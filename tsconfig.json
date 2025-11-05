@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "commonjs",
     "allowJs": true,
-    "skipLibCheck": true,
     "esModuleInterop": true,
     "noImplicitAny": true,
     "sourceMap": true,
     "outDir": "dist",
-    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "jsx": "react",
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["DOM", "ES2020"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "strict": true,
     "ignoreDeprecations": "6.0"
-  }
+  },
+  "include": ["src", "src/env.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
