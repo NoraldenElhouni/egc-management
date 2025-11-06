@@ -9,7 +9,7 @@ const Dashboard = ({ session }: { session: any }) => {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="bg-green-200" style={{ padding: "20px" }}>
       <h2>Welcome, {session.user.email}!</h2>
       <p>You are logged in.</p>
       <button onClick={handleLogout}>Log Out</button>

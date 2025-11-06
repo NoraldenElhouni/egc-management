@@ -36,7 +36,7 @@ const LoginForm = () => {
         borderRadius: "5px",
       }}
     >
-      <h2>Login</h2>
+      <h2 className="bg-red-200">Login</h2>
       <input
         type="email"
         placeholder="Email"
