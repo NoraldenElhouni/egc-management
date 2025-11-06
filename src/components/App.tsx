@@ -1,15 +1,13 @@
-// src/renderer/App.tsx
 import React, { useState, useEffect } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import Dashboard from "./dashboard/dashboard";
 import LoginForm from "./auth/LoginForm";
+import Layout from "./layouts/Layout"; // 👈 import the wrapper
 
-// A component to handle routing logic and state
 const AppRouter = () => {
-  const [session, setSession] = useState(false); // State to hold the user session
+  const [session, setSession] = useState(false);
 
-  // Listen for authentication state changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(!!session);
@@ -28,10 +26,20 @@ const AppRouter = () => {
 
   return (
     <Routes>
-      {/* If a session exists, redirect to the dashboard. Otherwise, show the login page. */}
-      <Route path="/" element={session ? <Dashboard /> : <LoginForm />} />
+      {/* Public route */}
       <Route path="/login" element={<LoginForm />} />
-      {/* Add other routes here if needed */}
+
+      {/* Protected routes with Layout wrapper */}
+      {session && (
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          {/* Add more wrapped routes here */}
+          {/* <Route path="/settings" element={<Settings />} /> */}
+        </Route>
+      )}
+
+      {/* If not logged in, fallback to login */}
+      {!session && <Route path="*" element={<LoginForm />} />}
     </Routes>
   );
 };
