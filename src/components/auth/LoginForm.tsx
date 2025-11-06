@@ -1,60 +1,121 @@
-// src/renderer/components/LoginForm.tsx (updated)
+// src/components/auth/LoginForm.tsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import { signInUser } from "../../lib/auth";
 
-const LoginForm = () => {
+const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate(); // Initialize the hook
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     try {
       await signInUser(email, password);
-      // Redirect to the home page or dashboard after successful login
       navigate("/");
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err ?? "");
+      setError(message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ... (rest of the component structure remains the same)
   return (
-    <form
-      onSubmit={handleLogin}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        maxWidth: "300px",
-        gap: "10px",
-        padding: "20px",
-        border: "1px solid #ccc",
-        borderRadius: "5px",
-      }}
-    >
-      <h2 className="bg-red-200">Login</h2>
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <button type="submit">Log In</button>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <form
+        onSubmit={handleLogin}
+        className="w-full max-w-md bg-white shadow-lg rounded-lg p-6 space-y-6"
+        aria-label="Login form"
+      >
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-800">
+            تسجيل الدخول إلى EGC
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            أدخل تفاصيل حسابك للمتابعة.
+          </p>
+        </div>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </form>
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-sm font-medium text-gray-700">
+            البريد الإلكتروني
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="mt-1 block w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            autoComplete="email"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium text-gray-700"
+            >
+              كلمة المرور
+            </label>
+          </div>
+          <input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="mt-1 block w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            autoComplete="current-password"
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div>
+          <button
+            type="submit"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            ) : (
+              "تسجيل الدخول"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
