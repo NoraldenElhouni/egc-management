@@ -11,6 +11,7 @@ import ExpensesPage from "../pages/Expenses";
 import ReportsPage from "../pages/Reports";
 import UsersPage from "../pages/Users";
 import NewProjectPage from "../pages/projects/NewProject";
+import ProfilePage from "../pages/profile/profile";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -49,7 +50,7 @@ const AppRouter = () => {
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/users" element={<UsersPage />} />
-          <Route path="/profile" element={<div>Profile Page</div>} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
       )}
 
