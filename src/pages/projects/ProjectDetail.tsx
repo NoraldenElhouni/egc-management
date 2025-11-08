@@ -3,10 +3,19 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 
 type Project = {
+  address: string | null;
+  client_id: string;
+  code: string;
+  created_at: string;
+  description: string | null;
   id: string;
-  title: string;
-  description: string;
-  // other fields...
+  latitude: number | null;
+  longitude: number | null;
+  name: string;
+  percentage: number | null;
+  percentage_taken: number;
+  serial_number: number | null;
+  status: "active" | "paused" | "completed" | "cancelled";
 };
 
 export default function ProjectDetail() {
@@ -65,7 +74,7 @@ export default function ProjectDetail() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">{project.title}</h1>
+      <h1 className="text-xl font-semibold">{project.name}</h1>
       <p className="mt-2">{project.description}</p>
 
       <div className="mt-4"></div>
