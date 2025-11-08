@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import Dashboard from "./dashboard/dashboard";
 import LoginForm from "./auth/LoginForm";
 import Layout from "./layouts/Layout"; // 👈 import the wrapper
+import ProjectDetail from "../pages/ProjectDetail";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -35,6 +36,7 @@ const AppRouter = () => {
           <Route path="/" element={<Dashboard />} />
           {/* Add more wrapped routes here */}
           {/* <Route path="/settings" element={<Settings />} /> */}
+          <Route path="/projects/:id" element={<ProjectDetail />} />
         </Route>
       )}
 

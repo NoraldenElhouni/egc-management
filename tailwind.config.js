@@ -7,7 +7,12 @@ module.exports = {
     "./src/**/**/*.{html,js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: "#3b82f6", // A specific hex code for a blue
+        secondary: "#ecc94b", // A specific hex code for a yellow
+      },
+    },
   },
   plugins: [],
 };
