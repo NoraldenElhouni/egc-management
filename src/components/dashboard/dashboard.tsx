@@ -1,5 +1,5 @@
 // src/renderer/components/Dashboard.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { signOutUser } from "../../lib/auth";
 import { supabase } from "../../lib/supabaseClient";
 
