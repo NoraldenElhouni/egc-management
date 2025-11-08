@@ -10,7 +10,9 @@ import {
   PlusCircle,
   List,
   ExternalLink,
+  RefreshCcw,
 } from "lucide-react";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 type Project = {
   id: number | string;
@@ -183,8 +185,17 @@ const Sidebar: React.FC = () => {
               aria-label="تحديث المشاريع"
               title="تحديث"
             >
-              <List size={14} />
-              تحديث
+              {loading ? (
+                <>
+                  <LoadingSpinner size={16} />
+                  تحديث
+                </>
+              ) : (
+                <>
+                  <RefreshCcw size={14} />
+                  تحديث
+                </>
+              )}
             </button>
           </div>
 

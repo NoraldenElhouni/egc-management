@@ -4,12 +4,13 @@ import { supabase } from "../lib/supabaseClient";
 import Dashboard from "./dashboard/dashboard";
 import LoginForm from "./auth/LoginForm";
 import Layout from "./layouts/Layout"; // 👈 import the wrapper
-import ProjectDetail from "../pages/ProjectDetail";
+import ProjectDetail from "../pages/projects/ProjectDetail";
 import MainMenu from "../pages/MainMenu";
-import ProjectsPage from "../pages/Projects";
+import ProjectsPage from "../pages/projects/Projects";
 import ExpensesPage from "../pages/Expenses";
 import ReportsPage from "../pages/Reports";
 import UsersPage from "../pages/Users";
+import NewProjectPage from "../pages/projects/NewProject";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -43,10 +44,12 @@ const AppRouter = () => {
           {/* <Route path="/settings" element={<Settings />} /> */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/projects/new" element={<NewProjectPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/profile" element={<div>Profile Page</div>} />
         </Route>
       )}
 
