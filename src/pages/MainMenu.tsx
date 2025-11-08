@@ -1,4 +1,3 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { signOutUser } from "../lib/auth";
 import {
@@ -29,7 +28,7 @@ const MainMenu = () => {
       className="flex items-center justify-center h-[calc(100vh-4rem)] bg-gray-50 overflow-hidden"
       dir="rtl"
     >
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-80 text-right">
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-right">
         <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">
           القائمة الرئيسية
         </h1>

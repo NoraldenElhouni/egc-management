@@ -33,10 +33,10 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <form
         onSubmit={handleLogin}
-        className="w-full max-w-md bg-white shadow-lg rounded-lg p-6 space-y-6"
+        className="w-full max-w-md bg-background shadow-lg rounded-lg p-6 space-y-6"
         aria-label="Login form"
       >
         <div>
@@ -59,7 +59,7 @@ const LoginForm: React.FC = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mt-1 block w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:primary focus:border"
             autoComplete="email"
           />
         </div>
@@ -82,7 +82,7 @@ const LoginForm: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 block w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 block w-full px-4 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:primary focus:border"
               autoComplete="current-password"
             />
 
@@ -105,12 +105,12 @@ const LoginForm: React.FC = () => {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-error">{error}</p>}
 
         <div>
           <button
             type="submit"
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md disabled:opacity-60"
             disabled={loading}
           >
             {loading ? (

@@ -10,7 +10,12 @@ module.exports = {
     extend: {
       colors: {
         /* 🎨 Core Semantic Colors */
-        primary: "#2563eb", // blue-600
+        primary: {
+          // blue-600
+          DEFAULT: "#2563eb", // blue-600
+          light: "#3b82f6", // blue-500
+          dark: "#1d4ed8", // blue-700
+        },
         secondary: "#64748b", // slate-500
         accent: "#06b6d4", // cyan-500
         muted: "#f1f5f9", // slate-100

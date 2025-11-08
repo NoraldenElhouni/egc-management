@@ -17,6 +17,7 @@ import LoadingSpinner from "../ui/LoadingSpinner";
 type Project = {
   id: number | string;
   name: string;
+  serial_number: number;
 };
 
 const Sidebar: React.FC = () => {
@@ -34,7 +35,8 @@ const Sidebar: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name");
+        .select("id, name, serial_number")
+        .order("serial_number", { ascending: true });
       if (error) throw error;
       setProjects((data ?? []) as Project[]);
     } catch (err: unknown) {
@@ -71,8 +73,10 @@ const Sidebar: React.FC = () => {
     }, 250);
   };
 
-  const filtered = projects.filter((p) =>
-    p.name.toLowerCase().includes(query.trim().toLowerCase())
+  const filtered = projects.filter(
+    (p) =>
+      p.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+      p.serial_number.toString().includes(query.trim().toLowerCase())
   );
 
   // Mobile drawer toggle close on route change
@@ -127,7 +131,10 @@ const Sidebar: React.FC = () => {
         aria-label="الشريط الجانبي للمشاريع"
         dir="rtl"
       >
-        <div className="h-full overflow-auto bg-white p-4 flex flex-col gap-3">
+        {/* hide-scrollbar: utility to hide scrollbars across browsers for the inner list */}
+        <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}`}</style>
+
+        <div className="h-full overflow-hidden bg-white p-4 flex flex-col gap-3">
           {/* Logo / header */}
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 hover:opacity-90">
@@ -226,7 +233,7 @@ const Sidebar: React.FC = () => {
                 </div>
               ) : (
                 <nav
-                  className="flex-1 overflow-auto"
+                  className="flex-1 overflow-auto hide-scrollbar"
                   aria-label="قائمة المشاريع"
                 >
                   <ul className="space-y-1">
@@ -241,6 +248,7 @@ const Sidebar: React.FC = () => {
                               ${active ? "bg-slate-100 font-medium" : "hover:bg-slate-50"}`}
                             aria-current={active ? "page" : undefined}
                           >
+                            <span className="truncate">{p.serial_number}</span>
                             <span className="truncate">{p.name}</span>
                             <span className="text-slate-400">
                               <ExternalLink size={14} />
