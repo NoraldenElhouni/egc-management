@@ -6,7 +6,7 @@ const BackButton = ({ side = "left" }: { side?: "left" | "right" }) => {
   return (
     <button
       onClick={() => navigate(-1)}
-      className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800"
+      className="inline-flex  items-center gap-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-full p-1 transition-colors "
     >
       {side === "left" ? (
         <>
@@ -14,10 +14,9 @@ const BackButton = ({ side = "left" }: { side?: "left" | "right" }) => {
           <ArrowLeft size={16} />
         </>
       ) : (
-        <>
-          <ArrowRight size={16} />
-          <span className="hidden sm:inline">عودة</span>
-        </>
+        <div className="p-2">
+          <ArrowRight size={14} />
+        </div>
       )}
     </button>
   );

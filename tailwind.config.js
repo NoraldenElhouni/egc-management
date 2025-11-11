@@ -11,15 +11,29 @@ module.exports = {
       colors: {
         /* 🎨 Core Semantic Colors */
         primary: {
-          // blue-600
           DEFAULT: "#2563eb", // blue-600
           light: "#3b82f6", // blue-500
           superLight: "#dbeafe", // blue-100
           dark: "#1d4ed8", // blue-700
+          foreground: "#ffffff", // text on primary
         },
-        secondary: "#64748b", // slate-500
-        accent: "#06b6d4", // cyan-500
-        muted: "#f1f5f9", // slate-100
+        secondary: {
+          DEFAULT: "#64748b", // slate-500
+          light: "#94a3b8", // slate-400
+          dark: "#475569", // slate-600
+          foreground: "#ffffff", // text on secondary
+        },
+        accent: {
+          DEFAULT: "#06b6d4", // cyan-500
+          light: "#22d3ee", // cyan-400
+          dark: "#0891b2", // cyan-700
+          foreground: "#ffffff",
+        },
+        muted: {
+          DEFAULT: "#f1f5f9", // slate-100
+          dark: "#e2e8f0", // slate-200
+          foreground: "#0f172a", // text on muted
+        },
         background: "#f8fafc", // slate-50
         foreground: "#0f172a", // slate-900
         border: "#e2e8f0", // slate-200

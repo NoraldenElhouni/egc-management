@@ -1,7 +1,7 @@
 import React from "react";
 
-const LoadingSpinner: React.FC<{ size?: number; label?: string }> = ({
-  size = 36,
+const LoadingSpinner: React.FC<{ size?: string; label?: string }> = ({
+  size = "24",
   label = "Loading...",
 }) => {
   const srStyle: React.CSSProperties = {
@@ -34,8 +34,15 @@ const LoadingSpinner: React.FC<{ size?: number; label?: string }> = ({
       }}
     >
       <svg
-        width={size}
-        height={size}
+        className={
+          size === "sm"
+            ? "w-4 h-4"
+            : size === "md"
+              ? "w-6 h-6"
+              : size === "lg"
+                ? "w-8 h-8"
+                : "w-10 h-10"
+        }
         viewBox="0 0 50 50"
         style={svgStyle}
         xmlns="http://www.w3.org/2000/svg"
