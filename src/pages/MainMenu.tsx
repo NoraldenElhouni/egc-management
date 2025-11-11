@@ -4,9 +4,11 @@ import {
   LogOut,
   Users,
   MapPin,
-  PieChart,
   DollarSign,
-  FileText,
+  LinkIcon,
+  ShieldUser,
+  User,
+  Settings,
 } from "lucide-react";
 
 const MainMenu = () => {
@@ -16,11 +18,38 @@ const MainMenu = () => {
   };
 
   const menuItems = [
-    { label: "إدارة المستخدمين", icon: <Users />, path: "/users" },
-    { label: "إدارة المواقع", icon: <MapPin />, path: "/projects" },
-    { label: "توزيع الحصص", icon: <PieChart />, path: "/allocations" },
-    { label: "المصروفات العمومية", icon: <DollarSign />, path: "/expenses" },
-    { label: "التقارير", icon: <FileText />, path: "/reports" },
+    {
+      label: "إدارة الموظفين",
+      icon: <Users />,
+      path: "/hr",
+      role: ["admin", "manager", "hr"],
+    },
+    {
+      label: "إدارة العملاء",
+      icon: <ShieldUser />,
+      path: "/crm",
+      role: ["admin", "manager", "crm"],
+    },
+    {
+      label: "سلسلة التوريد",
+      icon: <LinkIcon />,
+      path: "/supply-chain",
+      role: ["admin", "manager"],
+    },
+    {
+      label: "المشاريع",
+      icon: <MapPin />,
+      path: "/projects",
+      role: ["admin", "manager"],
+    },
+    {
+      label: "المالية",
+      icon: <DollarSign />,
+      path: "/finance",
+      role: ["admin", "manager", "finance", "bookkeeper", "accountant"],
+    },
+    { label: "الملف الشخصي", icon: <User />, path: "/profile" },
+    { label: "الإعدادات", icon: <Settings />, path: "/settings" },
   ];
 
   return (
