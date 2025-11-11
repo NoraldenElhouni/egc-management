@@ -10,6 +10,7 @@ import ProjectsPage from "../pages/projects/Projects";
 import NewProjectPage from "../pages/projects/NewProject";
 import ProfilePage from "../pages/profile/profile";
 import MainMenuLayout from "./layouts/MainMenuLayout";
+import HrPage from "../pages/hr/HrPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -31,6 +32,7 @@ const AppRouter = () => {
   }, []);
 
   return (
+    // <AuthProvider>
     <Routes>
       {/* Public route */}
       <Route path="/login" element={<LoginForm />} />
@@ -39,10 +41,8 @@ const AppRouter = () => {
       {session && (
         <Route element={<MainMenuLayout />}>
           <Route path="/" element={<MainMenu />} />
-          {/* Add more wrapped routes here */}
-          {/* <Route path="/settings" element={<Settings />} /> */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/hr" element={<MainMenu />} />
+          <Route path="/hr" element={<HrPage />} />
           <Route path="/crm" element={<MainMenu />} />
           <Route path="/supply-chain" element={<MainMenu />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
@@ -51,6 +51,7 @@ const AppRouter = () => {
           <Route path="/finance" element={<MainMenu />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<MainMenu />} />
+          <Route path="/website" element={<MainMenu />} />
         </Route>
       )}
 

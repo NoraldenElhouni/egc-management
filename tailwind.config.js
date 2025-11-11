@@ -14,6 +14,7 @@ module.exports = {
           // blue-600
           DEFAULT: "#2563eb", // blue-600
           light: "#3b82f6", // blue-500
+          superLight: "#dbeafe", // blue-100
           dark: "#1d4ed8", // blue-700
         },
         secondary: "#64748b", // slate-500
@@ -22,6 +23,7 @@ module.exports = {
         background: "#f8fafc", // slate-50
         foreground: "#0f172a", // slate-900
         border: "#e2e8f0", // slate-200
+        card: "#ffffff", // white
 
         /* ✅ State Colors */
         success: {

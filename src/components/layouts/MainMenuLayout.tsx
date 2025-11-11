@@ -4,15 +4,18 @@ import Header from "./header";
 
 const MainMenuLayout = () => {
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      {/* Main content area — offset on desktop to make room for right sidebar (w-72) */}
-      <div>
+    // Use flex column so the header sits on top and main fills the rest
+    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+      {/* fixed header */}
+      <div className="fixed top-0 left-0 right-0 z-10">
         <Header />
-        <main>
-          {/* Page content outlet */}
-          <Outlet />
-        </main>
       </div>
+
+      {/* main area: add top padding to account for header height and consistent page padding */}
+      <main className="flex-1 pt-16 p-6 overflow-auto">
+        {/* Page content outlet */}
+        <Outlet />
+      </main>
     </div>
   );
 };

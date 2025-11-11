@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ProfileDropdown from "./ProfileDropdown";
+import BackButton from "../ui/BackButton";
 
 const Header = () => {
   const location = useLocation();
@@ -8,17 +9,22 @@ const Header = () => {
   // Derive a simple page title from the current pathname (you can replace with real routing metadata)
   const titleFromPath = (path: string) => {
     if (path === "/") return "اللوحة الرئيسية";
+    if (path.startsWith("/dashboard")) return "لوحة القيادة";
+    if (path.startsWith("/hr")) return "إدارة الموارد البشرية";
+    if (path.startsWith("/crm")) return "إدارة علاقات العملاء";
+    if (path.startsWith("/supply-chain")) return "سلسلة التوريد";
     if (path.startsWith("/projects/new")) return "إنشاء مشروع جديد";
     if (path.startsWith("/projects")) return "المشاريع";
-    if (path.startsWith("/users")) return "المستخدمون";
-    if (path.startsWith("/reports")) return "التقارير";
+    if (path.startsWith("/finance")) return "المالية";
     if (path.startsWith("/profile")) return "الملف الشخصي";
+    if (path.startsWith("/settings")) return "الإعدادات";
+    if (path.startsWith("/website")) return "إدارة الموقع";
     return "الصفحة";
   };
   const pageTitle = titleFromPath(location.pathname);
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 border-b bg-white shadow-sm">
+    <header className="h-16 flex  items-center justify-between px-4 border-b bg-white shadow-sm">
       {/* Left area: page title & breadcrumb */}
       <div className="flex items-center gap-4">
         {/* menu button for small screens (visual parity with Sidebar's own mobile UI) */}
@@ -35,7 +41,8 @@ const Header = () => {
           <Menu size={18} />
         </button>
 
-        <div>
+        <div className="flex items-center gap-3">
+          {location.pathname !== "/" && <BackButton side="right" />}
           <h1 className="text-lg font-semibold text-slate-800">{pageTitle}</h1>
         </div>
       </div>
