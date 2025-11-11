@@ -11,6 +11,11 @@ import NewProjectPage from "../pages/projects/NewProject";
 import ProfilePage from "../pages/profile/profile";
 import MainMenuLayout from "./layouts/MainMenuLayout";
 import HrPage from "../pages/hr/HrPage";
+import CrmPage from "../pages/crm/crmPage";
+import FinancePage from "../pages/finance/FinancePage";
+import SupplyChainPage from "../pages/supply-chain/SupplyChainPage";
+import SettingsPage from "../pages/settings/SettingsPage";
+import WebsitePage from "../pages/website/WebsitePage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -43,15 +48,15 @@ const AppRouter = () => {
           <Route path="/" element={<MainMenu />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/hr" element={<HrPage />} />
-          <Route path="/crm" element={<MainMenu />} />
-          <Route path="/supply-chain" element={<MainMenu />} />
+          <Route path="/crm" element={<CrmPage />} />
+          <Route path="/supply-chain" element={<SupplyChainPage />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/new" element={<NewProjectPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/finance" element={<MainMenu />} />
+          <Route path="/finance" element={<FinancePage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<MainMenu />} />
-          <Route path="/website" element={<MainMenu />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/website" element={<WebsitePage />} />
         </Route>
       )}
 

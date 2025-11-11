@@ -1,14 +1,13 @@
-const ProfilePage = () => {
+const SupplyChainPage = () => {
   return (
     <div className="bg-background  text-foreground">
       <header className="flex items-center justify-between gap-4 mb-6"></header>
       <main>
         <h2 className="text-foreground">
-          مرحبًا بك في صفحة إدارة الملف الشخصي
+          مرحبًا بك في صفحة إدارة سلسلة التوريد
         </h2>
       </main>
     </div>
   );
 };
-
-export default ProfilePage;
+export default SupplyChainPage;
