@@ -24,6 +24,13 @@ import AnnouncementsPage from "../pages/hr/AnnouncementsPage";
 import RestPasswordPage from "../pages/hr/RestPasswordPage";
 import EmployeesPage from "../pages/hr/employeesPage";
 import EmployeeDetailsPage from "../pages/hr/EmployeeDetailsPage";
+import ContractorPage from "../pages/supply-chain/ContractorPage";
+import VendorsPage from "../pages/supply-chain/VendorsPage";
+import AccountingPage from "../pages/finance/AccountingPage";
+import BookkeepingPage from "../pages/finance/BookkeepingPage";
+import TreasuryPage from "../pages/finance/TreasuryPage";
+import PaymentsPage from "../pages/finance/PaymentsPage";
+import CompanyPage from "../pages/finance/CompanyPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -74,9 +81,9 @@ const AppRouter = () => {
           <Route path="/supply-chain" element={<SupplyChainPage />} />
           <Route
             path="/supply-chain/contractors"
-            element={<SupplyChainPage />}
+            element={<ContractorPage />}
           />
-          <Route path="/supply-chain/vendors" element={<SupplyChainPage />} />
+          <Route path="/supply-chain/vendors" element={<VendorsPage />} />
 
           {/* Projects */}
           <Route path="/projects/:id" element={<ProjectDetail />} />
@@ -85,11 +92,11 @@ const AppRouter = () => {
 
           {/* Finance */}
           <Route path="/finance" element={<FinancePage />} />
-          <Route path="/finance/accounting" element={<FinancePage />} />
-          <Route path="/finance/bookkeeping" element={<FinancePage />} />
-          <Route path="/finance/treasury" element={<FinancePage />} />
-          <Route path="/finance/payments" element={<FinancePage />} />
-          <Route path="/finance/company" element={<FinancePage />} />
+          <Route path="/finance/accounting" element={<AccountingPage />} />
+          <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
+          <Route path="/finance/treasury" element={<TreasuryPage />} />
+          <Route path="/finance/payments" element={<PaymentsPage />} />
+          <Route path="/finance/company" element={<CompanyPage />} />
 
           {/* Profile & Settings */}
           <Route path="/profile" element={<ProfilePage />} />

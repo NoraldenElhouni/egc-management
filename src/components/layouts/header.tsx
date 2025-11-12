@@ -45,6 +45,13 @@ const Header = () => {
     "loans-advances": "القروض والسلف",
     announcements: "الإعلانات",
     "rest-password": "إعادة تعيين كلمة المرور",
+    treasury: "الخزانة",
+    payments: "المدفوعات",
+    company: "الشركة",
+    accounting: "المحاسبة",
+    bookkeeping: "مسك الدفاتر",
+    vendors: "الموردين",
+    contractors: "المقاولون",
   };
 
   return (
