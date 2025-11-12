@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import { useState } from "react";
+import UserTableDemo from "../../components/dummey/UserTableDemo";
 
 const HrPage = () => {
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,9 @@ const HrPage = () => {
           >
             btn test
           </Button>
+        </div>
+        <div>
+          <UserTableDemo />
         </div>
       </main>
     </div>
