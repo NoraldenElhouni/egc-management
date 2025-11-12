@@ -1464,6 +1464,44 @@ export type Database = {
           },
         ];
       };
+      users: {
+        Row: {
+          created_at: string;
+          email: string;
+          first_name: string;
+          id: string;
+          last_name: string | null;
+          role_id: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          first_name: string;
+          id?: string;
+          last_name?: string | null;
+          role_id: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          first_name?: string;
+          id?: string;
+          last_name?: string | null;
+          role_id?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "users_role_id_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;

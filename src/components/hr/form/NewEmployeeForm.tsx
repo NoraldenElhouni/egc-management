@@ -9,6 +9,7 @@ import { PasswordField } from "../../ui/inputs/PasswordField";
 import { SelectField } from "../../ui/inputs/SelectField";
 import { DateField } from "../../ui/inputs/DateField";
 import { NumberField } from "../../ui/inputs/NumberField";
+import { createEmployee } from "../../../services/employees/setEmployeeService";
 
 const NewEmployeeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
@@ -31,12 +32,22 @@ const NewEmployeeForm: React.FC = () => {
     },
   });
 
-  const onSubmit = (data: UserFormValues) => {
+  const onSubmit = async (data: UserFormValues) => {
     setLoading(true);
-    console.log("New employee payload:", data);
-    setSuccess("تم اضافة الموظف بنجاح");
-    setLoading(false);
-    reset();
+    try {
+      const response = await createEmployee(data);
+      if (!response.success) {
+        alert("خطأ في إنشاء الموظف: " + response.message);
+        throw new Error(response.message);
+      }
+      setSuccess("تم اضافة الموظف بنجاح");
+      reset();
+    } catch (error) {
+      console.log("Unexpected error creating employee:", error);
+      alert("حدث خطأ غير متوقع أثناء إنشاء الموظف.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const employeeTypeOptions = [
