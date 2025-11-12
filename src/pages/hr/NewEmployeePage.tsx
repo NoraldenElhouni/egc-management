@@ -1,5 +1,11 @@
+import NewEmployeeForm from "../../components/hr/form/NewEmployeeForm";
+
 const NewEmployeePage = () => {
-  return <div>NewEmployeePage</div>;
+  return (
+    <div className="p-4">
+      <NewEmployeeForm />
+    </div>
+  );
 };
 
 export default NewEmployeePage;
