@@ -52,7 +52,7 @@ export default function GenericTable<TData extends object>({
   onRowClick,
   onRowSelectionChange,
   className = "",
-  emptyMessage = "No data",
+  emptyMessage = "لا توجد بيانات لعرضها.",
 }: GenericTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(

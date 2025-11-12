@@ -6,7 +6,7 @@ export const createEmployee = async (data: UserFormValues) => {
     await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: true, // optional, auto confirm email
+      email_confirm: true,
       user_metadata: {
         role: data.role,
         employeeId: data.employeeId,

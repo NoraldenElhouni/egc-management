@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import { useState } from "react";
-import UserTableDemo from "../../components/dummey/UserTableDemo";
+import EmployeesList from "../../components/hr/list/EmployeesList";
 
 const HrPage = () => {
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ const HrPage = () => {
           </Button>
         </div>
         <div>
-          <UserTableDemo />
+          <EmployeesList />
         </div>
       </main>
     </div>
