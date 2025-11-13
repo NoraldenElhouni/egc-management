@@ -23,7 +23,10 @@ const Header = () => {
   };
   const pageTitle = titleFromPath(location.pathname);
 
-  const parts = location.pathname.split("/").filter(Boolean);
+  const parts = location.pathname
+    .split("/")
+    .filter(Boolean)
+    .filter((seg) => !/^[0-9a-fA-F-]{8,}$/.test(seg));
 
   // Simple human-friendly labels for common route segments
   const segmentNames: Record<string, string> = {
