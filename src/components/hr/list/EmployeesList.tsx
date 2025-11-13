@@ -24,10 +24,7 @@ const EmployeesList = () => {
     fetchEmployees();
   }, []);
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-semibold mb-4">
-        User Management (with multi-select)
-      </h2>
+    <div>
       <GenericTable
         data={employees}
         columns={EmployeesColumns}

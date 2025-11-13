@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Employees } from "../../../types/global.type";
+import { Link } from "react-router-dom";
 
 export const EmployeesColumns: ColumnDef<Employees>[] = [
   // Selection column (first column)
@@ -37,7 +38,12 @@ export const EmployeesColumns: ColumnDef<Employees>[] = [
     header: "الاسم",
     cell: ({ row }) => (
       <div>
-        {row.original.first_name} {row.original.last_name}
+        <Link
+          to={`/hr/employees/${row.original.id}`}
+          className="font-medium hover:underline"
+        >
+          {row.original.first_name} {row.original.last_name}
+        </Link>
       </div>
     ),
   },

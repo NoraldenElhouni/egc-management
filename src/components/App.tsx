@@ -73,6 +73,7 @@ const AppRouter = () => {
           <Route path="/hr/rest-password" element={<RestPasswordPage />} />
           <Route path="/hr/employees" element={<EmployeesPage />} />
           <Route path="/hr/employees/:id" element={<EmployeeDetailsPage />} />
+          <Route path="/hr/employees/:id/edit" element={<EmployeesPage />} />
 
           {/* CRM */}
           <Route path="/crm" element={<CrmPage />} />
