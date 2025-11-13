@@ -10,7 +10,13 @@ export const userSchema = z.object({
   firstName: z.string().min(2, "الاسم الأول يجب أن يكون على الأقل حرفين"),
   lastName: z.string().min(2, "اسم العائلة يجب أن يكون على الأقل حرفين"),
   dob: z.string().min(1, "تاريخ الميلاد مطلوب"),
+  placeOfBirth: z.string().optional(),
+  maritalStatus: z.enum(["Single", "Married", "Divorced", "Widowed"]),
+  bloodType: z
+    .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+    .optional(),
   nationality: z.string().optional(),
+  gender: z.enum(["Male", "Female"]),
 
   // Contact Information
   email: z.string().email("البريد الإلكتروني غير صالح"),
