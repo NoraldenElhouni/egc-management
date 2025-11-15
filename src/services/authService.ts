@@ -1,73 +1,130 @@
 import { supabase } from "../lib/supabaseClient";
-import { clearUserData, getUserData, saveUserData } from "../lib/userStorage";
+import {
+  clearUserData,
+  getUserData,
+  saveUserData,
+  UserData,
+} from "../lib/userStorage";
 
 export const authService = {
-  // Login with Supabase
-  async login(email: string, password: string) {
+  // Login with email/password
+  async login(email: string, password: string): Promise<UserData> {
+    // 1. Authenticate with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) throw error;
+    if (!data.user) throw new Error("No user data returned");
 
-    // Fetch user profile with role from your database
-    const { data: profile } = await supabase
-      .from("employees")
-      .select("name, role")
+    // 2. Fetch user profile with role from your profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("first_name, last_name")
       .eq("id", data.user.id)
       .single();
 
-    // Save to local storage for fast access
-    const userData = {
+    if (profileError) {
+      console.error("Profile fetch error:", profileError);
+    }
+
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_roles")
+      .select("*")
+      .eq("user_id", data.user.id)
+      .single();
+
+    if (roleError) {
+      console.error("Role fetch error:", roleError);
+    }
+
+    let userRole = null;
+    if (roleData?.role_id) {
+      const { data, error: userRoleError } = await supabase
+        .from("roles")
+        .select("name")
+        .eq("id", roleData.role_id)
+        .single();
+      userRole = data;
+      if (userRoleError) {
+        console.error("User role fetch error:", userRoleError);
+      }
+    }
+
+    // 3. Prepare user data
+    const userData: UserData = {
       id: data.user.id,
-      name: profile?.name || data.user.email || "User",
-      role: profile?.role || "user",
+      name:
+        `${profile?.first_name} ${profile?.last_name}` ||
+        data.user.email?.split("@")[0] ||
+        "User",
+      role: userRole?.name || "user",
       email: data.user.email,
     };
 
+    // 4. Save to localForage for fast access next time
     await saveUserData(userData);
+
     return userData;
   },
 
   // Logout
-  async logout() {
+  async logout(): Promise<void> {
     await supabase.auth.signOut();
     await clearUserData();
   },
 
-  // Get current user from local storage (FAST)
-  async getCurrentUser() {
+  // Get current user from local storage (FAST - no network)
+  async getCurrentUser(): Promise<UserData | null> {
     return await getUserData();
   },
 
   // Check if user is authenticated
-  async isAuthenticated() {
+  async isAuthenticated(): Promise<boolean> {
     const userData = await getUserData();
     return !!userData;
   },
 
-  // Refresh user data from Supabase (when needed)
-  async refreshUserData() {
+  // Refresh user data from Supabase (call when you need fresh data)
+  async refreshUserData(): Promise<UserData | null> {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
+      console.error("No authenticated user found during refresh");
       await clearUserData();
       return null;
     }
 
-    const { data: profile } = await supabase
-      .from("employees")
-      .select("name, role")
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("first_name, last_name, role_id")
       .eq("id", user.id)
       .single();
 
-    const userData = {
+    if (profileError) {
+      console.error("Profile fetch error:", profileError);
+    }
+
+    const { data: userRole, error: userRoleError } = await supabase
+      .from("roles")
+      .select("name")
+      .eq("id", profile?.role_id || "")
+      .single();
+
+    if (userRoleError) {
+      console.error("User role fetch error:", userRoleError);
+    }
+
+    const userData: UserData = {
       id: user.id,
-      name: profile?.name || user.email || "User",
-      role: profile?.role || "user",
+      name:
+        `${profile?.first_name} ${profile?.last_name}` ||
+        user.email?.split("@")[0] ||
+        "User",
+      role: userRole?.name || "user",
       email: user.email,
     };
 

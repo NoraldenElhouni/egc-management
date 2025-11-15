@@ -1,5 +1,12 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { authService } from "../services/authService";
+import { UserData } from "../lib/userStorage";
 
 interface AuthContextType {
   user: UserData | null;
@@ -11,11 +18,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user on app start
+  // Load user on app start - RUNS ONCE
   useEffect(() => {
     loadUser();
   }, []);
@@ -23,20 +30,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUser = async () => {
     try {
       setLoading(true);
-      // Try local storage first (FAST)
+
+      // Try local storage first (FAST - 10-50ms)
       const localUser = await authService.getCurrentUser();
 
       if (localUser) {
         setUser(localUser);
-        // Verify session in background (optional)
-        authService.refreshUserData().catch(() => {
-          // Session invalid, clear local data
-          setUser(null);
-        });
+        setLoading(false);
+
+        // Optional: Verify session in background
+        authService
+          .refreshUserData()
+          .then((refreshedUser) => {
+            if (refreshedUser) {
+              setUser(refreshedUser);
+            }
+          })
+          .catch(() => {
+            // Session invalid, clear everything
+            setUser(null);
+            authService.logout();
+          });
+      } else {
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error loading user:", error);
-    } finally {
       setLoading(false);
     }
   };
@@ -63,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Custom hook to use auth context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

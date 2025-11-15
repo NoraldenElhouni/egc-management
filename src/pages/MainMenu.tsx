@@ -9,27 +9,11 @@ import {
   Settings,
   Globe,
 } from "lucide-react";
-import { getProfile } from "../services/profile/getProfile";
-import { useEffect, useState, ComponentType } from "react";
+import { ComponentType } from "react";
+import { useAuth } from "../hooks/useAuth";
 
 const MainMenu = () => {
-  const [profile, setProfile] = useState<{ name: string; role: string } | null>(
-    null
-  );
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const data = await getProfile();
-        setProfile(data);
-      } catch (err) {
-        console.error("Failed to fetch profile", err);
-        setProfile(null);
-      }
-    };
-    fetchProfile();
-  }, []);
-
+  const { user, loading } = useAuth();
   // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
   const menuItems = [
     {
@@ -74,9 +58,9 @@ const MainMenu = () => {
 
   // Filter menu items based on the user's role. If an item has no `role` field it is public.
   const visibleItems = menuItems.filter((item) => {
-    if (!item.role) return true;
-    if (!profile || !profile.role) return false;
-    return item.role.includes(profile.role);
+    if (!item.role || loading) return true;
+    if (!user || !user.role) return false;
+    return item.role.includes(user.role);
   });
 
   return (

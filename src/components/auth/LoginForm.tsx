@@ -1,8 +1,8 @@
 // src/components/auth/LoginForm.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInUser } from "../../lib/auth";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +11,7 @@ const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +19,7 @@ const LoginForm: React.FC = () => {
     setLoading(true);
 
     try {
-      await signInUser(email, password);
+      await login(email, password);
       navigate("/");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err ?? "");

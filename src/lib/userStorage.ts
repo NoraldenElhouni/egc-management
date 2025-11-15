@@ -1,11 +1,11 @@
 import localforage from "localforage";
 
 const userStore = localforage.createInstance({
-  name: "myApp",
+  name: "EGC",
   storeName: "userData",
 });
 
-interface UserData {
+export interface UserData {
   id: string;
   name: string;
   role: string;
