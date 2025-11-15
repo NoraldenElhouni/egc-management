@@ -4,7 +4,7 @@ import EmployeesList from "../../components/hr/list/EmployeesList";
 
 const HrPage = () => {
   return (
-    <div className="bg-background  text-foreground">
+    <div className="bg-background p-6 text-foreground">
       <main>
         <div className="flex flex-row w-fit space-x-2">
           <Link to="/hr/employees/new">

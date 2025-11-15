@@ -80,7 +80,7 @@ const MainMenu = () => {
   });
 
   return (
-    <div className="h-full w-full mt-10 bg-background" dir="rtl">
+    <div className="h-full w-full p-6 mt-10 bg-background" dir="rtl">
       <h1 className="text-2xl font-bold mb-6 text-center text-foreground">
         القائمة الرئيسية
       </h1>

@@ -12,7 +12,7 @@ const MainMenuLayout = () => {
       </div>
 
       {/* main area: add top padding to account for header height and consistent page padding */}
-      <main className="flex-1 pt-16 p-6 overflow-auto">
+      <main className="flex-1 pt-16 overflow-auto">
         {/* Page content outlet */}
         <Outlet />
       </main>
