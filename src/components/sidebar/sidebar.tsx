@@ -194,7 +194,7 @@ const Sidebar: React.FC = () => {
             >
               {loading ? (
                 <>
-                  <LoadingSpinner size={16} />
+                  <LoadingSpinner size="16" />
                   تحديث
                 </>
               ) : (

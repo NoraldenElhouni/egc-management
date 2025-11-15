@@ -77,9 +77,9 @@ const PersonalInfo = () => {
 
         {/* Basic information card */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-center">
             {/* Avatar + name */}
-            <div className="flex items-center gap-4 col-span-1">
+            <div className="flex items-center gap-4 col-span-1 md:col-span-2">
               <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-primary/10 to-primary/50 flex items-center justify-center text-2xl font-semibold text-foreground">
                 {/* Initials */}
                 {employee.first_name?.[0] ?? ""}
@@ -150,9 +150,6 @@ const PersonalInfo = () => {
                 </div>
               </div>
             </div>
-
-            {/* Vertical divider on md and details on right */}
-            <div className="hidden md:block md:col-span-1 border-l" />
 
             <div className="col-span-1 md:col-span-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">

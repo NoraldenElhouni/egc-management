@@ -31,6 +31,11 @@ import BookkeepingPage from "../pages/finance/BookkeepingPage";
 import TreasuryPage from "../pages/finance/TreasuryPage";
 import PaymentsPage from "../pages/finance/PaymentsPage";
 import CompanyPage from "../pages/finance/CompanyPage";
+import HRLayout from "./sidebar/HRLayout";
+import SupplyChainLayout from "./sidebar/SupplyChainLayout";
+import ProjectsLayout from "./sidebar/ProjectsLayout";
+import FinanceLayout from "./sidebar/FinanceLayout";
+import Sidebar from "./sidebar/sidebar";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -64,40 +69,55 @@ const AppRouter = () => {
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* HR */}
-          <Route path="/hr" element={<HrPage />} />
-          <Route path="/hr/employees/new" element={<NewEmployeePage />} />
-          <Route path="/hr/payroll" element={<PayrolePage />} />
-          <Route path="/hr/loans-advances" element={<LoansAdvancesPage />} />
-          <Route path="/hr/attendance" element={<AttendancePage />} />
-          <Route path="/hr/announcements" element={<AnnouncementsPage />} />
-          <Route path="/hr/rest-password" element={<RestPasswordPage />} />
-          <Route path="/hr/employees" element={<EmployeesPage />} />
-          <Route path="/hr/employees/:id" element={<EmployeeDetailsPage />} />
-          <Route path="/hr/employees/:id/edit" element={<EmployeesPage />} />
+          <Route element={<HRLayout />}>
+            <Route path="/hr" element={<HrPage />} />
+            <Route path="/hr/employees/new" element={<NewEmployeePage />} />
+            <Route path="/hr/payroll" element={<PayrolePage />} />
+            <Route path="/hr/loans-advances" element={<LoansAdvancesPage />} />
+            <Route path="/hr/attendance" element={<AttendancePage />} />
+            <Route path="/hr/announcements" element={<AnnouncementsPage />} />
+            <Route path="/hr/rest-password" element={<RestPasswordPage />} />
+            <Route path="/hr/employees" element={<EmployeesPage />} />
+            <Route path="/hr/employees/:id" element={<EmployeeDetailsPage />} />
+            <Route path="/hr/employees/:id/edit" element={<EmployeesPage />} />
+          </Route>
 
           {/* CRM */}
           <Route path="/crm" element={<CrmPage />} />
 
           {/* Supply Chain */}
-          <Route path="/supply-chain" element={<SupplyChainPage />} />
-          <Route
-            path="/supply-chain/contractors"
-            element={<ContractorPage />}
-          />
-          <Route path="/supply-chain/vendors" element={<VendorsPage />} />
+          <Route element={<SupplyChainLayout />}>
+            <Route path="/supply-chain" element={<SupplyChainPage />} />
+            <Route
+              path="/supply-chain/contractors"
+              element={<ContractorPage />}
+            />
+            <Route
+              path="/supply-chain/contractors/new"
+              element={<ContractorPage />}
+            />
+            <Route path="/supply-chain/vendors" element={<VendorsPage />} />
+            <Route path="/supply-chain/vendors/new" element={<VendorsPage />} />
+          </Route>
 
           {/* Projects */}
-          <Route path="/projects/:id" element={<ProjectDetail />} />
-          <Route path="/projects/new" element={<NewProjectPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
+          <Route element={<ProjectsLayout />}>
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/new" element={<NewProjectPage />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+          </Route>
 
           {/* Finance */}
-          <Route path="/finance" element={<FinancePage />} />
-          <Route path="/finance/accounting" element={<AccountingPage />} />
-          <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
-          <Route path="/finance/treasury" element={<TreasuryPage />} />
-          <Route path="/finance/payments" element={<PaymentsPage />} />
-          <Route path="/finance/company" element={<CompanyPage />} />
+          <Route element={<FinanceLayout />}>
+            <Route path="/finance" element={<FinancePage />} />
+            <Route path="/finance/accounting" element={<AccountingPage />} />
+            <Route path="/finance/treasury" element={<TreasuryPage />} />
+            <Route path="/finance/payments" element={<PaymentsPage />} />
+            <Route path="/finance/company" element={<CompanyPage />} />
+          </Route>
+          <Route element={<Sidebar />}>
+            <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
+          </Route>
 
           {/* Profile & Settings */}
           <Route path="/profile" element={<ProfilePage />} />
