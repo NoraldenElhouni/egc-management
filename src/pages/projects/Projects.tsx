@@ -1,13 +1,18 @@
 import { Link } from "react-router-dom";
+import Button from "../../components/ui/Button";
+import ProjectsList from "../../components/project/ProjectsList";
 
 const ProjectsPage = () => {
   return (
-    <div className="bg-background  text-foreground">
-      <header className="flex items-center justify-between gap-4 mb-6"></header>
+    <div className="bg-background p-4 text-foreground">
       <main>
-        <h2 className="text-foreground">مرحبًا بك في صفحة إدارة المشاريع</h2>
         <div>
-          <Link to="/projects/new">إنشاء مشروع جديد</Link>
+          <Button variant="primary">
+            <Link to="/projects/new">إنشاء مشروع جديد</Link>
+          </Button>
+        </div>
+        <div>
+          <ProjectsList />
         </div>
       </main>
     </div>
