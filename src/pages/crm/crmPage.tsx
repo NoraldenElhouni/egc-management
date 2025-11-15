@@ -1,9 +1,10 @@
+import ClientsList from "../../components/crm/list/ClientsList";
+
 const CrmPage = () => {
   return (
-    <div className="bg-background  text-foreground">
-      <header className="flex items-center justify-between gap-4 mb-6"></header>
+    <div className="bg-background p-4 text-foreground">
       <main>
-        <h2 className="text-foreground">مرحبًا بك في صفحة إدارة العملاء</h2>
+        <ClientsList />
       </main>
     </div>
   );

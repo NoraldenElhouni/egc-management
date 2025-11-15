@@ -1,63 +1,70 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
-  FolderKanban,
-  FolderPlus,
-  BarChart3,
-  FileText,
   Users,
+  UserPlus,
+  Building2,
+  Phone,
+  Mail,
   Calendar,
-  DollarSign,
+  FileText,
+  TrendingUp,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
 
-const ProjectsLayout = () => {
+const CRMLayout = () => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
     {
-      title: "المشاريع",
-      icon: FolderKanban,
-      path: "/projects",
-      description: "قائمة جميع المشاريع",
+      title: "العملاء",
+      icon: Users,
+      path: "/crm",
+      description: "قائمة جميع العملاء",
     },
     {
-      title: "إنشاء مشروع جديد",
-      icon: FolderPlus,
-      path: "/projects/new",
-      description: "إضافة مشروع جديد",
+      title: "إضافة عميل جديد",
+      icon: UserPlus,
+      path: "/crm/clients/new",
+      description: "تسجيل عميل جديد",
+    },
+    {
+      title: "الشركات",
+      icon: Building2,
+      path: "/crm/companies",
+      description: "إدارة شركات العملاء",
+    },
+    {
+      title: "جهات الاتصال",
+      icon: Phone,
+      path: "/crm/contacts",
+      description: "إدارة جهات الاتصال",
+    },
+    {
+      title: "الاتصالات",
+      icon: Mail,
+      path: "/crm/communications",
+      description: "سجل الاتصالات",
+    },
+    {
+      title: "المواعيد",
+      icon: Calendar,
+      path: "/crm/appointments",
+      description: "جدول المواعيد",
+    },
+    {
+      title: "العقود",
+      icon: FileText,
+      path: "/crm/contracts",
+      description: "عقود العملاء",
     },
     {
       title: "التقارير",
-      icon: BarChart3,
-      path: "/projects/reports",
-      description: "تقارير المشاريع",
-    },
-    {
-      title: "المستندات",
-      icon: FileText,
-      path: "/projects/documents",
-      description: "مستندات المشاريع",
-    },
-    {
-      title: "الفريق",
-      icon: Users,
-      path: "/projects/team",
-      description: "إدارة فريق المشاريع",
-    },
-    {
-      title: "الجدول الزمني",
-      icon: Calendar,
-      path: "/projects/timeline",
-      description: "الجداول الزمنية",
-    },
-    {
-      title: "الميزانية",
-      icon: DollarSign,
-      path: "/projects/budget",
-      description: "ميزانيات المشاريع",
+      icon: TrendingUp,
+      path: "/crm/reports",
+      description: "تقارير وتحليلات",
     },
   ];
 
@@ -67,17 +74,17 @@ const ProjectsLayout = () => {
       return true;
     }
 
-    // For /projects, only activate if not on a sub-page
+    // For /crm, only activate if on exact path or no sub-route
     if (
-      path === "/projects" &&
-      location.pathname.startsWith("/projects/") &&
-      !location.pathname.match(/^\/projects\/\d+$/)
+      path === "/crm" &&
+      location.pathname !== "/crm" &&
+      !location.pathname.match(/^\/crm\/clients\/\d+$/)
     ) {
       return false;
     }
 
     // For detail pages (numeric ID), don't activate any menu item
-    if (location.pathname.match(/^\/projects\/\d+/)) {
+    if (location.pathname.match(/^\/crm\/clients\/\d+/)) {
       return false;
     }
 
@@ -101,9 +108,11 @@ const ProjectsLayout = () => {
         >
           {!isCollapsed && (
             <>
-              <h2 className="text-2xl font-bold text-gray-900">المشاريع</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                إدارة علاقات العملاء
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
-                إدارة ومتابعة المشاريع
+                إدارة العملاء والتواصل معهم
               </p>
             </>
           )}
@@ -189,4 +198,4 @@ const ProjectsLayout = () => {
   );
 };
 
-export default ProjectsLayout;
+export default CRMLayout;

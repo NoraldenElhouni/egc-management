@@ -35,12 +35,14 @@ import HRLayout from "./sidebar/HRLayout";
 import SupplyChainLayout from "./sidebar/SupplyChainLayout";
 import ProjectsLayout from "./sidebar/ProjectsLayout";
 import FinanceLayout from "./sidebar/FinanceLayout";
+import CRMLayout from "./sidebar/CRMLayout";
 import Sidebar from "./sidebar/sidebar";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 import ContractorDetailPage from "../pages/supply-chain/ContractorDetailPage";
 import VindorDetailPage from "../pages/supply-chain/VindorDetailPage";
 import NewContractorPage from "../pages/supply-chain/NewContractorPage";
 import NewVindorPage from "../pages/supply-chain/NewVindorPage";
+import ClientDetailPage from "../pages/crm/ClientDetailPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -132,7 +134,10 @@ const AppRouter = () => {
           </Route>
 
           {/* CRM */}
-          <Route path="/crm" element={<CrmPage />} />
+          <Route element={<CRMLayout />}>
+            <Route path="/crm" element={<CrmPage />} />
+            <Route path="/crm/clients/:id" element={<ClientDetailPage />} />
+          </Route>
 
           {/* Supply Chain */}
           <Route element={<SupplyChainLayout />}>
