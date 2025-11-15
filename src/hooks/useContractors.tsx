@@ -1,40 +1,40 @@
 import { useEffect, useState } from "react";
+import { Contractors } from "../types/global.type";
 import { supabase } from "../lib/supabaseClient";
-import { Employees } from "../types/global.type";
 
-export function useEmployees() {
-  const [employees, setemployees] = useState<Employees[]>([]);
+export function useContractors() {
+  const [contractors, setContractors] = useState<Contractors[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    async function fetchemployees() {
+    async function fetchContractors() {
       setLoading(true);
-      const { data, error } = await supabase.from("employees").select("*");
+      const { data, error } = await supabase.from("contractors").select("*");
 
       if (error) {
-        console.error("error fetching employyes", error);
+        console.error("error fetching contractors", error);
         setError(error);
       } else {
-        setemployees(data ?? []);
+        setContractors(data ?? []);
       }
 
       setLoading(false);
     }
 
-    fetchemployees();
+    fetchContractors();
   }, []); // runs once on mount
 
-  return { employees, loading, error };
+  return { contractors, loading, error };
 }
 
-export function useEmployee(id: string) {
-  const [employee, setemployee] = useState<Employees | null>(null);
+export function useContractor(id: string) {
+  const [contractor, setContractor] = useState<Contractors | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    async function fetchEmployees() {
+    async function fetchContractor() {
       setLoading(true);
       const { data, error } = await supabase
         .from("employees")
@@ -46,14 +46,14 @@ export function useEmployee(id: string) {
         console.error("error fetching employyes", error);
         setError(error);
       } else {
-        setemployee(data ?? null);
+        setContractor(data ?? null);
       }
 
       setLoading(false);
     }
 
-    fetchEmployees();
+    fetchContractor();
   }, [id]); // runs once on mount}
 
-  return { employee, loading, error };
+  return { contractor, loading, error };
 }
