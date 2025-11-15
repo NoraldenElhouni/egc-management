@@ -1,30 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { signOutUser } from "../../lib/auth";
 import { User } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getProfile } from "../../services/profile/getProfile";
+import { useAuth } from "../../hooks/useAuth";
 
 const ProfileDropdown = () => {
-  const [profile, setProfile] = useState<{ name: string; role: string } | null>(
-    null
-  );
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const profileData = await getProfile();
-        setProfile(profileData);
-      } catch (error) {
-        console.error("Failed to fetch profile", error);
-      }
-    };
-
-    fetchProfile();
-  }, []);
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await signOutUser();
+      await logout();
       // router or auth listener should redirect after sign-out
     } catch (err) {
       console.error("Logout failed", err);
@@ -58,9 +42,9 @@ const ProfileDropdown = () => {
         >
           <User size={16} />
           <div className="text-sm">
-            <div className="font-medium">{profile?.name || "اسم المستخدم"}</div>
+            <div className="font-medium">{user?.name || "اسم المستخدم"}</div>
             <div className="text-xs text-slate-400">
-              {profile?.role || "الدور"}
+              {user?.role || "الدور"}
             </div>
           </div>
         </button>
