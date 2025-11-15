@@ -39,7 +39,7 @@ export const ContractorsColumns: ColumnDef<Contractors>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/hr/employees/${row.original.id}`}
+          to={`/supply-chain/contractors/${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.first_name} {row.original.last_name}

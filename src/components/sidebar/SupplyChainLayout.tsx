@@ -30,13 +30,13 @@ const SupplyChainLayout = () => {
     {
       title: "توريد المواد",
       icon: Package,
-      path: "/supply-chain/material-supply",
+      path: "/supply-chain/vendors",
       description: "قائمة توريد المواد",
     },
     {
       title: "إضافة توريد جديد",
       icon: PackagePlus,
-      path: "/supply-chain/material-supply/new",
+      path: "/supply-chain/vendors/new",
       description: "تسجيل توريد جديد",
     },
   ];
@@ -51,8 +51,8 @@ const SupplyChainLayout = () => {
     if (
       (path === "/supply-chain/contractors" &&
         location.pathname.startsWith("/supply-chain/contractors/")) ||
-      (path === "/supply-chain/material-supply" &&
-        location.pathname.startsWith("/supply-chain/material-supply/"))
+      (path === "/supply-chain/vendors" &&
+        location.pathname.startsWith("/supply-chain/vendors/"))
     ) {
       return false;
     }

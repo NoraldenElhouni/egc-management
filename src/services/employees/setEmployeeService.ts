@@ -23,7 +23,7 @@ export const createEmployee = async (data: UserFormValues) => {
     });
 
   if (userError) {
-    console.log("Error creating auth user:", userError);
+    console.error("Error creating auth user:", userError);
     return {
       success: false,
       error: userError,

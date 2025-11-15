@@ -5,6 +5,14 @@ import GenericTable from "../../tables/table";
 const VindorsList = () => {
   const { vindors, loading, error } = useVindors();
 
+  if (loading) {
+    return <div>جاري التحميل...</div>;
+  }
+
+  if (error) {
+    return <div>خطأ في تحميل الموردين: {error}</div>;
+  }
+
   return (
     <div>
       <GenericTable
@@ -15,9 +23,9 @@ const VindorsList = () => {
         enableFiltering
         enableRowSelection
         showGlobalFilter
-        onRowSelectionChange={(selected) =>
-          console.log("Selected rows:", selected)
-        }
+        // onRowSelectionChange={(selected) =>
+        //   console.log("Selected rows:", selected)
+        // }
       />
     </div>
   );

@@ -43,7 +43,7 @@ const NewEmployeeForm: React.FC = () => {
       setSuccess("تم اضافة الموظف بنجاح");
       reset();
     } catch (error) {
-      console.log("Unexpected error creating employee:", error);
+      console.error("Unexpected error creating employee:", error);
       alert("حدث خطأ غير متوقع أثناء إنشاء الموظف.");
     } finally {
       setLoading(false);

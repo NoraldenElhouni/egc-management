@@ -168,9 +168,6 @@ export default function UserTableWithSelectDemo() {
         enableFiltering
         enableRowSelection
         showGlobalFilter
-        onRowSelectionChange={(selected) =>
-          console.log("Selected rows:", selected)
-        }
       />
     </div>
   );

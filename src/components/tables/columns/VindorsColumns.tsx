@@ -43,7 +43,7 @@ export const VindorsColumns: ColumnDef<Vindors>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/hr/employees/${row.original.id}`}
+          to={`/supply-chain/vendors/${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}

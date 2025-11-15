@@ -37,6 +37,10 @@ import ProjectsLayout from "./sidebar/ProjectsLayout";
 import FinanceLayout from "./sidebar/FinanceLayout";
 import Sidebar from "./sidebar/sidebar";
 import { AuthProvider } from "../hooks/useAuth";
+import ContractorDetailPage from "../pages/supply-chain/ContractorDetailPage";
+import VindorDetailPage from "../pages/supply-chain/VindorDetailPage";
+import NewContractorPage from "../pages/supply-chain/NewContractorPage";
+import NewVindorPage from "../pages/supply-chain/NewVindorPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -104,12 +108,20 @@ const AppRouter = () => {
               />
               <Route
                 path="/supply-chain/contractors/new"
-                element={<ContractorPage />}
+                element={<NewContractorPage />}
+              />
+              <Route
+                path="/supply-chain/contractors/:id"
+                element={<ContractorDetailPage />}
               />
               <Route path="/supply-chain/vendors" element={<VendorsPage />} />
               <Route
                 path="/supply-chain/vendors/new"
-                element={<VendorsPage />}
+                element={<NewVindorPage />}
+              />
+              <Route
+                path="/supply-chain/vendors/:id"
+                element={<VindorDetailPage />}
               />
             </Route>
 
