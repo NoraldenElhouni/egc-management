@@ -19,7 +19,7 @@ export function useClients() {
       setError(error);
       setClients([]);
     } else {
-      setClients((data ?? []) as Clients[]);
+      setClients(data);
     }
 
     setLoading(false);
@@ -79,6 +79,10 @@ export function useClients() {
       return { data: null, error: err };
     }
   }, []);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   const refresh = useCallback(() => fetchClients(), [fetchClients]);
 
