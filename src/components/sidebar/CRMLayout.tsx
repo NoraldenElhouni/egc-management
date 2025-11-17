@@ -3,12 +3,7 @@ import { useState } from "react";
 import {
   Users,
   UserPlus,
-  Building2,
-  Phone,
-  Mail,
   Calendar,
-  FileText,
-  TrendingUp,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
@@ -30,41 +25,12 @@ const CRMLayout = () => {
       path: "/crm/clients/new",
       description: "تسجيل عميل جديد",
     },
-    {
-      title: "الشركات",
-      icon: Building2,
-      path: "/crm/companies",
-      description: "إدارة شركات العملاء",
-    },
-    {
-      title: "جهات الاتصال",
-      icon: Phone,
-      path: "/crm/contacts",
-      description: "إدارة جهات الاتصال",
-    },
-    {
-      title: "الاتصالات",
-      icon: Mail,
-      path: "/crm/communications",
-      description: "سجل الاتصالات",
-    },
+
     {
       title: "المواعيد",
       icon: Calendar,
       path: "/crm/appointments",
       description: "جدول المواعيد",
-    },
-    {
-      title: "العقود",
-      icon: FileText,
-      path: "/crm/contracts",
-      description: "عقود العملاء",
-    },
-    {
-      title: "التقارير",
-      icon: TrendingUp,
-      path: "/crm/reports",
-      description: "تقارير وتحليلات",
     },
   ];
 

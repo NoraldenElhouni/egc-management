@@ -43,6 +43,7 @@ import VindorDetailPage from "../pages/supply-chain/VindorDetailPage";
 import NewContractorPage from "../pages/supply-chain/NewContractorPage";
 import NewVindorPage from "../pages/supply-chain/NewVindorPage";
 import ClientDetailPage from "../pages/crm/ClientDetailPage";
+import NewClientPage from "../pages/crm/NewClientPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -136,6 +137,7 @@ const AppRouter = () => {
           {/* CRM */}
           <Route element={<CRMLayout />}>
             <Route path="/crm" element={<CrmPage />} />
+            <Route path="/crm/clients/new" element={<NewClientPage />} />
             <Route path="/crm/clients/:id" element={<ClientDetailPage />} />
           </Route>
 
