@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "../../lib/adminSupabase";
-import { UserFormValues } from "../../types/schema/users.shema";
+import { UserFormValues } from "../../types/schema/users.schema";
 
 export const createEmployee = async (data: UserFormValues) => {
   const { data: userData, error: userError } =

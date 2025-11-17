@@ -1,7 +1,6 @@
-import React from "react";
-import GenericTable from "../tables/table";
-import { ProjectsColumns } from "../tables/columns/ProjectsColumns";
-import { useProjects } from "../../hooks/useProjects";
+import { useProjects } from "../../../hooks/useProjects";
+import { ProjectsColumns } from "../../tables/columns/ProjectsColumns";
+import GenericTable from "../../tables/table";
 
 const ProjectsList = () => {
   const { projects } = useProjects();

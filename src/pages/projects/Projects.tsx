@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Button from "../../components/ui/Button";
-import ProjectsList from "../../components/project/ProjectsList";
+import ProjectsList from "../../components/project/lists/ProjectsList";
 
 const ProjectsPage = () => {
   return (

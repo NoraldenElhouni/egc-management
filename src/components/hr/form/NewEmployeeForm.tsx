@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Button from "../../ui/Button";
-import { userSchema, UserFormValues } from "../../../types/schema/users.shema";
+import { userSchema, UserFormValues } from "../../../types/schema/users.schema";
 import { useForm } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

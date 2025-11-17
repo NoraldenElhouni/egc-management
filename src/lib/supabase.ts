@@ -1467,28 +1467,34 @@ export type Database = {
       users: {
         Row: {
           created_at: string;
+          dob: string | null;
           email: string;
           first_name: string;
           id: string;
           last_name: string | null;
+          phone: string | null;
           role_id: string;
           updated_at: string | null;
         };
         Insert: {
           created_at?: string;
+          dob?: string | null;
           email: string;
           first_name: string;
           id?: string;
           last_name?: string | null;
+          phone?: string | null;
           role_id: string;
           updated_at?: string | null;
         };
         Update: {
           created_at?: string;
+          dob?: string | null;
           email?: string;
           first_name?: string;
           id?: string;
           last_name?: string | null;
+          phone?: string | null;
           role_id?: string;
           updated_at?: string | null;
         };

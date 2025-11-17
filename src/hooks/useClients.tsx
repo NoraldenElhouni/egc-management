@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Clients } from "../types/global.type";
-import { ClientFormValues } from "../types/schema/clients.shema";
+import { ClientFormValues } from "../types/schema/clients.schema";
 import { supabaseAdmin } from "../lib/adminSupabase";
 
 export function useClients() {

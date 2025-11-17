@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import {
   ClientFormValues,
   ClientSchema,
-} from "../../../types/schema/clients.shema";
+} from "../../../types/schema/clients.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "../../ui/Button";
 import { TextField } from "../../ui/inputs/TextField";

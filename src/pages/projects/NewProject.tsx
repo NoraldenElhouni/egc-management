@@ -1,7 +1,12 @@
 import React from "react";
+import NewProjectForm from "../../components/project/form/newProjectForm";
 
 const NewProjectPage = () => {
-  return <div>NewProjectPage</div>;
+  return (
+    <div className="p-4">
+      <NewProjectForm />
+    </div>
+  );
 };
 
 export default NewProjectPage;
