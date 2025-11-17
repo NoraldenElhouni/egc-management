@@ -11,6 +11,8 @@ import {
   List,
   ExternalLink,
   RefreshCcw,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import LoadingSpinner from "../ui/LoadingSpinner";
 
@@ -26,6 +28,7 @@ const Sidebar: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false); // mobile drawer
+  const [isCollapsed, setIsCollapsed] = useState(false); // desktop collapse
   const location = useLocation();
   const searchRef = useRef<number | null>(null);
 
@@ -126,8 +129,10 @@ const Sidebar: React.FC = () => {
       {/* Sidebar (desktop) and Drawer (mobile) */}
       <aside
         role="complementary"
-        className={`fixed inset-y-0 right-0 w-72 border-l shadow-sm z-50 transform transition-transform
-          ${isOpen ? "translate-x-0" : "translate-x-full"} sm:translate-x-0 sm:block`}
+        className={`fixed right-0 top-16 bottom-0 z-50 bg-white border-l shadow-sm transform transition-all
+          ${isOpen ? "translate-x-0" : "translate-x-full"} sm:translate-x-0 sm:block ${
+            isCollapsed ? "w-20" : "w-72"
+          }`}
         aria-label="الشريط الجانبي للمشاريع"
         dir="rtl"
       >
@@ -135,24 +140,35 @@ const Sidebar: React.FC = () => {
         <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}`}</style>
 
         <div className="h-full overflow-hidden bg-white p-4 flex flex-col gap-3">
-          {/* Logo / header */}
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-90">
-              <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold">
-                القائمة
+          {/* Header / title */}
+          <div className="relative flex items-center justify-between">
+            {!isCollapsed ? (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">المشاريع</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  قائمة المشاريع وإدارتها
+                </p>
               </div>
-            </Link>
+            ) : (
+              <div className="flex items-center justify-center w-full">
+                <div className="rounded-lg bg-slate-100 p-2" aria-hidden>
+                  المشاريع
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
-              <Link
-                to="/projects/new"
-                className="inline-flex items-center gap-1 text-xs py-1 px-3 rounded-lg bg-blue-50 hover:bg-blue-100"
-                aria-label="إضافة مشروع جديد"
-                title="إضافة مشروع"
-              >
-                <PlusCircle size={16} />
-                إضافة
-              </Link>
+              {!isCollapsed && (
+                <Link
+                  to="/projects/new"
+                  className="inline-flex items-center gap-1 text-xs py-1 px-3 rounded-lg bg-blue-50 hover:bg-blue-100"
+                  aria-label="إضافة مشروع جديد"
+                  title="إضافة مشروع"
+                >
+                  <PlusCircle size={16} />
+                  إضافة
+                </Link>
+              )}
 
               {/* close button for mobile inside panel */}
               <button
@@ -164,27 +180,42 @@ const Sidebar: React.FC = () => {
                 <X size={16} />
               </button>
             </div>
+
+            {/* Collapse Toggle Button */}
+            <button
+              onClick={() => setIsCollapsed((s) => !s)}
+              className={`absolute top-3 left-3 hover:bg-gray-100 rounded-full p-1 transition-all`}
+              title={isCollapsed ? "توسيع القائمة" : "طي القائمة"}
+            >
+              {isCollapsed ? (
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
           </div>
 
-          {/* Search */}
-          <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-2 py-2">
-            <Search size={16} />
-            <input
-              type="search"
-              aria-label="بحث عن مشروع"
-              placeholder="ابحث عن مشروع..."
-              value={query}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="bg-transparent outline-none text-sm w-full"
-            />
-          </div>
+          {/* Search (hide when collapsed) */}
+          {!isCollapsed && (
+            <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-2 py-2">
+              <Search size={16} />
+              <input
+                type="search"
+                aria-label="بحث عن مشروع"
+                placeholder="ابحث عن مشروع..."
+                value={query}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="bg-transparent outline-none text-sm w-full"
+              />
+            </div>
+          )}
 
-          {/* Section title */}
+          {/* Section title + refresh */}
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold flex items-center gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
               <Folder size={16} />
-              المشاريع
-            </h2>
+              {!isCollapsed ? "المشاريع" : ""}
+            </h3>
 
             <button
               onClick={fetchProjects}
@@ -195,12 +226,12 @@ const Sidebar: React.FC = () => {
               {loading ? (
                 <>
                   <LoadingSpinner size="16" />
-                  تحديث
+                  {!isCollapsed && "تحديث"}
                 </>
               ) : (
                 <>
                   <RefreshCcw size={14} />
-                  تحديث
+                  {!isCollapsed && "تحديث"}
                 </>
               )}
             </button>
@@ -247,12 +278,23 @@ const Sidebar: React.FC = () => {
                             className={`flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors
                               ${active ? "bg-slate-100 font-medium" : "hover:bg-slate-50"}`}
                             aria-current={active ? "page" : undefined}
+                            title={p.name}
                           >
-                            <span className="truncate">{p.serial_number}</span>
-                            <span className="truncate">{p.name}</span>
-                            <span className="text-slate-400">
-                              <ExternalLink size={14} />
+                            {!isCollapsed && (
+                              <span className="truncate">
+                                {p.serial_number}
+                              </span>
+                            )}
+                            <span
+                              className={`truncate ${isCollapsed ? "text-center flex-1" : ""}`}
+                            >
+                              {p.name}
                             </span>
+                            {!isCollapsed && (
+                              <span className="text-slate-400">
+                                <ExternalLink size={14} />
+                              </span>
+                            )}
                           </Link>
                         </li>
                       );
@@ -267,18 +309,18 @@ const Sidebar: React.FC = () => {
           <div className="mt-auto pt-3 border-t flex items-center justify-between gap-2">
             <Link
               to="/projects"
-              className="text-xs text-slate-600 hover:underline flex items-center gap-1"
+              className={`text-xs text-slate-600 hover:underline flex items-center gap-1 ${isCollapsed ? "justify-center w-full" : ""}`}
             >
               <List size={14} />
-              عرض جميع المشاريع
+              {!isCollapsed && "عرض جميع المشاريع"}
             </Link>
 
             <Link
               to="/projects/new"
-              className="text-xs bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 inline-flex items-center gap-1"
+              className={`text-xs bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 inline-flex items-center gap-1 ${isCollapsed ? "justify-center w-full" : ""}`}
             >
               <PlusCircle size={14} />
-              جديد
+              {!isCollapsed && "جديد"}
             </Link>
           </div>
         </div>

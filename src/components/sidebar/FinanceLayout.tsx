@@ -6,67 +6,59 @@ import {
   Vault,
   CreditCard,
   Building2,
-  TrendingUp,
-  Receipt,
-  PieChart,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 const FinanceLayout = () => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user, loading } = useAuth();
 
   const menuItems = [
-    {
-      title: "لوحة التحكم المالية",
-      icon: PieChart,
-      path: "/finance",
-      description: "نظرة عامة على المالية",
-    },
     {
       title: "المحاسبة",
       icon: Calculator,
       path: "/finance/accounting",
       description: "إدارة الحسابات",
+      role: ["Admin", "Finance"],
     },
     {
       title: "مسك الدفاتر",
       icon: BookOpen,
       path: "/finance/bookkeeping",
       description: "تسجيل القيود المالية",
+      role: ["Admin", "Finance", "Bookkeeper"],
     },
     {
       title: "الخزينة",
       icon: Vault,
       path: "/finance/treasury",
       description: "إدارة الخزينة",
+      role: ["Admin", "Finance", "Treasurer"],
     },
     {
       title: "المدفوعات",
       icon: CreditCard,
       path: "/finance/payments",
       description: "متابعة المدفوعات",
+      role: ["Admin", "Finance", "Bookkeeper"],
     },
     {
       title: "الشركة",
       icon: Building2,
       path: "/finance/company",
       description: "بيانات الشركة المالية",
-    },
-    {
-      title: "الإيرادات والمصروفات",
-      icon: TrendingUp,
-      path: "/finance/revenue-expenses",
-      description: "تحليل الإيرادات والمصروفات",
-    },
-    {
-      title: "الفواتير",
-      icon: Receipt,
-      path: "/finance/invoices",
-      description: "إدارة الفواتير",
+      role: ["Admin", "Finance", "Bookkeeper"],
     },
   ];
+  const visibleItems = menuItems.filter((item) => {
+    const roles = (item as { role?: string[] }).role;
+    if (!roles || loading) return true;
+    if (!user || !user.role) return false;
+    return roles.includes(user.role);
+  });
 
   const isActivePath = (path: string) => {
     // Exact match for the path
@@ -125,7 +117,7 @@ const FinanceLayout = () => {
         {/* Navigation - Scrollable */}
         <nav className="flex-1 overflow-y-auto p-4 scrollbar-hide">
           <ul className="space-y-1">
-            {menuItems.map((item) => {
+            {visibleItems.map((item) => {
               const Icon = item.icon;
               const isActive = isActivePath(item.path);
 

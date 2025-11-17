@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../../hooks/useAuth";
 import {
   Users,
   UserPlus,
@@ -33,6 +34,14 @@ const CRMLayout = () => {
       description: "جدول المواعيد",
     },
   ];
+
+  const { user, loading } = useAuth();
+  const visibleItems = menuItems.filter((item) => {
+    const roles = (item as { role?: string[] }).role;
+    if (!roles || loading) return true;
+    if (!user || !user.role) return false;
+    return roles.includes(user.role);
+  });
 
   const isActivePath = (path: string) => {
     // Exact match for the path
@@ -102,7 +111,7 @@ const CRMLayout = () => {
         {/* Navigation - Scrollable */}
         <nav className="flex-1 overflow-y-auto p-4 scrollbar-hide">
           <ul className="space-y-1">
-            {menuItems.map((item) => {
+            {visibleItems.map((item) => {
               const Icon = item.icon;
               const isActive = isActivePath(item.path);
 
