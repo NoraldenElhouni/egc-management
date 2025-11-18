@@ -1,5 +1,47 @@
-const ProjectBookDetails = () => {
-  return <div>ProjectBookDetails</div>;
+import { useBookProject } from "../../../../hooks/projects/useBookProjects";
+import Tabs from "../../../ui/Tabs";
+import BookProjectExpenseTab from "../tabs/BookProjectExpenseTab";
+import BookProjectIncomeTab from "../tabs/BookProjectIncomeTab";
+
+const ProjectBookDetails = ({ id }: { id: string }) => {
+  const { project, loading, error } = useBookProject(id);
+
+  const tabs = [
+    {
+      id: "expenses",
+      label: "المصروفات",
+      content: <BookProjectExpenseTab project={project} />,
+    },
+    {
+      id: "income",
+      label: "الدخل",
+      content: <BookProjectIncomeTab project={project} />,
+    },
+    {
+      id: "returned-income",
+      label: "مواد المرجعة",
+      content: <div>مواد المرجعة</div>,
+    },
+    {
+      id: "works",
+      label: "الاعمال",
+      content: <div>الاعمال</div>,
+    },
+  ];
+
+  if (loading) {
+    return <div>جاري التحميل...</div>;
+  }
+  if (error) {
+    return <div>خطأ في تحميل المشروع: {error.message}</div>;
+  }
+  return (
+    <div>
+      <div>
+        <Tabs tabs={tabs} defaultTab="expenses" />
+      </div>
+    </div>
+  );
 };
 
 export default ProjectBookDetails;

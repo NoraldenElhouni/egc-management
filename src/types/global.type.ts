@@ -1,5 +1,7 @@
+// types/database.ts
 import { Tables } from "../lib/supabase";
 
+// Core entity types
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
 export type Contractors = Tables<"contractors">;
@@ -16,3 +18,27 @@ export type ProjectIncome = Tables<"project_incomes">;
 export type Services = Tables<"services">;
 export type ProjectExpenses = Tables<"project_expenses">;
 export type Account = Tables<"accounts">;
+export type Users = Tables<"users">;
+export type Roles = Tables<"roles">;
+export type Permissions = Tables<"permissions">;
+export type Departments = Tables<"departments">;
+export type Offers = Tables<"offers">;
+export type OfferItems = Tables<"offer_items">;
+export type BidItems = Tables<"bid_items">;
+export type Transactions = Tables<"transactions">;
+export type TransactionCategories = Tables<"transaction_categories">;
+export type Company = Tables<"company">;
+export type AuditLog = Tables<"audit_log">;
+
+// Additional types for tables not in your original export
+export type ContractorSpecializations = Tables<"contractor_specializations">;
+export type EmployeeHistory = Tables<"employee_history">;
+export type ExpensePayments = Tables<"expense_payments">;
+export type ProjectAssignments = Tables<"project_assignments">;
+export type ProjectRoles = Tables<"project_roles">;
+export type ProjectSpecializations = Tables<"project_specializations">;
+export type RolePermissions = Tables<"role_permissions">;
+export type SpecializationPermissions = Tables<"specialization_permissions">;
+export type UserPermissions = Tables<"user_permissions">;
+export type UserRoles = Tables<"user_roles">;
+export type UserSpecializations = Tables<"user_specializations">;
