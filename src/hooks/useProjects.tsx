@@ -84,3 +84,33 @@ export function useProjects() {
 
   return { projects, loading, error, addProject, refresh };
 }
+
+export function useProject(id: string) {
+  const [project, setProject] = useState<Projects | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchProject() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error("error fetching employyes", error);
+        setError(error);
+      } else {
+        setProject(data);
+      }
+
+      setLoading(false);
+    }
+
+    fetchProject();
+  }, [id]);
+
+  return { project, loading, error };
+}

@@ -27,7 +27,7 @@ import EmployeeDetailsPage from "../pages/hr/EmployeeDetailsPage";
 import ContractorPage from "../pages/supply-chain/ContractorPage";
 import VendorsPage from "../pages/supply-chain/VendorsPage";
 import AccountingPage from "../pages/finance/AccountingPage";
-import BookkeepingPage from "../pages/finance/BookkeepingPage";
+import BookkeepingPage from "../pages/finance/bookkeeper/BookkeepingPage";
 import TreasuryPage from "../pages/finance/TreasuryPage";
 import PaymentsPage from "../pages/finance/PaymentsPage";
 import CompanyPage from "../pages/finance/CompanyPage";
@@ -44,6 +44,7 @@ import NewVindorPage from "../pages/supply-chain/NewVindorPage";
 import ClientDetailPage from "../pages/crm/ClientDetailPage";
 import NewClientPage from "../pages/crm/NewClientPage";
 import BookkeeperLayout from "./sidebar/BookkeeperLayout";
+import ProjectBookDetailsPage from "../pages/finance/bookkeeper/ProjectBookDetailsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -186,7 +187,7 @@ const AppRouter = () => {
             <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
             <Route
               path="/finance/bookkeeping/projects/:id"
-              element={<ProjectDetail />}
+              element={<ProjectBookDetailsPage />}
             />
           </Route>
 

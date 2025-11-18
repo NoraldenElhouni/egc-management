@@ -11,7 +11,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { formatCurrency } from "../../utils/helpper";
-import { Project } from "../../types/global.type";
+import { Projects } from "../../types/global.type";
 
 const mockExpenses = [
   {
@@ -112,7 +112,7 @@ const totalPaid = mockExpenses.reduce((sum, exp) => sum + exp.amount_paid, 0);
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>(); // id may be undefined typewise
 
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<Projects | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

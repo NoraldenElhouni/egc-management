@@ -38,8 +38,16 @@ const BookkeeperLayout: React.FC = () => {
     // collapse state could be persisted here later
   }, [isCollapsed]);
 
-  const isActive = (id: number | string) =>
-    location.pathname === `/projects/${id}`;
+  const isActive = (id: string) => {
+    const expectedPaths = [
+      `/finance/bookkeeping/projects/${id}`,
+      `/projects/${id}`,
+    ];
+
+    return expectedPaths.some(
+      (p) => location.pathname === p || location.pathname.startsWith(p + "/")
+    );
+  };
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50">
