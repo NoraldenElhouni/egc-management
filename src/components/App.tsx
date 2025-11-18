@@ -36,7 +36,6 @@ import SupplyChainLayout from "./sidebar/SupplyChainLayout";
 import ProjectsLayout from "./sidebar/ProjectsLayout";
 import FinanceLayout from "./sidebar/FinanceLayout";
 import CRMLayout from "./sidebar/CRMLayout";
-import Sidebar from "./sidebar/sidebar";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 import ContractorDetailPage from "../pages/supply-chain/ContractorDetailPage";
 import VindorDetailPage from "../pages/supply-chain/VindorDetailPage";
@@ -44,6 +43,7 @@ import NewContractorPage from "../pages/supply-chain/NewContractorPage";
 import NewVindorPage from "../pages/supply-chain/NewVindorPage";
 import ClientDetailPage from "../pages/crm/ClientDetailPage";
 import NewClientPage from "../pages/crm/NewClientPage";
+import BookkeeperLayout from "./sidebar/BookkeeperLayout";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -182,8 +182,12 @@ const AppRouter = () => {
             <Route path="/finance/payments" element={<PaymentsPage />} />
             <Route path="/finance/company" element={<CompanyPage />} />
           </Route>
-          <Route element={<Sidebar />}>
+          <Route element={<BookkeeperLayout />}>
             <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
+            <Route
+              path="/finance/bookkeeping/projects/:id"
+              element={<ProjectDetail />}
+            />
           </Route>
 
           {/* Profile & Settings */}

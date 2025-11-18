@@ -1,4 +1,4 @@
-import { Tables } from "../../../../Fields/types/supabase";
+import { Tables } from "../lib/supabase";
 
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
@@ -16,19 +16,3 @@ export type ProjectIncome = Tables<"project_incomes">;
 export type Services = Tables<"services">;
 export type ProjectExpenses = Tables<"project_expenses">;
 export type Account = Tables<"accounts">;
-
-export type Project = {
-  address: string | null;
-  client_id: string;
-  code: string;
-  created_at: string;
-  description: string | null;
-  id: string;
-  latitude: number | null;
-  longitude: number | null;
-  name: string;
-  percentage: number | null;
-  percentage_taken: number;
-  serial_number: number | null;
-  status: "active" | "paused" | "completed" | "cancelled";
-};

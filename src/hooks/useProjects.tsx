@@ -65,5 +65,22 @@ export function useProjects() {
     return data; // return the new project
   };
 
-  return { projects, loading, error, addProject };
+  const refresh = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("projects").select("*");
+
+    if (error) {
+      console.error("error refreshing projects", error);
+      setError(error);
+      setLoading(false);
+      return null;
+    }
+
+    setProjects(data ?? []);
+    setError(null);
+    setLoading(false);
+    return data;
+  };
+
+  return { projects, loading, error, addProject, refresh };
 }
