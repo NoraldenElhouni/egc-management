@@ -839,7 +839,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_type"];
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
-          status: string | null;
+          status: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at: string;
         };
@@ -857,7 +857,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_type"];
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
-          status?: string | null;
+          status?: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at?: string;
         };
@@ -875,7 +875,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_type"];
           phase?: Database["public"]["Enums"]["phase_type"];
           project_id?: string;
-          status?: string | null;
+          status?: Database["public"]["Enums"]["expense_status"] | null;
           total_amount?: number;
           updated_at?: string;
         };
@@ -1525,6 +1525,12 @@ export type Database = {
       approval_type: "technical" | "finance";
       contractor_mode: "open" | "direct";
       currency_type: "LYD" | "USD" | "EUR";
+      expense_status:
+        | "pending"
+        | "partially_paid"
+        | "paid"
+        | "overdue"
+        | "cancelled";
       expense_type: "material" | "labor";
       fund_type: "client" | "internal" | "sale" | "refund" | "other";
       offer_approvals_type: "pending" | "approved" | "rejected";
@@ -1680,6 +1686,13 @@ export const Constants = {
       approval_type: ["technical", "finance"],
       contractor_mode: ["open", "direct"],
       currency_type: ["LYD", "USD", "EUR"],
+      expense_status: [
+        "pending",
+        "partially_paid",
+        "paid",
+        "overdue",
+        "cancelled",
+      ],
       expense_type: ["material", "labor"],
       fund_type: ["client", "internal", "sale", "refund", "other"],
       offer_approvals_type: ["pending", "approved", "rejected"],

@@ -122,7 +122,7 @@ export default function GenericTable<TData extends object>({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto border rounded">
+      <div className="w-full overflow-x-auto border rounded">
         <table className="min-w-full border-collapse table-auto">
           <thead className="bg-gray-50">
             {table.getHeaderGroups().map((headerGroup) => (

@@ -1,4 +1,5 @@
 import { ProjectWithDetailsForBook } from "../../../../types/projects.type";
+import { ProjectsIncomeColumns } from "../../../tables/columns/ProjectIncomeColumns";
 import GenericTable from "../../../tables/table";
 
 interface BookProjectIncomeTabProps {
@@ -11,7 +12,7 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
       <div></div>
       <GenericTable
         data={project?.project_incomes || []}
-        columns={[{ header: "المعرف", accessorKey: "id" }]}
+        columns={ProjectsIncomeColumns}
       />
     </div>
   );

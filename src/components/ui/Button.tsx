@@ -15,7 +15,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     | "info"
     | "ghost"
     | "muted";
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "xs";
   className?: string;
   disabled?: boolean;
   loading?: boolean;
@@ -76,6 +76,7 @@ const Button: React.FC<ButtonProps> = ({
 
   const sizes: Record<string, string> = {
     sm: "px-3 py-1.5 text-sm",
+    xs: "px-2 py-1 text-xs",
     md: "px-4 py-2 text-base",
     lg: "px-6 py-3 text-lg",
     xl: "px-8 py-4 text-xl",
