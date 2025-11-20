@@ -1,354 +1,585 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Users, DollarSign, MapPin, Activity } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import ProjectHeader from "../../components/project/ProjectHeader";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Code,
-  MapPin,
-  TrendingDown,
-} from "lucide-react";
-import { formatCurrency } from "../../utils/helpper";
-import { Projects } from "../../types/global.type";
+import { useParams } from "react-router-dom";
+import { translateProjectStatus } from "../../utils/translations";
 
-const mockExpenses = [
-  {
-    id: "1",
-    project_id: "1",
-    description: "Concrete foundation materials",
-    total_amount: 15000,
-    payment_method: "bank_transfer",
-    expense_date: "2025-11-01",
-    phase: "foundation",
-    expense_type: "materials",
-    status: "paid",
-    amount_paid: 15000,
-    created_by: "user-1",
-  },
-  {
-    id: "2",
-    project_id: "1",
-    description: "Labour costs - week 1",
-    total_amount: 8500,
-    payment_method: "cash",
-    expense_date: "2025-11-03",
-    phase: "foundation",
-    expense_type: "labour",
-    status: "pending",
-    amount_paid: 0,
-    created_by: "user-2",
-  },
-  {
-    id: "3",
-    project_id: "1",
-    description: "Equipment rental - excavator",
-    total_amount: 5200,
-    payment_method: "bank_transfer",
-    expense_date: "2025-11-05",
-    phase: "site_preparation",
-    expense_type: "equipment",
-    status: "paid",
-    amount_paid: 5200,
-    created_by: "user-1",
-  },
-  {
-    id: "4",
-    project_id: "1",
-    description: "Steel reinforcement bars",
-    total_amount: 12300,
-    payment_method: "bank_transfer",
-    expense_date: "2025-11-06",
-    phase: "foundation",
-    expense_type: "materials",
-    status: "paid",
-    amount_paid: 12300,
-    created_by: "user-3",
-  },
-  {
-    id: "5",
-    project_id: "1",
-    description: "Site safety equipment",
-    total_amount: 3400,
-    payment_method: "cash",
-    expense_date: "2025-11-08",
-    phase: "site_preparation",
-    expense_type: "safety",
-    status: "pending",
-    amount_paid: 0,
-    created_by: "user-1",
-  },
-];
+// Type definitions
+interface Client {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string;
+  phone_number: string;
+}
 
-const statusColors = {
-  paid: "bg-green-100 text-green-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  partially_paid: "bg-blue-100 text-blue-800",
-  cancelled: "bg-red-100 text-red-800",
-};
+interface User {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string;
+}
 
-const expenseTypeLabels = {
-  materials: "Materials",
-  labour: "Labour",
-  equipment: "Equipment",
-  safety: "Safety",
-  services: "Services",
-  other: "Other",
-};
+interface ProjectRole {
+  name: string;
+}
 
-const phaseLabels = {
-  site_preparation: "Site Preparation",
-  foundation: "Foundation",
-  construction: "Construction",
-  finishing: "Finishing",
-};
+interface ProjectAssignment {
+  id: string;
+  project_id: string;
+  user_id: string;
+  project_role_id: string;
+  assigned_at: string;
+  user?: User;
+  project_role?: ProjectRole;
+}
 
-const totalAmount = mockExpenses.reduce(
-  (sum, exp) => sum + exp.total_amount,
-  0
-);
-const totalPaid = mockExpenses.reduce((sum, exp) => sum + exp.amount_paid, 0);
-export default function ProjectDetail() {
-  const { id } = useParams<{ id: string }>(); // id may be undefined typewise
+interface Contractor {
+  first_name: string;
+  last_name: string | null;
+}
 
-  const [project, setProject] = useState<Projects | null>(null);
-  const [loading, setLoading] = useState(true);
+interface Contract {
+  id: string;
+  status: string;
+  amount: number;
+  start_date: string | null;
+  end_date: string | null;
+  contractor?: Contractor;
+}
+
+interface Account {
+  balance: number;
+  held: number;
+  currency: string;
+  type: string;
+}
+
+interface FinancialData {
+  totalExpenses: number;
+  totalPaid: number;
+  totalIncome: number;
+  balance: number;
+  held: number;
+  available: number;
+  pendingPayments: number;
+}
+
+interface ProjectStats {
+  teamSize: number;
+  activeContracts: number;
+  completionPercentage: number;
+}
+
+interface Project {
+  id: string;
+  client_id: string;
+  code: string;
+  name: string;
+  address: string | null;
+  status: string;
+  created_at: string;
+  description: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  percentage: number | null;
+  percentage_taken: number;
+  serial_number: number | null;
+  client: Client;
+  teamMembers: ProjectAssignment[];
+  contracts: Contract[];
+  accounts: Account[];
+  financial: FinancialData;
+  stats: ProjectStats;
+}
+
+interface UseProjectReturn {
+  project: Project | null;
+  loading: boolean;
+  error: string | null;
+}
+
+// Custom hook to fetch project data
+const useProject = (projectId: string | null): UseProjectReturn => {
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) {
-      setError("Project ID is missing.");
-      setLoading(false);
-      return;
-    }
+    const fetchProjectDetails = async () => {
+      if (!projectId) {
+        setLoading(false);
+        return;
+      }
 
-    setLoading(true);
-    setError(null);
-
-    const fetchProject = async () => {
       try {
-        const { data, error } = await supabase
+        setLoading(true);
+        setError(null);
+
+        // Fetch main project data with client info
+        const { data: projectData, error: projectError } = await supabase
           .from("projects")
-          .select("*")
-          .eq("id", id)
+          .select(
+            `
+            *,
+            client:clients(
+              id,
+              first_name,
+              last_name,
+              email,
+              phone_number
+            )
+          `
+          )
+          .eq("id", projectId)
           .single();
-        if (data) {
-          setProject(data);
-        } else {
-          console.error("Project not found for id:", id, error);
-          setError(error ? error.message : "Project not found.");
-        }
-      } catch (err: unknown) {
+
+        if (projectError) throw projectError;
+
+        // Fetch project assignments (team members)
+        const { data: assignments, error: assignmentsError } = await supabase
+          .from("project_assignments")
+          .select(
+            `
+            *,
+            user:user_id(
+              id,
+              first_name,
+              last_name,
+              email
+            ),
+            project_role:project_roles(
+              name
+            )
+          `
+          )
+          .eq("project_id", projectId);
+
+        if (assignmentsError) throw assignmentsError;
+
+        // Fetch financial data - expenses
+        const { data: expenses, error: expensesError } = await supabase
+          .from("project_expenses")
+          .select("total_amount, amount_paid, status")
+          .eq("project_id", projectId);
+
+        if (expensesError) throw expensesError;
+
+        // Fetch financial data - incomes
+        const { data: incomes, error: incomesError } = await supabase
+          .from("project_incomes")
+          .select("amount")
+          .eq("project_id", projectId);
+
+        if (incomesError) throw incomesError;
+
+        // Fetch contracts
+        const { data: contracts, error: contractsError } = await supabase
+          .from("contracts")
+          .select(
+            `
+            id,
+            status,
+            amount,
+            start_date,
+            end_date,
+            contractor:assigned_to(
+              first_name,
+              last_name
+            )
+          `
+          )
+          .eq("project_id", projectId);
+
+        if (contractsError) throw contractsError;
+
+        // Fetch accounts for this project
+        const { data: accounts, error: accountsError } = await supabase
+          .from("accounts")
+          .select("balance, held, currency, type")
+          .eq("owner_type", "project")
+          .eq("owner_id", projectId);
+
+        if (accountsError) throw accountsError;
+
+        // Calculate financial summaries
+        const totalExpenses =
+          expenses?.reduce(
+            (sum, exp) => sum + parseFloat(String(exp.total_amount || 0)),
+            0
+          ) || 0;
+        const totalPaid =
+          expenses?.reduce(
+            (sum, exp) => sum + parseFloat(String(exp.amount_paid || 0)),
+            0
+          ) || 0;
+        const totalIncome =
+          incomes?.reduce(
+            (sum, inc) => sum + parseFloat(String(inc.amount || 0)),
+            0
+          ) || 0;
+        const totalBalance =
+          accounts?.reduce(
+            (sum, acc) => sum + parseFloat(String(acc.balance || 0)),
+            0
+          ) || 0;
+        const totalHeld =
+          accounts?.reduce(
+            (sum, acc) => sum + parseFloat(String(acc.held || 0)),
+            0
+          ) || 0;
+
+        // Compile all data
+        const compiledProject: Project = {
+          ...projectData,
+          teamMembers: assignments || [],
+          contracts: contracts || [],
+          accounts: accounts || [],
+          financial: {
+            totalExpenses,
+            totalPaid,
+            totalIncome,
+            balance: totalBalance,
+            held: totalHeld,
+            available: totalBalance - totalHeld,
+            pendingPayments: totalExpenses - totalPaid,
+          },
+          stats: {
+            teamSize: assignments?.length || 0,
+            activeContracts:
+              contracts?.filter((c) => c.status === "active").length || 0,
+            completionPercentage: projectData.percentage || 0,
+          },
+        };
+
+        setProject(compiledProject);
+      } catch (err) {
         console.error("Error fetching project:", err);
-        setError(err instanceof Error ? err.message : String(err));
+        setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProject();
-  }, [id]);
+    fetchProjectDetails();
+  }, [projectId]);
 
-  if (loading) return <div>جاري تحميل المشروع…</div>;
-  if (error)
+  return { project, loading, error };
+};
+
+// Project Details Component
+const ProjectDetailsPage = () => {
+  const { id } = useParams<{ id: string }>();
+  if (!id) {
     return (
-      <div>
-        <p className="text-error">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-gray-600">No project id found</p>
       </div>
     );
-  if (!project) return <div>المشروع غير موجود</div>;
+  }
+  const { project, loading, error } = useProject(id);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading project details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <h3 className="text-red-800 font-semibold mb-2">
+            Error Loading Project
+          </h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-gray-600">No project found</p>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("en-LY", {
+      style: "currency",
+      currency: "LYD",
+    }).format(amount || 0);
+  };
 
   return (
-    <div className="p-6">
-      <ProjectHeader project={project} />
-      <div className="mb-8">
-        <div className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Project Code */}
-            <div className="flex items-start gap-3">
-              <Code className="w-5 h-5 text-slate-600 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Project Code
-                </p>
-                <p className="text-base font-semibold text-foreground">
-                  {project.code}
-                </p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {project.name}
+                </h1>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    project.status === "active"
+                      ? "bg-green-100 text-green-800"
+                      : project.status === "completed"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {translateProjectStatus(project.status)}
+                </span>
+              </div>
+              <p className="text-gray-600 mb-2">الرمز: {project.code}</p>
+              {project.description && (
+                <p className="text-gray-700 mt-2">{project.description}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500 mb-1">تاريخ الإنشاء</div>
+              <div className="text-gray-900">
+                {new Date(project.created_at).toLocaleDateString()}
               </div>
             </div>
+          </div>
 
-            {/* Location */}
-            <div className="flex items-start gap-3">
-              <MapPin className="w-5 h-5 text-slate-600 mt-1 flex-shrink-0" />
+          {project.address && (
+            <div className="flex items-center gap-2 mt-4 text-gray-600">
+              <MapPin className="w-4 h-4" />
+              <span>{project.address}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Location
-                </p>
-                <p className="text-base font-semibold text-foreground">
-                  {project.address}
+                <p className="text-sm text-gray-600 mb-1">أعضاء الفريق</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {project.stats.teamSize}
                 </p>
               </div>
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
+          </div>
 
-            {/* Created Date */}
-            <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-slate-600 mt-1 flex-shrink-0" />
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Created
+                <p className="text-sm text-gray-600 mb-1">الرصيد الكلي</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {formatCurrency(project.financial.balance)}
                 </p>
-                <p className="text-base font-semibold text-foreground">
-                  {new Date(project.created_at).toLocaleDateString()}
+              </div>
+              <div className="bg-green-100 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">العقود النشطة</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {project.stats.activeContracts}
                 </p>
+              </div>
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <Activity className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div>actions</div>
-      <div className="container mx-auto py-8 px-4">
-        {/* Project Information div */}
 
-        {/* Expenses Section */}
-        <div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border border-border">
-              <div className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
-                      Total Expenses
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {formatCurrency(totalAmount)}
-                    </p>
-                  </div>
-                  <TrendingDown className="w-10 h-10 text-red-500 opacity-50" />
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Client Information */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              معلومات العميل
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-600">الاسم</p>
+                <p className="text-gray-900 font-medium">
+                  {project.client.first_name} {project.client.last_name}
+                </p>
               </div>
-            </div>
-
-            <div className="border border-border">
-              <div className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
-                      Amount Paid
-                    </p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {formatCurrency(totalPaid)}
-                    </p>
-                  </div>
-                  <CheckCircle2 className="w-10 h-10 text-green-500 opacity-50" />
-                </div>
+              <div>
+                <p className="text-sm text-gray-600">البريد الإلكتروني</p>
+                <p className="text-gray-900">{project.client.email}</p>
               </div>
-            </div>
-
-            <div className="border border-border">
-              <div className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
-                      Pending Amount
-                    </p>
-                    <p className="text-2xl font-bold text-yellow-600">
-                      {formatCurrency(totalAmount - totalPaid)}
-                    </p>
-                  </div>
-                  <Clock className="w-10 h-10 text-yellow-500 opacity-50" />
-                </div>
+              <div>
+                <p className="text-sm text-gray-600">الهاتف</p>
+                <p className="text-gray-900">{project.client.phone_number}</p>
               </div>
             </div>
           </div>
-          <div>
+
+          {/* Financial Overview */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              نظرة عامة مالية
+            </h2>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">إجمالي الدخل</span>
+                <span className="font-semibold text-green-600">
+                  {formatCurrency(project.financial.totalIncome)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">إجمالي المصاريف</span>
+                <span className="font-semibold text-red-600">
+                  {formatCurrency(project.financial.totalExpenses)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">المبلغ المدفوع</span>
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(project.financial.totalPaid)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t">
+                <span className="text-gray-600">الرصيد المتاح</span>
+                <span className="font-semibold text-blue-600">
+                  {formatCurrency(project.financial.available)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">المبلغ المحتجز</span>
+                <span className="font-semibold text-orange-600">
+                  {formatCurrency(project.financial.held)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">المدفوعات المعلقة</span>
+                <span className="font-semibold text-yellow-600">
+                  {formatCurrency(project.financial.pendingPayments)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Team Members */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            أعضاء الفريق
+          </h2>
+          {project.teamMembers.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-100 border-b border-border">
-                  <tr>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Description
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      الاسم
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Type
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      البريد الإلكتروني
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Phase
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      الدور في المشروع
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Paid
-                    </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Method
-                    </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">
-                      Status
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      تاريخ التعيين
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mockExpenses.map((expense, idx) => (
-                    <tr
-                      key={expense.id}
-                      className={`border-b border-border hover:bg-slate-50 transition-colors ${
-                        idx % 2 === 0 ? "bg-white" : "bg-slate-50"
-                      }`}
-                    >
-                      <td className="px-6 py-4 text-sm text-foreground font-medium">
-                        {expense.description}
+                  {project.teamMembers.map((member) => (
+                    <tr key={member.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        {member.user?.first_name} {member.user?.last_name}
                       </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div>
-                          {expenseTypeLabels[
-                            expense.expense_type as keyof typeof expenseTypeLabels
-                          ] || expense.expense_type}
-                        </div>
+                      <td className="py-3 px-4 text-gray-600">
+                        {member.user?.email}
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {phaseLabels[
-                          expense.phase as keyof typeof phaseLabels
-                        ] || expense.phase}
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                          {member.project_role?.name || "N/A"}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-foreground">
-                        {formatCurrency(expense.total_amount)}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-green-600">
-                        {formatCurrency(expense.amount_paid)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground capitalize">
-                        {expense.payment_method.replace("_", " ")}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {new Date(expense.expense_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div
-                          className={
-                            statusColors[
-                              expense.status as keyof typeof statusColors
-                            ] || "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {expense.status.charAt(0).toUpperCase() +
-                            expense.status.slice(1)}
-                        </div>
+                      <td className="py-3 px-4 text-gray-600">
+                        {new Date(member.assigned_at).toLocaleDateString()}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-          {/* <ProjectExpensesList expenses={mockExpenses} /> */}
+          ) : (
+            <p className="text-gray-500">لا يوجد أعضاء فريق معينون بعد</p>
+          )}
+        </div>
+
+        {/* Active Contracts */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            العقود النشطة
+          </h2>
+          {project.contracts.length > 0 ? (
+            <div className="space-y-4">
+              {project.contracts.map((contract) => (
+                <div
+                  key={contract.id}
+                  className="border rounded-lg p-4 hover:bg-gray-50"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {contract.contractor?.first_name}{" "}
+                        {contract.contractor?.last_name}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {contract.start_date &&
+                          `Start: ${new Date(contract.start_date).toLocaleDateString()}`}
+                        {contract.end_date &&
+                          ` - End: ${new Date(contract.end_date).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">
+                        {formatCurrency(contract.amount)}
+                      </p>
+                      <span
+                        className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium ${
+                          contract.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : contract.status === "completed"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {contract.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500">لا توجد عقود متاحة</p>
+          )}
         </div>
       </div>
-      <div className="mt-4"></div>
     </div>
   );
-}
+};
+
+export default ProjectDetailsPage;

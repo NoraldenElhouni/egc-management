@@ -1,9 +1,62 @@
+import {
+  BookOpen,
+  Building2,
+  Calculator,
+  CreditCard,
+  Vault,
+} from "lucide-react";
+import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
+import { useAuth } from "../../hooks/useAuth";
+
 const FinancePage = () => {
+  const { user, loading } = useAuth();
+
+  const menuItems: MenuItem[] = [
+    {
+      label: "المحاسبة",
+      icon: Calculator,
+      path: "/finance/accounting",
+      description: "إدارة الحسابات",
+      role: ["Admin", "Finance"],
+    },
+    {
+      label: "مسك الدفاتر",
+      icon: BookOpen,
+      path: "/finance/bookkeeping",
+      description: "تسجيل القيود المالية",
+      role: ["Admin", "Finance", "Bookkeeper"],
+    },
+    {
+      label: "الخزينة",
+      icon: Vault,
+      path: "/finance/treasury",
+      description: "إدارة الخزينة",
+      role: ["Admin", "Finance", "Treasurer"],
+    },
+    {
+      label: "المدفوعات",
+      icon: CreditCard,
+      path: "/finance/payments",
+      description: "متابعة المدفوعات",
+      role: ["Admin", "Finance", "Bookkeeper"],
+    },
+    {
+      label: "الشركة",
+      icon: Building2,
+      path: "/finance/company",
+      description: "بيانات الشركة المالية",
+      role: ["Admin", "Finance", "Bookkeeper"],
+    },
+  ];
+
   return (
-    <div className="bg-background  text-foreground">
-      <header className="flex items-center justify-between gap-4 mb-6"></header>
-      <main></main>
-    </div>
+    <MenuGrid
+      title="المالية"
+      items={menuItems}
+      userRole={user?.role}
+      loading={loading}
+      columns={{ base: 1, sm: 2, md: 3 }}
+    />
   );
 };
 

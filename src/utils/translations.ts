@@ -58,3 +58,14 @@ export const translateExpenseStatus = (
 
   return translations[status] || status;
 };
+export const translateProjectStatus = (status: string): string => {
+  const statusTranslations: Record<string, string> = {
+    active: "نشط",
+    completed: "مكتمل",
+    pending: "قيد الانتظار",
+    on_hold: "متوقف مؤقتاً",
+    cancelled: "ملغي",
+  };
+
+  return statusTranslations[status] || status;
+};
