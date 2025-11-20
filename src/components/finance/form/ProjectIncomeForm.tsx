@@ -1,0 +1,147 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  ProjectIncomeFormValues,
+  ProjectIncomeSchema,
+} from "../../../types/schema/ProjectBook.schema";
+import { TextField } from "../../ui/inputs/TextField";
+import { SelectField } from "../../ui/inputs/SelectField";
+import { NumberField } from "../../ui/inputs/NumberField";
+import Button from "../../ui/Button";
+import { DateField } from "../../ui/inputs/DateField";
+import { useBookProject } from "../../../hooks/projects/useBookProjects";
+
+interface ProjectIncomeFormProps {
+  projectId: string;
+}
+
+const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
+  const [success, setSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { addIncome } = useBookProject(projectId);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm({
+    resolver: zodResolver(ProjectIncomeSchema),
+    defaultValues: {
+      project_id: projectId,
+      income_date: new Date().toISOString().split("T")[0],
+    },
+  });
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (submitError) {
+      const timer = setTimeout(() => setSubmitError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [submitError]);
+
+  const onSubmit = async (data: ProjectIncomeFormValues) => {
+    try {
+      setSubmitError(null);
+      const { error } = await addIncome(data);
+
+      if (error) {
+        setSubmitError("حدث خطأ أثناء إضافة الدخل");
+        return;
+      }
+
+      setSuccess("تم إضافة الدخل بنجاح!");
+      reset({ project_id: projectId });
+    } catch (error) {
+      console.error("Submit error:", error);
+      setSubmitError("حدث خطأ أثناء إضافة الدخل");
+    }
+  };
+
+  return (
+    <div className="p-2 text-sm">
+      {" "}
+      {success && (
+        <div className="mb-3 p-2 rounded text-xs bg-success/10 text-success">
+          {success}
+        </div>
+      )}
+      {submitError && (
+        <div className="mb-3 p-2 rounded text-xs bg-error/10 text-error">
+          {submitError}
+        </div>
+      )}
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {" "}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+          <TextField
+            id="serial_number"
+            label="رقم التسلسلي"
+            register={register("serial_number")}
+            error={errors.serial_number}
+          />
+
+          <SelectField
+            id="fund"
+            label="نوع المصروف"
+            register={register("fund")}
+            error={errors.fund}
+            options={[
+              { value: "sale", label: "مبيعات" },
+              { value: "client", label: "استثمار" },
+              { value: "internal", label: "داخلي" },
+              { value: "refund", label: "استرداد" },
+              { value: "other", label: "أخرى" },
+            ]}
+          />
+
+          <NumberField
+            id="amount"
+            label="القيمة"
+            register={register("amount", { valueAsNumber: true })}
+            error={errors.amount}
+          />
+          <TextField
+            id="description"
+            label="الوصف"
+            register={register("description")}
+            error={errors.description}
+          />
+          <SelectField
+            id="payment_method"
+            label="طريقة الدفع"
+            register={register("payment_method")}
+            error={errors.payment_method}
+            options={[
+              { value: "cash", label: "نقداً" },
+              { value: "bank_transfer", label: "تحويل بنكي" },
+              { value: "check", label: "شيك" },
+            ]}
+          />
+          <DateField
+            id="income_date"
+            label="التاريخ"
+            register={register("income_date")}
+            error={errors.income_date}
+          />
+
+          <div className="flex justify-end items-end">
+            <Button type="submit" size="sm" disabled={isSubmitting}>
+              {isSubmitting ? "جاري الإرسال..." : "إرسال الدخل"}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default ProjectIncomeForm;

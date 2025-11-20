@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { ProjectWithDetailsForBook } from "../../types/projects.type";
 import { supabase } from "../../lib/supabaseClient";
-import { ProjectExpenseFormValues } from "../../types/schema/ProjectBook.schema";
+import {
+  ProjectExpenseFormValues,
+  ProjectIncomeFormValues,
+} from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
 
@@ -87,6 +90,53 @@ export function useBookProject(projectId: string) {
       setLoading(false);
     }
   };
+  const addIncome = async (incomeData: ProjectIncomeFormValues) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  return { project, loading, error, addExpense };
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data, error } = await supabase
+        .from("project_incomes")
+        .insert({
+          project_id: incomeData.project_id,
+          description: incomeData.description,
+          amount: incomeData.amount,
+          income_date: incomeData.income_date,
+          created_by: user.id,
+          fund: incomeData.fund,
+          payment_method: incomeData.payment_method,
+          // serial_number: incomeData.serial_number,
+          // related_expense: incomeData.related_expense,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding income", error);
+        throw error;
+      }
+
+      // Update local state with new income
+      if (data && project) {
+        setProject({
+          ...project,
+          project_incomes: [...(project.project_incomes || []), data],
+        });
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      const error = err as PostgrestError;
+      setError(error);
+      return { data: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { project, loading, error, addExpense, addIncome };
 }

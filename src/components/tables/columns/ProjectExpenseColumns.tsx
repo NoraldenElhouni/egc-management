@@ -105,21 +105,6 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     ),
     size: 120,
   },
-
-  // DISCOUNTING
-  {
-    accessorKey: "Discounting",
-    header: "الخصم",
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap">
-        {row.original.Discounting
-          ? `${toNum(row.original.Discounting).toLocaleString()} LYD`
-          : "N/A"}
-      </div>
-    ),
-    size: 100,
-  },
-
   // REMAINING AMOUNT (handles negative / overpay)
   {
     accessorKey: "remaining_amount",
@@ -136,7 +121,11 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
       return (
         <div
           className={`font-medium whitespace-nowrap ${
-            isOverpaid ? "text-yellow-600" : "text-red-600"
+            remaining === 0
+              ? "text-black"
+              : isOverpaid
+                ? "text-yellow-600"
+                : "text-red-600"
           }`}
           title={
             isOverpaid
@@ -151,6 +140,20 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
       );
     },
     size: 140,
+  },
+
+  // DISCOUNTING
+  {
+    accessorKey: "Discounting",
+    header: "الخصم",
+    cell: ({ row }) => (
+      <div className="whitespace-nowrap">
+        {row.original.Discounting
+          ? `${toNum(row.original.Discounting).toLocaleString()} LYD`
+          : "N/A"}
+      </div>
+    ),
+    size: 100,
   },
 
   // PAYMENT METHOD

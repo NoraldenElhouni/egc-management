@@ -28,4 +28,23 @@ export const ProjectExpenseSchema = z
     path: ["paid_amount"],
   });
 
+export const ProjectIncomeSchema = z.object({
+  project_id: z.string(),
+  serial_number: z.string().min(1, "رقم المسلسل مطلوب"),
+  description: z.string().nullable(),
+  amount: z.number().min(0, "المبلغ يجب أن يكون غير سالب"),
+  fund: z.enum(["client", "internal", "sale", "refund", "other"], {
+    message: "مصدر التمويل غير صالح",
+  }),
+  payment_method: z.enum(["cash", "cheque", "transfer", "deposit"], {
+    message: "طريقة الدفع غير صالحة",
+  }),
+  income_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "التاريخ غير صالح",
+  }),
+  // related_expense: z.string().nullable(),
+});
+
+export type ProjectIncomeFormValues = z.infer<typeof ProjectIncomeSchema>;
+
 export type ProjectExpenseFormValues = z.infer<typeof ProjectExpenseSchema>;
