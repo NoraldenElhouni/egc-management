@@ -3,7 +3,10 @@ import { Link } from "react-router-dom";
 import { Projects } from "../../../types/global.type";
 import { statusColor } from "../../../utils/colors/status";
 
-export const ProjectsColumns: ColumnDef<Projects>[] = [
+// Convert to a function that accepts the link path builder
+export const createProjectsColumns = (
+  getLinkPath: (id: string | number) => string
+): ColumnDef<Projects>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -36,7 +39,7 @@ export const ProjectsColumns: ColumnDef<Projects>[] = [
     header: "الاسم",
     cell: ({ row }) => (
       <Link
-        to={`/projects/${row.original.id}`}
+        to={getLinkPath(row.original.id)}
         className="font-medium hover:underline"
       >
         {row.original.name}
@@ -48,11 +51,6 @@ export const ProjectsColumns: ColumnDef<Projects>[] = [
     accessorKey: "code",
     header: "الكود",
   },
-
-  //   {
-  //     accessorKey: "client_id",
-  //     header: "العميل",
-  //   },
 
   {
     accessorKey: "percentage",

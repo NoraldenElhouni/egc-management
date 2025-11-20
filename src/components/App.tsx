@@ -26,9 +26,9 @@ import EmployeesPage from "../pages/hr/EmployeesPage";
 import EmployeeDetailsPage from "../pages/hr/EmployeeDetailsPage";
 import ContractorPage from "../pages/supply-chain/ContractorPage";
 import VendorsPage from "../pages/supply-chain/VendorsPage";
-import AccountingPage from "../pages/finance/AccountingPage";
+import AccountingPage from "../pages/finance/accounting/AccountingPage";
 import BookkeepingPage from "../pages/finance/bookkeeper/BookkeepingPage";
-import TreasuryPage from "../pages/finance/TreasuryPage";
+import TreasuryPage from "../pages/finance/treasury/TreasuryPage";
 import PaymentsPage from "../pages/finance/PaymentsPage";
 import CompanyPage from "../pages/finance/CompanyPage";
 import HRLayout from "./sidebar/HRLayout";
@@ -179,7 +179,15 @@ const AppRouter = () => {
           <Route element={<FinanceLayout />}>
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/finance/accounting" element={<AccountingPage />} />
+            <Route
+              path="/finance/accounting/project/:id"
+              element={<CompanyPage />}
+            />
             <Route path="/finance/treasury" element={<TreasuryPage />} />
+            <Route
+              path="/finance/treasury/project/:id"
+              element={<TreasuryPage />}
+            />
             <Route path="/finance/payments" element={<PaymentsPage />} />
             <Route path="/finance/company" element={<CompanyPage />} />
           </Route>

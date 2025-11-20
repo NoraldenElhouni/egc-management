@@ -38,6 +38,7 @@ const Header = () => {
     crm: "إدارة علاقات العملاء",
     "supply-chain": "سلسلة التوريد",
     projects: "المشاريع",
+    project: "المشروع",
     finance: "المالية",
     profile: "الملف الشخصي",
     settings: "الإعدادات",

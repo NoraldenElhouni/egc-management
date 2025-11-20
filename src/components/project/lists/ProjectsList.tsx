@@ -1,14 +1,26 @@
+import { useMemo } from "react";
 import { useProjects } from "../../../hooks/useProjects";
-import { ProjectsColumns } from "../../tables/columns/ProjectsColumns";
+import { createProjectsColumns } from "../../tables/columns/ProjectsColumns";
 import GenericTable from "../../tables/table";
 
-const ProjectsList = () => {
+interface ProjectsListProps {
+  basePath?: string; // Renamed for clarity
+}
+
+const ProjectsList = ({ basePath = "/projects" }: ProjectsListProps) => {
   const { projects } = useProjects();
+
+  // Create columns with the desired link path
+  const columns = useMemo(
+    () => createProjectsColumns((id) => `${basePath}/${id}`),
+    [basePath]
+  );
+
   return (
     <div>
       <GenericTable
         data={projects}
-        columns={ProjectsColumns}
+        columns={columns}
         enableSorting
         enablePagination
         enableFiltering
