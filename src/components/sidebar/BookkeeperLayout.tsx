@@ -7,7 +7,6 @@ import {
   RefreshCcw,
   ExternalLink,
   List,
-  PlusCircle,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -173,16 +172,6 @@ const BookkeeperLayout: React.FC = () => {
               عرض الكل
             </Link>
           )}
-
-          <Link
-            to="/projects/new"
-            className={`ml-auto text-xs bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 inline-flex items-center gap-1 ${
-              isCollapsed ? "w-full justify-center" : ""
-            }`}
-          >
-            <PlusCircle className="w-4 h-4" />
-            {!isCollapsed && "جديد"}
-          </Link>
         </div>
       </aside>
 

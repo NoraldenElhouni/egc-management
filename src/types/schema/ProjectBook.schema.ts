@@ -1,0 +1,31 @@
+import { z } from "zod";
+
+export const ProjectExpenseSchema = z
+  .object({
+    project_id: z.string(),
+    description: z.string().min(1, "الوصف مطلوب"),
+    serial_number: z.string().min(1, "رقم المسلسل مطلوب"),
+    type: z.enum(["labor", "material"], {
+      message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
+    }),
+    phase: z.enum(["construction", "finishing"], {
+      message: "المرحلة يجب أن تكون إما 'انشاء' أو 'تشطيب'",
+    }),
+    total_amount: z.number().min(0, "القيمة يجب أن تكون غير سالبة").default(0),
+    paid_amount: z
+      .number()
+      .min(0, "القيمة المدفوعة يجب أن تكون غير سالبة")
+      .default(0),
+    payment_method: z.enum(["cash", "cheque", "transfer", "deposit"], {
+      message: "طريقة الدفع غير صالحة",
+    }),
+    date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+      message: "التاريخ غير صالح",
+    }),
+  })
+  .refine((data) => data.paid_amount <= data.total_amount, {
+    message: "القيمة المدفوعة لا يمكن أن تتجاوز القيمة الإجمالية",
+    path: ["paid_amount"],
+  });
+
+export type ProjectExpenseFormValues = z.infer<typeof ProjectExpenseSchema>;
