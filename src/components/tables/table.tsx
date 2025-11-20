@@ -131,7 +131,7 @@ export default function GenericTable<TData extends object>({
                   <th
                     key={header.id}
                     colSpan={header.colSpan}
-                    className="text-left py-3 px-4 font-semibold text-sm select-none border-b border-gray-200"
+                    className=" py-3 px-4 font-semibold text-sm select-none border-b border-gray-200"
                   >
                     {header.isPlaceholder ? null : (
                       <div

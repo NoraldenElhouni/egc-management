@@ -26,6 +26,12 @@ import {
   UserRoles,
 } from "./global.type";
 
+export type ContractPaymentWithRelations = ContractPayments & {
+  employee: Employees | null;
+  contractors: { first_name: string; last_name: string } | null;
+  contracts: { projects: { name: string } } | null;
+};
+
 export interface ClientWithProjects extends Clients {
   projects: ProjectWithDetails[];
 }

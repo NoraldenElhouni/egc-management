@@ -1,5 +1,11 @@
+import PaymentsList from "../../components/finance/payments/PaymentsList";
+
 const PaymentsPage = () => {
-  return <div>PaymentsPage</div>;
+  return (
+    <div className="p-4">
+      <PaymentsList />
+    </div>
+  );
 };
 
 export default PaymentsPage;
