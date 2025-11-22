@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Employees } from "../types/global.type";
+import { fullEmployee } from "../types/extended.type";
+import { PostgrestError } from "@supabase/supabase-js";
 
 export function useEmployees() {
   const [employees, setemployees] = useState<Employees[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
     async function fetchemployees() {
@@ -29,16 +31,16 @@ export function useEmployees() {
 }
 
 export function useEmployee(id: string) {
-  const [employee, setemployee] = useState<Employees | null>(null);
+  const [employee, setemployee] = useState<fullEmployee | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
     async function fetchEmployees() {
       setLoading(true);
       const { data, error } = await supabase
         .from("employees")
-        .select("*")
+        .select("*, employee_certifications(*), employee_documents(*)")
         .eq("id", id)
         .single();
 

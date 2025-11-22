@@ -1,36 +1,42 @@
 import { useState } from "react";
 import PersonalInfo from "../../components/hr/employee/PersonalInfo";
-
-const tabs = [
-  {
-    id: "personal-info",
-    label: "المعلومات الشخصية",
-    content: <PersonalInfo />,
-  },
-  {
-    id: "employee-details",
-    label: "تفاصيل الموظف",
-    content: <div>Employee Details Content</div>,
-  },
-  {
-    id: "salary-details",
-    label: "تفاصيل الرواتب",
-    content: <div>Salary Details Content</div>,
-  },
-  {
-    id: "documents",
-    label: "الوثائق",
-    content: <div>Documents Content</div>,
-  },
-  {
-    id: "salary-history",
-    label: "تاريخ الرواتب",
-    content: <div>Salary History Content</div>,
-  },
-];
+import { useEmployee } from "../../hooks/useEmployees";
+import { useParams } from "react-router-dom";
+import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
+import SalaryDetails from "../../components/hr/employee/SalaryDetails";
+import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
 
 export default function EmployeeDetailsPage() {
   const [activeTab, setActiveTab] = useState("personal-info");
+  const { id } = useParams<{ id: string }>();
+  const employeeId = id || "";
+  const { employee, loading, error } = useEmployee(employeeId);
+
+  if (loading) return <div>جاري التحميل...</div>;
+  if (error || !employee) return <div>خطأ في تحميل بيانات الموظف.</div>;
+
+  const tabs = [
+    {
+      id: "personal-info",
+      label: "المعلومات الشخصية",
+      content: <PersonalInfo employee={employee} />,
+    },
+    {
+      id: "employee-details",
+      label: "تفاصيل الموظف",
+      content: <EmployeeDetails employee={employee} />,
+    },
+    {
+      id: "salary-details",
+      label: "تفاصيل الرواتب",
+      content: <SalaryDetails />,
+    },
+    {
+      id: "documents",
+      label: "الوثائق",
+      content: <EmployeeDocuments />,
+    },
+  ];
 
   return (
     <div className="bg-background min-h-screen">

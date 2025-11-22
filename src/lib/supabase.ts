@@ -541,6 +541,105 @@ export type Database = {
         };
         Relationships: [];
       };
+      employee_certifications: {
+        Row: {
+          certification: string;
+          created_at: string;
+          employee_id: string;
+          id: string;
+        };
+        Insert: {
+          certification: string;
+          created_at?: string;
+          employee_id: string;
+          id?: string;
+        };
+        Update: {
+          certification?: string;
+          created_at?: string;
+          employee_id?: string;
+          id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "employee_certifications_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      employee_documents: {
+        Row: {
+          created_at: string;
+          doc_type: string;
+          employee_id: string;
+          id: string;
+          uploaded_by: string | null;
+          url: string;
+        };
+        Insert: {
+          created_at?: string;
+          doc_type: string;
+          employee_id: string;
+          id?: string;
+          uploaded_by?: string | null;
+          url: string;
+        };
+        Update: {
+          created_at?: string;
+          doc_type?: string;
+          employee_id?: string;
+          id?: string;
+          uploaded_by?: string | null;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      employee_emergency_contacts: {
+        Row: {
+          created_at: string;
+          employee_id: string;
+          id: string;
+          name: string;
+          phone: string;
+          relation: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          employee_id: string;
+          id?: string;
+          name: string;
+          phone: string;
+          relation?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          employee_id?: string;
+          id?: string;
+          name?: string;
+          phone?: string;
+          relation?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "employee_emergency_contacts_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       employee_history: {
         Row: {
           created_at: string;
@@ -578,39 +677,123 @@ export type Database = {
       };
       employees: {
         Row: {
+          address: string | null;
+          alternate_phone: string | null;
+          bank_account_number: string | null;
+          bank_name: string | null;
           base_salary: number;
+          blood_type: string | null;
           created_at: string;
+          date_of_joining: string | null;
           department_id: string;
+          dob: string | null;
           email: string;
+          emergency_contact: string | null;
+          emergency_contact_phone: string | null;
+          emergency_contact_relation: string | null;
+          employee_id: string | null;
+          employee_type: string | null;
           first_name: string;
+          gender: string | null;
+          gpa: number | null;
+          graduation_year: number | null;
+          highest_qualification: string | null;
           id: string;
+          id_proof_url: string | null;
+          job_title: string | null;
           last_name: string | null;
+          manager_id: string | null;
+          marital_status: string | null;
+          nationality: string | null;
+          personal_email: string | null;
+          personal_photo_url: string | null;
           phone_number: string;
+          place_of_birth: string | null;
+          resume_url: string | null;
+          salary_type: string | null;
           specializations_id: string;
+          status: string | null;
+          university: string | null;
           updated_at: string;
         };
         Insert: {
+          address?: string | null;
+          alternate_phone?: string | null;
+          bank_account_number?: string | null;
+          bank_name?: string | null;
           base_salary?: number;
+          blood_type?: string | null;
           created_at?: string;
+          date_of_joining?: string | null;
           department_id: string;
+          dob?: string | null;
           email: string;
+          emergency_contact?: string | null;
+          emergency_contact_phone?: string | null;
+          emergency_contact_relation?: string | null;
+          employee_id?: string | null;
+          employee_type?: string | null;
           first_name: string;
+          gender?: string | null;
+          gpa?: number | null;
+          graduation_year?: number | null;
+          highest_qualification?: string | null;
           id?: string;
+          id_proof_url?: string | null;
+          job_title?: string | null;
           last_name?: string | null;
+          manager_id?: string | null;
+          marital_status?: string | null;
+          nationality?: string | null;
+          personal_email?: string | null;
+          personal_photo_url?: string | null;
           phone_number: string;
+          place_of_birth?: string | null;
+          resume_url?: string | null;
+          salary_type?: string | null;
           specializations_id: string;
+          status?: string | null;
+          university?: string | null;
           updated_at?: string;
         };
         Update: {
+          address?: string | null;
+          alternate_phone?: string | null;
+          bank_account_number?: string | null;
+          bank_name?: string | null;
           base_salary?: number;
+          blood_type?: string | null;
           created_at?: string;
+          date_of_joining?: string | null;
           department_id?: string;
+          dob?: string | null;
           email?: string;
+          emergency_contact?: string | null;
+          emergency_contact_phone?: string | null;
+          emergency_contact_relation?: string | null;
+          employee_id?: string | null;
+          employee_type?: string | null;
           first_name?: string;
+          gender?: string | null;
+          gpa?: number | null;
+          graduation_year?: number | null;
+          highest_qualification?: string | null;
           id?: string;
+          id_proof_url?: string | null;
+          job_title?: string | null;
           last_name?: string | null;
+          manager_id?: string | null;
+          marital_status?: string | null;
+          nationality?: string | null;
+          personal_email?: string | null;
+          personal_photo_url?: string | null;
           phone_number?: string;
+          place_of_birth?: string | null;
+          resume_url?: string | null;
+          salary_type?: string | null;
           specializations_id?: string;
+          status?: string | null;
+          university?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -619,6 +802,20 @@ export type Database = {
             columns: ["department_id"];
             isOneToOne: false;
             referencedRelation: "departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "employees_id_fkey1";
+            columns: ["id"];
+            isOneToOne: true;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "employees_manager_id_fkey";
+            columns: ["manager_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
             referencedColumns: ["id"];
           },
           {
@@ -820,6 +1017,13 @@ export type Database = {
             columns: ["project_role_id"];
             isOneToOne: false;
             referencedRelation: "project_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_assignments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];
