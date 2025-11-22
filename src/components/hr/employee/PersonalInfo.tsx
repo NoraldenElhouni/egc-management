@@ -9,6 +9,22 @@ interface PersonalInfoProps {
 }
 
 const PersonalInfo = ({ employee }: PersonalInfoProps) => {
+  const handleSaveBasic = (data: fullEmployee) => {
+    console.log("Save basic:", data);
+    // TODO: call API / persist changes
+  };
+
+  const handleSaveAddress = (data: fullEmployee) => {
+    console.log("Save address:", data);
+  };
+
+  const handleSaveEducation = (data: fullEmployee) => {
+    console.log("Save education:", data);
+  };
+
+  const handleSaveEmergency = (data: fullEmployee) => {
+    console.log("Save emergency:", data);
+  };
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="p-6">
@@ -16,16 +32,19 @@ const PersonalInfo = ({ employee }: PersonalInfoProps) => {
           المعلومات الشخصية
         </h3>
 
-        <BasicInfoCard employee={employee} />
+        <BasicInfoCard employee={employee} onSave={handleSaveBasic} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <AddressCard employee={employee} />
-            <EducationCard employee={employee} />
+            <AddressCard employee={employee} onSave={handleSaveAddress} />
+            <EducationCard employee={employee} onSave={handleSaveEducation} />
           </div>
 
           <div className="space-y-6">
-            <EmergencyContactCard employee={employee} />
+            <EmergencyContactCard
+              employee={employee}
+              onSave={handleSaveEmergency}
+            />
           </div>
         </div>
       </div>
