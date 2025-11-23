@@ -10,14 +10,17 @@ import { SelectField } from "../../ui/inputs/SelectField";
 import { DateField } from "../../ui/inputs/DateField";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { createEmployee } from "../../../services/employees/setEmployeeService";
+import { useUtils } from "../../../hooks/useUtils";
 
 const NewEmployeeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { specializations, roles, managers } = useUtils();
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
     trigger,
     setFocus,
@@ -25,8 +28,9 @@ const NewEmployeeForm: React.FC = () => {
   } = useForm<UserFormValues>({
     resolver: zodResolver(userSchema) as unknown as Resolver<UserFormValues>,
     defaultValues: {
+      employeeId: "EMP-001",
       employeeType: "Full-Time",
-      role: "Support",
+      roleId: "212424d8-219a-4899-a24b-5d5bf05546e8",
       salaryType: "fixed",
       status: "Active",
     },
@@ -34,6 +38,7 @@ const NewEmployeeForm: React.FC = () => {
 
   const onSubmit = async (data: UserFormValues) => {
     setLoading(true);
+    console.log("Submitting new employee:", data);
     try {
       const response = await createEmployee(data);
       if (!response.success) {
@@ -51,39 +56,28 @@ const NewEmployeeForm: React.FC = () => {
   };
 
   const employeeTypeOptions = [
-    { value: "Full-Time", label: "Full-Time" },
-    { value: "Part-Time", label: "Part-Time" },
-    { value: "Contractor", label: "Contractor" },
-    { value: "Intern", label: "Intern" },
-  ];
-
-  const roleOptions = [
-    { value: "Admin", label: "Admin" },
-    { value: "Manager", label: "Manager" },
-    { value: "HR", label: "HR" },
-    { value: "Finance", label: "Finance" },
-    { value: "Sales", label: "Sales" },
-    { value: "Support", label: "Support" },
-    { value: "Bookkeeper", label: "Bookkeeper" },
-    { value: "Accountant", label: "Accountant" },
+    { value: "Full-Time", label: "دوام كامل" },
+    { value: "Part-Time", label: "دوام جزئي" },
+    { value: "Contractor", label: "متعاقد" },
+    { value: "Intern", label: "متدرب" },
   ];
 
   const salaryTypeOptions = [
-    { value: "fixed", label: "fixed" },
-    { value: "percentage", label: "percentage" },
+    { value: "fixed", label: "ثابت" },
+    { value: "percentage", label: "نسبة مئوية" },
   ];
 
   const statusOptions = [
-    { value: "Active", label: "Active" },
-    { value: "Inactive", label: "Inactive" },
-    { value: "On Leave", label: "On Leave" },
+    { value: "Active", label: "نشط" },
+    { value: "Inactive", label: "غير نشط" },
+    { value: "On Leave", label: "في إجازة" },
   ];
 
   const maritalStatusOptions = [
-    { value: "Single", label: "Single" },
-    { value: "Married", label: "Married" },
-    { value: "Divorced", label: "Divorced" },
-    { value: "Widowed", label: "Widowed" },
+    { value: "Single", label: "أعزب" },
+    { value: "Married", label: "متزوج" },
+    { value: "Divorced", label: "مطلق" },
+    { value: "Widowed", label: "أرمل" },
   ];
 
   const bloodTypeOptions = [
@@ -98,15 +92,26 @@ const NewEmployeeForm: React.FC = () => {
   ];
 
   const genderOptions = [
-    { value: "Male", label: "Male" },
-    { value: "Female", label: "Female" },
+    { value: "Male", label: "ذكر" },
+    { value: "Female", label: "انثي" },
   ];
 
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Watch selected role to show/filter specializations
+  const selectedRoleId = watch("roleId");
+  const specializationsForSelectedRole = selectedRoleId
+    ? specializations.filter((s) => s.role_id === selectedRoleId)
+    : specializations;
+  const selectedRole = roles.find((r) => r.id === selectedRoleId);
+  // show specializations only for roles that look like 'engineer' (accept small typo 'enger')
+  const showSpecializations = Boolean(
+    selectedRole && /engineer|enger/i.test(selectedRole.name || "")
+  );
+
   const stepFields: string[][] = [
     // Step 0 - Account
-    ["employeeId", "password", "role", "status", "employeeType"],
+    ["email", "password", "roleId", "status", "employeeType"],
     // Step 1 - Personal
     [
       "firstName",
@@ -121,7 +126,6 @@ const NewEmployeeForm: React.FC = () => {
     ],
     // Step 2 - Contact
     [
-      "email",
       "personalEmail",
       "phone",
       "alternatePhone",
@@ -132,9 +136,6 @@ const NewEmployeeForm: React.FC = () => {
     ],
     // Step 3 - Job
     [
-      "jobTitle",
-      "department",
-      "departmentId",
       "dateOfJoining",
       "managerId",
       "specializationsId",
@@ -197,6 +198,29 @@ const NewEmployeeForm: React.FC = () => {
     }
   };
 
+  // When form submit fails validation, jump to the step that contains the first invalid field
+  const handleSubmitErrors = (errs: Record<string, unknown>) => {
+    // Log the full error object for debugging
+    // eslint-disable-next-line no-console
+    console.warn("Form submit errors:", errs);
+
+    const errorKeys = Object.keys(errs || {});
+    if (errorKeys.length === 0) return;
+
+    const firstKey = errorKeys[0];
+    // find the step index that contains this field
+    const stepIndex = stepFields.findIndex((step) => step.includes(firstKey));
+    if (stepIndex >= 0) {
+      setCurrentStep(stepIndex);
+      try {
+        // focus the field so the user sees the error
+        setFocus(firstKey as keyof UserFormValues);
+      } catch (e) {
+        // ignore focus errors
+      }
+    }
+  };
+
   const handleBack = () => {
     try {
       setCurrentStep((s) => Math.max(s - 1, 0));
@@ -218,7 +242,7 @@ const NewEmployeeForm: React.FC = () => {
 
       <form
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, handleSubmitErrors)}
         onKeyDown={(e) => {
           // Prevent Enter from submitting the whole form while navigating steps.
           if (e.key === "Enter" && currentStep < totalSteps - 1) {
@@ -237,10 +261,11 @@ const NewEmployeeForm: React.FC = () => {
         {currentStep === 0 && (
           <>
             <TextField
-              id="employeeId"
-              label="رقم الموظف"
-              register={register("employeeId")}
-              error={errors.employeeId}
+              id="email"
+              label="البريد الالكتروني"
+              type="email"
+              register={register("email")}
+              error={errors.email}
             />
 
             <PasswordField
@@ -251,11 +276,21 @@ const NewEmployeeForm: React.FC = () => {
             />
 
             <SelectField
-              id="role"
+              id="roleId"
               label="الدور"
-              options={roleOptions}
-              register={register("role")}
-              error={errors.role}
+              options={roles
+                .filter(
+                  (role) =>
+                    !["client", "contractor", "supplier"].includes(
+                      (role.name || "").toLowerCase()
+                    )
+                )
+                .map((role) => ({
+                  value: role.id,
+                  label: role.name,
+                }))}
+              register={register("roleId")}
+              error={errors.roleId}
             />
 
             <SelectField
@@ -350,14 +385,6 @@ const NewEmployeeForm: React.FC = () => {
         {currentStep === 2 && (
           <>
             <TextField
-              id="email"
-              label="البريد الالكتروني"
-              type="email"
-              register={register("email")}
-              error={errors.email}
-            />
-
-            <TextField
               id="personalEmail"
               label="البريد الإلكتروني الشخصي (اختياري)"
               type="email"
@@ -411,27 +438,6 @@ const NewEmployeeForm: React.FC = () => {
 
         {currentStep === 3 && (
           <>
-            <TextField
-              id="jobTitle"
-              label="المسمى الوظيفي"
-              register={register("jobTitle")}
-              error={errors.jobTitle}
-            />
-
-            <TextField
-              id="department"
-              label="القسم"
-              register={register("department")}
-              error={errors.department}
-            />
-
-            <TextField
-              id="departmentId"
-              label="معرف القسم (اختياري)"
-              register={register("departmentId")}
-              error={errors.departmentId}
-            />
-
             <DateField
               id="dateOfJoining"
               label="تاريخ الانضمام (اختياري)"
@@ -439,19 +445,40 @@ const NewEmployeeForm: React.FC = () => {
               error={errors.dateOfJoining}
             />
 
-            <TextField
+            {/*
+              Always include a "لايوجد" placeholder option even if managers exist.
+              Use an empty string as the value for the placeholder so it doesn't match any real id.
+            */}
+            <SelectField
               id="managerId"
               label="معرف المدير (اختياري)"
+              options={[
+                { value: "", label: "لايوجد" },
+                ...managers.map((manager) => ({
+                  value: manager.id,
+                  label: `${manager.first_name} ${manager.last_name}`,
+                })),
+              ]}
               register={register("managerId")}
               error={errors.managerId}
             />
 
-            <TextField
-              id="specializationsId"
-              label="معرف التخصصات (اختياري)"
-              register={register("specializationsId")}
-              error={errors.specializationsId}
-            />
+            {showSpecializations && (
+              <SelectField
+                id="specializationsId"
+                label="التخصصات (اختياري)"
+                options={
+                  specializationsForSelectedRole.length > 0
+                    ? specializationsForSelectedRole.map((spec) => ({
+                        value: spec.id,
+                        label: spec.name,
+                      }))
+                    : [{ value: "", label: "None" }]
+                }
+                register={register("specializationsId")}
+                error={errors.specializationsId}
+              />
+            )}
 
             <SelectField
               id="salaryType"

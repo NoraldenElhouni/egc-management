@@ -31,23 +31,11 @@ export const userSchema = z.object({
 
   // Job Details
   employeeType: z.enum(["Full-Time", "Part-Time", "Contractor", "Intern"]),
-  jobTitle: z.string().min(2, "المسمى الوظيفي يجب أن يكون على الأقل حرفين"),
-  department: z.string().min(2, "القسم يجب أن يكون على الأقل حرفين"),
   dateOfJoining: z.string().optional(),
   managerId: z.string().optional(),
   status: z.enum(["Active", "Inactive", "On Leave"]),
-  role: z.enum([
-    "Admin",
-    "Manager",
-    "HR",
-    "Finance",
-    "Sales",
-    "Support",
-    "Bookkeeper",
-    "Accountant",
-  ]),
+  roleId: z.string().optional(),
   specializationsId: z.string().optional(),
-  departmentId: z.string().optional(),
 
   //Compensation & Payroll
   salaryType: z.enum(["fixed", "percentage"]),

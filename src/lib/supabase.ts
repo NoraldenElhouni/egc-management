@@ -523,24 +523,6 @@ export type Database = {
           },
         ];
       };
-      departments: {
-        Row: {
-          created_at: string;
-          id: string;
-          name: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          name: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          name?: string;
-        };
-        Relationships: [];
-      };
       employee_certifications: {
         Row: {
           certification: string;
@@ -605,41 +587,6 @@ export type Database = {
           },
         ];
       };
-      employee_emergency_contacts: {
-        Row: {
-          created_at: string;
-          employee_id: string;
-          id: string;
-          name: string;
-          phone: string;
-          relation: string | null;
-        };
-        Insert: {
-          created_at?: string;
-          employee_id: string;
-          id?: string;
-          name: string;
-          phone: string;
-          relation?: string | null;
-        };
-        Update: {
-          created_at?: string;
-          employee_id?: string;
-          id?: string;
-          name?: string;
-          phone?: string;
-          relation?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "employee_emergency_contacts_employee_id_fkey";
-            columns: ["employee_id"];
-            isOneToOne: false;
-            referencedRelation: "employees";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       employee_history: {
         Row: {
           created_at: string;
@@ -685,7 +632,6 @@ export type Database = {
           blood_type: string | null;
           created_at: string;
           date_of_joining: string | null;
-          department_id: string;
           dob: string | null;
           email: string;
           emergency_contact: string | null;
@@ -700,7 +646,6 @@ export type Database = {
           highest_qualification: string | null;
           id: string;
           id_proof_url: string | null;
-          job_title: string | null;
           last_name: string | null;
           manager_id: string | null;
           marital_status: string | null;
@@ -711,7 +656,7 @@ export type Database = {
           place_of_birth: string | null;
           resume_url: string | null;
           salary_type: string | null;
-          specializations_id: string;
+          specializations_id: string | null;
           status: string | null;
           university: string | null;
           updated_at: string;
@@ -725,7 +670,6 @@ export type Database = {
           blood_type?: string | null;
           created_at?: string;
           date_of_joining?: string | null;
-          department_id: string;
           dob?: string | null;
           email: string;
           emergency_contact?: string | null;
@@ -740,7 +684,6 @@ export type Database = {
           highest_qualification?: string | null;
           id?: string;
           id_proof_url?: string | null;
-          job_title?: string | null;
           last_name?: string | null;
           manager_id?: string | null;
           marital_status?: string | null;
@@ -751,7 +694,7 @@ export type Database = {
           place_of_birth?: string | null;
           resume_url?: string | null;
           salary_type?: string | null;
-          specializations_id: string;
+          specializations_id?: string | null;
           status?: string | null;
           university?: string | null;
           updated_at?: string;
@@ -765,7 +708,6 @@ export type Database = {
           blood_type?: string | null;
           created_at?: string;
           date_of_joining?: string | null;
-          department_id?: string;
           dob?: string | null;
           email?: string;
           emergency_contact?: string | null;
@@ -780,7 +722,6 @@ export type Database = {
           highest_qualification?: string | null;
           id?: string;
           id_proof_url?: string | null;
-          job_title?: string | null;
           last_name?: string | null;
           manager_id?: string | null;
           marital_status?: string | null;
@@ -791,21 +732,14 @@ export type Database = {
           place_of_birth?: string | null;
           resume_url?: string | null;
           salary_type?: string | null;
-          specializations_id?: string;
+          specializations_id?: string | null;
           status?: string | null;
           university?: string | null;
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "employees_department_id_fkey";
-            columns: ["department_id"];
-            isOneToOne: false;
-            referencedRelation: "departments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "employees_id_fkey1";
+            foreignKeyName: "employees_id_fkey";
             columns: ["id"];
             isOneToOne: true;
             referencedRelation: "users";
@@ -1425,16 +1359,22 @@ export type Database = {
       };
       roles: {
         Row: {
+          code: string;
           id: string;
           name: string;
+          number: number;
         };
         Insert: {
+          code: string;
           id?: string;
           name: string;
+          number?: number;
         };
         Update: {
+          code?: string;
           id?: string;
           name?: string;
+          number?: number;
         };
         Relationships: [];
       };
