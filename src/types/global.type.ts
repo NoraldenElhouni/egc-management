@@ -23,7 +23,6 @@ export type Account = Tables<"accounts">;
 export type Users = Tables<"users">;
 export type Roles = Tables<"roles">;
 export type Permissions = Tables<"permissions">;
-export type Departments = Tables<"departments">;
 export type Offers = Tables<"offers">;
 export type OfferItems = Tables<"offer_items">;
 export type BidItems = Tables<"bid_items">;

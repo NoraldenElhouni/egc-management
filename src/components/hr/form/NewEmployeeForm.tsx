@@ -10,23 +10,27 @@ import { SelectField } from "../../ui/inputs/SelectField";
 import { DateField } from "../../ui/inputs/DateField";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { createEmployee } from "../../../services/employees/setEmployeeService";
+import { useUtils } from "../../../hooks/useUtils";
 
 const NewEmployeeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { specializations, roles, managers } = useUtils();
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
+    trigger,
+    setFocus,
     reset,
   } = useForm<UserFormValues>({
-    // Cast resolver to the expected Resolver<UserFormValues> to avoid TS errors
-    // when duplicate/react-hook-form type instances exist in the dependency tree.
     resolver: zodResolver(userSchema) as unknown as Resolver<UserFormValues>,
     defaultValues: {
+      employeeId: "EMP-001",
       employeeType: "Full-Time",
-      role: "Support",
+      roleId: "212424d8-219a-4899-a24b-5d5bf05546e8",
       salaryType: "fixed",
       status: "Active",
     },
@@ -34,6 +38,7 @@ const NewEmployeeForm: React.FC = () => {
 
   const onSubmit = async (data: UserFormValues) => {
     setLoading(true);
+    console.log("Submitting new employee:", data);
     try {
       const response = await createEmployee(data);
       if (!response.success) {
@@ -51,27 +56,179 @@ const NewEmployeeForm: React.FC = () => {
   };
 
   const employeeTypeOptions = [
-    { value: "Full-Time", label: "Full-Time" },
-    { value: "Part-Time", label: "Part-Time" },
-    { value: "Contractor", label: "Contractor" },
-    { value: "Intern", label: "Intern" },
-  ];
-
-  const roleOptions = [
-    { value: "Admin", label: "Admin" },
-    { value: "Manager", label: "Manager" },
-    { value: "HR", label: "HR" },
-    { value: "Finance", label: "Finance" },
-    { value: "Sales", label: "Sales" },
-    { value: "Support", label: "Support" },
-    { value: "Bookkeeper", label: "Bookkeeper" },
-    { value: "Accountant", label: "Accountant" },
+    { value: "Full-Time", label: "دوام كامل" },
+    { value: "Part-Time", label: "دوام جزئي" },
+    { value: "Contractor", label: "متعاقد" },
+    { value: "Intern", label: "متدرب" },
   ];
 
   const salaryTypeOptions = [
-    { value: "fixed", label: "fixed" },
-    { value: "percentage", label: "percentage" },
+    { value: "fixed", label: "ثابت" },
+    { value: "percentage", label: "نسبة مئوية" },
   ];
+
+  const statusOptions = [
+    { value: "Active", label: "نشط" },
+    { value: "Inactive", label: "غير نشط" },
+    { value: "On Leave", label: "في إجازة" },
+  ];
+
+  const maritalStatusOptions = [
+    { value: "Single", label: "أعزب" },
+    { value: "Married", label: "متزوج" },
+    { value: "Divorced", label: "مطلق" },
+    { value: "Widowed", label: "أرمل" },
+  ];
+
+  const bloodTypeOptions = [
+    { value: "A+", label: "A+" },
+    { value: "A-", label: "A-" },
+    { value: "B+", label: "B+" },
+    { value: "B-", label: "B-" },
+    { value: "AB+", label: "AB+" },
+    { value: "AB-", label: "AB-" },
+    { value: "O+", label: "O+" },
+    { value: "O-", label: "O-" },
+  ];
+
+  const genderOptions = [
+    { value: "Male", label: "ذكر" },
+    { value: "Female", label: "انثي" },
+  ];
+
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Watch selected role to show/filter specializations
+  const selectedRoleId = watch("roleId");
+  const specializationsForSelectedRole = selectedRoleId
+    ? specializations.filter((s) => s.role_id === selectedRoleId)
+    : specializations;
+  const selectedRole = roles.find((r) => r.id === selectedRoleId);
+  // show specializations only for roles that look like 'engineer' (accept small typo 'enger')
+  const showSpecializations = Boolean(
+    selectedRole && /engineer|enger/i.test(selectedRole.name || "")
+  );
+
+  const stepFields: string[][] = [
+    // Step 0 - Account
+    ["email", "password", "roleId", "status", "employeeType"],
+    // Step 1 - Personal
+    [
+      "firstName",
+      "lastName",
+      "dob",
+      "placeOfBirth",
+      "gender",
+      "maritalStatus",
+      "bloodType",
+      "nationality",
+      "personalPhotoUrl",
+    ],
+    // Step 2 - Contact
+    [
+      "personalEmail",
+      "phone",
+      "alternatePhone",
+      "address",
+      "emergencyContact",
+      "emergencyContactPhone",
+      "emergencyContactRelation",
+    ],
+    // Step 3 - Job
+    [
+      "dateOfJoining",
+      "managerId",
+      "specializationsId",
+      "salaryType",
+      "baseSalary",
+      "bankName",
+      "bankAccountNumber",
+    ],
+    // Step 4 - Compensation & Documents
+    [
+      "highestQualification",
+      "university",
+      "graduationYear",
+      "gpa",
+      "certifications",
+      "resumeUrl",
+      "idProofUrl",
+    ],
+    // Step 5 - Experience & Review
+    ["previousCompanyName", "previousJobTitle", "yearsOfExperience"],
+  ];
+
+  const totalSteps = stepFields.length;
+
+  const handleNext = async () => {
+    try {
+      const fields = stepFields[currentStep] || [];
+      const valid = await trigger(fields as (keyof UserFormValues)[]);
+      if (valid) {
+        setCurrentStep((s) => Math.min(s + 1, totalSteps - 1));
+        return;
+      }
+
+      // If not valid, log errors and focus the first invalid field in this step.
+      // eslint-disable-next-line no-console
+      console.warn("Step validation failed", { step: currentStep, errors });
+
+      for (const f of fields) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (errors && (errors as any)[f]) {
+          try {
+            // Try to focus the field using RHF's setFocus
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setFocus(f as any);
+          } catch (e) {
+            // Fallback: try to scroll to DOM element
+            const el = document.getElementById(f);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (el && typeof (el as any).scrollIntoView === "function") {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }
+          break;
+        }
+      }
+    } catch (err) {
+      // Prevent unexpected errors from bubbling to a debugger; log and stay on the same step.
+      // eslint-disable-next-line no-console
+      console.error("Error validating step fields:", err);
+    }
+  };
+
+  // When form submit fails validation, jump to the step that contains the first invalid field
+  const handleSubmitErrors = (errs: Record<string, unknown>) => {
+    // Log the full error object for debugging
+    // eslint-disable-next-line no-console
+    console.warn("Form submit errors:", errs);
+
+    const errorKeys = Object.keys(errs || {});
+    if (errorKeys.length === 0) return;
+
+    const firstKey = errorKeys[0];
+    // find the step index that contains this field
+    const stepIndex = stepFields.findIndex((step) => step.includes(firstKey));
+    if (stepIndex >= 0) {
+      setCurrentStep(stepIndex);
+      try {
+        // focus the field so the user sees the error
+        setFocus(firstKey as keyof UserFormValues);
+      } catch (e) {
+        // ignore focus errors
+      }
+    }
+  };
+
+  const handleBack = () => {
+    try {
+      setCurrentStep((s) => Math.max(s - 1, 0));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Error navigating back:", err);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-sm">
@@ -85,109 +242,386 @@ const NewEmployeeForm: React.FC = () => {
 
       <form
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, handleSubmitErrors)}
+        onKeyDown={(e) => {
+          // Prevent Enter from submitting the whole form while navigating steps.
+          if (e.key === "Enter" && currentStep < totalSteps - 1) {
+            e.preventDefault();
+            try {
+              // attempt to advance to next step on Enter
+              void handleNext();
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error("Error handling Enter key navigation:", err);
+            }
+          }
+        }}
         noValidate
       >
-        <TextField
-          id="employeeId"
-          label="معرف الموظف"
-          register={register("employeeId")}
-          error={errors.employeeId}
-        />
+        {currentStep === 0 && (
+          <>
+            <TextField
+              id="email"
+              label="البريد الالكتروني"
+              type="email"
+              register={register("email")}
+              error={errors.email}
+            />
 
-        <PasswordField
-          id="password"
-          label="كلمة المرور"
-          register={register("password")}
-          error={errors.password}
-        />
+            <PasswordField
+              id="password"
+              label="كلمة المرور"
+              register={register("password")}
+              error={errors.password}
+            />
 
-        <TextField
-          id="firstName"
-          label="الاسم الاول"
-          register={register("firstName")}
-          error={errors.firstName}
-        />
+            <SelectField
+              id="roleId"
+              label="الدور"
+              options={roles
+                .filter(
+                  (role) =>
+                    !["client", "contractor", "supplier"].includes(
+                      (role.name || "").toLowerCase()
+                    )
+                )
+                .map((role) => ({
+                  value: role.id,
+                  label: role.name,
+                }))}
+              register={register("roleId")}
+              error={errors.roleId}
+            />
 
-        <TextField
-          id="lastName"
-          label="اسم العائلة"
-          register={register("lastName")}
-          error={errors.lastName}
-        />
+            <SelectField
+              id="status"
+              label="الحالة"
+              options={statusOptions}
+              register={register("status")}
+              error={errors.status}
+            />
 
-        <DateField
-          id="dateOfBirth"
-          label="تاريخ الميلاد"
-          register={register("dob")}
-          error={errors.dob}
-        />
+            <SelectField
+              id="employeeType"
+              label="نوع الموظف"
+              options={employeeTypeOptions}
+              register={register("employeeType")}
+              error={errors.employeeType}
+            />
+          </>
+        )}
 
-        <TextField
-          id="email"
-          label="البريد الالكتروني"
-          type="email"
-          register={register("email")}
-          error={errors.email}
-        />
+        {currentStep === 1 && (
+          <>
+            <TextField
+              id="firstName"
+              label="الاسم الاول"
+              register={register("firstName")}
+              error={errors.firstName}
+            />
 
-        <TextField
-          id="phone"
-          label="الهاتف (اختياري)"
-          register={register("phone")}
-          error={errors.phone}
-        />
+            <TextField
+              id="lastName"
+              label="اسم العائلة"
+              register={register("lastName")}
+              error={errors.lastName}
+            />
 
-        <SelectField
-          id="employeeType"
-          label="نوع الموظف"
-          options={employeeTypeOptions}
-          register={register("employeeType")}
-          error={errors.employeeType}
-        />
+            <DateField
+              id="dateOfBirth"
+              label="تاريخ الميلاد"
+              register={register("dob")}
+              error={errors.dob}
+            />
 
-        <TextField
-          id="jobTitle"
-          label="المسمى الوظيفي"
-          register={register("jobTitle")}
-          error={errors.jobTitle}
-        />
+            <TextField
+              id="placeOfBirth"
+              label="مكان الميلاد (اختياري)"
+              register={register("placeOfBirth")}
+              error={errors.placeOfBirth}
+            />
 
-        <TextField
-          id="department"
-          label="القسم"
-          register={register("department")}
-          error={errors.department}
-        />
+            <SelectField
+              id="gender"
+              label="الجنس"
+              options={genderOptions}
+              register={register("gender")}
+              error={errors.gender}
+            />
 
-        <SelectField
-          id="role"
-          label="الدور"
-          options={roleOptions}
-          register={register("role")}
-          error={errors.role}
-        />
+            <SelectField
+              id="maritalStatus"
+              label="الحالة الاجتماعية"
+              options={maritalStatusOptions}
+              register={register("maritalStatus")}
+              error={errors.maritalStatus}
+            />
 
-        <SelectField
-          id="salaryType"
-          label="نوع الراتب"
-          options={salaryTypeOptions}
-          register={register("salaryType")}
-          error={errors.salaryType}
-        />
+            <SelectField
+              id="bloodType"
+              label="فصيلة الدم (اختياري)"
+              options={bloodTypeOptions}
+              register={register("bloodType")}
+              error={errors.bloodType}
+            />
 
-        <NumberField
-          id="baseSalary"
-          label="الراتب الاساسي (اختياري)"
-          step={100}
-          register={register("baseSalary", { valueAsNumber: true })}
-          error={errors.baseSalary}
-        />
+            <TextField
+              id="nationality"
+              label="الجنسية (اختياري)"
+              register={register("nationality")}
+              error={errors.nationality}
+            />
 
-        <div className="md:col-span-2 flex justify-end gap-2 mt-3">
-          <Button loading={loading} type="submit">
-            اضافة موظف
-          </Button>
+            <TextField
+              id="personalPhotoUrl"
+              label="رابط الصورة الشخصية (اختياري)"
+              type="text"
+              register={register("personalPhotoUrl")}
+              error={errors.personalPhotoUrl}
+            />
+          </>
+        )}
+
+        {currentStep === 2 && (
+          <>
+            <TextField
+              id="personalEmail"
+              label="البريد الإلكتروني الشخصي (اختياري)"
+              type="email"
+              register={register("personalEmail")}
+              error={errors.personalEmail}
+            />
+
+            <TextField
+              id="phone"
+              label="الهاتف (اختياري)"
+              register={register("phone")}
+              error={errors.phone}
+            />
+
+            <TextField
+              id="alternatePhone"
+              label="هاتف بديل (اختياري)"
+              register={register("alternatePhone")}
+              error={errors.alternatePhone}
+            />
+
+            <TextField
+              id="address"
+              label="العنوان (اختياري)"
+              register={register("address")}
+              error={errors.address}
+            />
+
+            <TextField
+              id="emergencyContact"
+              label="اسم جهة الطوارئ (اختياري)"
+              register={register("emergencyContact")}
+              error={errors.emergencyContact}
+            />
+
+            <TextField
+              id="emergencyContactPhone"
+              label="هاتف جهة الطوارئ (اختياري)"
+              register={register("emergencyContactPhone")}
+              error={errors.emergencyContactPhone}
+            />
+
+            <TextField
+              id="emergencyContactRelation"
+              label="صلة جهة الطوارئ (اختياري)"
+              register={register("emergencyContactRelation")}
+              error={errors.emergencyContactRelation}
+            />
+          </>
+        )}
+
+        {currentStep === 3 && (
+          <>
+            <DateField
+              id="dateOfJoining"
+              label="تاريخ الانضمام (اختياري)"
+              register={register("dateOfJoining")}
+              error={errors.dateOfJoining}
+            />
+
+            {/*
+              Always include a "لايوجد" placeholder option even if managers exist.
+              Use an empty string as the value for the placeholder so it doesn't match any real id.
+            */}
+            <SelectField
+              id="managerId"
+              label="معرف المدير (اختياري)"
+              options={[
+                { value: "", label: "لايوجد" },
+                ...managers.map((manager) => ({
+                  value: manager.id,
+                  label: `${manager.first_name} ${manager.last_name}`,
+                })),
+              ]}
+              register={register("managerId")}
+              error={errors.managerId}
+            />
+
+            {showSpecializations && (
+              <SelectField
+                id="specializationsId"
+                label="التخصصات (اختياري)"
+                options={
+                  specializationsForSelectedRole.length > 0
+                    ? specializationsForSelectedRole.map((spec) => ({
+                        value: spec.id,
+                        label: spec.name,
+                      }))
+                    : [{ value: "", label: "None" }]
+                }
+                register={register("specializationsId")}
+                error={errors.specializationsId}
+              />
+            )}
+
+            <SelectField
+              id="salaryType"
+              label="نوع الراتب"
+              options={salaryTypeOptions}
+              register={register("salaryType")}
+              error={errors.salaryType}
+            />
+
+            <NumberField
+              id="baseSalary"
+              label="الراتب الاساسي (اختياري)"
+              step={100}
+              register={register("baseSalary", { valueAsNumber: true })}
+              error={errors.baseSalary}
+            />
+
+            <TextField
+              id="bankName"
+              label="اسم البنك (اختياري)"
+              register={register("bankName")}
+              error={errors.bankName}
+            />
+
+            <TextField
+              id="bankAccountNumber"
+              label="رقم الحساب البنكي (اختياري)"
+              register={register("bankAccountNumber")}
+              error={errors.bankAccountNumber}
+            />
+          </>
+        )}
+
+        {currentStep === 4 && (
+          <>
+            <TextField
+              id="highestQualification"
+              label="أعلى مؤهل (اختياري)"
+              register={register("highestQualification")}
+              error={errors.highestQualification}
+            />
+
+            <TextField
+              id="university"
+              label="الجامعة (اختياري)"
+              register={register("university")}
+              error={errors.university}
+            />
+
+            <NumberField
+              id="graduationYear"
+              label="سنة التخرج (اختياري)"
+              step={1}
+              register={register("graduationYear", { valueAsNumber: true })}
+              error={errors.graduationYear}
+            />
+
+            <NumberField
+              id="gpa"
+              label="المعدل (اختياري)"
+              step={0.01}
+              register={register("gpa", { valueAsNumber: true })}
+              error={errors.gpa}
+            />
+
+            <TextField
+              id="resumeUrl"
+              label="رابط السيرة الذاتية (اختياري)"
+              type="text"
+              register={register("resumeUrl")}
+              error={errors.resumeUrl}
+            />
+
+            <TextField
+              id="idProofUrl"
+              label="رابط إثبات الهوية (اختياري)"
+              type="text"
+              register={register("idProofUrl")}
+              error={errors.idProofUrl}
+            />
+          </>
+        )}
+
+        {currentStep === 5 && (
+          <>
+            <TextField
+              id="previousCompanyName"
+              label="اسم الشركة السابقة (اختياري)"
+              register={register("previousCompanyName")}
+              error={errors.previousCompanyName}
+            />
+
+            <TextField
+              id="previousJobTitle"
+              label="المسمى الوظيفي السابق (اختياري)"
+              register={register("previousJobTitle")}
+              error={errors.previousJobTitle}
+            />
+
+            <NumberField
+              id="yearsOfExperience"
+              label="سنوات الخبرة (اختياري)"
+              step={1}
+              register={register("yearsOfExperience", { valueAsNumber: true })}
+              error={errors.yearsOfExperience}
+            />
+          </>
+        )}
+
+        <div className="md:col-span-2 flex justify-between gap-2 mt-3">
+          <div>
+            {currentStep > 0 && (
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBack();
+                }}
+              >
+                العودة
+              </Button>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {currentStep < totalSteps - 1 && (
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNext();
+                }}
+              >
+                التالي
+              </Button>
+            )}
+
+            {currentStep === totalSteps - 1 && (
+              <Button loading={loading} type="submit">
+                اضافة موظف
+              </Button>
+            )}
+          </div>
         </div>
       </form>
     </div>
