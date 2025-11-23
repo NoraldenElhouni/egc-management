@@ -19,7 +19,7 @@ export type fullEmployee = Employees & {
 
 export type EmployeeWithRole = Employees & {
   users: {
-    roles: Roles;
+    roles: Roles | null;
   } | null;
 };
 

@@ -13,7 +13,7 @@ const EmployeesList = () => {
       try {
         const { data, error } = await supabase
           .from("employees")
-          .select("*, users!inner(roles(*))");
+          .select("*, users(roles(*))");
         if (error) {
           throw error;
         }

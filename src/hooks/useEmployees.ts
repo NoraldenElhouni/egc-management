@@ -13,7 +13,7 @@ export function useEmployees() {
       setLoading(true);
       const { data, error } = await supabase
         .from("employees")
-        .select("*, users!inner(roles(*))");
+        .select("*, users(roles(*))");
 
       if (error) {
         console.error("error fetching employyes", error);
