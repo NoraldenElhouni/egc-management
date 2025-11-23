@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { EmployeesColumns } from "../../tables/columns/EmployeesColumns";
 import GenericTable from "../../tables/table";
-import { Employees } from "../../../types/global.type";
+import { EmployeeWithRole } from "../../../types/extended.type";
 import { supabase } from "../../../lib/supabaseClient";
 
 const EmployeesList = () => {
-  const [employees, setEmployees] = useState<Employees[]>([]);
+  const [employees, setEmployees] = useState<EmployeeWithRole[]>([]);
 
   useEffect(() => {
     // Fetch employees data from your API or service
     const fetchEmployees = async () => {
       try {
-        const { data, error } = await supabase.from("employees").select("*");
+        const { data, error } = await supabase
+          .from("employees")
+          .select("*, users!inner(roles(*))");
         if (error) {
           throw error;
         }

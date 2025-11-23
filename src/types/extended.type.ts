@@ -3,6 +3,7 @@ import {
   ContractPayments,
   EmployeeCertifications,
   EmployeesDocuments,
+  Roles,
 } from "./global.type";
 
 export type ContractPaymentWithRelations = ContractPayments & {
@@ -14,6 +15,12 @@ export type ContractPaymentWithRelations = ContractPayments & {
 export type fullEmployee = Employees & {
   employee_certifications: EmployeeCertifications[];
   employee_documents: EmployeesDocuments[];
+};
+
+export type EmployeeWithRole = Employees & {
+  users: {
+    roles: Roles;
+  } | null;
 };
 
 // export interface ClientWithProjects extends Clients {

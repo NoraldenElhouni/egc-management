@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Employees } from "../types/global.type";
-import { fullEmployee } from "../types/extended.type";
+import { fullEmployee, EmployeeWithRole } from "../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 
 export function useEmployees() {
-  const [employees, setemployees] = useState<Employees[]>([]);
+  const [employees, setemployees] = useState<EmployeeWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
     async function fetchemployees() {
       setLoading(true);
-      const { data, error } = await supabase.from("employees").select("*");
+      const { data, error } = await supabase
+        .from("employees")
+        .select("*, users!inner(roles(*))");
 
       if (error) {
         console.error("error fetching employyes", error);
