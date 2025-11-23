@@ -1,28 +1,14 @@
-import { fullEmployee } from "../../../types/extended.type";
+import { FullEmployee } from "../../../types/extended.type";
 import EmployeeHeaderCard from "./EmployeeHeaderCard";
 import ProjectsCard from "./ProjectsCard";
 import QuickStats from "./QuickStats";
 
 interface EmployeeDetailsProps {
-  employee: fullEmployee;
+  employee: FullEmployee;
 }
 
 const EmployeeDetails = ({ employee }: EmployeeDetailsProps) => {
-  const derivedProjects = [
-    {
-      id: "proj1",
-      name: "مشروع تطوير الويب",
-      code: "WEB-01",
-      role: "مطور أمامي",
-      status: "نشط",
-      assigned_at:
-        employee.date_of_joining ??
-        employee.created_at ??
-        new Date().toISOString(),
-    },
-  ];
-
-  const handleSave = (data: fullEmployee) => {
+  const handleSave = (data: FullEmployee) => {
     console.log("Saved employee details:", data);
     // TODO: persist changes via API / supabase
   };
@@ -36,7 +22,7 @@ const EmployeeDetails = ({ employee }: EmployeeDetailsProps) => {
 
         <EmployeeHeaderCard employee={employee} onSave={handleSave} />
 
-        <ProjectsCard projects={derivedProjects} />
+        <ProjectsCard projects={employee.projects || []} />
 
         <QuickStats employee={employee} />
       </div>

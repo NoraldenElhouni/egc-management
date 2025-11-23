@@ -29,12 +29,12 @@ export default function EmployeeDetailsPage() {
     {
       id: "salary-details",
       label: "تفاصيل الرواتب",
-      content: <SalaryDetails />,
+      content: <SalaryDetails payroll={employee.payroll} />,
     },
     {
       id: "documents",
       label: "الوثائق",
-      content: <EmployeeDocuments />,
+      content: <EmployeeDocuments documents={employee.employee_documents} />,
     },
   ];
 

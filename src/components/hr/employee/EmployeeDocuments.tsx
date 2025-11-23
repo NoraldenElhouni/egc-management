@@ -1,8 +1,10 @@
 import React, { useRef, useState } from "react";
+import { EmployeesDocuments } from "../../../types/global.type";
 
 type DocRecord = {
   filename: string;
   url?: string;
+  id?: string;
 };
 
 type EmployeeDocs = {
@@ -11,11 +13,10 @@ type EmployeeDocs = {
   diploma?: DocRecord | null;
 };
 
-const initialDocs: EmployeeDocs = {
-  cv: { filename: "ahmed_cv.pdf", url: "#" },
-  idOrPassport: null,
-  diploma: { filename: "diploma.pdf", url: "#" },
-};
+interface EmployeeDocumentsProps {
+  documents: EmployeesDocuments[];
+  onUpload?: (docType: string, file: File) => Promise<void>;
+}
 
 const DocCard = ({
   title,
@@ -74,8 +75,50 @@ const DocCard = ({
   );
 };
 
-const EmployeeDocuments = () => {
-  const [docs, setDocs] = useState<EmployeeDocs>(initialDocs);
+const EmployeeDocuments = ({ documents, onUpload }: EmployeeDocumentsProps) => {
+  // Map employee documents by type
+  const mapDocuments = (): EmployeeDocs => {
+    const result: EmployeeDocs = {
+      cv: null,
+      idOrPassport: null,
+      diploma: null,
+    };
+
+    // Map employee_documents array
+    documents?.forEach((doc) => {
+      const record: DocRecord = {
+        id: doc.id,
+        filename: doc.doc_type,
+        url: doc.url,
+      };
+
+      if (
+        doc.doc_type.toLowerCase().includes("cv") ||
+        doc.doc_type.toLowerCase().includes("resume") ||
+        doc.doc_type.toLowerCase().includes("سيرة")
+      ) {
+        result.cv = record;
+      } else if (
+        doc.doc_type.toLowerCase().includes("id") ||
+        doc.doc_type.toLowerCase().includes("passport") ||
+        doc.doc_type.toLowerCase().includes("هوية") ||
+        doc.doc_type.toLowerCase().includes("جواز")
+      ) {
+        result.idOrPassport = record;
+      } else if (
+        doc.doc_type.toLowerCase().includes("diploma") ||
+        doc.doc_type.toLowerCase().includes("degree") ||
+        doc.doc_type.toLowerCase().includes("شهادة") ||
+        doc.doc_type.toLowerCase().includes("دبلوم")
+      ) {
+        result.diploma = record;
+      }
+    });
+
+    return result;
+  };
+
+  const [docs, setDocs] = useState<EmployeeDocs>(mapDocuments());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingAddType = useRef<string | null>(null);
 
@@ -84,18 +127,29 @@ const EmployeeDocuments = () => {
     fileInputRef.current?.click();
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
     const type = pendingAddType.current as keyof EmployeeDocs | null;
     if (!type) return;
 
-    // For this dummy UI we won't actually upload — we'll create a local object URL
+    // Create temporary local preview
     const url = URL.createObjectURL(file);
     const newDoc: DocRecord = { filename: file.name, url };
-
     setDocs((d) => ({ ...d, [type]: newDoc }));
+
+    // Call upload handler if provided
+    if (onUpload) {
+      try {
+        await onUpload(type, file);
+      } catch (error) {
+        console.error("Upload failed:", error);
+        // Revert on error
+        setDocs(mapDocuments());
+      }
+    }
+
     pendingAddType.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
   }

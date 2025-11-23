@@ -3,6 +3,13 @@ import {
   ContractPayments,
   EmployeeCertifications,
   EmployeesDocuments,
+  UserRoles,
+  Roles,
+  ProjectAssignments,
+  Projects,
+  ProjectRoles,
+  Payroll,
+  EmployeeLeaves,
 } from "./global.type";
 
 export type ContractPaymentWithRelations = ContractPayments & {
@@ -11,9 +18,26 @@ export type ContractPaymentWithRelations = ContractPayments & {
   contracts: { projects: { name: string } } | null;
 };
 
-export type fullEmployee = Employees & {
+// Project related types (export these for use elsewhere)
+export type ProjectAssignmentWithDetails = ProjectAssignments & {
+  projects: Projects;
+  project_roles: ProjectRoles;
+};
+
+export type EmployeeProjects = ProjectAssignmentWithDetails[];
+
+// Main employee type
+export type FullEmployee = Employees & {
   employee_certifications: EmployeeCertifications[];
   employee_documents: EmployeesDocuments[];
+  user_role?:
+    | (UserRoles & {
+        roles: Roles;
+      })
+    | null;
+  projects: EmployeeProjects;
+  payroll: Payroll[];
+  employee_leaves: EmployeeLeaves[];
 };
 
 // export interface ClientWithProjects extends Clients {

@@ -30,6 +30,8 @@ export type Transactions = Tables<"transactions">;
 export type TransactionCategories = Tables<"transaction_categories">;
 export type Company = Tables<"company">;
 export type AuditLog = Tables<"audit_log">;
+export type EmployeeLeaves = Tables<"employee_leaves">;
+export type Payroll = Tables<"payroll">;
 
 // Additional types for tables not in your original export
 export type ContractorSpecializations = Tables<"contractor_specializations">;
