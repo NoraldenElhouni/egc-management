@@ -1,4 +1,4 @@
-import { Edit } from "lucide-react";
+import { Edit, LampDesk } from "lucide-react";
 import { fullEmployee } from "../../../types/extended.type";
 import { formatDate } from "../../../utils/helpper";
 import { useEffect, useState } from "react";
@@ -65,71 +65,18 @@ const EmployeeHeaderCard = ({ employee, onSave }: EmployeeHeaderCardProps) => {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 11c2.761 0 5-2.239 5-5S14.761 1 12 1 7 3.239 7 6s2.239 5 5 5z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-4.35-4.35"
-                  />
-                </svg>
-                {editMode ? (
-                  <input
-                    className="border rounded px-2 py-1 text-sm"
-                    value={formData.job_title ?? ""}
-                    onChange={(e) => updateField("job_title", e.target.value)}
-                  />
-                ) : (
-                  <span>{employee.job_title ?? "غير محدد"}</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 7v13h18V7M16 3v4M8 3v4h8V3"
-                  />
-                </svg>
+              {editMode ? (
+                <input
+                  className="border rounded px-2 py-1 text-sm"
+                  value={formData.address ?? ""}
+                  onChange={(e) => updateField("status", e.target.value)}
+                />
+              ) : (
                 <span>ENG</span>
-              </div>
+              )}
 
               <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8v4l3 3"
-                  />
-                </svg>
+                <div className="text-xs text-gray-400">الحالة</div>
                 {editMode ? (
                   <input
                     className="border rounded px-2 py-1 text-sm"

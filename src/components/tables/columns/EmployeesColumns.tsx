@@ -83,4 +83,19 @@ export const EmployeesColumns: ColumnDef<Employees>[] = [
       return date.toLocaleDateString("ar-LY");
     },
   },
+  {
+    accessorKey: "status",
+    header: "الحالة",
+    cell: ({ row }) => (
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+          row.original.status === "Active"
+            ? "bg-green-100 text-green-800"
+            : "bg-red-100 text-red-800"
+        }`}
+      >
+        {row.original.status === "Active" ? "نشط" : "غير نشط"}
+      </span>
+    ),
+  },
 ];
