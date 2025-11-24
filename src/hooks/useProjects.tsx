@@ -29,7 +29,7 @@ export function useProjects() {
 
   const addProject = async (newProject: ProjectFormValues) => {
     setLoading(true);
-
+    console.log("Adding project:", newProject);
     const CODE = Math.random().toString(36).substring(2, 8).toUpperCase();
     const payload: Database["public"]["Tables"]["projects"]["Insert"] = {
       name: newProject.name,
@@ -54,6 +54,37 @@ export function useProjects() {
       setError(error);
       setLoading(false);
       return null;
+    }
+
+    if (newProject.accounts && newProject.accounts.length > 0) {
+      const accountsToInsert: Database["public"]["Tables"]["accounts"]["Insert"][] =
+        newProject.accounts.map((account) => ({
+          currency: account || "LYD",
+          owner_id: data.id,
+          owner_type: "project",
+          type: "cash",
+          balance: 0,
+          held: 0,
+        }));
+
+      // Add the bank account
+      accountsToInsert.push({
+        currency: "LYD",
+        owner_id: data.id,
+        owner_type: "project",
+        type: "bank",
+        balance: 0,
+        held: 0,
+      });
+
+      const { error: accountsError } = await supabase
+        .from("accounts")
+        .insert(accountsToInsert);
+
+      if (accountsError) {
+        console.error("error adding project accounts", accountsError);
+        setError(accountsError);
+      }
     }
 
     // update local state

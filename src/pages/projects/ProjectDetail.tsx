@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Users, DollarSign, MapPin, Activity } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useParams } from "react-router-dom";
@@ -41,11 +41,11 @@ interface Contractor {
 
 interface Contract {
   id: string;
-  status: string;
+  status: string | null;
   amount: number;
   start_date: string | null;
   end_date: string | null;
-  contractor?: Contractor;
+  contractor?: Contractor | null;
 }
 
 interface Account {
@@ -218,16 +218,17 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             (sum, inc) => sum + parseFloat(String(inc.amount || 0)),
             0
           ) || 0;
-        const totalBalance =
-          accounts?.reduce(
-            (sum, acc) => sum + parseFloat(String(acc.balance || 0)),
-            0
-          ) || 0;
-        const totalHeld =
-          accounts?.reduce(
-            (sum, acc) => sum + parseFloat(String(acc.held || 0)),
-            0
-          ) || 0;
+        // Only calculate balance and held for LYD accounts
+        const lydAccounts =
+          accounts?.filter((acc) => acc.currency === "LYD") || [];
+        const totalBalance = lydAccounts.reduce(
+          (sum, acc) => sum + parseFloat(String(acc.balance || 0)),
+          0
+        );
+        const totalHeld = lydAccounts.reduce(
+          (sum, acc) => sum + parseFloat(String(acc.held || 0)),
+          0
+        );
 
         // Compile all data
         const compiledProject: Project = {
@@ -311,12 +312,46 @@ const ProjectDetailsPage = () => {
     );
   }
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat("en-LY", {
-      style: "currency",
-      currency: "LYD",
-    }).format(amount || 0);
+  const formatCurrency = (amount: number, currency = "LYD"): string => {
+    // Choose a locale based on currency for better formatting defaults
+    const localeMap: Record<string, string> = {
+      LYD: "en-LY",
+      USD: "en-US",
+      EUR: "de-DE", // German locale commonly used for EUR formatting
+    };
+    const locale = localeMap[currency] || "en-US";
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount || 0);
+    } catch {
+      // Fallback if Intl cannot format given currency
+      return `${amount?.toFixed(2)} ${currency}`;
+    }
   };
+
+  const groupAccountsByCurrency = (accounts: Account[]) => {
+    const byCurrency: Record<string, Record<string, Account[]>> = {};
+    accounts.forEach((acc) => {
+      if (!byCurrency[acc.currency]) byCurrency[acc.currency] = {};
+      if (!byCurrency[acc.currency][acc.type])
+        byCurrency[acc.currency][acc.type] = [];
+      byCurrency[acc.currency][acc.type].push(acc);
+    });
+    // Sort to ensure LYD comes first
+    const sortedEntries = Object.entries(byCurrency).sort(([a], [b]) => {
+      if (a === "LYD") return -1;
+      if (b === "LYD") return 1;
+      return a.localeCompare(b);
+    });
+    return Object.fromEntries(sortedEntries);
+  };
+
+  const typeLabel = (type: string) =>
+    type === "bank" ? "بنك" : type === "cash" ? "نقدي" : type;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -363,12 +398,12 @@ const ProjectDetailsPage = () => {
         </div>
 
         {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">أعضاء الفريق</p>
-                <p className="text-3xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-gray-900">
                   {project.stats.teamSize}
                 </p>
               </div>
@@ -382,8 +417,8 @@ const ProjectDetailsPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">الرصيد الكلي</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {formatCurrency(project.financial.balance)}
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(project.financial.balance, "LYD")}
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -396,12 +431,28 @@ const ProjectDetailsPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">العقود النشطة</p>
-                <p className="text-3xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-gray-900">
                   {project.stats.activeContracts}
                 </p>
               </div>
               <div className="bg-orange-100 p-3 rounded-lg">
                 <Activity className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">
+                  نسبة الشركة {project.percentage}%
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(project.percentage_taken, "LYD")}
+                </p>
+              </div>
+              <div className="bg-green-100 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
@@ -440,37 +491,37 @@ const ProjectDetailsPage = () => {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">إجمالي الدخل</span>
                 <span className="font-semibold text-green-600">
-                  {formatCurrency(project.financial.totalIncome)}
+                  {formatCurrency(project.financial.totalIncome, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">إجمالي المصاريف</span>
                 <span className="font-semibold text-red-600">
-                  {formatCurrency(project.financial.totalExpenses)}
+                  {formatCurrency(project.financial.totalExpenses, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">المبلغ المدفوع</span>
                 <span className="font-semibold text-gray-900">
-                  {formatCurrency(project.financial.totalPaid)}
+                  {formatCurrency(project.financial.totalPaid, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t">
                 <span className="text-gray-600">الرصيد المتاح</span>
                 <span className="font-semibold text-blue-600">
-                  {formatCurrency(project.financial.available)}
+                  {formatCurrency(project.financial.available, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">المبلغ المحتجز</span>
                 <span className="font-semibold text-orange-600">
-                  {formatCurrency(project.financial.held)}
+                  {formatCurrency(project.financial.held, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">المدفوعات المعلقة</span>
                 <span className="font-semibold text-yellow-600">
-                  {formatCurrency(project.financial.pendingPayments)}
+                  {formatCurrency(project.financial.pendingPayments, "LYD")}
                 </span>
               </div>
             </div>
@@ -528,6 +579,84 @@ const ProjectDetailsPage = () => {
           )}
         </div>
 
+        {/* Accounts Breakdown */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">الحسابات</h2>
+          {project.accounts && project.accounts.length > 0 ? (
+            <div className="space-y-6">
+              {Object.entries(groupAccountsByCurrency(project.accounts)).map(
+                ([currency, types]) => (
+                  <div key={currency} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        عملة: {currency}
+                      </h3>
+                      <span className="text-sm text-gray-600">
+                        إجمالي الرصيد:{" "}
+                        {formatCurrency(
+                          Object.values(types)
+                            .flat()
+                            .reduce((s, a) => s + (a.balance || 0), 0),
+                          currency
+                        )}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(types).map(([type, accounts]) => {
+                        const totalBalance = accounts.reduce(
+                          (s, a) => s + (a.balance || 0),
+                          0
+                        );
+                        const totalHeld = accounts.reduce(
+                          (s, a) => s + (a.held || 0),
+                          0
+                        );
+                        return (
+                          <div key={type} className="bg-gray-50 rounded p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium text-gray-800">
+                                {typeLabel(type)}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                عدد الحسابات: {accounts.length}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">الرصيد</span>
+                                <span className="font-semibold text-gray-900">
+                                  {formatCurrency(totalBalance, currency)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">المحتجز</span>
+                                <span className="font-semibold text-orange-600">
+                                  {formatCurrency(totalHeld, currency)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">المتاح</span>
+                                <span className="font-semibold text-blue-600">
+                                  {formatCurrency(
+                                    totalBalance - totalHeld,
+                                    currency
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-500">لا توجد حسابات لهذا المشروع</p>
+          )}
+        </div>
+
         {/* Active Contracts */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -555,7 +684,7 @@ const ProjectDetailsPage = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">
-                        {formatCurrency(contract.amount)}
+                        {formatCurrency(contract.amount, "LYD")}
                       </p>
                       <span
                         className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium ${

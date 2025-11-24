@@ -54,13 +54,13 @@ export const createProjectsColumns = (
 
   {
     accessorKey: "percentage",
-    header: "نسبة الانجاز",
+    header: "نسبة المشروع",
     cell: ({ row }) => row.original.percentage ?? "—",
   },
 
   {
     accessorKey: "percentage_taken",
-    header: "النسبة المسحوبة",
+    header: "حصة الشركة",
   },
 
   {
