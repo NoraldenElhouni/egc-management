@@ -100,12 +100,11 @@ const ProjectExpenseForm = ({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <TextField
-            id="serial_number"
-            label="رقم التسلسلي"
-            register={register("serial_number")}
-            error={errors.serial_number}
+            id="description"
+            label="الوصف"
+            register={register("description")}
+            error={errors.description}
           />
-
           <SelectField
             id="type"
             label="نوع المصروف"
@@ -138,12 +137,7 @@ const ProjectExpenseForm = ({
             register={register("paid_amount", { valueAsNumber: true })}
             error={errors.paid_amount}
           />
-          <TextField
-            id="description"
-            label="الوصف"
-            register={register("description")}
-            error={errors.description}
-          />
+
           <SelectField
             id="payment_method"
             label="طريقة الدفع"
@@ -172,6 +166,7 @@ const ProjectExpenseForm = ({
               دفع كامل
             </Button>
           </div>
+          <div />
           <div className="flex justify-end items-end">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? "جاري الإرسال..." : "إرسال المصروف"}

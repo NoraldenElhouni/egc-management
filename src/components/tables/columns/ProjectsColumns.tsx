@@ -33,6 +33,11 @@ export const createProjectsColumns = (
     ),
     size: 32,
   },
+  {
+    accessorKey: "serial_number",
+    header: "الرقم",
+    size: 32,
+  },
 
   {
     accessorKey: "name",

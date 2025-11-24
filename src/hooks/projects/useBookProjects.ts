@@ -47,6 +47,21 @@ export function useBookProject(projectId: string) {
         throw new Error("User not authenticated");
       }
 
+      // get the project for expense counter for the serial number
+      const { data: projectRow, error: projectError } = await supabase
+        .from("projects")
+        .select("expense_counter")
+        .eq("id", expenseData.project_id)
+        .single();
+
+      if (projectError) {
+        console.error(
+          "Error fetching project for expense counter",
+          projectError
+        );
+        throw projectError;
+      }
+
       const { data, error } = await supabase
         .from("project_expenses")
         .insert({
@@ -58,7 +73,7 @@ export function useBookProject(projectId: string) {
           expense_type: expenseData.type,
           payment_method: expenseData.payment_method,
           amount_paid: expenseData.paid_amount,
-          // serial_number: expenseData.serial_number,
+          serial_number: projectRow?.expense_counter || 0,
           phase: expenseData.phase,
           status:
             expenseData.paid_amount >= expenseData.total_amount
@@ -73,11 +88,28 @@ export function useBookProject(projectId: string) {
         throw error;
       }
 
+      // update project expense counter
+      const { error: counterError } = await supabase
+        .from("projects")
+        .update({
+          expense_counter: (projectRow?.expense_counter || 0) + 1,
+        })
+        .eq("id", expenseData.project_id);
+
+      if (counterError) {
+        console.error("error updating project expense counter", counterError);
+        setError(counterError);
+      }
+
       // Update local state with new expense
-      if (data && project) {
-        setProject({
-          ...project,
-          project_expenses: [...(project.project_expenses || []), data],
+      if (data) {
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            project_expenses: [...(prev.project_expenses || []), data],
+            expense_counter: (prev.expense_counter || 0) + 1,
+          };
         });
       }
 
@@ -90,6 +122,7 @@ export function useBookProject(projectId: string) {
       setLoading(false);
     }
   };
+
   const addIncome = async (incomeData: ProjectIncomeFormValues) => {
     try {
       setLoading(true);
@@ -97,6 +130,21 @@ export function useBookProject(projectId: string) {
 
       if (!user?.id) {
         throw new Error("User not authenticated");
+      }
+
+      // get the project for income counter for the serial number
+      const { data: projectRow, error: projectError } = await supabase
+        .from("projects")
+        .select("income_counter")
+        .eq("id", incomeData.project_id)
+        .single();
+
+      if (projectError) {
+        console.error(
+          "Error fetching project for income counter",
+          projectError
+        );
+        throw projectError;
       }
 
       const { data, error } = await supabase
@@ -109,7 +157,7 @@ export function useBookProject(projectId: string) {
           created_by: user.id,
           fund: incomeData.fund,
           payment_method: incomeData.payment_method,
-          // serial_number: incomeData.serial_number,
+          serial_number: projectRow?.income_counter || 0,
           // related_expense: incomeData.related_expense,
         })
         .select()
@@ -121,11 +169,28 @@ export function useBookProject(projectId: string) {
       }
 
       // Update local state with new income
-      if (data && project) {
-        setProject({
-          ...project,
-          project_incomes: [...(project.project_incomes || []), data],
+      if (data) {
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            project_incomes: [...(prev.project_incomes || []), data],
+            income_counter: (prev.income_counter || 0) + 1,
+          };
         });
+      }
+
+      // update project income counter
+      const { error: counterError } = await supabase
+        .from("projects")
+        .update({
+          income_counter: (projectRow?.income_counter || 0) + 1,
+        })
+        .eq("id", incomeData.project_id);
+
+      if (counterError) {
+        console.error("error updating project income counter", counterError);
+        setError(counterError);
       }
 
       return { data, error: null };

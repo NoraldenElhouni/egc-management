@@ -34,6 +34,11 @@ export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
     size: 32,
   },
   {
+    accessorKey: "serial_number",
+    header: "الرقم",
+    size: 32,
+  },
+  {
     accessorKey: "description",
     header: "الوصف",
     cell: ({ row }) => (

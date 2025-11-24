@@ -20,16 +20,6 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
       label: "الدخل",
       content: <BookProjectIncomeTab project={project} />,
     },
-    {
-      id: "returned-income",
-      label: "مواد المرجعة",
-      content: <div>مواد المرجعة</div>,
-    },
-    {
-      id: "works",
-      label: "الاعمال",
-      content: <div>الاعمال</div>,
-    },
   ];
 
   if (loading) {

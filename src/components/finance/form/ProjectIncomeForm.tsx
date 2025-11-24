@@ -81,14 +81,7 @@ const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
       )}
       <form onSubmit={handleSubmit(onSubmit)}>
         {" "}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <TextField
-            id="serial_number"
-            label="رقم التسلسلي"
-            register={register("serial_number")}
-            error={errors.serial_number}
-          />
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
           <SelectField
             id="fund"
             label="نوع المصروف"

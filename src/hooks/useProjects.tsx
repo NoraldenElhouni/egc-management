@@ -12,7 +12,10 @@ export function useProjects() {
   useEffect(() => {
     async function fetchProjects() {
       setLoading(true);
-      const { data, error } = await supabase.from("projects").select("*");
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("serial_number", { ascending: true });
 
       if (error) {
         console.error("error fetching employyes", error);
@@ -29,7 +32,19 @@ export function useProjects() {
 
   const addProject = async (newProject: ProjectFormValues) => {
     setLoading(true);
-    console.log("Adding project:", newProject);
+    // fetch the company projects_counter for serial number
+    const { data: companyData, error: companyError } = await supabase
+      .from("company")
+      .select("projects_counter")
+      .single();
+
+    if (companyError) {
+      console.error("error fetching company data", companyError);
+      setError(companyError);
+      setLoading(false);
+      return null;
+    }
+
     const CODE = Math.random().toString(36).substring(2, 8).toUpperCase();
     const payload: Database["public"]["Tables"]["projects"]["Insert"] = {
       name: newProject.name,
@@ -39,7 +54,7 @@ export function useProjects() {
       status:
         newProject.status as Database["public"]["Enums"]["project_status_enum"],
       percentage: (newProject.percentage ?? null) as number | null,
-      serial_number: (newProject.serial_number ?? null) as number | null,
+      serial_number: companyData?.projects_counter ?? null,
       code: CODE,
     };
 
@@ -85,6 +100,16 @@ export function useProjects() {
         console.error("error adding project accounts", accountsError);
         setError(accountsError);
       }
+    }
+
+    // update counter in company table
+    const { error: counterError } = await supabase.from("company").update({
+      projects_counter: (companyData?.projects_counter || 0) + 1,
+    });
+
+    if (counterError) {
+      console.error("error updating company projects counter", counterError);
+      setError(counterError);
     }
 
     // update local state

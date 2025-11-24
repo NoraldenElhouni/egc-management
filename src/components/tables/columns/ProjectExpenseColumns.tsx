@@ -42,6 +42,11 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     ),
     size: 32,
   },
+  {
+    accessorKey: "serial_number",
+    header: "الرقم",
+    size: 32,
+  },
 
   // DESCRIPTION
   {

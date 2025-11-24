@@ -5,18 +5,53 @@ import {
   Search,
   Folder,
   RefreshCcw,
-  ExternalLink,
   List,
   ChevronLeft,
   ChevronRight,
+  Star,
 } from "lucide-react";
 
 const BookkeeperLayout: React.FC = () => {
   const { projects, loading, error, refresh } = useProjects();
   const [query, setQuery] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const location = useLocation();
   const searchRef = useRef<number | null>(null);
+
+  // Load favorites from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("favoriteProjects");
+      if (raw) {
+        const arr: string[] = JSON.parse(raw);
+        setFavorites(new Set(arr));
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
+
+  const persistFavorites = (next: Set<string>) => {
+    localStorage.setItem("favoriteProjects", JSON.stringify(Array.from(next)));
+  };
+
+  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      persistFavorites(next);
+      return next;
+    });
+  };
+
+  const isFavorite = (id: string) => favorites.has(id);
 
   // Debounced search
   const onSearchChange = (value: string) => {
@@ -25,13 +60,27 @@ const BookkeeperLayout: React.FC = () => {
     searchRef.current = window.setTimeout(() => setQuery((v) => v), 200);
   };
 
-  const filtered = projects.filter((p) => {
-    if (!query.trim()) return true;
-    return (
-      String(p.serial_number).includes(query.trim()) ||
-      p.name.toLowerCase().includes(query.trim().toLowerCase())
-    );
-  });
+  const filtered = projects
+    .filter((p) => {
+      if (!query.trim()) return true;
+      return (
+        String(p.serial_number).includes(query.trim()) ||
+        p.name.toLowerCase().includes(query.trim().toLowerCase())
+      );
+    })
+    // Sort: favorites first, then by serial_number ascending
+    .sort((a, b) => {
+      const aFav = isFavorite(a.id);
+      const bFav = isFavorite(b.id);
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+      const aSerial = Number(a.serial_number);
+      const bSerial = Number(b.serial_number);
+      if (isNaN(aSerial) && isNaN(bSerial)) return 0;
+      if (isNaN(aSerial)) return 1;
+      if (isNaN(bSerial)) return -1;
+      return aSerial - bSerial;
+    });
 
   useEffect(() => {
     // collapse state could be persisted here later
@@ -151,7 +200,25 @@ const BookkeeperLayout: React.FC = () => {
                         <span className="truncate font-medium">{p.name}</span>
                         <div className="flex items-center gap-2 text-slate-400">
                           <span className="text-sm">{p.serial_number}</span>
-                          <ExternalLink className="w-4 h-4" />
+                          <button
+                            onClick={(e) => toggleFavorite(p.id, e)}
+                            aria-label={
+                              isFavorite(p.id)
+                                ? "إزالة من المفضلة"
+                                : "إضافة إلى المفضلة"
+                            }
+                            className={`transition-colors rounded p-0.5 ${
+                              isFavorite(p.id)
+                                ? "text-yellow-500"
+                                : "text-slate-400 hover:text-slate-600"
+                            }`}
+                          >
+                            <Star
+                              className="w-4 h-4"
+                              fill={isFavorite(p.id) ? "currentColor" : "none"}
+                              strokeWidth={isFavorite(p.id) ? 1.5 : 2}
+                            />
+                          </button>
                         </div>
                       </>
                     )}

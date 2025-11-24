@@ -4,7 +4,6 @@ export const ProjectExpenseSchema = z
   .object({
     project_id: z.string(),
     description: z.string().min(1, "الوصف مطلوب"),
-    serial_number: z.string().min(1, "رقم المسلسل مطلوب"),
     type: z.enum(["labor", "material"], {
       message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
     }),
@@ -30,7 +29,6 @@ export const ProjectExpenseSchema = z
 
 export const ProjectIncomeSchema = z.object({
   project_id: z.string(),
-  serial_number: z.string().min(1, "رقم المسلسل مطلوب"),
   description: z.string().nullable(),
   amount: z.number().min(0, "المبلغ يجب أن يكون غير سالب"),
   fund: z.enum(["client", "internal", "sale", "refund", "other"], {
