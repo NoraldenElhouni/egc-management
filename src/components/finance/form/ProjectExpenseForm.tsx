@@ -156,10 +156,10 @@ const ProjectExpenseForm = ({
             error={errors.date}
           />
           <SelectField
-            id="Currency"
+            id="currency"
             label="العملة"
-            register={register("Currency")}
-            error={errors.Currency}
+            register={register("currency")}
+            error={errors.currency}
             options={[
               { value: "LYD", label: "دينار ليبي" },
               { value: "USD", label: "دولار أمريكي" },

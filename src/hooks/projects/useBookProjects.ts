@@ -71,13 +71,8 @@ export function useBookProject(projectId: string) {
           expense_date: expenseData.date,
           created_by: user.id,
           expense_type: expenseData.type,
-          amount_paid: expenseData.paid_amount,
           serial_number: projectRow?.expense_counter || 0,
           phase: expenseData.phase,
-          status:
-            expenseData.paid_amount >= expenseData.total_amount
-              ? "paid"
-              : "partially_paid",
         })
         .select()
         .single();
@@ -87,76 +82,97 @@ export function useBookProject(projectId: string) {
         throw error;
       }
 
-      //get the account
-      const { data: accountData, error: accountError } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("owner_id", expenseData.project_id)
-        .eq("currency", expenseData.Currency)
-        .eq("type", expenseData.payment_method === "cash" ? "cash" : "bank")
-        .eq("owner_type", "project")
-        .single();
-
-      if (accountError) {
-        console.error("Error fetching project account", accountError);
-        throw accountError;
-      }
-
-      // create expense_payments entry
       if (expenseData.paid_amount > 0) {
-        const { error: paymentError } = await supabase
-          .from("expense_payments")
-          .insert({
-            expense_id: data.id,
-            amount: expenseData.paid_amount,
-            created_at: new Date().toISOString(),
-            payment_method: expenseData.payment_method,
-            created_by: user.id,
-            account_id: accountData.id,
-            //since this is the first payment the serial number is 1 if not take it from project_expenses.payment_counter
-            serial_number: 1,
-          });
+        const { data: rpcData, error: rpcError } = await supabase.rpc(
+          "process_expense_payment", // make sure the name matches
+          {
+            p_amount: expenseData.paid_amount,
+            p_expense_id: data.id,
+            p_payment_method: expenseData.payment_method,
+            p_created_by: user.id,
+            p_currency: expenseData.currency,
+            p_project_id: expenseData.project_id,
+          }
+        );
 
-        if (paymentError) {
-          console.error("Error adding expense payment", paymentError);
-          throw paymentError;
+        if (rpcError) {
+          console.error("Error processing expense payment", rpcError);
+          throw rpcError;
+        } else {
+          console.log("RPC result:", rpcData);
         }
       }
 
-      // decrease project account by paid amount and hold the rest as payable
+      // //get the account
+      // const { data: accountData, error: accountError } = await supabase
+      //   .from("accounts")
+      //   .select("*")
+      //   .eq("owner_id", expenseData.project_id)
+      //   .eq("currency", expenseData.Currency)
+      //   .eq("type", expenseData.payment_method === "cash" ? "cash" : "bank")
+      //   .eq("owner_type", "project")
+      //   .single();
 
-      const { error: accountUpdateError } = await supabase
-        .from("accounts")
-        .update({
-          balance: accountData.balance - expenseData.paid_amount,
-          held:
-            accountData.held +
-            (expenseData.total_amount - expenseData.paid_amount),
-        })
-        .eq("id", accountData.id);
+      // if (accountError) {
+      //   console.error("Error fetching project account", accountError);
+      //   throw accountError;
+      // }
 
-      if (accountUpdateError) {
-        console.error("Error updating project account", accountUpdateError);
-        throw accountUpdateError;
-      }
+      // // create expense_payments entry
+      // if (expenseData.paid_amount > 0) {
+      //   const { error: paymentError } = await supabase
+      //     .from("expense_payments")
+      //     .insert({
+      //       expense_id: data.id,
+      //       amount: expenseData.paid_amount,
+      //       created_at: new Date().toISOString(),
+      //       payment_method: expenseData.payment_method,
+      //       created_by: user.id,
+      //       account_id: accountData.id,
+      //       //since this is the first payment the serial number is 1 if not take it from project_expenses.payment_counter
+      //       serial_number: 1,
+      //     });
 
-      const percentage_taken =
-        projectRow.percentage_taken +
-        (expenseData.total_amount * (projectRow.percentage || 0)) / 100;
+      //   if (paymentError) {
+      //     console.error("Error adding expense payment", paymentError);
+      //     throw paymentError;
+      //   }
+      // }
 
-      // update project expense counter
-      const { error: counterError } = await supabase
-        .from("projects")
-        .update({
-          expense_counter: (projectRow?.expense_counter || 0) + 1,
-          percentage_taken: percentage_taken,
-        })
-        .eq("id", expenseData.project_id);
+      // // decrease project account by paid amount and hold the rest as payable
 
-      if (counterError) {
-        console.error("error updating project expense counter", counterError);
-        setError(counterError);
-      }
+      // const { error: accountUpdateError } = await supabase
+      //   .from("accounts")
+      //   .update({
+      //     balance: accountData.balance - expenseData.paid_amount,
+      //     held:
+      //       accountData.held +
+      //       (expenseData.total_amount - expenseData.paid_amount),
+      //   })
+      //   .eq("id", accountData.id);
+
+      // if (accountUpdateError) {
+      //   console.error("Error updating project account", accountUpdateError);
+      //   throw accountUpdateError;
+      // }
+
+      // const percentage_taken =
+      //   projectRow.percentage_taken +
+      //   (expenseData.total_amount * (projectRow.percentage || 0)) / 100;
+
+      // // update project expense counter
+      // const { error: counterError } = await supabase
+      //   .from("projects")
+      //   .update({
+      //     expense_counter: (projectRow?.expense_counter || 0) + 1,
+      //     percentage_taken: percentage_taken,
+      //   })
+      //   .eq("id", expenseData.project_id);
+
+      // if (counterError) {
+      //   console.error("error updating project expense counter", counterError);
+      //   setError(counterError);
+      // }
 
       // Update local state with new expense
       if (data) {

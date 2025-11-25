@@ -801,30 +801,43 @@ export type Database = {
       };
       expense_payments: {
         Row: {
+          account_id: string | null;
           amount: number;
           created_at: string;
           created_by: string | null;
           expense_id: string;
           id: string;
           payment_method: string | null;
+          serial_number: number | null;
         };
         Insert: {
+          account_id?: string | null;
           amount: number;
           created_at?: string;
           created_by?: string | null;
           expense_id: string;
           id?: string;
           payment_method?: string | null;
+          serial_number?: number | null;
         };
         Update: {
+          account_id?: string | null;
           amount?: number;
           created_at?: string;
           created_by?: string | null;
           expense_id?: string;
           id?: string;
           payment_method?: string | null;
+          serial_number?: number | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "expense_payments_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "expense_payments_created_by_fkey";
             columns: ["created_by"];
@@ -1074,7 +1087,6 @@ export type Database = {
       };
       project_expenses: {
         Row: {
-          account_id: string | null;
           amount_paid: number;
           contract_id: string | null;
           created_at: string;
@@ -1093,7 +1105,6 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          account_id?: string | null;
           amount_paid?: number;
           contract_id?: string | null;
           created_at?: string;
@@ -1112,7 +1123,6 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          account_id?: string | null;
           amount_paid?: number;
           contract_id?: string | null;
           created_at?: string;
@@ -1131,13 +1141,6 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
-          {
-            foreignKeyName: "project_expenses_account_id_fkey";
-            columns: ["account_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
           {
             foreignKeyName: "project_expenses_contract_id_fkey";
             columns: ["contract_id"];
@@ -1704,23 +1707,28 @@ export type Database = {
     };
     Functions: {
       get_role_by_email: { Args: { p_email: string }; Returns: string };
-      handle_project_expense_with_account: {
-        Args: {
-          p_account_id: string;
-          p_amount_paid: number;
-          p_created_by: string;
-          p_expense_id: string;
-          p_payment_method: string;
-          p_project_id: string;
-          p_total_amount: number;
-        };
-        Returns: Json;
-      };
       has_permission: {
         Args: { p_perm_name: string; p_user: string };
         Returns: boolean;
       };
       is_admin: { Args: never; Returns: boolean };
+      process_expense_payment: {
+        Args: {
+          p_amount: number;
+          p_created_by: string;
+          p_currency: string;
+          p_expense_id: string;
+          p_payment_method: string;
+          p_project_id: string;
+        };
+        Returns: {
+          account: Json;
+          expense: Json;
+          payment: Json;
+          payment_id: string;
+          project: Json;
+        }[];
+      };
     };
     Enums: {
       account_type: "cash" | "bank";

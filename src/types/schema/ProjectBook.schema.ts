@@ -21,7 +21,7 @@ export const ProjectExpenseSchema = z
     date: z.string().refine((date) => !isNaN(Date.parse(date)), {
       message: "التاريخ غير صالح",
     }),
-    Currency: z.enum(["LYD", "USD", "EUR"], {
+    currency: z.enum(["LYD", "USD", "EUR"], {
       message: "العملة غير صالحة",
     }),
   })
