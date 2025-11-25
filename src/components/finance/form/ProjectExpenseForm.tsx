@@ -155,6 +155,18 @@ const ProjectExpenseForm = ({
             register={register("date")}
             error={errors.date}
           />
+          <SelectField
+            id="Currency"
+            label="العملة"
+            register={register("Currency")}
+            error={errors.Currency}
+            options={[
+              { value: "LYD", label: "دينار ليبي" },
+              { value: "USD", label: "دولار أمريكي" },
+              { value: "EUR", label: "يورو" },
+            ]}
+          />
+
           <div className="flex items-end">
             <Button
               type="button"
@@ -166,7 +178,7 @@ const ProjectExpenseForm = ({
               دفع كامل
             </Button>
           </div>
-          <div />
+
           <div className="flex justify-end items-end">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? "جاري الإرسال..." : "إرسال المصروف"}

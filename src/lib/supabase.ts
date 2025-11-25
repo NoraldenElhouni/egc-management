@@ -806,7 +806,7 @@ export type Database = {
           created_by: string | null;
           expense_id: string;
           id: string;
-          payment_method: Database["public"]["Enums"]["payment_type"] | null;
+          payment_method: string | null;
         };
         Insert: {
           amount: number;
@@ -814,7 +814,7 @@ export type Database = {
           created_by?: string | null;
           expense_id: string;
           id?: string;
-          payment_method?: Database["public"]["Enums"]["payment_type"] | null;
+          payment_method?: string | null;
         };
         Update: {
           amount?: number;
@@ -822,7 +822,7 @@ export type Database = {
           created_by?: string | null;
           expense_id?: string;
           id?: string;
-          payment_method?: Database["public"]["Enums"]["payment_type"] | null;
+          payment_method?: string | null;
         };
         Relationships: [
           {
@@ -1084,7 +1084,7 @@ export type Database = {
           expense_date: string;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id: string;
-          payment_method: Database["public"]["Enums"]["payment_type"];
+          payment_counter: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
           serial_number: number | null;
@@ -1103,7 +1103,7 @@ export type Database = {
           expense_date?: string;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id?: string;
-          payment_method: Database["public"]["Enums"]["payment_type"];
+          payment_counter?: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
           serial_number?: number | null;
@@ -1122,7 +1122,7 @@ export type Database = {
           expense_date?: string;
           expense_type?: Database["public"]["Enums"]["expense_type"];
           id?: string;
-          payment_method?: Database["public"]["Enums"]["payment_type"];
+          payment_counter?: number;
           phase?: Database["public"]["Enums"]["phase_type"];
           project_id?: string;
           serial_number?: number | null;
@@ -1166,7 +1166,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_type"];
           project_id: string;
           related_expense: string | null;
-          transaction_id: string | null;
+          serial_number: number;
           updated_at: string;
         };
         Insert: {
@@ -1180,7 +1180,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_type"];
           project_id: string;
           related_expense?: string | null;
-          transaction_id?: string | null;
+          serial_number: number;
           updated_at?: string;
         };
         Update: {
@@ -1194,7 +1194,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_type"];
           project_id?: string;
           related_expense?: string | null;
-          transaction_id?: string | null;
+          serial_number?: number;
           updated_at?: string;
         };
         Relationships: [
@@ -1704,6 +1704,18 @@ export type Database = {
     };
     Functions: {
       get_role_by_email: { Args: { p_email: string }; Returns: string };
+      handle_project_expense_with_account: {
+        Args: {
+          p_account_id: string;
+          p_amount_paid: number;
+          p_created_by: string;
+          p_expense_id: string;
+          p_payment_method: string;
+          p_project_id: string;
+          p_total_amount: number;
+        };
+        Returns: Json;
+      };
       has_permission: {
         Args: { p_perm_name: string; p_user: string };
         Returns: boolean;

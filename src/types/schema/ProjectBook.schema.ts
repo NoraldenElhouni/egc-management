@@ -21,6 +21,9 @@ export const ProjectExpenseSchema = z
     date: z.string().refine((date) => !isNaN(Date.parse(date)), {
       message: "التاريخ غير صالح",
     }),
+    Currency: z.enum(["LYD", "USD", "EUR"], {
+      message: "العملة غير صالحة",
+    }),
   })
   .refine((data) => data.paid_amount <= data.total_amount, {
     message: "القيمة المدفوعة لا يمكن أن تتجاوز القيمة الإجمالية",

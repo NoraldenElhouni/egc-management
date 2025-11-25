@@ -14,7 +14,7 @@ export function useBookProject(projectId: string) {
   );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  const { user } = useAuth(); // Move this outside of addExpense
+  const { user } = useAuth();
 
   useEffect(() => {
     async function fetchProject() {
@@ -50,7 +50,7 @@ export function useBookProject(projectId: string) {
       // get the project for expense counter for the serial number
       const { data: projectRow, error: projectError } = await supabase
         .from("projects")
-        .select("expense_counter")
+        .select("expense_counter, percentage_taken, percentage")
         .eq("id", expenseData.project_id)
         .single();
 
@@ -71,7 +71,6 @@ export function useBookProject(projectId: string) {
           expense_date: expenseData.date,
           created_by: user.id,
           expense_type: expenseData.type,
-          payment_method: expenseData.payment_method,
           amount_paid: expenseData.paid_amount,
           serial_number: projectRow?.expense_counter || 0,
           phase: expenseData.phase,
@@ -88,11 +87,69 @@ export function useBookProject(projectId: string) {
         throw error;
       }
 
+      //get the account
+      const { data: accountData, error: accountError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("owner_id", expenseData.project_id)
+        .eq("currency", expenseData.Currency)
+        .eq("type", expenseData.payment_method === "cash" ? "cash" : "bank")
+        .eq("owner_type", "project")
+        .single();
+
+      if (accountError) {
+        console.error("Error fetching project account", accountError);
+        throw accountError;
+      }
+
+      // create expense_payments entry
+      if (expenseData.paid_amount > 0) {
+        const { error: paymentError } = await supabase
+          .from("expense_payments")
+          .insert({
+            expense_id: data.id,
+            amount: expenseData.paid_amount,
+            created_at: new Date().toISOString(),
+            payment_method: expenseData.payment_method,
+            created_by: user.id,
+            account_id: accountData.id,
+            //since this is the first payment the serial number is 1 if not take it from project_expenses.payment_counter
+            serial_number: 1,
+          });
+
+        if (paymentError) {
+          console.error("Error adding expense payment", paymentError);
+          throw paymentError;
+        }
+      }
+
+      // decrease project account by paid amount and hold the rest as payable
+
+      const { error: accountUpdateError } = await supabase
+        .from("accounts")
+        .update({
+          balance: accountData.balance - expenseData.paid_amount,
+          held:
+            accountData.held +
+            (expenseData.total_amount - expenseData.paid_amount),
+        })
+        .eq("id", accountData.id);
+
+      if (accountUpdateError) {
+        console.error("Error updating project account", accountUpdateError);
+        throw accountUpdateError;
+      }
+
+      const percentage_taken =
+        projectRow.percentage_taken +
+        (expenseData.total_amount * (projectRow.percentage || 0)) / 100;
+
       // update project expense counter
       const { error: counterError } = await supabase
         .from("projects")
         .update({
           expense_counter: (projectRow?.expense_counter || 0) + 1,
+          percentage_taken: percentage_taken,
         })
         .eq("id", expenseData.project_id);
 
