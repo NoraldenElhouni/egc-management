@@ -45,6 +45,7 @@ import ClientDetailPage from "../pages/crm/ClientDetailPage";
 import NewClientPage from "../pages/crm/NewClientPage";
 import BookkeeperLayout from "./sidebar/BookkeeperLayout";
 import ProjectBookDetailsPage from "../pages/finance/bookkeeper/ProjectBookDetailsPage";
+import ExpensePaymentsPage from "../pages/finance/bookkeeper/ExpensePaymentsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -196,6 +197,18 @@ const AppRouter = () => {
             <Route
               path="/finance/bookkeeping/projects/:id"
               element={<ProjectBookDetailsPage />}
+            />
+            <Route
+              path="/finance/bookkeeping/projects/:id/expense/:expenseId"
+              element={<ExpensePaymentsPage />}
+            />
+            <Route
+              path="/finance/bookkeeping/projects/:id/expense/:expenseId/new"
+              element={<ExpensePaymentsPage />}
+            />
+            <Route
+              path="finance/bookkeeping/projects"
+              element={<BookkeepingPage />}
             />
           </Route>
 

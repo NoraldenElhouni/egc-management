@@ -46,6 +46,39 @@ export const ProjectIncomeSchema = z.object({
   // related_expense: z.string().nullable(),
 });
 
+export const ExpensePaymentSchema = (
+  accounts: { id: string; currency: "LYD" | "USD" | "EUR" }[],
+  remaining = Number.MAX_SAFE_INTEGER
+) =>
+  z
+    .object({
+      expenseId: z.string(),
+      amount: z
+        .number({ error: "المبلغ مطلوب" })
+        .positive("المبلغ يجب أن يكون أكبر من صفر")
+        .max(remaining, "المبلغ يتجاوز المتبقي"),
+      payment_method: z.enum(["cash", "cheque", "transfer", "deposit"], {
+        message: "طريقة الدفع غير صالحة",
+      }),
+      currency: z.enum(["LYD", "USD", "EUR"], {
+        message: "العملة غير صالحة",
+      }),
+      account_id: z.string().min(1, "اختر حساباً"),
+    })
+    .refine(
+      (vals) => {
+        // Ensure selected account matches selected currency
+        const acc = accounts.find((a) => a.id === vals.account_id);
+        if (!acc) return false;
+        return acc.currency === vals.currency;
+      },
+      { message: "الحساب لا يطابق العملة المختارة", path: ["account_id"] }
+    );
+
+export type ExpensePaymentFormValues = z.infer<
+  ReturnType<typeof ExpensePaymentSchema>
+>;
+
 export type ProjectIncomeFormValues = z.infer<typeof ProjectIncomeSchema>;
 
 export type ProjectExpenseFormValues = z.infer<typeof ProjectExpenseSchema>;

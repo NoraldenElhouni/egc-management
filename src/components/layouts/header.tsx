@@ -56,6 +56,9 @@ const Header = () => {
     bookkeeping: "مسك الدفاتر",
     vendors: "الموردين",
     contractors: "المقاولون",
+    clients: "العملاء",
+    expense: "المصروف",
+    income: "الدخل",
   };
 
   return (

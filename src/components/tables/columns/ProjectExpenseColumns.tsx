@@ -4,12 +4,12 @@ import { ProjectExpenses } from "../../../types/global.type";
 // ⬅ Your translation utils
 import {
   translateExpenseStatus,
-  translatePaymentMethod,
   translateExpenseType,
   translatePhase,
 } from "../../../utils/translations";
 
 import { getExpenseStatusColor } from "../../../utils/colors/status";
+import { Link } from "react-router-dom";
 
 // Safe number conversion
 const toNum = (v: unknown) => (typeof v === "number" ? v : Number(v || 0));
@@ -45,6 +45,14 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
   {
     accessorKey: "serial_number",
     header: "الرقم",
+    cell: ({ row }) => (
+      <Link
+        to={`/finance/bookkeeping/projects/${row.original.project_id}/expense/${row.original.id}`}
+        className="font-bold underline"
+      >
+        {row.original.serial_number}
+      </Link>
+    ),
     size: 32,
   },
 
@@ -159,18 +167,6 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
       </div>
     ),
     size: 100,
-  },
-
-  // PAYMENT METHOD
-  {
-    accessorKey: "payment_method",
-    header: "طريقة الدفع",
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap">
-        {translatePaymentMethod(row.original.payment_method)}
-      </span>
-    ),
-    size: 120,
   },
 
   // DATE

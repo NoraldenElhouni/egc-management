@@ -1,6 +1,8 @@
 // types/database.ts
 import { Tables } from "../lib/supabase";
 
+export type Currency = "LYD" | "USD" | "EUR";
+
 // Core entity types
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
@@ -26,8 +28,6 @@ export type Permissions = Tables<"permissions">;
 export type Offers = Tables<"offers">;
 export type OfferItems = Tables<"offer_items">;
 export type BidItems = Tables<"bid_items">;
-export type Transactions = Tables<"transactions">;
-export type TransactionCategories = Tables<"transaction_categories">;
 export type Company = Tables<"company">;
 export type AuditLog = Tables<"audit_log">;
 export type EmployeeLeaves = Tables<"employee_leaves">;
