@@ -2,7 +2,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { translateExpenseStatus } from "../../../utils/translations";
 import { getExpenseStatusColor } from "../../../utils/colors/status";
 import { ContractPaymentWithRelations } from "../../../types/extended.type";
-import Button from "../../ui/Button";
+import AcceptContractPayments from "../actions/payments/AcceptContractPayments";
+import EditContractPayments from "../actions/payments/EditContractPyaments";
+import DeleteContractPayments from "../actions/payments/DeleteContractPyaments";
 
 type ExpenseStatus =
   | "pending"
@@ -171,30 +173,9 @@ export const ContractPaymentsColumns: ColumnDef<ContractPaymentWithRelations>[] 
       size: 280,
       cell: ({ row }) => (
         <div className="flex justify-center gap-2">
-          <Button
-            type="button"
-            variant="success"
-            size="xs"
-            onClick={() => console.log("accept payment", row.original.id)}
-          >
-            قبول الدفع
-          </Button>
-          <Button
-            type="button"
-            variant="primary-light"
-            size="xs"
-            onClick={() => console.log("edit", row.original.id)}
-          >
-            تعديل
-          </Button>
-          <Button
-            type="button"
-            variant="error"
-            size="xs"
-            onClick={() => console.log("delete", row.original.id)}
-          >
-            حذف
-          </Button>
+          <AcceptContractPayments contractPaymentId={row.original.id} />
+          <EditContractPayments contractPaymentId={row.original.id} />
+          <DeleteContractPayments contractPaymentId={row.original.id} />
         </div>
       ),
     },
