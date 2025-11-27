@@ -35,7 +35,8 @@ export function useProjects() {
     // fetch the company projects_counter for serial number
     const { data: companyData, error: companyError } = await supabase
       .from("company")
-      .select("projects_counter");
+      .select("*")
+      .single();
 
     if (companyError) {
       console.error("error fetching company data", companyError);
@@ -50,10 +51,9 @@ export function useProjects() {
       description: (newProject.description ?? null) as string | null,
       client_id: newProject.client_id,
       address: (newProject.address ?? null) as string | null,
-      status:
-        newProject.status as Database["public"]["Enums"]["project_status_enum"],
+      status: "active",
       percentage: (newProject.percentage ?? null) as number | null,
-      serial_number: companyData[0]?.projects_counter ?? null,
+      serial_number: companyData?.projects_counter ?? null,
       code: CODE,
     };
 
@@ -102,9 +102,12 @@ export function useProjects() {
     }
 
     // update counter in company table
-    const { error: counterError } = await supabase.from("company").update({
-      projects_counter: (companyData[0]?.projects_counter || 0) + 1,
-    });
+    const { error: counterError } = await supabase
+      .from("company")
+      .update({
+        projects_counter: (companyData?.projects_counter || 0) + 1,
+      })
+      .eq("id", companyData?.id);
 
     if (counterError) {
       console.error("error updating company projects counter", counterError);

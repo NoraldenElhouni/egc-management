@@ -12,6 +12,7 @@ interface SelectFieldProps {
   options: SelectOption[];
   register: ReturnType<UseFormRegister<FieldValues>>;
   error?: FieldError;
+  placeholder?: string;
 }
 
 export const SelectField: React.FC<SelectFieldProps> = ({
@@ -20,6 +21,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   options,
   register,
   error,
+  placeholder,
 }) => {
   return (
     <div className="flex flex-col">
@@ -31,6 +33,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
         {...register}
         className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
       >
+        <option value="">{placeholder ?? "-- اختر --"}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

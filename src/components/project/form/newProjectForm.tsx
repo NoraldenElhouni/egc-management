@@ -65,6 +65,7 @@ const NewProjectForm: React.FC = () => {
             value: c.id,
             label: `${c.first_name} ${c.last_name ?? ""}`,
           }))}
+          placeholder="-- اختر عميل --"
         />
 
         <TextField
@@ -81,19 +82,6 @@ const NewProjectForm: React.FC = () => {
           error={errors.address}
         />
 
-        <SelectField
-          id="status"
-          label="الحالة"
-          register={register("status")}
-          error={errors.status}
-          options={[
-            { value: "active", label: "نشط" },
-            { value: "paused", label: "متوقف مؤقتاً" },
-            { value: "completed", label: "مكتمل" },
-            { value: "cancelled", label: "ملغى" },
-          ]}
-        />
-
         <NumberField
           id="percentage"
           label="النسبة (%)"
@@ -102,27 +90,7 @@ const NewProjectForm: React.FC = () => {
           error={errors.percentage}
         />
 
-        <NumberField
-          id="serial_number"
-          label="الرقم التسلسلي"
-          register={register("serial_number", { valueAsNumber: true })}
-          error={errors.serial_number}
-        />
-
-        <div className="md:col-span-2">
-          <label className="mb-1 text-sm text-foreground">وصف</label>
-          <textarea
-            {...register("description")}
-            className="w-full border rounded px-3 py-2 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          {errors.description && (
-            <p className="text-sm text-error mt-1">
-              {errors.description.message}
-            </p>
-          )}
-        </div>
-
-        <div className="md:col-span-2">
+        <div className="">
           <label className="mb-1 text-sm text-foreground">
             حسابات (اختر واحد أو أكثر)
           </label>
@@ -142,6 +110,19 @@ const NewProjectForm: React.FC = () => {
           </div>
           {errors.accounts && (
             <p className="text-sm text-error mt-1">{errors.accounts.message}</p>
+          )}
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="mb-1 text-sm text-foreground">وصف</label>
+          <textarea
+            {...register("description")}
+            className="w-full border rounded px-3 py-2 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {errors.description && (
+            <p className="text-sm text-error mt-1">
+              {errors.description.message}
+            </p>
           )}
         </div>
 
