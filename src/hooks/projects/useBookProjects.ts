@@ -229,7 +229,8 @@ export function useBookProject(projectId: string) {
           income_date: incomeData.income_date,
           created_by: user.id,
           fund: incomeData.fund,
-          payment_method: incomeData.payment_method,
+          payment_method:
+            incomeData.payment_method === "cash" ? "cash" : "cheque",
           serial_number: projectRow?.income_counter || 0,
           // related_expense: incomeData.related_expense,
         })
@@ -264,6 +265,35 @@ export function useBookProject(projectId: string) {
       if (counterError) {
         console.error("error updating project income counter", counterError);
         setError(counterError);
+      }
+
+      //update the account balance and total transactions
+      const { data: accountData, error: accountError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("owner_id", incomeData.project_id)
+        .eq("currency", incomeData.currency)
+        .eq("type", incomeData.payment_method === "cash" ? "cash" : "bank")
+        .eq("owner_type", "project")
+        .single();
+
+      if (accountError) {
+        console.error("Error fetching project account", accountError);
+        throw accountError;
+      }
+
+      const { error: accountUpdateError } = await supabase
+        .from("accounts")
+        .update({
+          balance: accountData.balance + incomeData.amount,
+          total_transactions:
+            accountData.total_transactions + incomeData.amount,
+        })
+        .eq("id", accountData.id);
+
+      if (accountUpdateError) {
+        console.error("Error updating project account", accountUpdateError);
+        throw accountUpdateError;
       }
 
       return { data, error: null };

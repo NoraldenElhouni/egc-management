@@ -14,9 +14,10 @@ import { useBookProject } from "../../../hooks/projects/useBookProjects";
 
 interface ProjectIncomeFormProps {
   projectId: string;
+  type?: "bookkeeper" | "treasury" | null;
 }
 
-const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
+const ProjectIncomeForm = ({ projectId, type }: ProjectIncomeFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { addIncome } = useBookProject(projectId);
@@ -31,6 +32,7 @@ const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
     defaultValues: {
       project_id: projectId,
       income_date: new Date().toISOString().split("T")[0],
+      fund: type === "bookkeeper" ? "refund" : undefined,
     },
   });
 
@@ -82,19 +84,19 @@ const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
       <form onSubmit={handleSubmit(onSubmit)}>
         {" "}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-          <SelectField
-            id="fund"
-            label="نوع المصروف"
-            register={register("fund")}
-            error={errors.fund}
-            options={[
-              { value: "sale", label: "مبيعات" },
-              { value: "client", label: "استثمار" },
-              { value: "internal", label: "داخلي" },
-              { value: "refund", label: "استرداد" },
-              { value: "other", label: "أخرى" },
-            ]}
-          />
+          {type === "treasury" && (
+            <SelectField
+              id="fund"
+              label="نوع المصروف"
+              register={register("fund")}
+              error={errors.fund}
+              options={[
+                { value: "client", label: "عميل" },
+                { value: "refund", label: "استرداد" },
+                { value: "other", label: "أخرى" },
+              ]}
+            />
+          )}
 
           <NumberField
             id="amount"
@@ -115,8 +117,7 @@ const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
             error={errors.payment_method}
             options={[
               { value: "cash", label: "نقداً" },
-              { value: "bank_transfer", label: "تحويل بنكي" },
-              { value: "check", label: "شيك" },
+              { value: "bank", label: "عن طريق البنك" },
             ]}
           />
           <DateField
@@ -124,6 +125,18 @@ const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
             label="التاريخ"
             register={register("income_date")}
             error={errors.income_date}
+          />
+          <SelectField
+            id="currency"
+            label="العملة"
+            register={register("currency")}
+            error={errors.currency}
+            options={[
+              { value: "LYD", label: "دينار ليبي" },
+              { value: "USD", label: "دولار أمريكي" },
+              { value: "EUR", label: "يورو" },
+            ]}
+            placeholder="اختر العملة"
           />
 
           <div className="flex justify-end items-end">

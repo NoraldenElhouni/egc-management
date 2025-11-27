@@ -5,6 +5,7 @@ import {
   translatePaymentMethod,
 } from "../../../utils/translations";
 import Button from "../../ui/Button";
+import { formatCurrency } from "../../../utils/helpper";
 
 export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
   {
@@ -80,7 +81,7 @@ export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
     header: "المبلغ",
     cell: ({ row }) => (
       <div className="font-medium text-green-700">
-        ${row.original.amount.toLocaleString()}
+        {formatCurrency(row.original.amount, "LYD")}
       </div>
     ),
     size: 120,
@@ -118,21 +119,21 @@ export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
     ),
     size: 140,
   },
-  {
-    id: "actions",
-    accessorKey: "actions",
-    header: "الإجراءات",
-    cell: ({ row }) => (
-      <Button
-        className="centered"
-        variant="muted"
-        size="xs"
-        onClick={() => {
-          console.log("Edit", row.original);
-        }}
-      >
-        تعديل
-      </Button>
-    ),
-  },
+  // {
+  //   id: "actions",
+  //   accessorKey: "actions",
+  //   header: "الإجراءات",
+  //   cell: ({ row }) => (
+  //     <Button
+  //       className="centered"
+  //       variant="muted"
+  //       size="xs"
+  //       onClick={() => {
+  //         console.log("Edit", row.original);
+  //       }}
+  //     >
+  //       تعديل
+  //     </Button>
+  //   ),
+  // },
 ];

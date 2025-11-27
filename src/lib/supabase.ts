@@ -47,6 +47,7 @@ export type Database = {
           id: string;
           owner_id: string;
           owner_type: Database["public"]["Enums"]["owner_type"];
+          total_transactions: number;
           type: Database["public"]["Enums"]["account_type"];
         };
         Insert: {
@@ -56,6 +57,7 @@ export type Database = {
           id?: string;
           owner_id: string;
           owner_type: Database["public"]["Enums"]["owner_type"];
+          total_transactions?: number;
           type: Database["public"]["Enums"]["account_type"];
         };
         Update: {
@@ -65,6 +67,7 @@ export type Database = {
           id?: string;
           owner_id?: string;
           owner_type?: Database["public"]["Enums"]["owner_type"];
+          total_transactions?: number;
           type?: Database["public"]["Enums"]["account_type"];
         };
         Relationships: [];
@@ -309,6 +312,7 @@ export type Database = {
           created_at: string;
           created_by: string;
           description: string | null;
+          expense_id: string | null;
           id: string;
           status: string;
         };
@@ -320,6 +324,7 @@ export type Database = {
           created_at?: string;
           created_by: string;
           description?: string | null;
+          expense_id?: string | null;
           id?: string;
           status?: string;
         };
@@ -331,10 +336,18 @@ export type Database = {
           created_at?: string;
           created_by?: string;
           description?: string | null;
+          expense_id?: string | null;
           id?: string;
           status?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "contract_payments_approved_by_fkey";
+            columns: ["approved_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "contract_payments_contract_id_fkey";
             columns: ["contract_id"];
@@ -347,6 +360,13 @@ export type Database = {
             columns: ["contractor_id"];
             isOneToOne: false;
             referencedRelation: "contractors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contract_payments_expense_id_fkey";
+            columns: ["expense_id"];
+            isOneToOne: false;
+            referencedRelation: "project_expenses";
             referencedColumns: ["id"];
           },
         ];
@@ -1149,6 +1169,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "project_expenses_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "project_expenses_project_id_fkey";
             columns: ["project_id"];
             isOneToOne: false;
@@ -1213,6 +1240,58 @@ export type Database = {
             columns: ["related_expense"];
             isOneToOne: false;
             referencedRelation: "project_expenses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_percentage_logs: {
+        Row: {
+          amount: number;
+          created_at: string | null;
+          expense_id: string;
+          id: string;
+          payment_id: string;
+          percentage: number;
+          project_id: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string | null;
+          expense_id: string;
+          id?: string;
+          payment_id: string;
+          percentage: number;
+          project_id: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string | null;
+          expense_id?: string;
+          id?: string;
+          payment_id?: string;
+          percentage?: number;
+          project_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_percentage_logs_expense_id_fkey";
+            columns: ["expense_id"];
+            isOneToOne: false;
+            referencedRelation: "project_expenses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_percentage_logs_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "expense_payments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_percentage_logs_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
             referencedColumns: ["id"];
           },
         ];

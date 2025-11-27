@@ -35,8 +35,8 @@ const ProjectExpenseForm = ({
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    watch,
-    setValue,
+    // watch,
+    // setValue,
   } = useForm({
     resolver: zodResolver(ProjectExpenseSchema),
     defaultValues: {
@@ -45,7 +45,7 @@ const ProjectExpenseForm = ({
     },
   });
 
-  const totalAmount = watch("total_amount");
+  // const totalAmount = watch("total_amount");
 
   useEffect(() => {
     if (success) {
@@ -79,11 +79,11 @@ const ProjectExpenseForm = ({
     }
   };
 
-  const handleMarkAsFullyPaid = () => {
-    if (totalAmount) {
-      setValue("paid_amount", totalAmount);
-    }
-  };
+  // const handleMarkAsFullyPaid = () => {
+  //   if (totalAmount) {
+  //     setValue("paid_amount", totalAmount);
+  //   }
+  // };
 
   return (
     <div className="text-sm">
@@ -114,6 +114,7 @@ const ProjectExpenseForm = ({
               { value: "labor", label: "اعمال" },
               { value: "material", label: "مواد" },
             ]}
+            placeholder="اختار نوع المصروف"
           />
           <SelectField
             id="phase"
@@ -124,16 +125,17 @@ const ProjectExpenseForm = ({
               { value: "construction", label: "انشاء" },
               { value: "finishing", label: "تشطيب" },
             ]}
+            placeholder="اختار المرحلة"
           />
           <NumberField
             id="total_amount"
-            label="القيمة"
+            label="اجمالي القيمة"
             register={register("total_amount", { valueAsNumber: true })}
             error={errors.total_amount}
           />
           <NumberField
             id="paid_amount"
-            label="القيمة المدفوعة"
+            label="القيمة مرادة الدفع"
             register={register("paid_amount", { valueAsNumber: true })}
             error={errors.paid_amount}
           />
@@ -148,6 +150,7 @@ const ProjectExpenseForm = ({
               { value: "bank_transfer", label: "تحويل بنكي" },
               { value: "check", label: "شيك" },
             ]}
+            placeholder="اختار طريقة الدفع"
           />
           <DateField
             id="date"
@@ -165,9 +168,10 @@ const ProjectExpenseForm = ({
               { value: "USD", label: "دولار أمريكي" },
               { value: "EUR", label: "يورو" },
             ]}
+            placeholder="اختار العملة"
           />
 
-          <div className="flex items-end">
+          {/* <div className="flex items-end">
             <Button
               type="button"
               variant="secondary"
@@ -177,11 +181,12 @@ const ProjectExpenseForm = ({
             >
               دفع كامل
             </Button>
-          </div>
+          </div> */}
+          <div />
 
           <div className="flex justify-end items-end">
             <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? "جاري الإرسال..." : "إرسال المصروف"}
+              {isSubmitting ? "جاري الانشاء..." : "انشاء المصروف"}
             </Button>
           </div>
         </div>

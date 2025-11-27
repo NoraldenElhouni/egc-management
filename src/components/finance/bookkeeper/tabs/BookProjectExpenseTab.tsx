@@ -29,6 +29,12 @@ const BookProjectExpenseTab = ({
       </div>
       <div>
         <GenericTable
+          enableFiltering
+          showGlobalFilter
+          enableSorting
+          enablePagination
+          enableRowSelection
+          initialSorting={[{ id: "expense_date", desc: true }]}
           data={project?.project_expenses || []}
           columns={ProjectsExpensesColumns}
         />

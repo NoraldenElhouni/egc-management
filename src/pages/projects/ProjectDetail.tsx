@@ -18,6 +18,7 @@ interface User {
   first_name: string;
   last_name: string | null;
   email: string;
+  phone: string | null;
 }
 
 interface ProjectRole {
@@ -53,15 +54,16 @@ interface Account {
   held: number;
   currency: string;
   type: string;
+  total_transactions: number;
 }
 
 interface FinancialData {
   totalExpenses: number;
   totalPaid: number;
   totalIncome: number;
+  refunded: number;
   balance: number;
   held: number;
-  available: number;
   pendingPayments: number;
 }
 
@@ -146,7 +148,8 @@ const useProject = (projectId: string | null): UseProjectReturn => {
               id,
               first_name,
               last_name,
-              email
+              email,
+              phone
             ),
             project_role:project_roles(
               name
@@ -168,7 +171,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
         // Fetch financial data - incomes
         const { data: incomes, error: incomesError } = await supabase
           .from("project_incomes")
-          .select("amount")
+          .select("*")
           .eq("project_id", projectId);
 
         if (incomesError) throw incomesError;
@@ -196,7 +199,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
         // Fetch accounts for this project
         const { data: accounts, error: accountsError } = await supabase
           .from("accounts")
-          .select("balance, held, currency, type")
+          .select("balance, held, currency, type, total_transactions")
           .eq("owner_type", "project")
           .eq("owner_id", projectId);
 
@@ -215,7 +218,17 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           ) || 0;
         const totalIncome =
           incomes?.reduce(
-            (sum, inc) => sum + parseFloat(String(inc.amount || 0)),
+            (sum, inc) =>
+              sum +
+              (inc.fund === "client" ? parseFloat(String(inc.amount ?? 0)) : 0),
+            0
+          ) || 0;
+
+        const totalreturned =
+          incomes?.reduce(
+            (sum, inc) =>
+              sum +
+              (inc.fund === "refund" ? parseFloat(String(inc.amount ?? 0)) : 0),
             0
           ) || 0;
         // Only calculate balance and held for LYD accounts
@@ -240,9 +253,9 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             totalExpenses,
             totalPaid,
             totalIncome,
+            refunded: totalreturned,
             balance: totalBalance,
             held: totalHeld,
-            available: totalBalance - totalHeld,
             pendingPayments: totalExpenses - totalPaid,
           },
           stats: {
@@ -279,6 +292,22 @@ const ProjectDetailsPage = () => {
     );
   }
   const { project, loading, error } = useProject(id);
+
+  // Compare LYD total_transactions with sum of client deposits + refunds
+  const areLYDTransactionsMatchingClientAndRefunds = (() => {
+    const lydAccounts =
+      project?.accounts?.filter((a) => a.currency === "LYD") || [];
+    const lydTotalTransactions = lydAccounts.reduce(
+      (sum, a) => sum + (Number(a.total_transactions) || 0),
+      0
+    );
+    const clientTotal = Number(project?.financial?.totalIncome || 0);
+    const refundTotal = Number(project?.financial?.refunded || 0);
+    const expected = clientTotal + refundTotal;
+    const epsilon = 0.01; // small tolerance for floating point differences
+    // true if almost equal
+    return Math.abs(lydTotalTransactions - expected) <= epsilon;
+  })();
 
   if (loading) {
     return (
@@ -416,7 +445,7 @@ const ProjectDetailsPage = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">الرصيد الكلي</p>
+                <p className="text-sm text-gray-600 mb-1">الرصيد الحالي</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency(project.financial.balance, "LYD")}
                 </p>
@@ -489,41 +518,49 @@ const ProjectDetailsPage = () => {
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">إجمالي الدخل</span>
+                <span className="text-gray-600">اجمالي ايداع</span>
                 <span className="font-semibold text-green-600">
                   {formatCurrency(project.financial.totalIncome, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">إجمالي المصاريف</span>
-                <span className="font-semibold text-red-600">
-                  {formatCurrency(project.financial.totalExpenses, "LYD")}
+                <span className="text-gray-600">قيم الراجع</span>
+                <span className="font-semibold text-green-600">
+                  {formatCurrency(project.financial.refunded, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">المبلغ المدفوع</span>
-                <span className="font-semibold text-gray-900">
-                  {formatCurrency(project.financial.totalPaid, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pt-3 border-t">
-                <span className="text-gray-600">الرصيد المتاح</span>
-                <span className="font-semibold text-blue-600">
-                  {formatCurrency(project.financial.available, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">المبلغ المحتجز</span>
+                <span className="text-gray-600">قيم المحجوزة</span>
                 <span className="font-semibold text-orange-600">
                   {formatCurrency(project.financial.held, "LYD")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">المدفوعات المعلقة</span>
-                <span className="font-semibold text-yellow-600">
-                  {formatCurrency(project.financial.pendingPayments, "LYD")}
+                <span className="text-gray-600">اجمالي مصروفات</span>
+                <span className="font-semibold text-orange-600">
+                  {formatCurrency(project.financial.totalExpenses, "LYD")}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">حصه الشركه</span>
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(project.percentage_taken, "LYD")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t">
+                <span className="text-gray-600">رصيد الحالي</span>
+                <span className="font-semibold text-blue-600">
+                  {formatCurrency(project.financial.balance, "LYD")}
+                </span>
+              </div>
+              {areLYDTransactionsMatchingClientAndRefunds ? null : (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-yellow-800 text-sm">
+                    تحذير: إجمالي المعاملات في حسابات LYD لا يتطابق مع مجموع
+                    إيداعات العملاء والمرتجعات. يرجى التحقق من البيانات المالية.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -545,6 +582,9 @@ const ProjectDetailsPage = () => {
                       البريد الإلكتروني
                     </th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      رقم الهاتف
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
                       الدور في المشروع
                     </th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
@@ -561,9 +601,14 @@ const ProjectDetailsPage = () => {
                       <td className="py-3 px-4 text-gray-600">
                         {member.user?.email}
                       </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {member.user?.phone || "لا يوجد رقم هاتف"}
+                      </td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                          {member.project_role?.name || "N/A"}
+                          {member.project_role?.name === "manager"
+                            ? "مدير مشروع"
+                            : "عضو فريق"}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600">
@@ -611,6 +656,10 @@ const ProjectDetailsPage = () => {
                           (s, a) => s + (a.held || 0),
                           0
                         );
+                        const totalTransactions = accounts.reduce(
+                          (s, a) => s + (a.total_transactions || 0),
+                          0
+                        );
                         return (
                           <div key={type} className="bg-gray-50 rounded p-3">
                             <div className="flex items-center justify-between mb-2">
@@ -622,6 +671,14 @@ const ProjectDetailsPage = () => {
                               </span>
                             </div>
                             <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  الاجمالي ايداع
+                                </span>
+                                <span className="font-semibold text-gray-900">
+                                  {formatCurrency(totalTransactions, currency)}
+                                </span>
+                              </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">الرصيد</span>
                                 <span className="font-semibold text-gray-900">

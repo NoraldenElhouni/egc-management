@@ -13,6 +13,8 @@ import {
   ExpensePayments,
   Users,
   Currency,
+  Account,
+  Clients,
 } from "./global.type";
 
 export type ContractPaymentWithRelations = ContractPayments & {
@@ -46,6 +48,15 @@ export type FullEmployee = Employees & {
 export type projectExpensePayments = ExpensePayments & {
   accounts: { id: string; currency: Currency; type: string } | null;
   users: Users | null;
+};
+
+export type FullProjectFinance = Projects & {
+  project_expenses: (projectExpensePayments & {
+    contract_payments: ContractPaymentWithRelations[];
+  })[];
+  project_incomes: projectExpensePayments[];
+  accounts: Account[] | null;
+  clients: Clients | null;
 };
 
 // export interface ClientWithProjects extends Clients {

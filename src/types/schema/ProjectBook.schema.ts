@@ -37,12 +37,13 @@ export const ProjectIncomeSchema = z.object({
   fund: z.enum(["client", "internal", "sale", "refund", "other"], {
     message: "مصدر التمويل غير صالح",
   }),
-  payment_method: z.enum(["cash", "cheque", "transfer", "deposit"], {
+  payment_method: z.enum(["cash", "bank"], {
     message: "طريقة الدفع غير صالحة",
   }),
   income_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "التاريخ غير صالح",
   }),
+  currency: z.enum(["LYD", "USD", "EUR"]),
   // related_expense: z.string().nullable(),
 });
 

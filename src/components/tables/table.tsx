@@ -43,7 +43,7 @@ export default function GenericTable<TData extends object>({
   data,
   columns,
   initialSorting = [],
-  pageSize = 10,
+  pageSize = 100,
   enableSorting = true,
   enablePagination = true,
   enableFiltering = false,

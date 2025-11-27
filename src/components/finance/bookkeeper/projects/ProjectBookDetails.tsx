@@ -18,7 +18,7 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
     {
       id: "income",
       label: "الدخل",
-      content: <BookProjectIncomeTab project={project} />,
+      content: <BookProjectIncomeTab project={project} type="bookkeeper" />,
     },
   ];
 
