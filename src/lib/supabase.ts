@@ -363,6 +363,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "contract_payments_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "contract_payments_expense_id_fkey";
             columns: ["expense_id"];
             isOneToOne: false;
@@ -528,6 +535,13 @@ export type Database = {
             columns: ["assigned_to"];
             isOneToOne: false;
             referencedRelation: "contractors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contracts_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
           {
@@ -1139,6 +1153,7 @@ export type Database = {
         Row: {
           amount_paid: number;
           contract_id: string | null;
+          contractor_id: string | null;
           created_at: string;
           created_by: string;
           description: string | null;
@@ -1157,6 +1172,7 @@ export type Database = {
         Insert: {
           amount_paid?: number;
           contract_id?: string | null;
+          contractor_id?: string | null;
           created_at?: string;
           created_by: string;
           description?: string | null;
@@ -1175,6 +1191,7 @@ export type Database = {
         Update: {
           amount_paid?: number;
           contract_id?: string | null;
+          contractor_id?: string | null;
           created_at?: string;
           created_by?: string;
           description?: string | null;
@@ -1196,6 +1213,13 @@ export type Database = {
             columns: ["contract_id"];
             isOneToOne: false;
             referencedRelation: "contracts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_expenses_contractor_id_fkey";
+            columns: ["contractor_id"];
+            isOneToOne: false;
+            referencedRelation: "contractors";
             referencedColumns: ["id"];
           },
           {
@@ -1822,6 +1846,22 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_contract_payment: {
+        Args: {
+          p_approved_by: string;
+          p_currency: string;
+          p_payment_id: string;
+          p_payment_method: string;
+        };
+        Returns: {
+          account: Json;
+          contract: Json;
+          expense: Json;
+          payment: Json;
+          project: Json;
+          project_balance: Json;
+        }[];
+      };
       get_role_by_email: { Args: { p_email: string }; Returns: string };
       has_permission: {
         Args: { p_perm_name: string; p_user: string };

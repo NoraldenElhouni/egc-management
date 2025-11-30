@@ -32,9 +32,8 @@ const BookProjectExpenseTab = ({
           enableFiltering
           showGlobalFilter
           enableSorting
-          enablePagination
           enableRowSelection
-          initialSorting={[{ id: "expense_date", desc: true }]}
+          initialSorting={[{ id: "serial_number", desc: true }]}
           data={project?.project_expenses || []}
           columns={ProjectsExpensesColumns}
         />

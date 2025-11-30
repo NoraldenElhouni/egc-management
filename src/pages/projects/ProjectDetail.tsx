@@ -39,6 +39,12 @@ interface ProjectAssignment {
 interface Contractor {
   first_name: string;
   last_name: string | null;
+  contractor_specializations: {
+    specializations: {
+      id: string;
+      name: string;
+    } | null;
+  }[];
 }
 
 interface Contract {
@@ -47,7 +53,7 @@ interface Contract {
   amount: number;
   start_date: string | null;
   end_date: string | null;
-  contractor?: Contractor | null;
+  contractors?: Contractor | null;
 }
 
 interface Account {
@@ -186,9 +192,16 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             amount,
             start_date,
             end_date,
-            contractor:assigned_to(
+            contractors!assigned_to(
+              id,
               first_name,
-              last_name
+              last_name,
+              contractor_specializations(
+                specializations(
+                  id,
+                  name
+                )
+              )
             )
           `
           )
@@ -674,10 +687,17 @@ const ProjectDetailsPage = () => {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="font-medium text-gray-900">
-                        {contract.contractor?.first_name}{" "}
-                        {contract.contractor?.last_name}
-                      </p>
+                      <div className="flex space-x-2 items-center gap-2">
+                        <p className="font-medium text-gray-900">
+                          {contract.contractors?.first_name}{" "}
+                          {contract.contractors?.last_name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {contract.contractors?.contractor_specializations
+                            ?.map((spec) => spec.specializations?.name || "")
+                            .join(", ")}
+                        </p>
+                      </div>
                       <p className="text-sm text-gray-600 mt-1">
                         {contract.start_date &&
                           `Start: ${new Date(contract.start_date).toLocaleDateString()}`}

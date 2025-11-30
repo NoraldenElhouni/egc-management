@@ -6,10 +6,11 @@ interface TextFieldProps {
   label: string;
   type?: "text" | "email" | "number";
   placeholder?: string;
-  register: ReturnType<UseFormRegister<FieldValues>>;
+  register?: ReturnType<UseFormRegister<FieldValues>>;
   error?: FieldError;
   step?: string;
   valueAsNumber?: boolean;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const TextField: React.FC<TextFieldProps> = ({
@@ -20,6 +21,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   register,
   error,
   step,
+  onChange,
 }) => {
   return (
     <div className="flex flex-col">
@@ -31,7 +33,8 @@ export const TextField: React.FC<TextFieldProps> = ({
         type={type}
         placeholder={placeholder}
         step={step}
-        {...register}
+        {...(register ?? {})}
+        onChange={onChange}
         className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
       />
       {error && <p className="text-sm text-error mt-1">{error.message}</p>}

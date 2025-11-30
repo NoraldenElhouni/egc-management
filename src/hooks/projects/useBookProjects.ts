@@ -77,6 +77,7 @@ export function useBookProject(projectId: string) {
             expenseData.total_amount === expenseData.paid_amount
               ? "paid"
               : "partially_paid",
+          contractor_id: expenseData.contractor_id || null,
         })
         .select()
         .single();

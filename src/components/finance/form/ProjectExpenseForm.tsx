@@ -6,10 +6,12 @@ import {
   ProjectExpenseSchema,
 } from "../../../types/schema/ProjectBook.schema";
 import { useEffect, useState } from "react";
+import { useContractors } from "../../../hooks/useContractors";
 import { NumberField } from "../../ui/inputs/NumberField";
 import Button from "../../ui/Button";
 import { TextField } from "../../ui/inputs/TextField";
 import { SelectField } from "../../ui/inputs/SelectField";
+import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
 import { DateField } from "../../ui/inputs/DateField";
 
 import { PostgrestError } from "@supabase/supabase-js";
@@ -35,17 +37,25 @@ const ProjectExpenseForm = ({
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    // watch,
-    // setValue,
+    watch,
+    setValue,
   } = useForm({
     resolver: zodResolver(ProjectExpenseSchema),
     defaultValues: {
       project_id: projectId,
       date: new Date().toISOString().split("T")[0],
+      type: "material",
     },
   });
 
   // const totalAmount = watch("total_amount");
+  const selectedType = watch("type");
+
+  const {
+    contractors,
+    loading: contractorsLoading,
+    error: contractorsError,
+  } = useContractors();
 
   useEffect(() => {
     if (success) {
@@ -116,6 +126,29 @@ const ProjectExpenseForm = ({
             ]}
             placeholder="اختار نوع المصروف"
           />
+          {selectedType === "labor" && (
+            <SearchableSelectField
+              id="contractor_id"
+              label="المقاول"
+              value={watch("contractor_id")}
+              onChange={(value) => setValue("contractor_id", value)}
+              error={errors.contractor_id}
+              loading={contractorsLoading}
+              options={contractors
+                .sort((a, b) => {
+                  const an = `${a.first_name} ${a.last_name || ""}`.trim();
+                  const bn = `${b.first_name} ${b.last_name || ""}`.trim();
+                  return an.localeCompare(bn, "ar", { sensitivity: "base" });
+                })
+                .map((c) => ({
+                  value: c.id,
+                  label: `${c.first_name} ${c.last_name || ""}`.trim(),
+                }))}
+              placeholder={
+                contractorsError ? "فشل تحميل المقاولين" : "اختار المقاول"
+              }
+            />
+          )}
           <SelectField
             id="phase"
             label="المرحلة"
@@ -181,7 +214,7 @@ const ProjectExpenseForm = ({
               دفع كامل
             </Button>
           </div> */}
-          <div />
+          {(!selectedType || selectedType === "material") && <div />}
 
           <div className="flex justify-end items-end">
             <Button type="submit" size="sm" disabled={isSubmitting}>

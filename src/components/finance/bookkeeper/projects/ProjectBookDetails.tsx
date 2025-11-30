@@ -7,17 +7,19 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
 
   const tabs = [
     {
-      id: "expenses",
-      label: "المصروفات",
+      id: "materials",
+      label: "مواد",
       content: (
         <BookProjectExpenseTab project={project} addExpense={addExpense} />
       ),
     },
-    // {
-    //   id: "income",
-    //   label: "الدخل",
-    //   content: <BookProjectIncomeTab project={project} />,
-    // },
+    {
+      id: "labor",
+      label: "عمالة",
+      content: (
+        <BookProjectExpenseTab project={project} addExpense={addExpense} />
+      ),
+    },
   ];
 
   if (loading) {
@@ -29,7 +31,7 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
   return (
     <div>
       <div>
-        <Tabs tabs={tabs} defaultTab="expenses" />
+        <Tabs tabs={tabs} defaultTab="materials" />
       </div>
     </div>
   );

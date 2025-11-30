@@ -7,6 +7,7 @@ export const ProjectExpenseSchema = z
     type: z.enum(["labor", "material"], {
       message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
     }),
+    contractor_id: z.string().optional(),
     phase: z.enum(["construction", "finishing"], {
       message: "المرحلة يجب أن تكون إما 'انشاء' أو 'تشطيب'",
     }),
@@ -24,6 +25,10 @@ export const ProjectExpenseSchema = z
     currency: z.enum(["LYD", "USD", "EUR"], {
       message: "العملة غير صالحة",
     }),
+  })
+  .refine((data) => (data.type === "labor" ? !!data.contractor_id : true), {
+    message: "يجب اختيار مقاول للأعمال",
+    path: ["contractor_id"],
   })
   .refine((data) => data.paid_amount <= data.total_amount, {
     message: "القيمة المدفوعة لا يمكن أن تتجاوز القيمة الإجمالية",
