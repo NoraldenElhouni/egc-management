@@ -4,7 +4,6 @@ import {
   translateFundSource,
   translatePaymentMethod,
 } from "../../../utils/translations";
-import Button from "../../ui/Button";
 import { formatCurrency } from "../../../utils/helpper";
 
 export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [

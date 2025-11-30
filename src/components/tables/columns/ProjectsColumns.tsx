@@ -2,6 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { Projects } from "../../../types/global.type";
 import { statusColor } from "../../../utils/colors/status";
+import { formatCurrency } from "../../../utils/helpper";
 
 // Convert to a function that accepts the link path builder and version
 export const createProjectsColumns = (
@@ -61,15 +62,20 @@ export const createProjectsColumns = (
 
     {
       accessorKey: "percentage",
-      header: "نسبة المشروع",
-      cell: ({ row }) => row.original.percentage ?? "—",
+      header: "الحصه المشروع مع نسبة",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-medium">
+            {formatCurrency(row.original.percentage_taken, "LYD")}
+          </div>
+          <div className="text-xs text-gray-500">
+            {row.original.percentage != null
+              ? `${row.original.percentage}%`
+              : "—"}
+          </div>
+        </div>
+      ),
     },
-
-    {
-      accessorKey: "percentage_taken",
-      header: "حصة الشركة",
-    },
-
     {
       accessorKey: "status",
       header: "الحالة",

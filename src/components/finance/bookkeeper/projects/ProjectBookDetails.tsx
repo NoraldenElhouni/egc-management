@@ -1,8 +1,6 @@
-// ProjectBookDetails.tsx
 import { useBookProject } from "../../../../hooks/projects/useBookProjects";
 import Tabs from "../../../ui/Tabs";
 import BookProjectExpenseTab from "../tabs/BookProjectExpenseTab";
-import BookProjectIncomeTab from "../tabs/BookProjectIncomeTab";
 
 const ProjectBookDetails = ({ id }: { id: string }) => {
   const { project, loading, error, addExpense } = useBookProject(id);
@@ -15,11 +13,11 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
         <BookProjectExpenseTab project={project} addExpense={addExpense} />
       ),
     },
-    {
-      id: "income",
-      label: "الدخل",
-      content: <BookProjectIncomeTab project={project} type="bookkeeper" />,
-    },
+    // {
+    //   id: "income",
+    //   label: "الدخل",
+    //   content: <BookProjectIncomeTab project={project} />,
+    // },
   ];
 
   if (loading) {

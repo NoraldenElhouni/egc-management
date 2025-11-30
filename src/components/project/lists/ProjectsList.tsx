@@ -5,7 +5,7 @@ import GenericTable from "../../tables/table";
 
 interface ProjectsListProps {
   basePath?: string; // Renamed for clarity
-  version?: string; // Optional version prop
+  version?: string;
 }
 
 const ProjectsList = ({
@@ -26,10 +26,9 @@ const ProjectsList = ({
         data={projects}
         columns={columns}
         enableSorting
-        enablePagination
         enableFiltering
-        enableRowSelection
         showGlobalFilter
+        initialSorting={[{ id: "serial_number", desc: true }]}
       />
     </div>
   );

@@ -10,8 +10,8 @@ export function formatCurrency(amount: number, currency = "USD"): string {
     case "LYD":
       locale = "en-LY"; // Libyan Arabic locale
       // Libyan dinar commonly uses 3 decimal places
-      minimumFractionDigits = 3;
-      maximumFractionDigits = 3;
+      minimumFractionDigits = 2;
+      maximumFractionDigits = 2;
       break;
     case "EUR":
       locale = "de-DE"; // common Euro locale (adjust as needed)

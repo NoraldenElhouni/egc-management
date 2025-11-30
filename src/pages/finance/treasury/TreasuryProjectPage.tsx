@@ -34,7 +34,7 @@ const TreasuryProjectPage = () => {
   }
   return (
     <div className="p-4">
-      <BookProjectIncomeTab project={project} type="treasury" />
+      <BookProjectIncomeTab project={project} />
     </div>
   );
 };

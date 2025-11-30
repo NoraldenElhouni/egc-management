@@ -11,16 +11,17 @@ import { NumberField } from "../../ui/inputs/NumberField";
 import Button from "../../ui/Button";
 import { DateField } from "../../ui/inputs/DateField";
 import { useBookProject } from "../../../hooks/projects/useBookProjects";
+import { useAuth } from "../../../hooks/useAuth";
 
 interface ProjectIncomeFormProps {
   projectId: string;
-  type?: "bookkeeper" | "treasury" | null;
 }
 
-const ProjectIncomeForm = ({ projectId, type }: ProjectIncomeFormProps) => {
+const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { addIncome } = useBookProject(projectId);
+  const { user } = useAuth();
 
   const {
     register,
@@ -32,7 +33,7 @@ const ProjectIncomeForm = ({ projectId, type }: ProjectIncomeFormProps) => {
     defaultValues: {
       project_id: projectId,
       income_date: new Date().toISOString().split("T")[0],
-      fund: type === "bookkeeper" ? "refund" : undefined,
+      fund: user?.role === "bookkeeper" ? "refund" : undefined,
     },
   });
 
@@ -84,7 +85,7 @@ const ProjectIncomeForm = ({ projectId, type }: ProjectIncomeFormProps) => {
       <form onSubmit={handleSubmit(onSubmit)}>
         {" "}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-          {type === "treasury" && (
+          {user?.role !== "bookkeeper" && (
             <SelectField
               id="fund"
               label="نوع المصروف"

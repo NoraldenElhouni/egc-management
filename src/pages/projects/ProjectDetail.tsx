@@ -3,6 +3,7 @@ import { Users, DollarSign, MapPin, Activity } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useParams } from "react-router-dom";
 import { translateProjectStatus } from "../../utils/translations";
+import OverviewStatus from "../../components/ui/OverviewStatus";
 
 // Type definitions
 interface Client {
@@ -427,65 +428,39 @@ const ProjectDetailsPage = () => {
         </div>
 
         {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">أعضاء الفريق</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {project.stats.teamSize}
-                </p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">الرصيد الحالي</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(project.financial.balance, "LYD")}
-                </p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">العقود النشطة</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {project.stats.activeContracts}
-                </p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <Activity className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">
-                  نسبة الشركة {project.percentage}%
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(project.percentage_taken, "LYD")}
-                </p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <OverviewStatus
+          stats={[
+            {
+              label: "أعضاء الفريق",
+              value: project.stats.teamSize,
+              icon: Users,
+              iconBgColor: "bg-blue-100",
+              iconColor: "text-blue-600",
+            },
+            {
+              label: "الرصيد الحالي",
+              value: formatCurrency(project.financial.balance, "LYD"),
+              icon: DollarSign,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+            {
+              label: "العقود النشطة",
+              value: project.stats.activeContracts,
+              icon: Activity,
+              iconBgColor: "bg-orange-100",
+              iconColor: "text-orange-600",
+            },
+            {
+              label: `نسبة الشركة ${project.percentage}%`,
+              value: formatCurrency(project.percentage_taken, "LYD"),
+              icon: DollarSign,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+          ]}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Client Information */}
