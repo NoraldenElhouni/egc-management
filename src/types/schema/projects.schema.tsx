@@ -12,7 +12,6 @@ export const ProjectSchema = z.object({
     .refine((v) => v == null || (v >= 0 && v <= 100), {
       message: "percentage must be between 0 and 100",
     }),
-  accounts: z.array(z.enum(["USD", "EUR", "LYD"])),
 });
 
 export type ProjectFormValues = z.infer<typeof ProjectSchema>;

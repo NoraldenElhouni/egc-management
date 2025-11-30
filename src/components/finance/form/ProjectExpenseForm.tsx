@@ -147,8 +147,7 @@ const ProjectExpenseForm = ({
             error={errors.payment_method}
             options={[
               { value: "cash", label: "نقداً" },
-              { value: "bank_transfer", label: "تحويل بنكي" },
-              { value: "check", label: "شيك" },
+              { value: "bank", label: "عن طريق البنك" },
             ]}
             placeholder="اختار طريقة الدفع"
           />

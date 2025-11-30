@@ -90,29 +90,6 @@ const NewProjectForm: React.FC = () => {
           error={errors.percentage}
         />
 
-        <div className="">
-          <label className="mb-1 text-sm text-foreground">
-            حسابات (اختر واحد أو أكثر)
-          </label>
-          <div className="flex gap-4 mt-1">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" value="USD" {...register("accounts")} />{" "}
-              USD
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" value="EUR" {...register("accounts")} />{" "}
-              EUR
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" value="LYD" {...register("accounts")} />{" "}
-              LYD
-            </label>
-          </div>
-          {errors.accounts && (
-            <p className="text-sm text-error mt-1">{errors.accounts.message}</p>
-          )}
-        </div>
-
         <div className="md:col-span-2">
           <label className="mb-1 text-sm text-foreground">وصف</label>
           <textarea

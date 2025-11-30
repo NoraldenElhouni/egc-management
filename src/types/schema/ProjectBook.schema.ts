@@ -15,7 +15,7 @@ export const ProjectExpenseSchema = z
       .number()
       .min(0, "القيمة المدفوعة يجب أن تكون غير سالبة")
       .default(0),
-    payment_method: z.enum(["cash", "cheque", "transfer", "deposit"], {
+    payment_method: z.enum(["cash", "bank"], {
       message: "طريقة الدفع غير صالحة",
     }),
     date: z.string().refine((date) => !isNaN(Date.parse(date)), {

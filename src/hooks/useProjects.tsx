@@ -70,35 +70,52 @@ export function useProjects() {
       return null;
     }
 
-    if (newProject.accounts && newProject.accounts.length > 0) {
-      const accountsToInsert: Database["public"]["Tables"]["accounts"]["Insert"][] =
-        newProject.accounts.map((account) => ({
-          currency: account || "LYD",
-          owner_id: data.id,
-          owner_type: "project",
-          type: "cash",
-          balance: 0,
-          held: 0,
-        }));
-
-      // Add the bank account
-      accountsToInsert.push({
-        currency: "LYD",
-        owner_id: data.id,
-        owner_type: "project",
-        type: "bank",
+    // insert project_balances
+    const balancesToInsert: Database["public"]["Tables"]["project_balances"]["Insert"][] =
+      ["USD", "EUR", "LYD"].map((currency) => ({
+        project_id: data.id,
         balance: 0,
         held: 0,
-      });
+        currency,
+      }));
 
-      const { error: accountsError } = await supabase
-        .from("accounts")
-        .insert(accountsToInsert);
+    const { error: projectBalancesError } = await supabase
+      .from("project_balances")
+      .insert(balancesToInsert);
 
-      if (accountsError) {
-        console.error("error adding project accounts", accountsError);
-        setError(accountsError);
-      }
+    if (projectBalancesError) {
+      console.error("error adding project balances", projectBalancesError);
+      setError(projectBalancesError);
+    }
+
+    // ensure cash accounts for USD, EUR, LYD and add a LYD bank account
+    const accountsToInsertAll: Database["public"]["Tables"]["accounts"]["Insert"][] =
+      (["USD", "EUR", "LYD"] as const).map((currency) => ({
+        currency,
+        owner_id: data.id,
+        owner_type: "project",
+        type: "cash",
+        balance: 0,
+        held: 0,
+      }));
+
+    // add bank account for LYD (so LYD has both cash and bank)
+    accountsToInsertAll.push({
+      currency: "LYD",
+      owner_id: data.id,
+      owner_type: "project",
+      type: "bank",
+      balance: 0,
+      held: 0,
+    });
+
+    const { error: accountsError } = await supabase
+      .from("accounts")
+      .insert(accountsToInsertAll);
+
+    if (accountsError) {
+      console.error("error adding project accounts", accountsError);
+      setError(accountsError);
     }
 
     // update counter in company table

@@ -1105,6 +1105,30 @@ export type Database = {
           },
         ];
       };
+      project_balances: {
+        Row: {
+          balance: number;
+          currency: string;
+          held: number;
+          id: string;
+          project_id: string;
+        };
+        Insert: {
+          balance?: number;
+          currency: string;
+          held?: number;
+          id?: string;
+          project_id: string;
+        };
+        Update: {
+          balance?: number;
+          currency?: string;
+          held?: number;
+          id?: string;
+          project_id?: string;
+        };
+        Relationships: [];
+      };
       project_expenses: {
         Row: {
           amount_paid: number;
