@@ -1112,6 +1112,8 @@ export type Database = {
           held: number;
           id: string;
           project_id: string;
+          total_expense: number;
+          total_transactions: number;
         };
         Insert: {
           balance?: number;
@@ -1119,6 +1121,8 @@ export type Database = {
           held?: number;
           id?: string;
           project_id: string;
+          total_expense?: number;
+          total_transactions?: number;
         };
         Update: {
           balance?: number;
@@ -1126,6 +1130,8 @@ export type Database = {
           held?: number;
           id?: string;
           project_id?: string;
+          total_expense?: number;
+          total_transactions?: number;
         };
         Relationships: [];
       };
@@ -1252,6 +1258,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "project_incomes_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "project_incomes_project_id_fkey";
             columns: ["project_id"];
@@ -1830,6 +1843,7 @@ export type Database = {
           payment: Json;
           payment_id: string;
           project: Json;
+          project_balance: Json;
         }[];
       };
     };

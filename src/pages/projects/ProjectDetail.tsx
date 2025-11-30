@@ -65,7 +65,6 @@ interface FinancialData {
   refunded: number;
   balance: number;
   held: number;
-  pendingPayments: number;
 }
 
 interface ProjectStats {
@@ -197,7 +196,15 @@ const useProject = (projectId: string | null): UseProjectReturn => {
 
         if (contractsError) throw contractsError;
 
-        // Fetch accounts for this project
+        // Fetch project balances per currency (authoritative totals)
+        const { data: projectBalances, error: balancesError } = await supabase
+          .from("project_balances")
+          .select("*")
+          .eq("project_id", projectId);
+
+        if (balancesError) throw balancesError;
+
+        // Fetch accounts for this project (informational, no held/transactions)
         const { data: accounts, error: accountsError } = await supabase
           .from("accounts")
           .select("balance, held, currency, type, total_transactions")
@@ -206,22 +213,23 @@ const useProject = (projectId: string | null): UseProjectReturn => {
 
         if (accountsError) throw accountsError;
 
-        // Calculate financial summaries
         const totalExpenses =
-          expenses?.reduce(
-            (sum, exp) => sum + parseFloat(String(exp.total_amount || 0)),
-            0
-          ) || 0;
+          projectBalances?.find((pb) => pb.currency === "LYD")?.total_expense ||
+          0;
+
+        const totalIncome =
+          projectBalances?.find((pb) => pb.currency === "LYD")
+            ?.total_transactions || 0;
+
+        const balance =
+          projectBalances?.find((pb) => pb.currency === "LYD")?.balance || 0;
+
+        const held =
+          projectBalances?.find((pb) => pb.currency === "LYD")?.held || 0;
+
         const totalPaid =
           expenses?.reduce(
             (sum, exp) => sum + parseFloat(String(exp.amount_paid || 0)),
-            0
-          ) || 0;
-        const totalIncome =
-          incomes?.reduce(
-            (sum, inc) =>
-              sum +
-              (inc.fund === "client" ? parseFloat(String(inc.amount ?? 0)) : 0),
             0
           ) || 0;
 
@@ -232,17 +240,6 @@ const useProject = (projectId: string | null): UseProjectReturn => {
               (inc.fund === "refund" ? parseFloat(String(inc.amount ?? 0)) : 0),
             0
           ) || 0;
-        // Only calculate balance and held for LYD accounts
-        const lydAccounts =
-          accounts?.filter((acc) => acc.currency === "LYD") || [];
-        const totalBalance = lydAccounts.reduce(
-          (sum, acc) => sum + parseFloat(String(acc.balance || 0)),
-          0
-        );
-        const totalHeld = lydAccounts.reduce(
-          (sum, acc) => sum + parseFloat(String(acc.held || 0)),
-          0
-        );
 
         // Compile all data
         const compiledProject: Project = {
@@ -255,9 +252,8 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             totalPaid,
             totalIncome,
             refunded: totalreturned,
-            balance: totalBalance,
-            held: totalHeld,
-            pendingPayments: totalExpenses - totalPaid,
+            balance,
+            held,
           },
           stats: {
             teamSize: assignments?.length || 0,
@@ -293,22 +289,6 @@ const ProjectDetailsPage = () => {
     );
   }
   const { project, loading, error } = useProject(id);
-
-  // Compare LYD total_transactions with sum of client deposits + refunds
-  const areLYDTransactionsMatchingClientAndRefunds = (() => {
-    const lydAccounts =
-      project?.accounts?.filter((a) => a.currency === "LYD") || [];
-    const lydTotalTransactions = lydAccounts.reduce(
-      (sum, a) => sum + (Number(a.total_transactions) || 0),
-      0
-    );
-    const clientTotal = Number(project?.financial?.totalIncome || 0);
-    const refundTotal = Number(project?.financial?.refunded || 0);
-    const expected = clientTotal + refundTotal;
-    const epsilon = 0.01; // small tolerance for floating point differences
-    // true if almost equal
-    return Math.abs(lydTotalTransactions - expected) <= epsilon;
-  })();
 
   if (loading) {
     return (
@@ -528,14 +508,23 @@ const ProjectDetailsPage = () => {
                   {formatCurrency(project.financial.balance, "LYD")}
                 </span>
               </div>
-              {areLYDTransactionsMatchingClientAndRefunds ? null : (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">رصيد المتاح</span>
+                <span className="font-semibold text-green-600">
+                  {formatCurrency(
+                    project.financial.balance - project.financial.held,
+                    "LYD"
+                  )}
+                </span>
+              </div>
+              {/* {isBalanced ? null : (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-yellow-800 text-sm">
                     تحذير: إجمالي المعاملات في حسابات LYD لا يتطابق مع مجموع
                     إيداعات العملاء والمرتجعات. يرجى التحقق من البيانات المالية.
                   </p>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -627,10 +616,7 @@ const ProjectDetailsPage = () => {
                           (s, a) => s + (a.balance || 0),
                           0
                         );
-                        const totalHeld = accounts.reduce(
-                          (s, a) => s + (a.held || 0),
-                          0
-                        );
+
                         const totalTransactions = accounts.reduce(
                           (s, a) => s + (a.total_transactions || 0),
                           0
@@ -656,23 +642,8 @@ const ProjectDetailsPage = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">الرصيد</span>
-                                <span className="font-semibold text-gray-900">
-                                  {formatCurrency(totalBalance, currency)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">المحتجز</span>
-                                <span className="font-semibold text-orange-600">
-                                  {formatCurrency(totalHeld, currency)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">المتاح</span>
                                 <span className="font-semibold text-blue-600">
-                                  {formatCurrency(
-                                    totalBalance - totalHeld,
-                                    currency
-                                  )}
+                                  {formatCurrency(totalBalance, currency)}
                                 </span>
                               </div>
                             </div>

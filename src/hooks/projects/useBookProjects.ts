@@ -86,36 +86,70 @@ export function useBookProject(projectId: string) {
         throw error;
       }
 
-      //get the account
-      const { data: accountData, error: accountError } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("owner_id", expenseData.project_id)
-        .eq("currency", expenseData.currency)
-        .eq("type", expenseData.payment_method === "cash" ? "cash" : "bank")
-        .eq("owner_type", "project")
-        .single();
+      // update the account balance and held amount
+      const { data: projectBalanceData, error: projectBalanceError } =
+        await supabase
+          .from("project_balances")
+          .select("*")
+          .eq("project_id", expenseData.project_id)
+          .eq("currency", expenseData.currency)
+          .single();
 
-      if (accountError) {
-        console.error("Error fetching project account", accountError);
-        throw accountError;
+      if (projectBalanceError) {
+        console.error("Error fetching project balance", projectBalanceError);
+        throw projectBalanceError;
       }
+
+      const { error: projectBalanceUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          held:
+            projectBalanceData.held +
+            (expenseData.total_amount - expenseData.paid_amount),
+          total_expense:
+            projectBalanceData.total_expense + expenseData.total_amount,
+        })
+        .eq("project_id", expenseData.project_id)
+        .eq("currency", expenseData.currency);
+
+      if (projectBalanceUpdateError) {
+        console.error(
+          "Error updating project balance",
+          projectBalanceUpdateError
+        );
+        throw projectBalanceUpdateError;
+      }
+
+      //get the account
+      // const { data: accountData, error: accountError } = await supabase
+      //   .from("accounts")
+      //   .select("*")
+      //   .eq("owner_id", expenseData.project_id)
+      //   .eq("currency", expenseData.currency)
+      //   .eq("type", expenseData.payment_method === "cash" ? "cash" : "bank")
+      //   .eq("owner_type", "project")
+      //   .single();
+
+      // if (accountError) {
+      //   console.error("Error fetching project account", accountError);
+      //   throw accountError;
+      // }
 
       // decrease project account by paid amount and hold the rest as payable
 
-      const { error: accountUpdateError } = await supabase
-        .from("accounts")
-        .update({
-          held:
-            accountData.held +
-            (expenseData.total_amount - expenseData.paid_amount),
-        })
-        .eq("id", accountData.id);
+      // const { error: accountUpdateError } = await supabase
+      //   .from("accounts")
+      //   .update({
+      //     held:
+      //       accountData.held +
+      //       (expenseData.total_amount - expenseData.paid_amount),
+      //   })
+      //   .eq("id", accountData.id);
 
-      if (accountUpdateError) {
-        console.error("Error updating project account", accountUpdateError);
-        throw accountUpdateError;
-      }
+      // if (accountUpdateError) {
+      //   console.error("Error updating project account", accountUpdateError);
+      //   throw accountUpdateError;
+      // }
 
       // update project expense counter
       const { error: counterError } = await supabase
@@ -271,6 +305,36 @@ export function useBookProject(projectId: string) {
       if (accountUpdateError) {
         console.error("Error updating project account", accountUpdateError);
         throw accountUpdateError;
+      }
+
+      // get the project balance and update it
+      const { data: projectData, error: projectBalanceError } = await supabase
+        .from("project_balances")
+        .select("*")
+        .eq("project_id", incomeData.project_id)
+        .eq("currency", incomeData.currency)
+        .single();
+
+      if (projectBalanceError) {
+        console.error("Error fetching project balance", projectBalanceError);
+        throw projectBalanceError;
+      }
+
+      const { error: projectBalanceUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance: projectData.balance + incomeData.amount,
+          total_transactions:
+            projectData.total_transactions + incomeData.amount,
+        })
+        .eq("id", projectData.id);
+
+      if (projectBalanceUpdateError) {
+        console.error(
+          "Error updating project balance",
+          projectBalanceUpdateError
+        );
+        throw projectBalanceUpdateError;
       }
 
       return { data, error: null };
