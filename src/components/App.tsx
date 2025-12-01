@@ -17,7 +17,6 @@ import SupplyChainPage from "../pages/supply-chain/SupplyChainPage";
 import SettingsPage from "../pages/settings/SettingsPage";
 import WebsitePage from "../pages/website/WebsitePage";
 import NewEmployeePage from "../pages/hr/NewEmployeePage";
-import PayrolePage from "../pages/hr/PayrolePage";
 import LoansAdvancesPage from "../pages/hr/LoansAdvancesPage";
 import AttendancePage from "../pages/hr/AttendancePage";
 import AnnouncementsPage from "../pages/hr/AnnouncementsPage";
@@ -47,6 +46,10 @@ import BookkeeperLayout from "./sidebar/BookkeeperLayout";
 import ProjectBookDetailsPage from "../pages/finance/bookkeeper/ProjectBookDetailsPage";
 import ExpensePaymentsPage from "../pages/finance/bookkeeper/ExpensePaymentsPage";
 import TreasuryProjectPage from "../pages/finance/treasury/TreasuryProjectPage";
+import PayrollPage from "../pages/hr/payroll/PayrollPage";
+import MonthlyPayrollPage from "../pages/hr/payroll/MonthlyPayrollPage";
+import PercentagesPayrollPage from "../pages/hr/payroll/PercentagesPayrollPage";
+import MapsPayrollPage from "../pages/hr/payroll/MapsPayrollPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -127,7 +130,16 @@ const AppRouter = () => {
           <Route element={<HRLayout />}>
             <Route path="/hr" element={<HrPage />} />
             <Route path="/hr/employees/new" element={<NewEmployeePage />} />
-            <Route path="/hr/payroll" element={<PayrolePage />} />
+            <Route
+              path="/hr/payroll/monthly"
+              element={<MonthlyPayrollPage />}
+            />
+            <Route
+              path="/hr/payroll/percentages"
+              element={<PercentagesPayrollPage />}
+            />
+            <Route path="/hr/payroll/maps" element={<MapsPayrollPage />} />
+            <Route path="/hr/payroll" element={<PayrollPage />} />
             <Route path="/hr/loans-advances" element={<LoansAdvancesPage />} />
             <Route path="/hr/attendance" element={<AttendancePage />} />
             <Route path="/hr/announcements" element={<AnnouncementsPage />} />
