@@ -59,7 +59,8 @@ export const ExpensePaymentsColumns: ColumnDef<projectExpensePayments>[] = [
         pm === "cash" ||
         pm === "cheque" ||
         pm === "transfer" ||
-        pm === "deposit"
+        pm === "deposit" ||
+        pm === "bank"
       ) {
         return translatePaymentMethod(pm);
       }

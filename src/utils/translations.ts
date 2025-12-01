@@ -1,11 +1,12 @@
 export const translatePaymentMethod = (
-  method: "cash" | "cheque" | "transfer" | "deposit"
+  method: "cash" | "cheque" | "transfer" | "deposit" | "bank"
 ): string => {
   const translations = {
     cash: "نقدي",
     cheque: "شيك",
     transfer: "تحويل",
     deposit: "إيداع",
+    bank: "بنك",
   };
 
   return translations[method] || method;
