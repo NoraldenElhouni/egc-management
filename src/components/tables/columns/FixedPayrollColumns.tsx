@@ -1,9 +1,9 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { Payroll } from "../../../types/global.type";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
+import { PayrollWithRelations } from "../../../types/extended.type";
 
 // Payroll table columns
-export const PayrollColumns: ColumnDef<Payroll>[] = [
+export const FixedPayrollColumns: ColumnDef<PayrollWithRelations>[] = [
   // Selection column (first column)
   {
     id: "select",
@@ -35,6 +35,17 @@ export const PayrollColumns: ColumnDef<Payroll>[] = [
   },
 
   {
+    accessorKey: "employees",
+    accessorFn: (row) =>
+      row.employees?.first_name + " " + row.employees?.last_name,
+    header: "الموظف",
+    cell: ({ row }) => {
+      const employee = row.original.employees;
+      if (!employee) return "N/A";
+      return `${employee.first_name} ${employee.last_name || ""}`.trim();
+    },
+  },
+  {
     accessorKey: "pay_date",
     header: "تاريخ الدفع",
     cell: ({ row }) => formatDate(row.original.pay_date),
@@ -46,19 +57,6 @@ export const PayrollColumns: ColumnDef<Payroll>[] = [
       row.original.basic_salary != null
         ? formatCurrency(row.original.basic_salary, "LYD")
         : "-",
-  },
-  {
-    accessorKey: "percentage_salary",
-    header: "النسبة",
-    cell: ({ row }) =>
-      row.original.percentage_salary != null
-        ? `${row.original.percentage_salary}`
-        : "-",
-  },
-  {
-    accessorKey: "total_salary",
-    header: "إجمالي الراتب",
-    cell: ({ row }) => formatCurrency(row.original.total_salary, "LYD"),
   },
   {
     accessorKey: "status",

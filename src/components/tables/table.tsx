@@ -37,6 +37,7 @@ type GenericTableProps<TData> = {
   onRowSelectionChange?: (selectedRows: TData[]) => void;
   className?: string;
   emptyMessage?: string;
+  header?: React.ReactNode;
 };
 
 export default function GenericTable<TData extends object>({
@@ -53,6 +54,7 @@ export default function GenericTable<TData extends object>({
   onRowSelectionChange,
   className = "",
   emptyMessage = "لا توجد بيانات لعرضها.",
+  header,
 }: GenericTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -101,6 +103,9 @@ export default function GenericTable<TData extends object>({
 
   return (
     <div className={`w-full overflow-auto p-2 ${className}`}>
+      {/* Optional Header */}
+      {header && <div className="mb-4">{header}</div>}
+
       {/* Global Filter */}
       {showGlobalFilter && enableFiltering && (
         <div className="mb-3">

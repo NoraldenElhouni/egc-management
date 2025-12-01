@@ -1,5 +1,5 @@
 import { Payroll } from "../../../types/global.type";
-import { PayrollColumns } from "../../tables/columns/PayrollColumns";
+import { EmployeePayrollColumns } from "../../tables/columns/EmployeePayrollColumns";
 import GenericTable from "../../tables/table";
 
 const SalaryDetails = ({ payroll }: { payroll?: Payroll[] }) => {
@@ -15,7 +15,7 @@ const SalaryDetails = ({ payroll }: { payroll?: Payroll[] }) => {
         ) : (
           <GenericTable
             data={payroll ?? []}
-            columns={PayrollColumns}
+            columns={EmployeePayrollColumns}
             enableSorting
             enablePagination
             enableFiltering

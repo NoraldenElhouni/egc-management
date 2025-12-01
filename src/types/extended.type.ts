@@ -59,6 +59,10 @@ export type FullProjectFinance = Projects & {
   clients: Clients | null;
 };
 
+export type PayrollWithRelations = Payroll & {
+  employees: { first_name: string; last_name: string | null } | null;
+};
+
 // export interface ClientWithProjects extends Clients {
 //   projects: ProjectWithDetails[];
 // }
