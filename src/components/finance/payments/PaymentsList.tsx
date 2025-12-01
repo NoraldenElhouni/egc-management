@@ -1,10 +1,16 @@
 import { usePayments } from "../../../hooks/finance/usePayments";
-import { ContractPaymentsColumns } from "../../tables/columns/ContractPaymentsColumns";
+import { createContractPaymentsColumns } from "../../tables/columns/ContractPaymentsColumns";
 import { ProjectsExpensesColumns } from "../../tables/columns/ProjectExpenseColumns";
 import GenericTable from "../../tables/table";
+import { useMemo } from "react";
 
 const PaymentsList = () => {
-  const { payments, contractPayments, loading, error } = usePayments();
+  const { payments, contractPayments, loading, error, refetch } = usePayments();
+
+  const contractPaymentsColumns = useMemo(
+    () => createContractPaymentsColumns({ onRefetch: refetch }),
+    [refetch]
+  );
 
   if (loading) return <div>جاري التحميل...</div>;
   if (error) return <div>حدث خطأ: {error}</div>;
@@ -21,7 +27,7 @@ const PaymentsList = () => {
       />
       <GenericTable
         data={contractPayments}
-        columns={ContractPaymentsColumns}
+        columns={contractPaymentsColumns}
         enableSorting
         enablePagination
         enableFiltering
