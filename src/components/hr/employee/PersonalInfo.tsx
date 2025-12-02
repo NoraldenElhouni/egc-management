@@ -1,28 +1,28 @@
-import { fullEmployee } from "../../../types/extended.type";
+import { FullEmployee } from "../../../types/extended.type";
 import AddressCard from "./cards/AddressCard";
 import BasicInfoCard from "./cards/BasicInfoCard";
 import EducationCard from "./cards/EducationCard";
 import EmergencyContactCard from "./cards/EmergencyContactCard";
 
 interface PersonalInfoProps {
-  employee: fullEmployee;
+  employee: FullEmployee;
 }
 
 const PersonalInfo = ({ employee }: PersonalInfoProps) => {
-  const handleSaveBasic = (data: fullEmployee) => {
+  const handleSaveBasic = (data: FullEmployee) => {
     console.log("Save basic:", data);
     // TODO: call API / persist changes
   };
 
-  const handleSaveAddress = (data: fullEmployee) => {
+  const handleSaveAddress = (data: FullEmployee) => {
     console.log("Save address:", data);
   };
 
-  const handleSaveEducation = (data: fullEmployee) => {
+  const handleSaveEducation = (data: FullEmployee) => {
     console.log("Save education:", data);
   };
 
-  const handleSaveEmergency = (data: fullEmployee) => {
+  const handleSaveEmergency = (data: FullEmployee) => {
     console.log("Save emergency:", data);
   };
   return (

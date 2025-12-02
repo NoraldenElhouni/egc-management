@@ -63,9 +63,15 @@ export type PayrollWithRelations = Payroll & {
   employees: { first_name: string; last_name: string | null } | null;
 };
 export type ProjectWithAssignments = Projects & {
+  project_percentage: {
+    total_percentage: number;
+    percentage: number;
+    period_percentage: number;
+    period_start: string;
+  } | null;
   project_assignments: Array<{
     user_id: string;
-    users: { first_name: string; last_name: string | null } | null;
+    employees: { first_name: string; last_name: string | null } | null;
   }>;
 };
 

@@ -223,15 +223,38 @@ export function useProjectsWithAssignments() {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          `id, code, name, percentage_taken, project_assignments(user_id, users(first_name,last_name))`
+          `id, code, name, project_assignments(user_id, employees(first_name,last_name))`
         );
 
       if (error) {
+        console.error("error fetching project", error);
         setError(error);
         setProjects([]);
-      } else {
-        setProjects((data as unknown as ProjectWithAssignments[]) ?? []);
       }
+      const { data: percentage, error: percentageError } = await supabase
+        .from("project_percentage")
+        .select(
+          `project_id, total_percentage, percentage, period_percentage, period_start`
+        )
+        .in("project_id", data?.map((p) => p.id) || [])
+        .eq("currency", "LYD");
+
+      if (percentageError) {
+        console.error("error fetching project percentage", percentageError);
+        setError(percentageError);
+      }
+      const projectsWithPercentages = (data || []).map((project) => {
+        const projectPercentage =
+          percentage?.find((p) => p.project_id === project.id) || null;
+        return {
+          ...project,
+          project_percentage: projectPercentage,
+        };
+      });
+
+      setProjects(
+        projectsWithPercentages as unknown as ProjectWithAssignments[]
+      );
       setLoading(false);
     };
 
@@ -239,4 +262,52 @@ export function useProjectsWithAssignments() {
   }, []);
 
   return { projects, loading, error };
+}
+export function useProjectWithAssignments(projectId: string) {
+  const [project, setProject] = useState<ProjectWithAssignments | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("projects")
+        .select(
+          `id, code, name, project_assignments(user_id, employees(first_name,last_name))`
+        )
+        .eq("id", projectId)
+        .single();
+
+      if (error) {
+        console.error("error fetching project", error);
+        setError(error);
+        setProject(null);
+      }
+      const { data: percentage, error: percentageError } = await supabase
+        .from("project_percentage")
+        .select(
+          `project_id, total_percentage, percentage, period_percentage, period_start`
+        )
+        .eq("project_id", data?.id || "")
+        .eq("currency", "LYD")
+        .single();
+
+      if (percentageError) {
+        console.error("error fetching project percentage", percentageError);
+        setError(percentageError);
+      }
+      const projectsWithPercentages = {
+        ...data,
+        project_percentage: percentage,
+      };
+
+      setProject(projectsWithPercentages as unknown as ProjectWithAssignments);
+      setLoading(false);
+    };
+
+    fetchProject();
+  }, [projectId]);
+
+  return { project, loading, error };
 }

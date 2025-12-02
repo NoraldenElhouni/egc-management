@@ -19,8 +19,8 @@ const PercentagesPayrollList = () => {
         {projects.map((project) => {
           const employees = (project.project_assignments || [])
             .map((pa) =>
-              pa.users
-                ? `${pa.users.first_name} ${pa.users.last_name ?? ""}`.trim()
+              pa.employees
+                ? `${pa.employees.first_name} ${pa.employees.last_name ?? ""}`.trim()
                 : null
             )
             .filter(Boolean) as string[];
@@ -39,11 +39,26 @@ const PercentagesPayrollList = () => {
                 <div className="text-sm text-gray-500">اسم المشروع</div>
                 <div className="text-base font-medium">{project.name}</div>
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-500">النسبة المأخوذة</span>
-                <span className="text-base font-semibold">
-                  {project.percentage_taken ?? 0}
-                </span>
+              <div className="mb-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-gray-500">النسبة الكلية</span>
+                  <span className="text-base font-semibold">
+                    {project.project_percentage?.total_percentage ?? 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-gray-500">نسبة الفترة</span>
+                  <span className="text-base font-semibold">
+                    {project.project_percentage?.period_percentage ?? 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">الفترة</span>
+                  <span className="text-base font-semibold">
+                    {project.project_percentage?.period_start ?? "غير محدد"} -{" "}
+                    {"الآن"}
+                  </span>
+                </div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 mb-1">المهندسين</div>

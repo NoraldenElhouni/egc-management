@@ -5,6 +5,8 @@ import { useParams } from "react-router-dom";
 import { translateProjectStatus } from "../../utils/translations";
 import OverviewStatus from "../../components/ui/OverviewStatus";
 import StatListItems from "../../components/ui/StatListItems";
+import LoadingPage from "../../components/ui/LoadingPage";
+import ErrorPage from "../../components/ui/errorPage";
 
 // Type definitions
 interface Client {
@@ -332,26 +334,12 @@ const ProjectDetailsPage = () => {
   const { project, loading, error } = useProject(id);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading project details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingPage label="Loading project details..." />;
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h3 className="text-red-800 font-semibold mb-2">
-            Error Loading Project
-          </h3>
-          <p className="text-red-600">{error}</p>
-        </div>
-      </div>
+      <ErrorPage label="حدث خطأ أثناء تحميل بيانات المشروع" error={error} />
     );
   }
 
