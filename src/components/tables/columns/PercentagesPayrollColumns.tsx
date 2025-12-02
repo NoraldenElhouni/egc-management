@@ -45,7 +45,7 @@ export const PercentagesPayrollColumns: ColumnDef<PayrollWithRelations>[] = [
       if (!employee) return "N/A";
       return (
         <Link
-          to={`/employees/${row.original.id}`}
+          to={`/hr/payroll/${row.original.id}`}
           className="font-medium hover:underline"
         >
           {`${employee.first_name} ${employee.last_name || ""}`.trim()}

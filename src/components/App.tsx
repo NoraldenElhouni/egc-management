@@ -50,6 +50,7 @@ import PayrollPage from "../pages/hr/payroll/PayrollPage";
 import MonthlyPayrollPage from "../pages/hr/payroll/MonthlyPayrollPage";
 import PercentagesPayrollPage from "../pages/hr/payroll/PercentagesPayrollPage";
 import MapsPayrollPage from "../pages/hr/payroll/MapsPayrollPage";
+import PayrollDetailedPage from "../pages/hr/payroll/PayrollDetailedPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -140,6 +141,7 @@ const AppRouter = () => {
             />
             <Route path="/hr/payroll/maps" element={<MapsPayrollPage />} />
             <Route path="/hr/payroll" element={<PayrollPage />} />
+            <Route path="/hr/payroll/:id" element={<PayrollDetailedPage />} />
             <Route path="/hr/loans-advances" element={<LoansAdvancesPage />} />
             <Route path="/hr/attendance" element={<AttendancePage />} />
             <Route path="/hr/announcements" element={<AnnouncementsPage />} />

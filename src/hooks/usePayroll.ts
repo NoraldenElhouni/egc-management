@@ -76,3 +76,30 @@ export function usePayroll() {
 
   return { fixed, percentage, fixedPayroll, percentagePayroll, loading, error };
 }
+
+export function useDetailedPayroll(id: string) {
+  const [payroll, setPayroll] = useState<PayrollWithRelations | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    async function fetchPayroll() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("payroll")
+        .select(`*, employees (first_name, last_name, salary_type)`)
+        .eq("id", id)
+        .single();
+      if (error) {
+        console.error("error fetching payroll", error);
+        setError(error);
+      } else {
+        setPayroll(data);
+      }
+      setLoading(false);
+    }
+    fetchPayroll();
+  }, [id]); // runs once on mount or when id changes
+
+  return { payroll, loading, error };
+}

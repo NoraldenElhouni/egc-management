@@ -1,6 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { PayrollWithRelations } from "../../../types/extended.type";
+import { Link } from "react-router-dom";
 
 // Payroll table columns
 export const FixedPayrollColumns: ColumnDef<PayrollWithRelations>[] = [
@@ -42,7 +43,14 @@ export const FixedPayrollColumns: ColumnDef<PayrollWithRelations>[] = [
     cell: ({ row }) => {
       const employee = row.original.employees;
       if (!employee) return "N/A";
-      return `${employee.first_name} ${employee.last_name || ""}`.trim();
+      return (
+        <Link
+          to={`/hr/payroll/${row.original.id}`}
+          className="font-medium hover:underline"
+        >
+          {`${employee.first_name} ${employee.last_name || ""}`.trim()}
+        </Link>
+      );
     },
   },
   {
