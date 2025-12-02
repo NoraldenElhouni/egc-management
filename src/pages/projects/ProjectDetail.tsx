@@ -81,6 +81,18 @@ interface ProjectStats {
   completionPercentage: number;
 }
 
+interface projectPercentage {
+  created_at: string;
+  currency: "LYD" | "USD" | "EUR" | null;
+  id: string;
+  percentage: number;
+  period_percentage: number;
+  period_start: string;
+  project_id: string;
+  total_percentage: number;
+  updated_at: string | null;
+}
+
 interface Project {
   id: string;
   client_id: string;
@@ -92,8 +104,7 @@ interface Project {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
-  percentage: number | null;
-  percentage_taken: number;
+  project_percentage: projectPercentage | null;
   serial_number: number | null;
   client: Client;
   teamMembers: ProjectAssignment[];
@@ -228,6 +239,17 @@ const useProject = (projectId: string | null): UseProjectReturn => {
 
         if (accountsError) throw accountsError;
 
+        // fetch project percentage
+        const { data: projectPercentage, error: projectPercentageError } =
+          await supabase
+            .from("project_percentage")
+            .select("*")
+            .eq("project_id", projectId)
+            .eq("currency", "LYD")
+            .single();
+
+        if (projectPercentageError) throw projectPercentageError;
+
         const totalExpenses =
           projectBalances?.find((pb) => pb.currency === "LYD")?.total_expense ||
           0;
@@ -261,6 +283,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
         // Compile all data
         const compiledProject: Project = {
           ...projectData,
+          project_percentage: projectPercentage || null,
           teamMembers: assignments || [],
           contracts: contracts || [],
           accounts: accounts || [],
@@ -277,7 +300,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             teamSize: assignments?.length || 0,
             activeContracts:
               contracts?.filter((c) => c.status === "approved").length || 0,
-            completionPercentage: projectData.percentage || 0,
+            completionPercentage: projectPercentage?.percentage || 0,
           },
         };
 
@@ -460,11 +483,19 @@ const ProjectDetailsPage = () => {
               ),
             },
             {
-              label: `نسبة الشركة ${project.percentage}%`,
-              value: formatCurrency(project.percentage_taken, "LYD"),
+              label: `نسبة الشركة ${project.project_percentage?.percentage ?? 0}%`,
+              value: formatCurrency(
+                project.project_percentage?.total_percentage ?? 0,
+                "LYD"
+              ),
               icon: DollarSign,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
+              secondaryLabel: "نسية الفترة",
+              secondaryValue: formatCurrency(
+                project.project_percentage?.period_percentage ?? 0,
+                "LYD"
+              ),
             },
           ]}
         />
@@ -532,7 +563,7 @@ const ProjectDetailsPage = () => {
                 positiveColor="text-emerald-700"
               />
               <StatListItems
-                value={project.percentage_taken}
+                value={project.project_percentage?.total_percentage || 0}
                 currency="LYD"
                 label="حصه الشركه"
                 positiveColor="text-sky-700"

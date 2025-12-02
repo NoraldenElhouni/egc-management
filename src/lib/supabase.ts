@@ -1015,6 +1015,7 @@ export type Database = {
           employee_id: string;
           id: string;
           pay_date: string;
+          payment_method: Database["public"]["Enums"]["payment_method"];
           percentage_salary: number | null;
           status: string;
           total_salary: number;
@@ -1026,6 +1027,7 @@ export type Database = {
           employee_id: string;
           id?: string;
           pay_date: string;
+          payment_method: Database["public"]["Enums"]["payment_method"];
           percentage_salary?: number | null;
           status?: string;
           total_salary?: number;
@@ -1037,6 +1039,7 @@ export type Database = {
           employee_id?: string;
           id?: string;
           pay_date?: string;
+          payment_method?: Database["public"]["Enums"]["payment_method"];
           percentage_salary?: number | null;
           status?: string;
           total_salary?: number;
@@ -1147,7 +1150,15 @@ export type Database = {
           total_expense?: number;
           total_transactions?: number;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "project_balances_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       project_expenses: {
         Row: {
@@ -1305,6 +1316,57 @@ export type Database = {
           },
         ];
       };
+      project_percentage: {
+        Row: {
+          created_at: string;
+          currency: Database["public"]["Enums"]["currency_type"] | null;
+          id: string;
+          percentage: number;
+          period_percentage: number;
+          period_start: string;
+          project_id: string;
+          total_percentage: number;
+          updated_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_type"] | null;
+          id?: string;
+          percentage?: number;
+          period_percentage?: number;
+          period_start: string;
+          project_id: string;
+          total_percentage?: number;
+          updated_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_type"] | null;
+          id?: string;
+          percentage?: number;
+          period_percentage?: number;
+          period_start?: string;
+          project_id?: string;
+          total_percentage?: number;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_percentage_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_percentage_project_id_fkey1";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       project_percentage_logs: {
         Row: {
           amount: number;
@@ -1415,8 +1477,6 @@ export type Database = {
           latitude: number | null;
           longitude: number | null;
           name: string;
-          percentage: number | null;
-          percentage_taken: number;
           serial_number: number | null;
           status: Database["public"]["Enums"]["project_status_enum"];
         };
@@ -1432,8 +1492,6 @@ export type Database = {
           latitude?: number | null;
           longitude?: number | null;
           name: string;
-          percentage?: number | null;
-          percentage_taken?: number;
           serial_number?: number | null;
           status?: Database["public"]["Enums"]["project_status_enum"];
         };
@@ -1449,8 +1507,6 @@ export type Database = {
           latitude?: number | null;
           longitude?: number | null;
           name?: string;
-          percentage?: number | null;
-          percentage_taken?: number;
           serial_number?: number | null;
           status?: Database["public"]["Enums"]["project_status_enum"];
         };
@@ -1910,7 +1966,8 @@ export type Database = {
         | "rejected";
       offer_type: "request" | "proposal";
       owner_type: "employee" | "project" | "company" | "contractor";
-      payment_type: "cash" | "cheque" | "transfer" | "deposit";
+      payment_method: "cash" | "bank";
+      payment_type: "cash" | "cheque" | "transfer" | "deposit" | "bank";
       phase_type: "construction" | "finishing";
       project_status_enum: "active" | "paused" | "completed" | "cancelled";
       projects_type: "construction" | "consulting";
@@ -2073,7 +2130,8 @@ export const Constants = {
       ],
       offer_type: ["request", "proposal"],
       owner_type: ["employee", "project", "company", "contractor"],
-      payment_type: ["cash", "cheque", "transfer", "deposit"],
+      payment_method: ["cash", "bank"],
+      payment_type: ["cash", "cheque", "transfer", "deposit", "bank"],
       phase_type: ["construction", "finishing"],
       project_status_enum: ["active", "paused", "completed", "cancelled"],
       projects_type: ["construction", "consulting"],

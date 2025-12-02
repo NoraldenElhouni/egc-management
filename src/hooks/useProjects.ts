@@ -54,7 +54,6 @@ export function useProjects() {
       client_id: newProject.client_id,
       address: (newProject.address ?? null) as string | null,
       status: "active",
-      percentage: (newProject.percentage ?? null) as number | null,
       serial_number: companyData?.projects_counter ?? null,
       code: CODE,
     };
@@ -118,6 +117,27 @@ export function useProjects() {
     if (accountsError) {
       console.error("error adding project accounts", accountsError);
       setError(accountsError);
+    }
+
+    // insert percentage
+    const percentageData: Database["public"]["Tables"]["project_percentage"]["Insert"][] =
+      (["USD", "EUR", "LYD"] as const).map((currency) => ({
+        period_start: new Date().toISOString(),
+        project_id: data.id,
+        percentage: newProject.percentage ?? 0,
+        currency: currency,
+        period_percentage: 0,
+        total_percentage: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+    const { error: percentageError } = await supabase
+      .from("project_percentage")
+      .insert(percentageData);
+
+    if (percentageError) {
+      console.error("error adding project percentage", percentageError);
+      setError(percentageError);
     }
 
     // update counter in company table

@@ -11,11 +11,13 @@ import {
 import { useProjects } from "../../../hooks/useProjects";
 import { useClients } from "../../../hooks/useClients";
 import { NumberField } from "../../ui/inputs/NumberField";
+import { useNavigate } from "react-router-dom";
 
 const NewProjectForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const { addProject, loading, error } = useProjects();
   const { clients } = useClients();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -35,6 +37,7 @@ const NewProjectForm: React.FC = () => {
       }
       setSuccess("تم اضافة المشروع بنجاح");
       reset();
+      navigate(`/projects`);
     } catch (err) {
       console.error("Unexpected error creating project:", err);
       alert("حدث خطأ غير متوقع أثناء إنشاء المشروع.");
