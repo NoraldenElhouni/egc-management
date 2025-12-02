@@ -51,6 +51,7 @@ import MonthlyPayrollPage from "../pages/hr/payroll/MonthlyPayrollPage";
 import PercentagesPayrollPage from "../pages/hr/payroll/PercentagesPayrollPage";
 import MapsPayrollPage from "../pages/hr/payroll/MapsPayrollPage";
 import PayrollDetailedPage from "../pages/hr/payroll/PayrollDetailedPage";
+import PayrollFinancePage from "../pages/finance/payroll/PayrollFinancePage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -194,6 +195,7 @@ const AppRouter = () => {
           {/* Finance */}
           <Route element={<FinanceLayout />}>
             <Route path="/finance" element={<FinancePage />} />
+            <Route path="/finance/payroll" element={<PayrollFinancePage />} />
             <Route path="/finance/accounting" element={<AccountingPage />} />
             <Route
               path="/finance/accounting/project/:id"

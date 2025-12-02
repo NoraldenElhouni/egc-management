@@ -4,7 +4,7 @@ import { PayrollWithRelations } from "../../../types/extended.type";
 import { Link } from "react-router-dom";
 
 // Payroll table columns
-export const FixedPayrollColumns: ColumnDef<PayrollWithRelations>[] = [
+export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
   // Selection column (first column)
   {
     id: "select",
@@ -65,6 +65,18 @@ export const FixedPayrollColumns: ColumnDef<PayrollWithRelations>[] = [
       row.original.basic_salary != null
         ? formatCurrency(row.original.basic_salary, "LYD")
         : "-",
+  },
+  {
+    accessorKey: "percentage_salary",
+    header: "النسبة",
+    cell: ({ row }) =>
+      row.original.percentage_salary != null
+        ? `${row.original.percentage_salary}`
+        : "-",
+  },
+  {
+    accessorKey: "total_salary",
+    header: "الإجمالي",
   },
   {
     accessorKey: "status",

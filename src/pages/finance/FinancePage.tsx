@@ -3,6 +3,7 @@ import {
   Building2,
   Calculator,
   CreditCard,
+  Users,
   Vault,
 } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
@@ -46,6 +47,13 @@ const FinancePage = () => {
       path: "/finance/company",
       description: "بيانات الشركة المالية",
       role: ["Admin", "Finance", "Bookkeeper"],
+    },
+    {
+      label: "الرواتب",
+      icon: Users,
+      path: "/finance/payroll",
+      description: "إدارة الرواتب",
+      role: ["Admin", "Finance"],
     },
   ];
 

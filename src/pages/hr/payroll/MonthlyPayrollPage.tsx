@@ -1,7 +1,5 @@
-import FixedPayrollList from "../../../components/hr/list/FixedPayrollList";
-
 const MonthlyPayrollPage = () => {
-  return <FixedPayrollList />;
+  return <div>hello</div>;
 };
 
 export default MonthlyPayrollPage;

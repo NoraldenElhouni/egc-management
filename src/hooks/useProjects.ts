@@ -3,6 +3,8 @@ import { supabase } from "../lib/supabaseClient";
 import type { Database } from "../lib/supabase";
 import { Projects } from "../types/global.type";
 import { ProjectFormValues } from "../types/schema/projects.schema";
+import { ProjectWithAssignments } from "../types/extended.type";
+import { PostgrestError } from "@supabase/supabase-js";
 
 export function useProjects() {
   const [projects, setProjects] = useState<Projects[]>([]);
@@ -188,4 +190,33 @@ export function useProject(id: string) {
   }, [id]);
 
   return { project, loading, error };
+}
+
+export function useProjectsWithAssignments() {
+  const [projects, setProjects] = useState<ProjectWithAssignments[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("projects")
+        .select(
+          `id, code, name, percentage_taken, project_assignments(user_id, users(first_name,last_name))`
+        );
+
+      if (error) {
+        setError(error);
+        setProjects([]);
+      } else {
+        setProjects((data as unknown as ProjectWithAssignments[]) ?? []);
+      }
+      setLoading(false);
+    };
+
+    fetchProjects();
+  }, []);
+
+  return { projects, loading, error };
 }
