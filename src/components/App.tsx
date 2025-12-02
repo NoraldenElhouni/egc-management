@@ -52,6 +52,7 @@ import PercentagesPayrollPage from "../pages/hr/payroll/PercentagesPayrollPage";
 import MapsPayrollPage from "../pages/hr/payroll/MapsPayrollPage";
 import PayrollDetailedPage from "../pages/hr/payroll/PayrollDetailedPage";
 import PayrollFinancePage from "../pages/finance/payroll/PayrollFinancePage";
+import ProjectPercentagesPayrollPage from "../pages/hr/payroll/project/ProjectPercentagesPayrollPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -139,6 +140,10 @@ const AppRouter = () => {
             <Route
               path="/hr/payroll/percentages"
               element={<PercentagesPayrollPage />}
+            />
+            <Route
+              path="/hr/payroll/percentages/:projectId"
+              element={<ProjectPercentagesPayrollPage />}
             />
             <Route path="/hr/payroll/maps" element={<MapsPayrollPage />} />
             <Route path="/hr/payroll" element={<PayrollPage />} />

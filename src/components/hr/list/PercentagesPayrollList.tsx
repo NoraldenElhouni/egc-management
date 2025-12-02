@@ -29,7 +29,7 @@ const PercentagesPayrollList = () => {
             <div
               key={project.id}
               className="rounded-xl border border-gray-200 bg-white hover:shadow-md transition-shadow cursor-pointer p-4"
-              onClick={() => navigate(`/projects/${project.id}`)}
+              onClick={() => navigate(`/hr/payroll/percentages/${project.id}`)}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-500">كود المشروع</span>
@@ -42,13 +42,11 @@ const PercentagesPayrollList = () => {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-500">النسبة المأخوذة</span>
                 <span className="text-base font-semibold">
-                  {project.percentage_taken ?? 0}%
+                  {project.percentage_taken ?? 0}
                 </span>
               </div>
               <div>
-                <div className="text-sm text-gray-500 mb-1">
-                  الموظفون المخصصون
-                </div>
+                <div className="text-sm text-gray-500 mb-1">المهندسين</div>
                 <div className="text-sm text-gray-800 truncate">
                   {employees.length > 0 ? employees.join("، ") : "غير مخصص"}
                 </div>
