@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Users, DollarSign, MapPin, Activity } from "lucide-react";
+import { Users, DollarSign, MapPin, Workflow } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useParams } from "react-router-dom";
 import { translateProjectStatus } from "../../utils/translations";
 import OverviewStatus from "../../components/ui/OverviewStatus";
+import StatListItems from "../../components/ui/StatListItems";
 
 // Type definitions
 interface Client {
@@ -71,6 +72,7 @@ interface FinancialData {
   refunded: number;
   balance: number;
   held: number;
+  totalinvoices: number;
 }
 
 interface ProjectStats {
@@ -254,6 +256,8 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             0
           ) || 0;
 
+        const totalinvoices = expenses?.length || 0;
+
         // Compile all data
         const compiledProject: Project = {
           ...projectData,
@@ -267,11 +271,12 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             refunded: totalreturned,
             balance,
             held,
+            totalinvoices,
           },
           stats: {
             teamSize: assignments?.length || 0,
             activeContracts:
-              contracts?.filter((c) => c.status === "active").length || 0,
+              contracts?.filter((c) => c.status === "approved").length || 0,
             completionPercentage: projectData.percentage || 0,
           },
         };
@@ -430,6 +435,8 @@ const ProjectDetailsPage = () => {
               icon: Users,
               iconBgColor: "bg-blue-100",
               iconColor: "text-blue-600",
+              secondaryLabel: "العقود النشطة",
+              secondaryValue: project.stats.activeContracts,
             },
             {
               label: "الرصيد الحالي",
@@ -437,13 +444,20 @@ const ProjectDetailsPage = () => {
               icon: DollarSign,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
+              secondaryLabel: "المحتجز",
+              secondaryValue: formatCurrency(project.financial.held, "LYD"),
             },
             {
-              label: "العقود النشطة",
-              value: project.stats.activeContracts,
-              icon: Activity,
+              label: "اجمالي المصروفات",
+              value: formatCurrency(project.financial.totalExpenses, "LYD"),
+              icon: Workflow,
               iconBgColor: "bg-orange-100",
               iconColor: "text-orange-600",
+              secondaryLabel: "المدفوع",
+              secondaryValue: formatCurrency(
+                project.financial.totalPaid,
+                "LYD"
+              ),
             },
             {
               label: `نسبة الشركة ${project.percentage}%`,
@@ -485,59 +499,56 @@ const ProjectDetailsPage = () => {
               نظرة عامة مالية
             </h2>
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">اجمالي ايداع</span>
-                <span className="font-semibold text-green-600">
-                  {formatCurrency(project.financial.totalIncome, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">قيم الراجع</span>
-                <span className="font-semibold text-green-600">
-                  {formatCurrency(project.financial.refunded, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">قيم المحجوزة</span>
-                <span className="font-semibold text-orange-600">
-                  {formatCurrency(project.financial.held, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">اجمالي مصروفات</span>
-                <span className="font-semibold text-orange-600">
-                  {formatCurrency(project.financial.totalExpenses, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">حصه الشركه</span>
-                <span className="font-semibold text-gray-900">
-                  {formatCurrency(project.percentage_taken, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pt-3 border-t">
-                <span className="text-gray-600">رصيد الحالي</span>
-                <span className="font-semibold text-blue-600">
-                  {formatCurrency(project.financial.balance, "LYD")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">رصيد المتاح</span>
-                <span className="font-semibold text-green-600">
-                  {formatCurrency(
-                    project.financial.balance - project.financial.held,
-                    "LYD"
-                  )}
-                </span>
-              </div>
-              {/* {isBalanced ? null : (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-yellow-800 text-sm">
-                    تحذير: إجمالي المعاملات في حسابات LYD لا يتطابق مع مجموع
-                    إيداعات العملاء والمرتجعات. يرجى التحقق من البيانات المالية.
-                  </p>
-                </div>
-              )} */}
+              <StatListItems
+                value={project.financial.totalIncome}
+                currency="LYD"
+                label="اجمالي ايداع"
+                positiveColor="text-emerald-700"
+              />
+
+              <StatListItems
+                value={project.financial.totalExpenses}
+                currency="LYD"
+                label="اجمالي مصروفات"
+                positiveColor="text-gray-800"
+              />
+              <StatListItems
+                value={project.financial.held}
+                currency="LYD"
+                label="قيم المحجوزة"
+                positiveColor="text-amber-700"
+              />
+              <StatListItems
+                value={project.financial.balance}
+                currency="LYD"
+                label="رصيد الحالي"
+                positiveColor="text-emerald-700"
+              />
+
+              <StatListItems
+                value={project.financial.balance - project.financial.held}
+                currency="LYD"
+                label="رصيد المتاح"
+                positiveColor="text-emerald-700"
+              />
+              <StatListItems
+                value={project.percentage_taken}
+                currency="LYD"
+                label="حصه الشركه"
+                positiveColor="text-sky-700"
+              />
+
+              <StatListItems
+                value={project.financial.refunded}
+                currency="LYD"
+                label="قيم الراجع"
+                positiveColor="text-gray-800"
+              />
+              <StatListItems
+                value={project.financial.totalinvoices}
+                label="عدد الفواتير"
+                positiveColor="text-gray-700"
+              />
             </div>
           </div>
         </div>
@@ -711,7 +722,7 @@ const ProjectDetailsPage = () => {
                       </p>
                       <span
                         className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium ${
-                          contract.status === "active"
+                          contract.status === "approved"
                             ? "bg-green-100 text-green-800"
                             : contract.status === "completed"
                               ? "bg-blue-100 text-blue-800"
