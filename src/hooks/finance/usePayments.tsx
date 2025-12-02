@@ -147,29 +147,50 @@ export function useExpensePayments(expenseId: string) {
   const addPayment = async (form: ExpensePaymentFormValues) => {
     setSubmitting(true);
     try {
+      // Validate user
       if (!user?.id) {
         return { success: false, error: "غير مصرح — المستخدم غير معروف" };
       }
-      if (form.amount > 0) {
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          "process_expense_payment", // make sure the name matches
-          {
-            p_amount: form.amount,
-            p_expense_id: form.expenseId,
-            p_payment_method: form.payment_method,
-            p_created_by: user.id,
-            p_currency: form.currency,
-            p_project_id: expense?.project_id || "",
-          }
-        );
 
-        if (rpcError) {
-          console.error("Error processing expense payment", rpcError);
-          return { success: false, error: rpcError.message };
-        } else {
-          console.log("RPC result:", rpcData);
-        }
+      // Validate expense and project_id
+      if (!expense?.project_id) {
+        return { success: false, error: "معلومات المشروع غير متوفرة" };
       }
+
+      // Validate amount
+      if (!form.amount || form.amount <= 0) {
+        return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
+      }
+
+      // Validate currency
+      if (!form.currency) {
+        return { success: false, error: "العملة مطلوبة" };
+      }
+
+      // Validate payment method
+      if (!form.payment_method) {
+        return { success: false, error: "طريقة الدفع مطلوبة" };
+      }
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "process_expense_payment", // make sure the name matches
+        {
+          p_amount: form.amount,
+          p_expense_id: form.expenseId,
+          p_payment_method: form.payment_method,
+          p_created_by: user.id,
+          p_currency: form.currency,
+          p_project_id: expense?.project_id,
+        }
+      );
+
+      if (rpcError) {
+        console.error("Error processing expense payment", rpcError);
+        return { success: false, error: rpcError.message };
+      } else {
+        console.log("RPC result:", rpcData);
+      }
+
       return { success: true, error: null };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

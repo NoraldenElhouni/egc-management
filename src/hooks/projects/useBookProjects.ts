@@ -7,6 +7,7 @@ import {
 } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
+import { ProjectExpenses } from "../../types/global.type";
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
@@ -47,10 +48,10 @@ export function useBookProject(projectId: string) {
         throw new Error("User not authenticated");
       }
 
-      // get the project for expense counter for the serial number
-      const { data: projectRow, error: projectError } = await supabase
+      // Get the project for expense counter (serial number)
+      const { data: project, error: projectError } = await supabase
         .from("projects")
-        .select("expense_counter, percentage_taken, percentage")
+        .select("expense_counter")
         .eq("id", expenseData.project_id)
         .single();
 
@@ -62,6 +63,15 @@ export function useBookProject(projectId: string) {
         throw projectError;
       }
 
+      // Calculate initial status
+      const initialStatus =
+        expenseData.total_amount === expenseData.paid_amount
+          ? "paid"
+          : expenseData.paid_amount > 0
+            ? "partially_paid"
+            : "unpaid";
+
+      // Insert the expense
       const { data, error } = await supabase
         .from("project_expenses")
         .insert({
@@ -71,14 +81,12 @@ export function useBookProject(projectId: string) {
           expense_date: expenseData.date,
           created_by: user.id,
           expense_type: expenseData.type,
-          serial_number: projectRow?.expense_counter || 0,
+          serial_number: project?.expense_counter || 0,
           phase: expenseData.phase,
-          status:
-            expenseData.total_amount === expenseData.paid_amount
-              ? "paid"
-              : "partially_paid",
+          status: initialStatus,
           contractor_id: expenseData.contractor_id || null,
-        })
+          amount_paid: 0, // Start at 0, RPC will update if there's a payment
+        } as ProjectExpenses)
         .select()
         .single();
 
@@ -87,8 +95,21 @@ export function useBookProject(projectId: string) {
         throw error;
       }
 
-      // update the account balance and held amount
-      const { data: projectBalanceData, error: projectBalanceError } =
+      // Update project expense counter
+      const { error: counterError } = await supabase
+        .from("projects")
+        .update({
+          expense_counter: (project?.expense_counter || 0) + 1,
+        })
+        .eq("id", expenseData.project_id);
+
+      if (counterError) {
+        console.error("Error updating project expense counter", counterError);
+        throw counterError;
+      }
+
+      // Update project_balances: add to held and total_expense
+      const { data: projectBalance, error: projectBalanceError } =
         await supabase
           .from("project_balances")
           .select("*")
@@ -101,14 +122,15 @@ export function useBookProject(projectId: string) {
         throw projectBalanceError;
       }
 
+      // Add unpaid amount to held, and total amount to total_expense
+      const unpaidAmount = expenseData.total_amount - expenseData.paid_amount;
+
       const { error: projectBalanceUpdateError } = await supabase
         .from("project_balances")
         .update({
-          held:
-            projectBalanceData.held +
-            (expenseData.total_amount - expenseData.paid_amount),
+          held: projectBalance.held + unpaidAmount,
           total_expense:
-            projectBalanceData.total_expense + expenseData.total_amount,
+            projectBalance.total_expense + expenseData.total_amount,
         })
         .eq("project_id", expenseData.project_id)
         .eq("currency", expenseData.currency);
@@ -121,53 +143,10 @@ export function useBookProject(projectId: string) {
         throw projectBalanceUpdateError;
       }
 
-      //get the account
-      // const { data: accountData, error: accountError } = await supabase
-      //   .from("accounts")
-      //   .select("*")
-      //   .eq("owner_id", expenseData.project_id)
-      //   .eq("currency", expenseData.currency)
-      //   .eq("type", expenseData.payment_method === "cash" ? "cash" : "bank")
-      //   .eq("owner_type", "project")
-      //   .single();
-
-      // if (accountError) {
-      //   console.error("Error fetching project account", accountError);
-      //   throw accountError;
-      // }
-
-      // decrease project account by paid amount and hold the rest as payable
-
-      // const { error: accountUpdateError } = await supabase
-      //   .from("accounts")
-      //   .update({
-      //     held:
-      //       accountData.held +
-      //       (expenseData.total_amount - expenseData.paid_amount),
-      //   })
-      //   .eq("id", accountData.id);
-
-      // if (accountUpdateError) {
-      //   console.error("Error updating project account", accountUpdateError);
-      //   throw accountUpdateError;
-      // }
-
-      // update project expense counter
-      const { error: counterError } = await supabase
-        .from("projects")
-        .update({
-          expense_counter: (projectRow?.expense_counter || 0) + 1,
-        })
-        .eq("id", expenseData.project_id);
-
-      if (counterError) {
-        console.error("error updating project expense counter", counterError);
-        setError(counterError);
-      }
-
+      // If there's a paid amount, process the payment via RPC
       if (expenseData.paid_amount > 0) {
         const { data: rpcData, error: rpcError } = await supabase.rpc(
-          "process_expense_payment", // make sure the name matches
+          "process_expense_payment",
           {
             p_amount: expenseData.paid_amount,
             p_expense_id: data.id,
@@ -181,9 +160,15 @@ export function useBookProject(projectId: string) {
         if (rpcError) {
           console.error("Error processing expense payment", rpcError);
           throw rpcError;
-        } else {
-          console.log("RPC result:", rpcData);
         }
+
+        console.log("RPC result:", rpcData);
+
+        // Update local state with the RPC response data if needed
+        // if (rpcData && rpcData.length > 0) {
+        //   const rpcResult = rpcData[0];
+        //   // You can use rpcResult.expense, rpcResult.project, etc.
+        // }
       }
 
       // Update local state with new expense
@@ -197,6 +182,8 @@ export function useBookProject(projectId: string) {
           };
         });
       }
+
+      console.log("Added expense:", data);
 
       return { data, error: null };
     } catch (err) {
