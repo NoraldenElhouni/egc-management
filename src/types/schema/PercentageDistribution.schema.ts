@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const PercentageDistributionSchema = z.object({
   project_id: z.string(),
-  period_percentage: z.number().min(0, "Period percentage must be >= 0"),
+  // period_percentage: z.number().min(0, "Period percentage must be >= 0"),
   employees: z
     .array(
       z.object({

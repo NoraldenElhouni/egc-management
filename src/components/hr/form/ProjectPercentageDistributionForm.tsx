@@ -32,6 +32,7 @@ const ProjectPercentageDistributionForm = ({
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<PercentageDistributionFormValues>({
     resolver: zodResolver(PercentageDistributionSchema),
@@ -91,7 +92,15 @@ const ProjectPercentageDistributionForm = ({
     }
     // Ensure project_id is set
     data.project_id = projectId;
-    console.log("Submitting:", data);
+    const result = await PercentageDistribution(data);
+    if (result.success) {
+      setSuccess("تم حفظ توزيع النسبة بنجاح.");
+      reset();
+      // refresh project data to get updated period percentage
+    } else {
+      setSuccess("فشل حفظ توزيع النسبة. حاول مرة أخرى.");
+    }
+
     setLoading(false);
   };
 

@@ -2,6 +2,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { PayrollWithRelations } from "../../../types/extended.type";
 import { Link } from "react-router-dom";
+import AcceptPayrollPayments from "../actions/payroll/AcceptPayrollPayments";
+import RejectPayrollPayments from "../actions/payroll/rejectPayrollPayments";
+import { translateStatus } from "../../../utils/translations";
+import { statusColor } from "../../../utils/colors/status";
 
 // Payroll table columns
 export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
@@ -82,9 +86,23 @@ export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
     accessorKey: "status",
     header: "الحالة",
     cell: ({ row }) => (
-      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100">
-        {row.original.status}
+      <span
+        className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor(row.original.status)}`}
+      >
+        {translateStatus(row.original.status)}
       </span>
+    ),
+  },
+
+  // Actions column
+  {
+    id: "actions",
+    header: "الإجراءات",
+    cell: ({ row }) => (
+      <div className="flex justify-center gap-2">
+        <AcceptPayrollPayments payrollPaymentId={row.original.id} />
+        <RejectPayrollPayments payrollPaymentId={row.original.id} />
+      </div>
     ),
   },
 ];

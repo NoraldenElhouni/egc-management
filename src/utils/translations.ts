@@ -70,3 +70,16 @@ export const translateProjectStatus = (status: string): string => {
 
   return statusTranslations[status] || status;
 };
+
+export const translateStatus = (status: string): string => {
+  const statusTranslations: Record<string, string> = {
+    active: "نشط",
+    inactive: "غير نشط",
+    pending: "قيد الانتظار",
+    approved: "موافق عليه",
+    rejected: "مرفوض",
+    completed: "مكتمل",
+    cancelled: "ملغي",
+  };
+  return statusTranslations[status] || status;
+};
