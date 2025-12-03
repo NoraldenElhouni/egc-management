@@ -170,7 +170,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
               first_name,
               last_name,
               email,
-              phone
+              phone:phone_number
             ),
             project_role:project_roles(
               name
