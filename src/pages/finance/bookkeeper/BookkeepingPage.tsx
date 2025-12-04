@@ -1,7 +1,9 @@
+import ProjectsList from "../../../components/project/lists/ProjectsList";
+
 const BookkeepingPage = () => {
   return (
-    <div className="p-4 flex justify-center items-center h-full">
-      <p>اختار مشروع من القائمة علي اليمين الشاشه</p>
+    <div className="p-4 ">
+      <ProjectsList basePath="/finance/bookkeeping/project" />
     </div>
   );
 };

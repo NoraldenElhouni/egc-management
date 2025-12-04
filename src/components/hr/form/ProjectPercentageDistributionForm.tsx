@@ -48,7 +48,6 @@ const ProjectPercentageDistributionForm = ({
       },
     },
   });
-  console.log("Form errors:", project?.project_percentage?.period_percentage);
 
   // Prefill project_id and employee rows when project loads
   const assignments = useMemo(

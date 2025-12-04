@@ -185,7 +185,7 @@ const BookkeeperLayout: React.FC = () => {
               {filtered.map((p) => (
                 <li key={p.id}>
                   <Link
-                    to={`/finance/bookkeeping/projects/${p.id}`}
+                    to={`/finance/bookkeeping/project/${p.id}`}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                       isActive(p.id)
                         ? "bg-blue-50 text-blue-700"

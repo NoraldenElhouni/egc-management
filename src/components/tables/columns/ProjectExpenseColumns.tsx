@@ -47,7 +47,7 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     header: "الرقم",
     cell: ({ row }) => (
       <Link
-        to={`/finance/bookkeeping/projects/${row.original.project_id}/expense/${row.original.id}`}
+        to={`/finance/bookkeeping/project/${row.original.project_id}/expense/${row.original.id}`}
         className="font-bold underline"
       >
         {row.original.serial_number}

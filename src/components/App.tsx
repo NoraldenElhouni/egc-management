@@ -212,20 +212,20 @@ const AppRouter = () => {
               element={<TreasuryProjectPage />}
             />
             <Route path="/finance/payments" element={<PaymentsPage />} />
-            <Route path="/finance/company" element={<CompanyPage />} />
+            <Route path="/finance/company" element={<CompanyPage />} />{" "}
+            <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
           </Route>
           <Route element={<BookkeeperLayout />}>
-            <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
             <Route
-              path="/finance/bookkeeping/projects/:id"
+              path="/finance/bookkeeping/project/:id"
               element={<ProjectBookDetailsPage />}
             />
             <Route
-              path="/finance/bookkeeping/projects/:id/expense/:expenseId"
+              path="/finance/bookkeeping/project/:id/expense/:expenseId"
               element={<ExpensePaymentsPage />}
             />
             <Route
-              path="/finance/bookkeeping/projects/:id/expense/:expenseId/new"
+              path="/finance/bookkeeping/project/:id/expense/:expenseId/new"
               element={<ExpensePaymentsPage />}
             />
             <Route

@@ -3,11 +3,14 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
 import { PayrollWithRelations } from "../types/extended.type";
 import { PercentageDistributionFormValues } from "../types/schema/PercentageDistribution.schema";
+import { Employees } from "../types/global.type";
+import { FixedPayrollFormValues } from "../types/schema/fixedPayroll.schema";
 
 export function usePayroll() {
   const [payroll, setPayroll] = useState<PayrollWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PostgrestError | null>(null);
+  const [fixedEmployees, setFixedEmployees] = useState<Employees[]>([]);
 
   useEffect(() => {
     async function fetchEmployees() {
@@ -35,7 +38,21 @@ export function usePayroll() {
       setLoading(false);
     }
 
+    async function fetchFixedEmployees() {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("*")
+        .eq("salary_type", "fixed");
+
+      if (error) {
+        console.error("error fetching fixed employees", error);
+        setError(error);
+      }
+      setFixedEmployees(data || []);
+    }
+
     fetchEmployees();
+    fetchFixedEmployees();
   }, []); // runs once on mount
 
   const PercentageDistribution = async (
@@ -127,7 +144,45 @@ export function usePayroll() {
     return { success: true };
   };
 
-  return { payroll, loading, error, PercentageDistribution };
+  const fixedPayroll = async (form: FixedPayrollFormValues) => {
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData || !userData.user) {
+      return { success: false, message: "المستخدم غير مسجل الدخول" };
+    }
+
+    //insert payroll entries for each fixed employee
+    for (const emp of form.employees) {
+      const { error: payrollError } = await supabase
+        .from("payroll")
+        .insert([
+          {
+            employee_id: emp.id,
+            pay_date: new Date().toISOString(),
+            total_salary: emp.amount,
+            basic_salary: emp.amount,
+            percentage_salary: 0,
+            created_by: userData.user.id,
+            payment_method: "cash",
+            status: "pending",
+          },
+        ]);
+
+      if (payrollError) {
+        console.error("error creating payroll entry", payrollError);
+        return { success: false, message: "فشل إنشاء قيد الرواتب" };
+      }
+    }
+  };
+
+  return {
+    payroll,
+    fixedEmployees,
+    loading,
+    error,
+    PercentageDistribution,
+    fixedPayroll,
+  };
 }
 
 export function useDetailedPayroll(id: string) {
