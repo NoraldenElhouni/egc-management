@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import { Projects } from "../../../types/global.type";
 import { statusColor } from "../../../utils/colors/status";
 import { formatCurrency } from "../../../utils/helpper";
+import { FullProject } from "../../../types/extended.type";
 
 // Convert to a function that accepts the link path builder and version
 export const createProjectsColumns = (
   getLinkPath: (id: string | number) => string,
   version = "default"
-): ColumnDef<Projects>[] => {
-  const allColumns: ColumnDef<Projects>[] = [
+): ColumnDef<FullProject>[] => {
+  const allColumns: ColumnDef<FullProject>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -63,19 +64,81 @@ export const createProjectsColumns = (
     {
       accessorKey: "percentage",
       header: "الحصه المشروع مع نسبة",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <div className="text-sm font-medium">
-            {formatCurrency(row.original.percentage_taken, "LYD")}
+      cell: ({ row }) => {
+        const data = row.original.project_percentage;
+        const lydItem = data.find((item) => item.currency === "LYD");
+
+        return (
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium">
+              {formatCurrency(lydItem?.total_percentage ?? 0, "LYD")}
+            </div>
+            <div className="text-xs text-gray-500">{lydItem?.percentage}%</div>
           </div>
-          <div className="text-xs text-gray-500">
-            {row.original.percentage != null
-              ? `${row.original.percentage}%`
-              : "—"}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
+    {
+      accessorKey: "project_balances",
+      header: "قيمة المشروع",
+      cell: ({ row }) => {
+        const balances = row.original.project_balances;
+        const lydBalance = balances.find(
+          (balance) => balance.currency === "LYD"
+        );
+
+        return lydBalance ? (
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium">
+              {formatCurrency(lydBalance?.balance ?? 0, "LYD")}
+            </div>
+          </div>
+        ) : (
+          "—"
+        );
+      },
+    },
+    {
+      accessorKey: "project_balances.held",
+      header: "قيمة المحتجز",
+      cell: ({ row }) => {
+        const balances = row.original.project_balances;
+        const lydBalance = balances.find(
+          (balance) => balance.currency === "LYD"
+        );
+
+        return lydBalance ? (
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium">
+              {formatCurrency(lydBalance?.held ?? 0, "LYD")}
+            </div>
+          </div>
+        ) : (
+          "—"
+        );
+      },
+    },
+    {
+      accessorKey: "project_balances.total_transactions",
+      header: "اجمالي ايداع",
+      cell: ({ row }) => {
+        const balances = row.original.project_balances;
+        const lydBalance = balances.find(
+          (balance) => balance.currency === "LYD"
+        );
+
+        return lydBalance ? (
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium">
+              {formatCurrency(lydBalance?.total_transactions ?? 0, "LYD")}
+            </div>
+          </div>
+        ) : (
+          "—"
+        );
+      },
+    },
+
     {
       accessorKey: "status",
       header: "الحالة",
@@ -120,6 +183,21 @@ export const createProjectsColumns = (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const key = col.id || (col as any).accessorKey;
       return ["select", "serial_number", "name", "status"].includes(key);
+    });
+  }
+  if (version === "finance") {
+    // Show only essential columns for compact view
+    return allColumns.filter((col) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const key = col.id || (col as any).accessorKey;
+      return [
+        "select",
+        "serial_number",
+        "name",
+        "percentage",
+        "project_balances",
+        "project_balances.held",
+      ].includes(key);
     });
   }
 

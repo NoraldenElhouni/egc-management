@@ -3,11 +3,11 @@ import { supabase } from "../lib/supabaseClient";
 import type { Database } from "../lib/supabase";
 import { Projects } from "../types/global.type";
 import { ProjectFormValues } from "../types/schema/projects.schema";
-import { ProjectWithAssignments } from "../types/extended.type";
+import { FullProject, ProjectWithAssignments } from "../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 
 export function useProjects() {
-  const [projects, setProjects] = useState<Projects[]>([]);
+  const [projects, setProjects] = useState<FullProject[] | null>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -16,7 +16,7 @@ export function useProjects() {
       setLoading(true);
       const { data, error } = await supabase
         .from("projects")
-        .select("*")
+        .select("*, project_balances(*), project_percentage(*)")
         .order("serial_number", { ascending: true });
 
       if (error) {
@@ -155,7 +155,12 @@ export function useProjects() {
 
     // update local state
     if (data) {
-      setProjects((prev) => [...prev, data]);
+      const newProjectWithRelations = {
+        ...data,
+        project_balances: [],
+        project_percentage: [],
+      } as unknown as FullProject;
+      setProjects((prev) => [...(prev ?? []), newProjectWithRelations]);
     }
 
     setLoading(false);
@@ -164,7 +169,9 @@ export function useProjects() {
 
   const refresh = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("projects").select("*");
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*, project_balances(*), project_percentage(*)");
 
     if (error) {
       console.error("error refreshing projects", error);

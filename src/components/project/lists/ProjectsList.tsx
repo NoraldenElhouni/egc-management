@@ -23,7 +23,7 @@ const ProjectsList = ({
   return (
     <div>
       <GenericTable
-        data={projects}
+        data={projects ?? []}
         columns={columns}
         enableSorting
         enableFiltering

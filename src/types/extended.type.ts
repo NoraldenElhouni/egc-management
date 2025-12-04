@@ -15,7 +15,14 @@ import {
   Currency,
   Account,
   Clients,
+  ProjectBalances,
+  ProjectPercentage,
 } from "./global.type";
+
+export type FullProject = Projects & {
+  project_balances: ProjectBalances[];
+  project_percentage: ProjectPercentage[];
+};
 
 export type ContractPaymentWithRelations = ContractPayments & {
   employee: Employees | null;
