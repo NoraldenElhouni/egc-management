@@ -197,6 +197,8 @@ export const createProjectsColumns = (
         "percentage",
         "project_balances",
         "project_balances.held",
+        "project_balances.total_transactions",
+        "status",
       ].includes(key);
     });
   }
