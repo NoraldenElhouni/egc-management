@@ -22,7 +22,9 @@ export function useBookProject(projectId: string) {
       setLoading(true);
       const { data, error } = await supabase
         .from("projects")
-        .select("*, project_incomes(*), project_expenses(*)")
+        .select(
+          "*, project_incomes(*), project_expenses(*), project_balances(*)"
+        )
         .eq("id", projectId)
         .single();
 

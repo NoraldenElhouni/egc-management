@@ -6,6 +6,8 @@ import ProjectExpenseForm from "../../form/ProjectExpenseForm";
 import { ProjectExpenseFormValues } from "../../../../types/schema/ProjectBook.schema";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../../types/global.type";
+import OverviewStatus from "../../../ui/OverviewStatus";
+import { Hash } from "lucide-react";
 
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -22,11 +24,63 @@ const BookProjectExpenseTab = ({
   return (
     <div className="space-y-4">
       <div>
+        <OverviewStatus
+          stats={[
+            {
+              label: "اجمالي المصروفات",
+              value:
+                project?.project_expenses?.reduce(
+                  (acc, expense) => acc + expense.total_amount,
+                  0
+                ) || 0,
+              icon: Hash,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+            {
+              label: "إجمالي مصروفات المدفوعه",
+              value:
+                project?.project_expenses?.reduce(
+                  (acc, expense) => acc + expense.amount_paid,
+                  0
+                ) || 0,
+              icon: Hash,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+            {
+              label: "اجمالي المحجوز",
+              value:
+                project?.project_balances.reduce(
+                  (acc, balance) => acc + balance.held,
+                  0
+                ) || 0,
+              icon: Hash,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+
+            {
+              label: "اجمالي المتاح",
+              value:
+                project?.project_balances.reduce(
+                  (acc, balance) => acc + balance.balance,
+                  0
+                ) || 0,
+              icon: Hash,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+          ]}
+        />
+      </div>
+      <div>
         <ProjectExpenseForm
           projectId={project?.id || ""}
           addExpense={addExpense}
         />
       </div>
+
       <div>
         <GenericTable
           enableFiltering

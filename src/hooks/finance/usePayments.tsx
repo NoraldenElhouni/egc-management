@@ -8,13 +8,14 @@ import { supabase } from "../../lib/supabaseClient";
 import {
   ContractPaymentWithRelations,
   projectExpensePayments,
+  ProjectExpenseWithName,
 } from "../../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ExpensePaymentFormValues } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 
 export function usePayments() {
-  const [payments, setPayments] = useState<ProjectExpenses[]>([]);
+  const [payments, setPayments] = useState<ProjectExpenseWithName[]>([]);
   const [contractPayments, setContractPayments] = useState<
     ContractPaymentWithRelations[]
   >([]);
@@ -33,7 +34,7 @@ export function usePayments() {
       const [expensesRes, contractRes] = await Promise.all([
         supabase
           .from("project_expenses")
-          .select("*")
+          .select("*, projects(name)")
           .eq("status", "partially_paid"),
         supabase
           .from("contract_payments")
@@ -72,7 +73,7 @@ export function usePayments() {
 
       if (!mountedRef.current) return;
 
-      setPayments(expenses as ProjectExpenses[]);
+      setPayments(expenses as ProjectExpenseWithName[]);
       setContractPayments(
         contractPaymentsWithEmployees as ContractPaymentWithRelations[]
       );

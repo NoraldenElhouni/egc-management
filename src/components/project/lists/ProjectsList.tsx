@@ -47,12 +47,35 @@ const ProjectsList = ({
       0
     ) || 0;
 
+  const totalBalance =
+    projects?.reduce(
+      (acc, project) =>
+        acc +
+        (project.project_balances?.reduce(
+          (bAcc, balance) => bAcc + (balance.balance || 0),
+          0
+        ) || 0),
+      0
+    ) || 0;
+
+  const totalHeld =
+    projects?.reduce(
+      (acc, project) =>
+        acc +
+        (project.project_balances?.reduce(
+          (hAcc, held) => hAcc + (held.held || 0),
+          0
+        ) || 0),
+      0
+    ) || 0;
+
+  const toalAvailable = totalBalance - totalHeld;
+
   return (
     <div>
       <div>
         {version === "finance" ? (
           <div>
-            {" "}
             <OverviewStatus
               stats={[
                 {
@@ -64,24 +87,21 @@ const ProjectsList = ({
                 },
                 {
                   label: "الرصيد الحالي",
-                  value: formatCurrency(
-                    lydBalance?.reduce((acc, val) => acc + (val || 0), 0) ?? 0,
-                    "LYD"
-                  ),
+                  value: totalBalance,
                   icon: DollarSign,
                   iconBgColor: "bg-green-100",
                   iconColor: "text-green-600",
                 },
                 {
-                  label: "",
-                  value: 0,
+                  label: "الرصيد المتاح",
+                  value: toalAvailable,
                   icon: Workflow,
                   iconBgColor: "bg-orange-100",
                   iconColor: "text-orange-600",
                 },
                 {
-                  label: "",
-                  value: 0,
+                  label: "الرصيد المحتجز",
+                  value: totalHeld,
                   icon: DollarSign,
                   iconBgColor: "bg-green-100",
                   iconColor: "text-green-600",

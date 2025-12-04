@@ -17,11 +17,16 @@ import {
   Clients,
   ProjectBalances,
   ProjectPercentage,
+  ProjectExpenses,
 } from "./global.type";
 
 export type FullProject = Projects & {
   project_balances: ProjectBalances[];
   project_percentage: ProjectPercentage[];
+};
+
+export type ProjectExpenseWithName = ProjectExpenses & {
+  projects: { name: string };
 };
 
 export type ContractPaymentWithRelations = ContractPayments & {

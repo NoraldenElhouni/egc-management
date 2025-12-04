@@ -89,7 +89,9 @@ export const createProjectsColumns = (
 
         return lydBalance ? (
           <div className="flex items-center gap-3">
-            <div className="text-sm font-medium">
+            <div
+              className={`text-sm font-medium ${lydBalance.balance < 0 ? "text-red-600" : ""}`}
+            >
               {formatCurrency(lydBalance?.balance ?? 0, "LYD")}
             </div>
           </div>
@@ -109,7 +111,9 @@ export const createProjectsColumns = (
 
         return lydBalance ? (
           <div className="flex items-center gap-3">
-            <div className="text-sm font-medium">
+            <div
+              className={`text-sm font-medium ${lydBalance.held < 0 ? "text-red-600" : ""}`}
+            >
               {formatCurrency(lydBalance?.held ?? 0, "LYD")}
             </div>
           </div>
@@ -129,7 +133,9 @@ export const createProjectsColumns = (
 
         return lydBalance ? (
           <div className="flex items-center gap-3">
-            <div className="text-sm font-medium">
+            <div
+              className={`text-sm font-medium ${lydBalance.total_transactions < 0 ? "text-red-600" : ""}`}
+            >
               {formatCurrency(lydBalance?.total_transactions ?? 0, "LYD")}
             </div>
           </div>

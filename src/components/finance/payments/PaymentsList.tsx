@@ -1,6 +1,6 @@
 import { usePayments } from "../../../hooks/finance/usePayments";
 import { createContractPaymentsColumns } from "../../tables/columns/ContractPaymentsColumns";
-import { ProjectsExpensesColumns } from "../../tables/columns/ProjectExpenseColumns";
+import { ProjectsExpensesWithNamesColumns } from "../../tables/columns/ProjectsExpensesWithNamesColumns";
 import GenericTable from "../../tables/table";
 import { useMemo } from "react";
 
@@ -18,7 +18,7 @@ const PaymentsList = () => {
     <div>
       <GenericTable
         data={payments}
-        columns={ProjectsExpensesColumns}
+        columns={ProjectsExpensesWithNamesColumns}
         enableSorting
         enablePagination
         enableFiltering
