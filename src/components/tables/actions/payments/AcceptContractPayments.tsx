@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Button from "../../../ui/Button";
 import { useAuth } from "../../../../hooks/useAuth";
-import { supabase } from "../../../../lib/supabaseClient";
+import { acceptContractPayment } from "../../../../services/payments/setPayments";
 
 interface AcceptContractPaymentsProps {
   contractPaymentId: string;
@@ -26,19 +26,17 @@ const AcceptContractPayments = ({
         return;
       }
 
-      const { error } = await supabase.rpc("accept_contract_payment", {
-        p_payment_id: contractPaymentId,
-        p_approved_by: user.id,
-        p_payment_method: method,
-        p_currency: "LYD",
+      const payment = await acceptContractPayment({
+        approved_by: user.id,
+        payment_id: contractPaymentId,
+        payment_method: method,
+        currency: "LYD",
       });
 
-      if (error) {
-        console.error("Error accepting payment:", error);
+      if (payment.error) {
+        console.error("Error accepting payment:", payment.error);
         // show the exact error message coming from the DB (will be Arabic from the function)
-        const msg =
-          error.message ??
-          "حدث خطأ أثناء قبول الدفع. الرجاء المحاولة مرة أخرى.";
+        const msg = payment.error;
         alert(msg);
       } else {
         // success — clear error and call onSuccess
