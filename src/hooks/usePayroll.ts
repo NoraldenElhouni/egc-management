@@ -88,10 +88,12 @@ export function usePayroll() {
     }
 
     // 1.1 update balances of each account
+    const companyShare = (form.company.bank || 0) + (form.company.cash || 0);
+
     const { error: companyBalanceError } = await supabase
       .from("accounts")
       .update({
-        balance: (companyAccount.balance || 0) + form.company.amount,
+        balance: (companyAccount.balance || 0) + companyShare,
       })
       .eq("id", companyAccount.id);
 
@@ -105,12 +107,17 @@ export function usePayroll() {
 
     // 2 create payroll entries for each employee and the company
     for (const emp of form.employees) {
+      const grossBank = (emp.bank?.amount || 0) - (emp.bank?.discount || 0);
+      const grossCash = (emp.cash?.amount || 0) - (emp.cash?.discount || 0);
+      const held = (emp.bank?.held || 0) + (emp.cash?.held || 0);
+      const totalSalary = Math.max(0, grossBank + grossCash - held);
+
       const { error: payrollError } = await supabase.from("payroll").insert([
         {
           employee_id: emp.id,
           pay_date: new Date().toISOString(),
-          total_salary: emp.amount,
-          percentage_salary: emp.amount,
+          total_salary: totalSalary,
+          percentage_salary: totalSalary,
           created_by: user.id,
           basic_salary: 0,
           payment_method: "cash",
@@ -153,20 +160,18 @@ export function usePayroll() {
 
     //insert payroll entries for each fixed employee
     for (const emp of form.employees) {
-      const { error: payrollError } = await supabase
-        .from("payroll")
-        .insert([
-          {
-            employee_id: emp.id,
-            pay_date: new Date().toISOString(),
-            total_salary: emp.amount,
-            basic_salary: emp.amount,
-            percentage_salary: 0,
-            created_by: userData.user.id,
-            payment_method: "cash",
-            status: "pending",
-          },
-        ]);
+      const { error: payrollError } = await supabase.from("payroll").insert([
+        {
+          employee_id: emp.id,
+          pay_date: new Date().toISOString(),
+          total_salary: emp.amount,
+          basic_salary: emp.amount,
+          percentage_salary: 0,
+          created_by: userData.user.id,
+          payment_method: "cash",
+          status: "pending",
+        },
+      ]);
 
       if (payrollError) {
         console.error("error creating payroll entry", payrollError);

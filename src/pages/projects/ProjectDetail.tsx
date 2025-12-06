@@ -61,7 +61,6 @@ interface Contract {
 
 interface Account {
   balance: number;
-  held: number;
   currency: string;
   type: string;
   total_transactions: number;
@@ -93,6 +92,7 @@ interface projectPercentage {
   project_id: string;
   total_percentage: number;
   updated_at: string | null;
+  type?: string | null;
 }
 
 interface Project {
@@ -106,7 +106,7 @@ interface Project {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
-  project_percentage: projectPercentage | null;
+  project_percentages: projectPercentage[];
   serial_number: number | null;
   client: Client;
   teamMembers: ProjectAssignment[];
@@ -157,7 +157,10 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           .eq("id", projectId)
           .single();
 
-        if (projectError) throw projectError;
+        if (projectError) {
+          console.error("Error fetching project:", projectError);
+          throw projectError;
+        }
 
         // Fetch project assignments (team members)
         const { data: assignments, error: assignmentsError } = await supabase
@@ -179,7 +182,13 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           )
           .eq("project_id", projectId);
 
-        if (assignmentsError) throw assignmentsError;
+        if (assignmentsError) {
+          console.error(
+            "Error fetching project assignments:",
+            assignmentsError
+          );
+          throw assignmentsError;
+        }
 
         // Fetch financial data - expenses
         const { data: expenses, error: expensesError } = await supabase
@@ -187,7 +196,10 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           .select("total_amount, amount_paid, status")
           .eq("project_id", projectId);
 
-        if (expensesError) throw expensesError;
+        if (expensesError) {
+          console.error("Error fetching expenses:", expensesError);
+          throw expensesError;
+        }
 
         // Fetch financial data - incomes
         const { data: incomes, error: incomesError } = await supabase
@@ -195,7 +207,10 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           .select("*")
           .eq("project_id", projectId);
 
-        if (incomesError) throw incomesError;
+        if (incomesError) {
+          console.error("Error fetching incomes:", incomesError);
+          throw incomesError;
+        }
 
         // Fetch contracts
         const { data: contracts, error: contractsError } = await supabase
@@ -222,7 +237,10 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           )
           .eq("project_id", projectId);
 
-        if (contractsError) throw contractsError;
+        if (contractsError) {
+          console.error("Error fetching contracts:", contractsError);
+          throw contractsError;
+        }
 
         // Fetch project balances per currency (authoritative totals)
         const { data: projectBalances, error: balancesError } = await supabase
@@ -230,27 +248,37 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           .select("*")
           .eq("project_id", projectId);
 
-        if (balancesError) throw balancesError;
+        if (balancesError) {
+          console.error("Error fetching project balances:", balancesError);
+          throw balancesError;
+        }
 
         // Fetch accounts for this project (informational, no held/transactions)
         const { data: accounts, error: accountsError } = await supabase
           .from("accounts")
-          .select("balance, held, currency, type, total_transactions")
+          .select("balance, currency, type, total_transactions")
           .eq("owner_type", "project")
           .eq("owner_id", projectId);
 
-        if (accountsError) throw accountsError;
+        if (accountsError) {
+          console.error("Error fetching accounts:", accountsError);
+          throw accountsError;
+        }
 
-        // fetch project percentage
-        const { data: projectPercentage, error: projectPercentageError } =
+        // fetch project percentages (may include multiple rows for different types like 'cash' and 'bank')
+        const { data: projectPercentages, error: projectPercentageError } =
           await supabase
             .from("project_percentage")
             .select("*")
             .eq("project_id", projectId)
-            .eq("currency", "LYD")
-            .single();
+            .eq("currency", "LYD");
 
-        if (projectPercentageError) throw projectPercentageError;
+        if (projectPercentageError) {
+          console.warn(
+            "Non-fatal: projectPercentage query returned an error:",
+            projectPercentageError
+          );
+        }
 
         const totalExpenses =
           projectBalances?.find((pb) => pb.currency === "LYD")?.total_expense ||
@@ -285,7 +313,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
         // Compile all data
         const compiledProject: Project = {
           ...projectData,
-          project_percentage: projectPercentage || null,
+          project_percentages: projectPercentages || [],
           teamMembers: assignments || [],
           contracts: contracts || [],
           accounts: accounts || [],
@@ -302,7 +330,11 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             teamSize: assignments?.length || 0,
             activeContracts:
               contracts?.filter((c) => c.status === "approved").length || 0,
-            completionPercentage: projectPercentage?.percentage || 0,
+            completionPercentage:
+              projectPercentages?.reduce(
+                (s: number, p: projectPercentage) => s + (p.percentage || 0),
+                0
+              ) || 0,
           },
         };
 
@@ -392,6 +424,16 @@ const ProjectDetailsPage = () => {
   const typeLabel = (type: string) =>
     type === "bank" ? "بنك" : type === "cash" ? "نقدي" : type;
 
+  // Project percentage
+  const totalPercentages = project.project_percentages.reduce(
+    (acc, p) => acc + (p.total_percentage || 0),
+    0
+  );
+  const totalPercentagesPeriod = project.project_percentages.reduce(
+    (acc, p) => acc + (p.period_percentage || 0),
+    0
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -471,19 +513,13 @@ const ProjectDetailsPage = () => {
               ),
             },
             {
-              label: `نسبة الشركة ${project.project_percentage?.percentage ?? 0}%`,
-              value: formatCurrency(
-                project.project_percentage?.total_percentage ?? 0,
-                "LYD"
-              ),
+              label: `نسبة الشركة ${project.project_percentages[0].percentage}%`,
+              value: formatCurrency(totalPercentages ?? 0, "LYD"),
               icon: DollarSign,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
               secondaryLabel: "نسية الفترة",
-              secondaryValue: formatCurrency(
-                project.project_percentage?.period_percentage ?? 0,
-                "LYD"
-              ),
+              secondaryValue: `${totalPercentagesPeriod ?? 0}`,
             },
           ]}
         />
@@ -550,10 +586,20 @@ const ProjectDetailsPage = () => {
                 label="رصيد المتاح"
                 positiveColor="text-emerald-700"
               />
+
+              {project.project_percentages.map((pp) => (
+                <StatListItems
+                  key={pp.id}
+                  value={pp.total_percentage ?? 0}
+                  currency="LYD"
+                  label={`حصه الشركة (${pp.type === "cash" ? "نقدي" : "بنك"})`}
+                  positiveColor="text-sky-600"
+                />
+              ))}
               <StatListItems
-                value={project.project_percentage?.total_percentage || 0}
+                value={totalPercentages ?? 0}
                 currency="LYD"
-                label="حصه الشركه"
+                label="حصه الشركه (الإجمالي)"
                 positiveColor="text-sky-700"
               />
 

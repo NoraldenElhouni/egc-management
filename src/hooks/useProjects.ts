@@ -97,7 +97,6 @@ export function useProjects() {
         owner_type: "project",
         type: "cash",
         balance: 0,
-        held: 0,
       }));
 
     // add bank account for LYD (so LYD has both cash and bank)
@@ -107,7 +106,6 @@ export function useProjects() {
       owner_type: "project",
       type: "bank",
       balance: 0,
-      held: 0,
     });
 
     const { error: accountsError } = await supabase
@@ -130,7 +128,21 @@ export function useProjects() {
         total_percentage: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        type: "cash",
       }));
+
+    percentageData.push({
+      period_start: new Date().toISOString(),
+      project_id: data.id,
+      percentage: newProject.percentage ?? 0,
+      currency: "LYD",
+      period_percentage: 0,
+      total_percentage: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      type: "bank",
+    });
+
     const { error: percentageError } = await supabase
       .from("project_percentage")
       .insert(percentageData);

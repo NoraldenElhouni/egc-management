@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../types/global.type";
+import { processExpensePayment } from "../../services/payments/setPayments";
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
@@ -69,9 +70,7 @@ export function useBookProject(projectId: string) {
       const initialStatus =
         expenseData.total_amount === expenseData.paid_amount
           ? "paid"
-          : expenseData.paid_amount > 0
-            ? "partially_paid"
-            : "unpaid";
+          : "partially_paid";
 
       // Insert the expense
       const { data, error } = await supabase
@@ -125,12 +124,11 @@ export function useBookProject(projectId: string) {
       }
 
       // Add unpaid amount to held, and total amount to total_expense
-      const unpaidAmount = expenseData.total_amount - expenseData.paid_amount;
 
       const { error: projectBalanceUpdateError } = await supabase
         .from("project_balances")
         .update({
-          held: projectBalance.held + unpaidAmount,
+          held: projectBalance.held + expenseData.total_amount,
           total_expense:
             projectBalance.total_expense + expenseData.total_amount,
         })
@@ -147,45 +145,41 @@ export function useBookProject(projectId: string) {
 
       // If there's a paid amount, process the payment via RPC
       if (expenseData.paid_amount > 0) {
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          "process_expense_payment",
-          {
-            p_amount: expenseData.paid_amount,
-            p_expense_id: data.id,
-            p_payment_method: expenseData.payment_method,
-            p_created_by: user.id,
-            p_currency: expenseData.currency,
-            p_project_id: expenseData.project_id,
-          }
-        );
+        const processPayment = await processExpensePayment({
+          expense_id: data.id,
+          project_id: expenseData.project_id,
+          amount: expenseData.paid_amount,
+          currency: expenseData.currency,
+          payment_method: expenseData.payment_method,
+          created_by: user.id,
+        });
 
-        if (rpcError) {
-          console.error("Error processing expense payment", rpcError);
-          throw rpcError;
+        if (!processPayment.success) {
+          console.error(
+            "Error processing expense payment via RPC",
+            processPayment.error
+          );
+          throw new Error(
+            processPayment.error || "RPC payment processing error"
+          );
         }
 
-        console.log("RPC result:", rpcData);
+        console.log("RPC result:", processPayment);
 
         // Update local state with the RPC response data if needed
-        // if (rpcData && rpcData.length > 0) {
-        //   const rpcResult = rpcData[0];
-        //   // You can use rpcResult.expense, rpcResult.project, etc.
-        // }
+        if (processPayment.data) {
+          const paymentData = processPayment.data;
+          setProject((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              project_expenses: prev.project_expenses?.map((exp) =>
+                exp.id === data.id ? paymentData : exp
+              ),
+            };
+          });
+        }
       }
-
-      // Update local state with new expense
-      if (data) {
-        setProject((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            project_expenses: [...(prev.project_expenses || []), data],
-            expense_counter: (prev.expense_counter || 0) + 1,
-          };
-        });
-      }
-
-      console.log("Added expense:", data);
 
       return { data, error: null };
     } catch (err) {

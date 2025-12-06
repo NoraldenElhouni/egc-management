@@ -38,7 +38,6 @@ const ExpensePaymentsForm = ({
     defaultValues: {
       expenseId: expense.id,
       amount: 0,
-      payment_method: "cash",
       currency: "LYD",
       account_id: accounts.length > 0 ? accounts[0].id : "",
     },
@@ -100,19 +99,6 @@ const ExpensePaymentsForm = ({
             error={errors.amount}
             min={0}
             step="1"
-          />
-
-          <SelectField
-            id="payment_method"
-            label="طريقة الدفع"
-            register={register("payment_method")}
-            error={errors.payment_method}
-            options={[
-              { value: "cash", label: "نقداً" },
-              { value: "cheque", label: "شيك" },
-              { value: "transfer", label: "حوالة" },
-              { value: "deposit", label: "إيداع" },
-            ]}
           />
 
           <SelectField

@@ -13,6 +13,7 @@ import {
 import { PostgrestError } from "@supabase/supabase-js";
 import { ExpensePaymentFormValues } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
+import { processExpensePayment } from "../../services/payments/setPayments";
 
 export function usePayments() {
   const [payments, setPayments] = useState<ProjectExpenseWithName[]>([]);
@@ -168,28 +169,30 @@ export function useExpensePayments(expenseId: string) {
         return { success: false, error: "العملة مطلوبة" };
       }
 
-      // Validate payment method
-      if (!form.payment_method) {
-        return { success: false, error: "طريقة الدفع مطلوبة" };
+      //fetch the account type
+      const { data: accountData, error: accountError } = await supabase
+        .from("accounts")
+        .select("type")
+        .eq("id", form.account_id)
+        .single();
+
+      if (accountError) {
+        console.error("Error fetching account data", accountError);
+        return { success: false, error: "لا يمكن جلب بيانات الحساب" };
       }
 
-      const { data: rpcData, error: rpcError } = await supabase.rpc(
-        "process_expense_payment", // make sure the name matches
-        {
-          p_amount: form.amount,
-          p_expense_id: form.expenseId,
-          p_payment_method: form.payment_method,
-          p_created_by: user.id,
-          p_currency: form.currency,
-          p_project_id: expense?.project_id,
-        }
-      );
+      const processPayment = await processExpensePayment({
+        expense_id: expenseId,
+        project_id: expense?.project_id,
+        amount: form.amount,
+        currency: form.currency,
+        payment_method: accountData?.type,
+        created_by: user.id,
+      });
 
-      if (rpcError) {
-        console.error("Error processing expense payment", rpcError);
-        return { success: false, error: rpcError.message };
-      } else {
-        console.log("RPC result:", rpcData);
+      if (!processPayment.success) {
+        console.error("Error processing expense payment", processPayment.error);
+        return { success: false, error: processPayment.error };
       }
 
       return { success: true, error: null };

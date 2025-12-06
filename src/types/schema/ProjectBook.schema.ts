@@ -63,9 +63,6 @@ export const ExpensePaymentSchema = (
         .number({ error: "المبلغ مطلوب" })
         .positive("المبلغ يجب أن يكون أكبر من صفر")
         .max(remaining, "المبلغ يتجاوز المتبقي"),
-      payment_method: z.enum(["cash", "cheque", "transfer", "deposit"], {
-        message: "طريقة الدفع غير صالحة",
-      }),
       currency: z.enum(["LYD", "USD", "EUR"], {
         message: "العملة غير صالحة",
       }),

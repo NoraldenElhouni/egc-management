@@ -43,7 +43,6 @@ export type Database = {
         Row: {
           balance: number;
           currency: Database["public"]["Enums"]["currency_type"];
-          held: number;
           id: string;
           owner_id: string;
           owner_type: Database["public"]["Enums"]["owner_type"];
@@ -53,7 +52,6 @@ export type Database = {
         Insert: {
           balance?: number;
           currency: Database["public"]["Enums"]["currency_type"];
-          held?: number;
           id?: string;
           owner_id: string;
           owner_type: Database["public"]["Enums"]["owner_type"];
@@ -63,7 +61,6 @@ export type Database = {
         Update: {
           balance?: number;
           currency?: Database["public"]["Enums"]["currency_type"];
-          held?: number;
           id?: string;
           owner_id?: string;
           owner_type?: Database["public"]["Enums"]["owner_type"];
@@ -261,7 +258,7 @@ export type Database = {
           description: string | null;
           expense_date: string;
           id: string;
-          payroll_id: string | null;
+          reference_id: string | null;
           type: string;
         };
         Insert: {
@@ -272,7 +269,7 @@ export type Database = {
           description?: string | null;
           expense_date?: string;
           id?: string;
-          payroll_id?: string | null;
+          reference_id?: string | null;
           type: string;
         };
         Update: {
@@ -283,7 +280,7 @@ export type Database = {
           description?: string | null;
           expense_date?: string;
           id?: string;
-          payroll_id?: string | null;
+          reference_id?: string | null;
           type?: string;
         };
         Relationships: [
@@ -292,13 +289,6 @@ export type Database = {
             columns: ["company_id"];
             isOneToOne: false;
             referencedRelation: "company";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "company_expense_payroll_id_fkey";
-            columns: ["payroll_id"];
-            isOneToOne: false;
-            referencedRelation: "payroll";
             referencedColumns: ["id"];
           },
         ];
@@ -414,6 +404,7 @@ export type Database = {
           expense_id: string | null;
           id: string;
           status: string;
+          updated_at: string | null;
         };
         Insert: {
           amount?: number;
@@ -426,6 +417,7 @@ export type Database = {
           expense_id?: string | null;
           id?: string;
           status?: string;
+          updated_at?: string | null;
         };
         Update: {
           amount?: number;
@@ -438,6 +430,7 @@ export type Database = {
           expense_id?: string | null;
           id?: string;
           status?: string;
+          updated_at?: string | null;
         };
         Relationships: [
           {
@@ -1108,6 +1101,7 @@ export type Database = {
       };
       payroll: {
         Row: {
+          approved_by: string | null;
           basic_salary: number | null;
           created_at: string;
           created_by: string | null;
@@ -1118,8 +1112,10 @@ export type Database = {
           percentage_salary: number | null;
           status: string;
           total_salary: number;
+          updated_at: string | null;
         };
         Insert: {
+          approved_by?: string | null;
           basic_salary?: number | null;
           created_at?: string;
           created_by?: string | null;
@@ -1130,8 +1126,10 @@ export type Database = {
           percentage_salary?: number | null;
           status?: string;
           total_salary?: number;
+          updated_at?: string | null;
         };
         Update: {
+          approved_by?: string | null;
           basic_salary?: number | null;
           created_at?: string;
           created_by?: string | null;
@@ -1142,8 +1140,16 @@ export type Database = {
           percentage_salary?: number | null;
           status?: string;
           total_salary?: number;
+          updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "payroll_approved_by_fkey";
+            columns: ["approved_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "payroll_created_by_fkey";
             columns: ["created_by"];
@@ -1425,6 +1431,7 @@ export type Database = {
           period_start: string;
           project_id: string;
           total_percentage: number;
+          type: string | null;
           updated_at: string | null;
         };
         Insert: {
@@ -1436,6 +1443,7 @@ export type Database = {
           period_start: string;
           project_id: string;
           total_percentage?: number;
+          type?: string | null;
           updated_at?: string | null;
         };
         Update: {
@@ -1447,6 +1455,7 @@ export type Database = {
           period_start?: string;
           project_id?: string;
           total_percentage?: number;
+          type?: string | null;
           updated_at?: string | null;
         };
         Relationships: [
@@ -1504,6 +1513,99 @@ export type Database = {
           },
           {
             foreignKeyName: "project_percentage_logs_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_percentage_period_items: {
+        Row: {
+          created_at: string;
+          discount: number;
+          held: number;
+          id: string;
+          percentage: number;
+          period_id: string;
+          total_amount: number;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          discount: number;
+          held: number;
+          id?: string;
+          percentage: number;
+          period_id: string;
+          total_amount: number;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          discount?: number;
+          held?: number;
+          id?: string;
+          percentage?: number;
+          period_id?: string;
+          total_amount?: number;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_percentage_period_items_period_id_fkey";
+            columns: ["period_id"];
+            isOneToOne: false;
+            referencedRelation: "project_percentage_periods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_percentage_period_items_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_percentage_periods: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          end_date: string;
+          id: string;
+          project_id: string;
+          start_date: string;
+          total_amount: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          end_date: string;
+          id?: string;
+          project_id: string;
+          start_date: string;
+          total_amount: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          end_date?: string;
+          id?: string;
+          project_id?: string;
+          start_date?: string;
+          total_amount?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_percentage_periods_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_percentage_periods_project_id_fkey";
             columns: ["project_id"];
             isOneToOne: false;
             referencedRelation: "projects";
@@ -1726,6 +1828,47 @@ export type Database = {
             columns: ["specialization_id"];
             isOneToOne: false;
             referencedRelation: "specializations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roject_percentage_period_items: {
+        Row: {
+          amount: number;
+          created_at: string;
+          id: string;
+          payment_type: Database["public"]["Enums"]["payment_type"];
+          percentage: number;
+          period_id: string;
+          refrence_id: string;
+          type: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          id?: string;
+          payment_type: Database["public"]["Enums"]["payment_type"];
+          percentage: number;
+          period_id: string;
+          refrence_id?: string;
+          type: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          id?: string;
+          payment_type?: Database["public"]["Enums"]["payment_type"];
+          percentage?: number;
+          period_id?: string;
+          refrence_id?: string;
+          type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roject_percentage_period_items_period_id_fkey";
+            columns: ["period_id"];
+            isOneToOne: false;
+            referencedRelation: "project_percentage_periods";
             referencedColumns: ["id"];
           },
         ];
@@ -2018,7 +2161,9 @@ export type Database = {
           p_payroll_id: string;
         };
         Returns: {
+          expense_id: string;
           message: string;
+          payment_id: string;
           success: boolean;
         }[];
       };
@@ -2057,7 +2202,8 @@ export type Database = {
         | "partially_paid"
         | "paid"
         | "overdue"
-        | "cancelled";
+        | "cancelled"
+        | "unpaid";
       expense_type: "material" | "labor";
       fund_type: "client" | "internal" | "sale" | "refund" | "other";
       offer_approvals_type: "pending" | "approved" | "rejected";
@@ -2220,6 +2366,7 @@ export const Constants = {
         "paid",
         "overdue",
         "cancelled",
+        "unpaid",
       ],
       expense_type: ["material", "labor"],
       fund_type: ["client", "internal", "sale", "refund", "other"],
