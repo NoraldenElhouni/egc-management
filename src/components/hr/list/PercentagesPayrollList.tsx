@@ -8,6 +8,16 @@ const PercentagesPayrollList = () => {
 
   if (loading) return <div>جاري التحميل...</div>;
   if (error) return <div>حدث خطأ: {error.message}</div>;
+
+  const totalPercentages = projects.reduce((total, project) => {
+    const projectTotal =
+      project.project_percentage?.reduce(
+        (projTotal, pp) => projTotal + (pp?.total_percentage || 0),
+        0
+      ) ?? 0;
+    return total + projectTotal;
+  }, 0);
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
@@ -39,27 +49,38 @@ const PercentagesPayrollList = () => {
                 <div className="text-sm text-gray-500">اسم المشروع</div>
                 <div className="text-base font-medium">{project.name}</div>
               </div>
-              <div className="mb-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-500">النسبة الكلية</span>
-                  <span className="text-base font-semibold">
-                    {project.project_percentage?.total_percentage ?? 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-500">نسبة الفترة</span>
-                  <span className="text-base font-semibold">
-                    {project.project_percentage?.period_percentage ?? 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">الفترة</span>
-                  <span className="text-base font-semibold">
-                    {project.project_percentage?.period_start ?? "غير محدد"} -{" "}
-                    {"الآن"}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-4">
+                <span className="text-sm text-gray-500">اجمالي النسبة</span>
+                <span className="text-base font-semibold">
+                  {totalPercentages}
+                </span>
               </div>
+              {project.project_percentage &&
+                project.project_percentage.map((pp, index) => (
+                  <div key={index} className="mb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-500">
+                        النسبة الكلية {pp?.type === "bank" ? "بنك" : "كاش"}
+                      </span>
+                      <span className="text-base font-semibold">
+                        {pp?.total_percentage ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-500">نسبة الفترة</span>
+                      <span className="text-base font-semibold">
+                        {pp?.period_percentage ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">الفترة</span>
+                      <span className="text-base font-semibold">
+                        {pp?.period_start ?? "غير محدد"} - {"الآن"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
               <div>
                 <div className="text-sm text-gray-500 mb-1">المهندسين</div>
                 <div className="text-sm text-gray-800 truncate">

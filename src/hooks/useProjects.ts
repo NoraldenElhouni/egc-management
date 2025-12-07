@@ -253,7 +253,7 @@ export function useProjectsWithAssignments() {
       const { data: percentage, error: percentageError } = await supabase
         .from("project_percentage")
         .select(
-          `project_id, total_percentage, percentage, period_percentage, period_start`
+          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`
         )
         .in("project_id", data?.map((p) => p.id) || [])
         .eq("currency", "LYD");
@@ -262,12 +262,24 @@ export function useProjectsWithAssignments() {
         console.error("error fetching project percentage", percentageError);
         setError(percentageError);
       }
+
       const projectsWithPercentages = (data || []).map((project) => {
         const projectPercentage =
-          percentage?.find((p) => p.project_id === project.id) || null;
+          percentage
+            ?.filter((p) => p.project_id === project.id) // use filter to get an array
+            .map((p) => ({
+              total_percentage: p.total_percentage,
+              percentage: p.percentage,
+              period_percentage: p.period_percentage,
+              type: p.type,
+              currency: p.currency,
+              period_start: p.period_start,
+            })) || [];
+
         return {
           ...project,
-          project_percentage: projectPercentage,
+          project_percentage:
+            projectPercentage.length > 0 ? projectPercentage : null,
         };
       });
 

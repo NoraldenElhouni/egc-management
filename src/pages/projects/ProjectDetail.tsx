@@ -429,10 +429,6 @@ const ProjectDetailsPage = () => {
     (acc, p) => acc + (p.total_percentage || 0),
     0
   );
-  const totalPercentagesPeriod = project.project_percentages.reduce(
-    (acc, p) => acc + (p.period_percentage || 0),
-    0
-  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -518,8 +514,6 @@ const ProjectDetailsPage = () => {
               icon: DollarSign,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
-              secondaryLabel: "نسية الفترة",
-              secondaryValue: `${totalPercentagesPeriod ?? 0}`,
             },
           ]}
         />
@@ -560,11 +554,10 @@ const ProjectDetailsPage = () => {
                 label="اجمالي ايداع"
                 positiveColor="text-emerald-700"
               />
-
               <StatListItems
-                value={project.financial.totalExpenses}
+                value={project.financial.totalPaid}
                 currency="LYD"
-                label="اجمالي مصروفات"
+                label="اجمالي السحب"
                 positiveColor="text-gray-800"
               />
               <StatListItems
@@ -574,19 +567,17 @@ const ProjectDetailsPage = () => {
                 positiveColor="text-amber-700"
               />
               <StatListItems
-                value={project.financial.balance}
-                currency="LYD"
-                label="رصيد الحالي"
-                positiveColor="text-emerald-700"
-              />
-
-              <StatListItems
                 value={project.financial.balance - project.financial.held}
                 currency="LYD"
                 label="رصيد المتاح"
                 positiveColor="text-emerald-700"
               />
-
+              <StatListItems
+                value={project.financial.balance}
+                currency="LYD"
+                label="رصيد الحالي"
+                positiveColor="text-emerald-700"
+              />
               {project.project_percentages.map((pp) => (
                 <StatListItems
                   key={pp.id}
@@ -602,7 +593,6 @@ const ProjectDetailsPage = () => {
                 label="حصه الشركه (الإجمالي)"
                 positiveColor="text-sky-700"
               />
-
               <StatListItems
                 value={project.financial.refunded}
                 currency="LYD"
