@@ -305,7 +305,7 @@ export function useProjectWithAssignments(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          `id, code, name, project_assignments(user_id, employees(first_name,last_name))`
+          `id, code, name, project_assignments(user_id, percentage,employees(first_name,last_name))`
         )
         .eq("id", projectId)
         .single();

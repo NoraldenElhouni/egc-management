@@ -75,11 +75,16 @@ const ProjectPercentageDistributionForm = ({
   // Initialize form when project loads
   useEffect(() => {
     if (project && project.project_assignments) {
+      const companyPercentage = project.project_assignments.reduce(
+        (sum, p) => sum + p.percentage,
+        0
+      );
+      const remainingCompanyPercentage = 100 - companyPercentage;
       reset({
         project_id: project.id,
         employee: project.project_assignments.map((pa) => ({
           employee_id: pa.user_id,
-          percentage: 0,
+          percentage: pa.percentage,
           CashAmount: 0,
           BankAmount: 0,
           cash_held: 0,
@@ -89,7 +94,7 @@ const ProjectPercentageDistributionForm = ({
           note: "",
         })),
         company: {
-          percentage: 0,
+          percentage: remainingCompanyPercentage,
           CashAmount: 0,
           BankAmount: 0,
           cash_held: 0,

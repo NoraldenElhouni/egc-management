@@ -87,6 +87,7 @@ export type ProjectWithAssignments = Projects & {
     | null;
   project_assignments: Array<{
     user_id: string;
+    percentage: number;
     employees: { first_name: string; last_name: string | null } | null;
   }>;
 };

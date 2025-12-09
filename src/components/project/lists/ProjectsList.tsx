@@ -4,7 +4,6 @@ import { createProjectsColumns } from "../../tables/columns/ProjectsColumns";
 import GenericTable from "../../tables/table";
 import OverviewStatus from "../../ui/OverviewStatus";
 import { DollarSign, Target, Workflow } from "lucide-react";
-import { formatCurrency } from "../../../utils/helpper";
 
 interface ProjectsListProps {
   basePath?: string; // Renamed for clarity
@@ -22,24 +21,6 @@ const ProjectsList = ({
     () => createProjectsColumns((id) => `${basePath}/${id}`, version),
     [basePath, version]
   );
-
-  const lydBalance = projects?.map((project) =>
-    project.project_balances?.reduce((acc, balance) => {
-      if (balance.currency === "LYD") {
-        return acc + (balance.balance || 0);
-      }
-      return acc;
-    }, 0)
-  );
-
-  // const lydTotalPercentages = projects?.map((project) =>
-  //   project.project_percentage?.reduce((acc, percentage) => {
-  //     if (percentage.currency === "LYD") {
-  //       return acc + (percentage.total_percentage || 0);
-  //     }
-  //     return acc;
-  //   }, 0)
-  // );
 
   const totalActiveProjects =
     projects?.reduce(

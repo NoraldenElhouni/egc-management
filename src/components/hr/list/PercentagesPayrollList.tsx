@@ -7,19 +7,21 @@ import {
   Building2,
   Users,
   RefreshCw,
-  AlertCircle,
   Wallet,
   CreditCard,
   Calendar,
 } from "lucide-react";
 import { formatDate } from "../../../utils/helpper";
 import { ProjectWithAssignments } from "../../../types/extended.type";
+import ProjectPercentageFormSkelton from "../../ui/loading/projectPercentageFormSkelton";
+import ErrorPage from "../../ui/errorPage";
+import EmptyState from "../../ui/EmptyState";
 
 const PercentagesPayrollList = () => {
   const { projects, loading, error } = useProjectsWithAssignments();
 
-  if (loading) return <LoadingSkeleton />;
-  if (error) return <ErrorState message={error.message} />;
+  if (loading) return <ProjectPercentageFormSkelton />;
+  if (error) return <ErrorPage error={error.message} />;
 
   return (
     <div className="p-4 space-y-6" dir="rtl">
@@ -182,37 +184,5 @@ const ProjectCard = ({ project }: { project: ProjectWithAssignments }) => {
     </div>
   );
 };
-
-// --- Loading & Empty States ---
-
-const LoadingSkeleton = () => (
-  <div
-    className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-    dir="rtl"
-  >
-    {[1, 2, 3, 4, 5, 6].map((i) => (
-      <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
-    ))}
-  </div>
-);
-
-const ErrorState = ({ message }: { message: string }) => (
-  <div className="flex flex-col items-center justify-center h-64 text-red-500 gap-2">
-    <AlertCircle size={32} />
-    <p>حدث خطأ أثناء تحميل البيانات: {message}</p>
-  </div>
-);
-
-const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
-    <div className="bg-gray-50 p-4 rounded-full mb-3">
-      <Building2 size={32} className="text-gray-400" />
-    </div>
-    <h3 className="text-lg font-medium text-gray-900">لا توجد مشاريع</h3>
-    <p className="text-sm text-gray-500">
-      لم يتم العثور على أي مشاريع مرتبطة حالياً.
-    </p>
-  </div>
-);
 
 export default PercentagesPayrollList;
