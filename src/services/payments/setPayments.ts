@@ -88,7 +88,7 @@ export async function processExpensePayment(
     return { success: false, error: "خطأ في جلب رصيد المشروع" };
   }
 
-  // 4.2) fetch active project_percentage
+  // 4.2) fetch active project_percentage (use limit(1).maybeSingle() to avoid PGRST116 when duplicates exist)
   const { data: projectPercentage, error: projectPercentageError } =
     await supabase
       .from("project_percentage")
@@ -96,11 +96,16 @@ export async function processExpensePayment(
       .eq("project_id", project.id)
       .eq("currency", currency)
       .eq("type", accountType)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
-  if (projectPercentageError || !projectPercentage) {
+  if (projectPercentageError) {
     console.error("Error fetching project percentage:", projectPercentageError);
     return { success: false, error: "خطأ في جلب نسبة المشروع" };
+  }
+  if (!projectPercentage) {
+    console.error("No project_percentage row found for project/currency/type");
+    return { success: false, error: "خطأ: لا توجد نسبة مشروع مفعّلة" };
   }
 
   // 5 insert expense payment record
@@ -284,7 +289,7 @@ export async function acceptContractPayment(
     return { success: false, error: "خطأ في جلب رصيد المشروع" };
   }
 
-  // 8) fetch active project_percentage
+  // 8) fetch active project_percentage (use limit(1).maybeSingle() to avoid PGRST116 when duplicates exist)
   const { data: projectPercentage, error: projectPercentageError } =
     await supabase
       .from("project_percentage")
@@ -292,11 +297,16 @@ export async function acceptContractPayment(
       .eq("project_id", project.id)
       .eq("currency", currency)
       .eq("type", accountType)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
-  if (projectPercentageError || !projectPercentage) {
+  if (projectPercentageError) {
     console.error("Error fetching project percentage:", projectPercentageError);
     return { success: false, error: "خطأ في جلب نسبة المشروع" };
+  }
+  if (!projectPercentage) {
+    console.error("No project_percentage row found for project/currency/type");
+    return { success: false, error: "خطأ: لا توجد نسبة مشروع مفعّلة" };
   }
 
   // 9) approve contract_payment
@@ -416,8 +426,9 @@ export async function acceptContractPayment(
   const { error: updateProjectPercentageError } = await supabase
     .from("project_percentage")
     .update({
-      period_percentage: projectPercentage.period_percentage + company_fee,
-      total_percentage: projectPercentage.total_percentage + company_fee,
+      period_percentage:
+        (projectPercentage.period_percentage || 0) + company_fee,
+      total_percentage: (projectPercentage.total_percentage || 0) + company_fee,
     })
     .eq("id", projectPercentage.id);
 

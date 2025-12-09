@@ -34,8 +34,8 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   }).format(amount);
 }
 
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+export function formatDate(dateString: string | undefined): string {
+  const date = new Date(dateString || "");
   return new Intl.DateTimeFormat("ar-LY", {
     year: "numeric",
     month: "2-digit",

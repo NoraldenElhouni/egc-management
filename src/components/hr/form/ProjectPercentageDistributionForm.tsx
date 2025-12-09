@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { usePayroll } from "../../../hooks/usePayroll";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Button from "../../ui/Button";
+import { formatCurrency } from "../../../utils/helpper";
+import { useProjectWithAssignments } from "../../../hooks/useProjects";
+import LoadingPage from "../../ui/LoadingPage";
+import ErrorPage from "../../ui/errorPage";
 import {
   PercentageDistributionFormValues,
   PercentageDistributionSchema,
 } from "../../../types/schema/PercentageDistribution.schema";
-import { useProjectWithAssignments } from "../../../hooks/useProjects";
-import LoadingPage from "../../ui/LoadingPage";
-import ErrorPage from "../../ui/errorPage";
-import { formatCurrency } from "../../../utils/helpper";
+import { usePayroll } from "../../../hooks/usePayroll";
 
 interface ProjectPercentageDistributionFormProps {
   projectId: string;
@@ -21,163 +20,170 @@ const ProjectPercentageDistributionForm = ({
 }: ProjectPercentageDistributionFormProps) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const [samePercentage, setSamePercentage] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { PercentageDistribution } = usePayroll();
+
   const {
     error,
     loading: projectLoading,
     project,
   } = useProjectWithAssignments(projectId);
 
+  const cashPercentage = project?.project_percentage?.find(
+    (pp) => pp.type === "cash"
+  );
+  const bankPercentage = project?.project_percentage?.find(
+    (pp) => pp.type === "bank"
+  );
+
+  const totalCashAvailable = cashPercentage?.period_percentage || 0;
+  const totalBankAvailable = bankPercentage?.period_percentage || 0;
+  const totalAvailable = totalCashAvailable + totalBankAvailable;
+
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    control,
     reset,
     formState: { errors },
   } = useForm<PercentageDistributionFormValues>({
     resolver: zodResolver(PercentageDistributionSchema),
     defaultValues: {
       project_id: projectId,
-      totals: { bank: 0, cash: 0 },
-      employees: [],
-      company: { bank: 0, cash: 0 },
+      employee: [],
+      company: {
+        percentage: 0,
+        CashAmount: 0,
+        BankAmount: 0,
+        cash_held: 0,
+        bank_held: 0,
+        discount: 0,
+        total: 0,
+        note: "",
+      },
+      total: 0,
     },
   });
 
-  // Prefill project_id and employee rows when project loads
-  const assignments = useMemo(
-    () => project?.project_assignments ?? [],
-    [project]
-  );
-  const periodAmount = project?.project_percentage?.period_percentage ?? 0;
+  const { fields } = useFieldArray({
+    control,
+    name: "employee",
+  });
 
-  // Build defaults after project is fetched
+  // Initialize form when project loads
   useEffect(() => {
-    const defaultEmployees = assignments.map((a) => ({
-      id: a.user_id as string,
-      bank: { percentage: 0, amount: 0, held: 0, discount: 0, note: "" },
-      cash: { percentage: 0, amount: 0, held: 0, discount: 0, note: "" },
-      note: "",
-    }));
-
-    reset({
-      project_id: projectId,
-      totals: { bank: periodAmount, cash: 0 },
-      employees: defaultEmployees,
-      company: { bank: 0, cash: 0 },
-    });
-
-    setSamePercentage((prev) => {
-      const next: Record<string, boolean> = { ...prev };
-      assignments.forEach((a) => {
-        if (next[a.user_id] === undefined) {
-          next[a.user_id] = true; // default to one percentage for both
-        }
+    if (project && project.project_assignments) {
+      reset({
+        project_id: project.id,
+        employee: project.project_assignments.map((pa) => ({
+          employee_id: pa.user_id,
+          percentage: 0,
+          CashAmount: 0,
+          BankAmount: 0,
+          cash_held: 0,
+          bank_held: 0,
+          discount: 0,
+          total: 0,
+          note: "",
+        })),
+        company: {
+          percentage: 0,
+          CashAmount: 0,
+          BankAmount: 0,
+          cash_held: 0,
+          bank_held: 0,
+          discount: 0,
+          total: 0,
+          note: "",
+        },
+        total: 0,
       });
-      return next;
-    });
-  }, [assignments, periodAmount, projectId, reset]);
+    }
+  }, [project, reset]);
 
-  const totals = watch("totals");
-  const employees = watch("employees") ?? [];
-  const company = watch("company");
+  const watchEmployees = watch("employee");
+  const watchCompany = watch("company");
 
-  // Keep derived amounts in sync with percentages and totals
+  // Calculate amounts when percentage changes
   useEffect(() => {
-    employees.forEach((emp, idx) => {
-      const bankPct = emp.bank?.percentage ?? 0;
-      const useSame = samePercentage[emp.id];
-      const cashPct = useSame ? bankPct : (emp.cash?.percentage ?? 0);
+    if (!watchEmployees) return;
 
-      if (useSame && emp.cash?.percentage !== bankPct) {
-        setValue(`employees.${idx}.cash.percentage`, bankPct, {
-          shouldDirty: true,
-        });
-      }
+    watchEmployees.forEach((emp, index) => {
+      const percentage = emp.percentage || 0;
+      const cashAmount = (totalCashAvailable * percentage) / 100;
+      const bankAmount = (totalBankAvailable * percentage) / 100;
+      const cashHeld = emp.cash_held || 0;
+      const bankHeld = emp.bank_held || 0;
+      const discount = emp.discount || 0;
+      const total = cashAmount - cashHeld + (bankAmount - bankHeld) - discount;
 
-      const bankAmount = Number(((totals?.bank || 0) * bankPct) / 100) || 0;
-      const cashAmount = Number(((totals?.cash || 0) * cashPct) / 100) || 0;
-
-      if ((emp.bank?.amount ?? 0) !== bankAmount) {
-        setValue(`employees.${idx}.bank.amount`, bankAmount, {
-          shouldDirty: true,
-        });
-      }
-      if ((emp.cash?.amount ?? 0) !== cashAmount) {
-        setValue(`employees.${idx}.cash.amount`, cashAmount, {
-          shouldDirty: true,
-        });
-      }
+      setValue(`employee.${index}.CashAmount`, cashAmount);
+      setValue(`employee.${index}.BankAmount`, bankAmount);
+      setValue(`employee.${index}.total`, total);
     });
-  }, [employees, samePercentage, setValue, totals?.bank, totals?.cash]);
+  }, [
+    watchEmployees?.map((e) => e.percentage).join(","),
+    watchEmployees?.map((e) => e.cash_held).join(","),
+    watchEmployees?.map((e) => e.bank_held).join(","),
+    watchEmployees?.map((e) => e.discount).join(","),
+    totalCashAvailable,
+    totalBankAvailable,
+    setValue,
+  ]);
 
-  const totalsAssigned = useMemo(() => {
-    const bankUsed =
-      (employees?.reduce(
-        (sum, e) =>
-          sum +
-          (Number(e.bank?.amount) || 0) +
-          (Number(e.bank?.held) || 0) +
-          (Number(e.bank?.discount) || 0),
-        0
-      ) || 0) + (Number(company?.bank) || 0);
+  useEffect(() => {
+    if (!watchCompany) return;
 
-    const cashUsed =
-      (employees?.reduce(
-        (sum, e) =>
-          sum +
-          (Number(e.cash?.amount) || 0) +
-          (Number(e.cash?.held) || 0) +
-          (Number(e.cash?.discount) || 0),
-        0
-      ) || 0) + (Number(company?.cash) || 0);
+    const percentage = watchCompany.percentage || 0;
+    const cashAmount = (totalCashAvailable * percentage) / 100;
+    const bankAmount = (totalBankAvailable * percentage) / 100;
+    const cashHeld = watchCompany.cash_held || 0;
+    const bankHeld = watchCompany.bank_held || 0;
+    const discount = watchCompany.discount || 0;
+    const total = cashAmount - cashHeld + (bankAmount - bankHeld) - discount;
 
-    return { bankUsed, cashUsed };
-  }, [company?.bank, company?.cash, employees]);
+    setValue("company.CashAmount", cashAmount);
+    setValue("company.BankAmount", bankAmount);
+    setValue("company.total", total);
+  }, [
+    watchCompany?.percentage,
+    watchCompany?.cash_held,
+    watchCompany?.bank_held,
+    watchCompany?.discount,
+    totalCashAvailable,
+    totalBankAvailable,
+    setValue,
+  ]);
 
-  const remaining = useMemo(
-    () => ({
-      bank: Math.max(0, (totals?.bank || 0) - totalsAssigned.bankUsed),
-      cash: Math.max(0, (totals?.cash || 0) - totalsAssigned.cashUsed),
-    }),
-    [
-      totals?.bank,
-      totals?.cash,
-      totalsAssigned.bankUsed,
-      totalsAssigned.cashUsed,
-    ]
+  // Calculate total percentages
+  const employeeTotalPercentage =
+    watchEmployees?.reduce((sum, emp) => sum + (emp.percentage || 0), 0) || 0;
+  const companyPercentage = watchCompany?.percentage || 0;
+  const grandTotalPercentage = employeeTotalPercentage + companyPercentage;
+  const remainingPercentage = 100 - grandTotalPercentage;
+
+  const handleFormSubmit = handleSubmit(
+    async (data: PercentageDistributionFormValues) => {
+      setLoading(true);
+      try {
+        const result = await PercentageDistribution(data);
+        if (!result.success) {
+          setErrorMessage(result.message || "حدث خطأ أثناء حفظ التوزيع");
+          alert(result.message || "حدث خطأ أثناء حفظ التوزيع");
+        } else {
+          setSuccess("تم حفظ توزيع نسب المشروع بنجاح");
+          setErrorMessage(null);
+        }
+      } catch (error) {
+        console.error(error);
+        setErrorMessage("حدث خطأ أثناء حفظ التوزيع");
+      } finally {
+        setLoading(false);
+      }
+    }
   );
-
-  const onSubmit = async (data: PercentageDistributionFormValues) => {
-    setLoading(true);
-
-    // Validate bank/cash assignments do not exceed totals
-    if (totalsAssigned.bankUsed > (data.totals.bank || 0)) {
-      setSuccess("إجمالي توزيع البنك يتجاوز المبلغ المتاح. فضلاً عدّل القيم.");
-      setLoading(false);
-      return;
-    }
-    if (totalsAssigned.cashUsed > (data.totals.cash || 0)) {
-      setSuccess("إجمالي توزيع النقد يتجاوز المبلغ المتاح. فضلاً عدّل القيم.");
-      setLoading(false);
-      return;
-    }
-
-    data.project_id = projectId;
-    const result = await PercentageDistribution(data);
-    if (result.success) {
-      setSuccess("تم حفظ توزيع النسبة بنجاح.");
-      reset();
-    } else {
-      setSuccess("فشل حفظ توزيع النسبة. حاول مرة أخرى.");
-    }
-
-    setLoading(false);
-  };
 
   if (projectLoading) {
     return <LoadingPage />;
@@ -191,405 +197,390 @@ const ProjectPercentageDistributionForm = ({
       />
     );
   }
+
+  if (!project) {
+    return <div className="text-center p-6">المشروع غير موجود.</div>;
+  }
+
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      <div className="mb-6 text-right">
-        <h1 className="text-2xl font-semibold mb-3">
-          مشروع
-          <span className="mx-2 font-bold">{project?.name ?? "—"}</span>
-          <span className="text-sm text-gray-600">
-            ({project?.code ?? "—"})
-          </span>
+    <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen" dir="rtl">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h1 className="text-3xl font-bold mb-2 text-gray-800">
+          توزيع نسب المشروع
         </h1>
+        <div className="text-lg text-gray-600 mb-4">
+          <span className="font-semibold">{project.name}</span>
+          <span className="text-sm mr-2">({project.code})</span>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
-            <div className="text-sm text-gray-600">إجمالي نسبة المشروع</div>
-            <div className="mt-2 text-lg font-medium text-primary">
-              {formatCurrency(
-                project?.project_percentage?.total_percentage ?? 0,
-                "LYD"
-              )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-lg border border-blue-200">
+            <div className="text-sm text-blue-700 font-medium mb-1">
+              النقدي المتاح
+            </div>
+            <div className="text-2xl font-bold text-blue-900">
+              {formatCurrency(totalCashAvailable, "LYD")}
             </div>
           </div>
 
-          <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
-            <div className="text-sm text-gray-600">نسبة الفترة</div>
-            <div className="mt-2 text-lg font-medium text-primary">
-              {formatCurrency(
-                project?.project_percentage?.period_percentage ?? 0,
-                "LYD"
-              )}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-lg border border-green-200">
+            <div className="text-sm text-green-700 font-medium mb-1">
+              البنك المتاح
             </div>
-            <div className="mt-1 text-xs text-gray-500">
-              من {project?.project_percentage?.period_start ?? "—"} إلى الآن
+            <div className="text-2xl font-bold text-green-900">
+              {formatCurrency(totalBankAvailable, "LYD")}
             </div>
           </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-lg border border-purple-200">
+            <div className="text-sm text-purple-700 font-medium mb-1">
+              الإجمالي المتاح
+            </div>
+            <div className="text-2xl font-bold text-purple-900">
+              {formatCurrency(totalAvailable, "LYD")}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="text-sm text-amber-800">النسبة المستخدمة:</span>
+              <span
+                className={`text-xl font-bold mr-2 ${grandTotalPercentage > 100 ? "text-red-600" : "text-amber-900"}`}
+              >
+                {grandTotalPercentage.toFixed(2)}%
+              </span>
+            </div>
+            <div>
+              <span className="text-sm text-amber-800">المتبقي:</span>
+              <span
+                className={`text-xl font-bold mr-2 ${remainingPercentage < 0 ? "text-red-600" : "text-green-600"}`}
+              >
+                {remainingPercentage.toFixed(2)}%
+              </span>
+            </div>
+          </div>
+          {grandTotalPercentage > 100 && (
+            <div className="mt-2 text-sm text-red-600 font-medium">
+              ⚠️ تحذير: النسبة الإجمالية تتجاوز 100%
+            </div>
+          )}
         </div>
       </div>
+
       {success && (
-        <div className="mb-4 p-3 rounded text-sm bg-success/10 text-success">
-          {success}
+        <div className="mb-4 p-4 rounded-lg bg-green-100 text-green-800 border border-green-300">
+          ✓ {success}
         </div>
       )}
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <input type="hidden" value={projectId} {...register("project_id")} />
-
-        {/* Totals */}
-        <div className="grid gap-4 sm:grid-cols-2 mb-6">
-          <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-gray-600">إجمالي البنك للفترة</div>
-              <div className="text-xs text-gray-500">LYD</div>
-            </div>
-            <input
-              type="number"
-              step="0.01"
-              min={0}
-              className="w-full border rounded px-3 py-2 text-left"
-              {...register("totals.bank", { valueAsNumber: true })}
-            />
-            {errors.totals?.bank && (
-              <div className="mt-1 text-xs text-error">
-                {errors.totals.bank.message as string}
-              </div>
-            )}
-            <div className="mt-2 text-xs text-gray-500">
-              المتبقي: {formatCurrency(remaining.bank, "LYD")}
-            </div>
-          </div>
-
-          <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-gray-600">إجمالي النقد للفترة</div>
-              <div className="text-xs text-gray-500">LYD</div>
-            </div>
-            <input
-              type="number"
-              step="0.01"
-              min={0}
-              className="w-full border rounded px-3 py-2 text-left"
-              {...register("totals.cash", { valueAsNumber: true })}
-            />
-            {errors.totals?.cash && (
-              <div className="mt-1 text-xs text-error">
-                {errors.totals.cash.message as string}
-              </div>
-            )}
-            <div className="mt-2 text-xs text-gray-500">
-              المتبقي: {formatCurrency(remaining.cash, "LYD")}
-            </div>
-          </div>
+      {errorMessage && (
+        <div className="mb-4 p-4 rounded-lg bg-red-100 text-red-800 border border-red-300">
+          ✗ {errorMessage}
         </div>
+      )}
 
-        {/* Summary */}
-        <div className="grid gap-4 sm:grid-cols-2 mb-6">
-          <div className="p-4 border rounded-lg">
-            <div className="text-sm text-gray-600">المعيّن من البنك</div>
-            <div
-              className={`mt-1 text-lg font-semibold ${
-                totalsAssigned.bankUsed > (totals?.bank || 0)
-                  ? "text-error"
-                  : "text-primary"
-              }`}
-            >
-              {formatCurrency(totalsAssigned.bankUsed, "LYD")}
+      <div className="space-y-6">
+        {/* Employees Section */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">
+            توزيع الموظفين
+          </h2>
+
+          {fields.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              لا يوجد موظفين مسجلين في هذا المشروع
             </div>
-          </div>
-          <div className="p-4 border rounded-lg">
-            <div className="text-sm text-gray-600">المعيّن من النقد</div>
-            <div
-              className={`mt-1 text-lg font-semibold ${
-                totalsAssigned.cashUsed > (totals?.cash || 0)
-                  ? "text-error"
-                  : "text-primary"
-              }`}
-            >
-              {formatCurrency(totalsAssigned.cashUsed, "LYD")}
-            </div>
-          </div>
-        </div>
+          ) : (
+            <div className="space-y-4">
+              {fields.map((field, index) => {
+                const employee = project.project_assignments[index];
+                const empData = watchEmployees?.[index];
 
-        {/* Employees distribution list */}
-        <div className="space-y-4 mb-8">
-          <div className="divide-y divide-gray-200 border rounded-lg">
-            {assignments.map((a, idx) => {
-              const fullName =
-                `${a.employees?.first_name ?? ""} ${a.employees?.last_name ?? ""}`.trim() ||
-                a.user_id;
-
-              const empErrors = errors.employees?.[idx];
-              return (
-                <div key={a.user_id} className="p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{fullName}</div>
-                    <label className="flex items-center gap-2 text-sm text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={samePercentage[a.user_id] ?? true}
-                        onChange={(e) =>
-                          setSamePercentage((prev) => ({
-                            ...prev,
-                            [a.user_id]: e.target.checked,
-                          }))
-                        }
-                      />
-                      نفس النسبة للبنك والنقد
-                    </label>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="p-4 bg-gray-50 rounded-lg border">
-                      <div className="font-semibold mb-2">بنك</div>
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            النسبة %
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            max={100}
-                            className="w-full border rounded px-3 py-2 text-left"
-                            {...register(`employees.${idx}.bank.percentage`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                          {empErrors?.bank?.percentage && (
-                            <div className="mt-1 text-xs text-error">
-                              {empErrors.bank.percentage.message as string}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            المبلغ
-                          </label>
-                          <input
-                            type="number"
-                            readOnly
-                            className="w-full border rounded px-3 py-2 bg-gray-100 text-left"
-                            {...register(`employees.${idx}.bank.amount`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                        </div>
+                return (
+                  <div
+                    key={field.id}
+                    className="bg-gray-50 rounded-lg p-5 border border-gray-200"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {employee.employees?.first_name}{" "}
+                        {employee.employees?.last_name}
+                      </h3>
+                      <div className="text-sm text-gray-600">
+                        ID: {employee.user_id.slice(0, 8)}
                       </div>
-
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            موقوف
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            className="w-full border rounded px-3 py-2 text-left"
-                            {...register(`employees.${idx}.bank.held`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                          {empErrors?.bank?.held && (
-                            <div className="mt-1 text-xs text-error">
-                              {empErrors.bank.held.message as string}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            خصم
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            className="w-full border rounded px-3 py-2 text-left"
-                            {...register(`employees.${idx}.bank.discount`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                          {empErrors?.bank?.discount && (
-                            <div className="mt-1 text-xs text-error">
-                              {empErrors.bank.discount.message as string}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <label className="block text-xs text-gray-600 mb-1">
-                        ملاحظة
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border rounded px-3 py-2 text-left"
-                        {...register(`employees.${idx}.bank.note`)}
-                      />
                     </div>
 
-                    <div className="p-4 bg-gray-50 rounded-lg border">
-                      <div className="font-semibold mb-2">نقد</div>
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            النسبة %
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            max={100}
-                            className="w-full border rounded px-3 py-2 text-left"
-                            disabled={samePercentage[a.user_id]}
-                            {...register(`employees.${idx}.cash.percentage`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                          {empErrors?.cash?.percentage && (
-                            <div className="mt-1 text-xs text-error">
-                              {empErrors.cash.percentage.message as string}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            المبلغ
-                          </label>
-                          <input
-                            type="number"
-                            readOnly
-                            className="w-full border rounded px-3 py-2 bg-gray-100 text-left"
-                            {...register(`employees.${idx}.cash.amount`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                      <div className="flex flex-col">
+                        <label className="mb-1 text-sm font-medium text-gray-700">
+                          النسبة المئوية (%)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          {...register(`employee.${index}.percentage`, {
+                            valueAsNumber: true,
+                          })}
+                          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {errors.employee?.[index]?.percentage && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {errors.employee[index]?.percentage?.message}
+                          </p>
+                        )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            موقوف
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            className="w-full border rounded px-3 py-2 text-left"
-                            {...register(`employees.${idx}.cash.held`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                          {empErrors?.cash?.held && (
-                            <div className="mt-1 text-xs text-error">
-                              {empErrors.cash.held.message as string}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">
-                            خصم
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            className="w-full border rounded px-3 py-2 text-left"
-                            {...register(`employees.${idx}.cash.discount`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                          {empErrors?.cash?.discount && (
-                            <div className="mt-1 text-xs text-error">
-                              {empErrors.cash.discount.message as string}
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex flex-col">
+                        <label className="mb-1 text-sm font-medium text-gray-700">
+                          النقدي المحجوز
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          {...register(`employee.${index}.cash_held`, {
+                            valueAsNumber: true,
+                          })}
+                          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                       </div>
 
-                      <label className="block text-xs text-gray-600 mb-1">
-                        ملاحظة
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border rounded px-3 py-2 text-left"
-                        {...register(`employees.${idx}.cash.note`)}
-                      />
+                      <div className="flex flex-col">
+                        <label className="mb-1 text-sm font-medium text-gray-700">
+                          البنك المحجوز
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          {...register(`employee.${index}.bank_held`, {
+                            valueAsNumber: true,
+                          })}
+                          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="flex flex-col">
+                        <label className="mb-1 text-sm font-medium text-gray-700">
+                          الخصم
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          {...register(`employee.${index}.discount`, {
+                            valueAsNumber: true,
+                          })}
+                          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="flex flex-col">
+                        <label className="mb-1 text-sm font-medium text-gray-700">
+                          ملاحظات
+                        </label>
+                        <input
+                          type="text"
+                          {...register(`employee.${index}.note`)}
+                          placeholder="ملاحظات اختيارية"
+                          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      ملاحظة عامة للموظف
-                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4 pt-4 border-t border-gray-300">
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <div className="text-xs text-blue-600 mb-1">نقدي</div>
+                        <div className="text-sm font-bold text-blue-900">
+                          {formatCurrency(empData?.CashAmount || 0, "LYD")}
+                        </div>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-lg">
+                        <div className="text-xs text-green-600 mb-1">بنك</div>
+                        <div className="text-sm font-bold text-green-900">
+                          {formatCurrency(empData?.BankAmount || 0, "LYD")}
+                        </div>
+                      </div>
+                      <div className="bg-amber-50 p-3 rounded-lg">
+                        <div className="text-xs text-amber-600 mb-1">
+                          نقدي محجوز
+                        </div>
+                        <div className="text-sm font-bold text-amber-900">
+                          {formatCurrency(empData?.cash_held || 0, "LYD")}
+                        </div>
+                      </div>
+                      <div className="bg-orange-50 p-3 rounded-lg">
+                        <div className="text-xs text-orange-600 mb-1">
+                          بنك محجوز
+                        </div>
+                        <div className="text-sm font-bold text-orange-900">
+                          {formatCurrency(empData?.bank_held || 0, "LYD")}
+                        </div>
+                      </div>
+                      <div className="bg-red-50 p-3 rounded-lg">
+                        <div className="text-xs text-red-600 mb-1">خصم</div>
+                        <div className="text-sm font-bold text-red-900">
+                          {formatCurrency(empData?.discount || 0, "LYD")}
+                        </div>
+                      </div>
+                      <div className="bg-purple-50 p-3 rounded-lg">
+                        <div className="text-xs text-purple-600 mb-1">
+                          الإجمالي
+                        </div>
+                        <div className="text-sm font-bold text-purple-900">
+                          {formatCurrency(empData?.total || 0, "LYD")}
+                        </div>
+                      </div>
+                    </div>
+
                     <input
-                      type="text"
-                      className="w-full border rounded px-3 py-2 text-left"
-                      {...register(`employees.${idx}.note`)}
+                      type="hidden"
+                      {...register(`employee.${index}.employee_id`)}
                     />
-                    {empErrors?.note && (
-                      <div className="mt-1 text-xs text-error">
-                        {empErrors.note.message as string}
-                      </div>
-                    )}
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-                  <input
-                    type="hidden"
-                    {...register(`employees.${idx}.id`)}
-                    defaultValue={a.user_id}
-                  />
+        {/* Company Section */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">
+            حصة الشركة
+          </h2>
+
+          <div className="bg-indigo-50 rounded-lg p-5 border border-indigo-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="flex flex-col">
+                <label className="mb-1 text-sm font-medium text-gray-700">
+                  النسبة المئوية (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  {...register("company.percentage", { valueAsNumber: true })}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="mb-1 text-sm font-medium text-gray-700">
+                  النقدي المحجوز
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  {...register("company.cash_held", { valueAsNumber: true })}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="mb-1 text-sm font-medium text-gray-700">
+                  البنك المحجوز
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  {...register("company.bank_held", { valueAsNumber: true })}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="mb-1 text-sm font-medium text-gray-700">
+                  الخصم
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  {...register("company.discount", { valueAsNumber: true })}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="mb-1 text-sm font-medium text-gray-700">
+                  ملاحظات
+                </label>
+                <input
+                  type="text"
+                  {...register("company.note")}
+                  placeholder="ملاحظات اختيارية"
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4 pt-4 border-t border-indigo-300">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="text-xs text-blue-600 mb-1">نقدي</div>
+                <div className="text-sm font-bold text-blue-900">
+                  {formatCurrency(watchCompany?.CashAmount || 0, "LYD")}
                 </div>
-              );
-            })}
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <div className="text-xs text-green-600 mb-1">بنك</div>
+                <div className="text-sm font-bold text-green-900">
+                  {formatCurrency(watchCompany?.BankAmount || 0, "LYD")}
+                </div>
+              </div>
+              <div className="bg-amber-50 p-3 rounded-lg">
+                <div className="text-xs text-amber-600 mb-1">نقدي محجوز</div>
+                <div className="text-sm font-bold text-amber-900">
+                  {formatCurrency(watchCompany?.cash_held || 0, "LYD")}
+                </div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded-lg">
+                <div className="text-xs text-orange-600 mb-1">بنك محجوز</div>
+                <div className="text-sm font-bold text-orange-900">
+                  {formatCurrency(watchCompany?.bank_held || 0, "LYD")}
+                </div>
+              </div>
+              <div className="bg-red-50 p-3 rounded-lg">
+                <div className="text-xs text-red-600 mb-1">خصم</div>
+                <div className="text-sm font-bold text-red-900">
+                  {formatCurrency(watchCompany?.discount || 0, "LYD")}
+                </div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <div className="text-xs text-purple-600 mb-1">الإجمالي</div>
+                <div className="text-sm font-bold text-purple-900">
+                  {formatCurrency(watchCompany?.total || 0, "LYD")}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Company share */}
-        <div className="mb-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">
-                حصة الشركة (بنك)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min={0}
-                className="w-full border rounded px-3 py-2 text-left"
-                {...register("company.bank", { valueAsNumber: true })}
-              />
-              {errors.company?.bank && (
-                <div className="mt-1 text-xs text-red-600">
-                  {errors.company.bank.message as string}
-                </div>
-              )}
+        <div className="space-y-3">
+          {grandTotalPercentage !== 100 && (
+            <div className="p-4 rounded-lg bg-red-50 border border-red-300 text-right">
+              <div className="text-red-800 font-semibold mb-2">
+                ⚠️ لا يمكن الحفظ - يجب أن يكون الإجمالي 100% بالضبط
+              </div>
+              <div className="text-red-700 text-sm">
+                {grandTotalPercentage > 100
+                  ? `الإجمالي الحالي: ${grandTotalPercentage.toFixed(2)}% (زيادة ${(grandTotalPercentage - 100).toFixed(2)}%)`
+                  : `الإجمالي الحالي: ${grandTotalPercentage.toFixed(2)}% (نقص ${(100 - grandTotalPercentage).toFixed(2)}%)`}
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">
-                حصة الشركة (نقد)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min={0}
-                className="w-full border rounded px-3 py-2 text-left"
-                {...register("company.cash", { valueAsNumber: true })}
-              />
-              {errors.company?.cash && (
-                <div className="mt-1 text-xs text-red-600">
-                  {errors.company.cash.message as string}
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "جاري الحفظ..." : "حفظ"}
-        </Button>
-      </form>
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleFormSubmit}
+            disabled={loading || grandTotalPercentage !== 100}
+            className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-lg shadow-md"
+          >
+            {loading ? "جاري الحفظ..." : "حفظ التوزيع"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

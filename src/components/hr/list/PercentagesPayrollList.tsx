@@ -1,98 +1,218 @@
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../ui/Button";
 import { useProjectsWithAssignments } from "../../../hooks/useProjects";
+// Assuming you might have icons installed. If not, simple SVGs are used below.
+import {
+  Building2,
+  Users,
+  RefreshCw,
+  AlertCircle,
+  Wallet,
+  CreditCard,
+  Calendar,
+} from "lucide-react";
+import { formatDate } from "../../../utils/helpper";
+import { ProjectWithAssignments } from "../../../types/extended.type";
 
 const PercentagesPayrollList = () => {
-  const navigate = useNavigate();
   const { projects, loading, error } = useProjectsWithAssignments();
 
-  if (loading) return <div>جاري التحميل...</div>;
-  if (error) return <div>حدث خطأ: {error.message}</div>;
-
-  const totalPercentages = projects.reduce((total, project) => {
-    const projectTotal =
-      project.project_percentage?.reduce(
-        (projTotal, pp) => projTotal + (pp?.total_percentage || 0),
-        0
-      ) ?? 0;
-    return total + projectTotal;
-  }, 0);
+  if (loading) return <LoadingSkeleton />;
+  if (error) return <ErrorState message={error.message} />;
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">المشاريع</h2>
-        <Button onClick={() => window.location.reload()}>تحديث</Button>
+    <div className="p-4 space-y-6" dir="rtl">
+      {/* Header Section */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+            <Building2 size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">المشاريع</h2>
+            <p className="text-sm text-gray-500">إدارة نسب المشاريع والرواتب</p>
+          </div>
+        </div>
+        <Button
+          onClick={() => window.location.reload()}
+          variant="primary"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw size={16} />
+          <span>تحديث</span>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {projects.map((project) => {
-          const employees = (project.project_assignments || [])
-            .map((pa) =>
-              pa.employees
-                ? `${pa.employees.first_name} ${pa.employees.last_name ?? ""}`.trim()
-                : null
-            )
-            .filter(Boolean) as string[];
+      {/* Grid Content */}
+      {projects && projects.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState />
+      )}
+    </div>
+  );
+};
 
-          return (
+// --- Sub Components ---
+
+const ProjectCard = ({ project }: { project: ProjectWithAssignments }) => {
+  const navigate = useNavigate();
+
+  // 1. Logic Fix: Calculate Total Percentage specific to THIS project
+  const projectTotalPercentage = useMemo(() => {
+    return (
+      project.project_percentage?.reduce<number>(
+        (sum, pp) => sum + (pp?.total_percentage ?? 0),
+        0
+      ) ?? 0
+    );
+  }, [project.project_percentage]);
+
+  // Format Employees List
+  const employees = (project.project_assignments || [])
+    .map((pa) =>
+      pa?.employees
+        ? `${pa.employees.first_name} ${pa.employees.last_name ?? ""}`.trim()
+        : null
+    )
+    .filter((x): x is string => Boolean(x));
+
+  return (
+    <div
+      onClick={() => navigate(`/hr/payroll/percentages/${project.id}`)}
+      className="group flex flex-col justify-between bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer overflow-hidden"
+    >
+      {/* Card Header */}
+      <div className="p-5 border-b border-gray-100">
+        <div className="flex justify-between items-start mb-3">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            #{project.code}
+          </span>
+          {/* Visual Indicator of Total Status */}
+          <span
+            className={`text-sm font-bold ${projectTotalPercentage >= 100 ? "text-green-600" : "text-blue-600"}`}
+          >
+            {projectTotalPercentage}
+          </span>
+        </div>
+        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+          {project.name}
+        </h3>
+      </div>
+
+      {/* Card Body: Percentages Details */}
+      <div className="p-5 space-y-4 flex-grow">
+        {project.project_percentage && project.project_percentage.length > 0 ? (
+          project.project_percentage.map((pp, index) => (
             <div
-              key={project.id}
-              className="rounded-xl border border-gray-200 bg-white hover:shadow-md transition-shadow cursor-pointer p-4"
-              onClick={() => navigate(`/hr/payroll/percentages/${project.id}`)}
+              key={index}
+              className="bg-gray-50 rounded-lg p-3 text-sm border border-gray-100"
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-500">كود المشروع</span>
-                <span className="font-semibold">{project.code}</span>
-              </div>
-              <div className="mb-2">
-                <div className="text-sm text-gray-500">اسم المشروع</div>
-                <div className="text-base font-medium">{project.name}</div>
-              </div>
-              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-4">
-                <span className="text-sm text-gray-500">اجمالي النسبة</span>
-                <span className="text-base font-semibold">
-                  {totalPercentages}
+              {/* Type Badge */}
+              <div className="flex justify-between items-center mb-2">
+                <span
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
+                    pp?.type === "bank"
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {pp?.type === "bank" ? (
+                    <CreditCard size={12} />
+                  ) : (
+                    <Wallet size={12} />
+                  )}
+                  {pp?.type === "bank" ? "بنك" : "كاش"}
+                </span>
+                <span className="font-bold text-gray-700">
+                  {pp?.total_percentage ?? 0}
                 </span>
               </div>
-              {project.project_percentage &&
-                project.project_percentage.map((pp, index) => (
-                  <div key={index} className="mb-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-500">
-                        النسبة الكلية {pp?.type === "bank" ? "بنك" : "كاش"}
-                      </span>
-                      <span className="text-base font-semibold">
-                        {pp?.total_percentage ?? 0}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-500">نسبة الفترة</span>
-                      <span className="text-base font-semibold">
-                        {pp?.period_percentage ?? 0}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">الفترة</span>
-                      <span className="text-base font-semibold">
-                        {pp?.period_start ?? "غير محدد"} - {"الآن"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
 
-              <div>
-                <div className="text-sm text-gray-500 mb-1">المهندسين</div>
-                <div className="text-sm text-gray-800 truncate">
-                  {employees.length > 0 ? employees.join("، ") : "غير مخصص"}
+              {/* Date and Period Details */}
+              <div className="space-y-1 text-gray-500 text-xs">
+                <div className="flex justify-between">
+                  <span>نسبة الفترة:</span>
+                  <span className="text-gray-900 font-medium">
+                    {pp?.period_percentage ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
+                  <span className="flex items-center gap-1">
+                    <Calendar size={12} />
+                    {pp?.period_start
+                      ? formatDate(pp.period_start)
+                      : "غير محدد"}
+                  </span>
+                  <span className="text-[10px] bg-gray-200 px-1 rounded">
+                    الحالية
+                  </span>
                 </div>
               </div>
             </div>
-          );
-        })}
+          ))
+        ) : (
+          <div className="text-center py-4 text-gray-400 text-sm italic">
+            لا توجد نسب مضافة
+          </div>
+        )}
+      </div>
+
+      {/* Card Footer: Employees */}
+      <div className="p-4 bg-gray-50 border-t border-gray-100">
+        <div className="flex items-center gap-2 text-gray-600">
+          <Users size={16} className="text-gray-400" />
+          <span className="text-xs font-medium">المهندسين:</span>
+        </div>
+        <div className="mt-2 text-sm text-gray-800 line-clamp-1 h-5">
+          {employees.length > 0 ? (
+            employees.join("، ")
+          ) : (
+            <span className="text-gray-400 italic text-xs">
+              لا يوجد مهندسين معينين
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+
+// --- Loading & Empty States ---
+
+const LoadingSkeleton = () => (
+  <div
+    className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+    dir="rtl"
+  >
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse"></div>
+    ))}
+  </div>
+);
+
+const ErrorState = ({ message }: { message: string }) => (
+  <div className="flex flex-col items-center justify-center h-64 text-red-500 gap-2">
+    <AlertCircle size={32} />
+    <p>حدث خطأ أثناء تحميل البيانات: {message}</p>
+  </div>
+);
+
+const EmptyState = () => (
+  <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+    <div className="bg-gray-50 p-4 rounded-full mb-3">
+      <Building2 size={32} className="text-gray-400" />
+    </div>
+    <h3 className="text-lg font-medium text-gray-900">لا توجد مشاريع</h3>
+    <p className="text-sm text-gray-500">
+      لم يتم العثور على أي مشاريع مرتبطة حالياً.
+    </p>
+  </div>
+);
 
 export default PercentagesPayrollList;

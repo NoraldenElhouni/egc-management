@@ -318,11 +318,10 @@ export function useProjectWithAssignments(projectId: string) {
       const { data: percentage, error: percentageError } = await supabase
         .from("project_percentage")
         .select(
-          `project_id, total_percentage, percentage, period_percentage, period_start`
+          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`
         )
         .eq("project_id", data?.id || "")
-        .eq("currency", "LYD")
-        .single();
+        .eq("currency", "LYD");
 
       if (percentageError) {
         console.error("error fetching project percentage", percentageError);
