@@ -1193,6 +1193,156 @@ export type Database = {
         }
         Relationships: []
       }
+      map_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      maps_distribution_details: {
+        Row: {
+          amount: number
+          created_at: string
+          distribution_type: string
+          employee_id: string | null
+          id: string
+          map_item_id: string
+          percentage: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          distribution_type: string
+          employee_id?: string | null
+          id?: string
+          map_item_id: string
+          percentage: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          distribution_type?: string
+          employee_id?: string | null
+          id?: string
+          map_item_id?: string
+          percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maps_distribution_details_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maps_distribution_details_map_item_id_fkey"
+            columns: ["map_item_id"]
+            isOneToOne: false
+            referencedRelation: "maps_distribution_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maps_distribution_items: {
+        Row: {
+          created_at: string
+          distribution_id: string
+          id: string
+          price: number
+          quantity: number
+          total: number
+          type_id: string
+        }
+        Insert: {
+          created_at?: string
+          distribution_id: string
+          id?: string
+          price: number
+          quantity: number
+          total: number
+          type_id: string
+        }
+        Update: {
+          created_at?: string
+          distribution_id?: string
+          id?: string
+          price?: number
+          quantity?: number
+          total?: number
+          type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maps_distribution_items_distribution_id_fkey"
+            columns: ["distribution_id"]
+            isOneToOne: false
+            referencedRelation: "maps_distributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maps_distribution_items_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "map_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maps_distributions: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          project_id: string
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          project_id: string
+          total_amount?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          project_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maps_distributions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maps_distributions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_items: {
         Row: {
           created_at: string
@@ -1943,6 +2093,7 @@ export type Database = {
           income_counter: number
           latitude: number | null
           longitude: number | null
+          map_counter: number
           name: string
           refund_counter: number
           serial_number: number | null
@@ -1959,6 +2110,7 @@ export type Database = {
           income_counter?: number
           latitude?: number | null
           longitude?: number | null
+          map_counter?: number
           name: string
           refund_counter?: number
           serial_number?: number | null
@@ -1975,6 +2127,7 @@ export type Database = {
           income_counter?: number
           latitude?: number | null
           longitude?: number | null
+          map_counter?: number
           name?: string
           refund_counter?: number
           serial_number?: number | null
@@ -2480,7 +2633,7 @@ export type Database = {
         | "overdue"
         | "cancelled"
         | "unpaid"
-      expense_type: "material" | "labor"
+      expense_type: "material" | "labor" | "maps"
       fund_type: "client" | "internal" | "sale" | "refund" | "other"
       offer_approvals_type: "pending" | "approved" | "rejected"
       offer_status:
@@ -2494,7 +2647,7 @@ export type Database = {
       owner_type: "employee" | "project" | "company" | "contractor"
       payment_method: "cash" | "bank"
       payment_type: "cash" | "cheque" | "transfer" | "deposit" | "bank"
-      phase_type: "construction" | "finishing"
+      phase_type: "construction" | "finishing" | "initial"
       project_status_enum: "active" | "paused" | "completed" | "cancelled"
       projects_type: "construction" | "consulting"
       transaction_type: "debit" | "credit"
@@ -2641,7 +2794,7 @@ export const Constants = {
         "cancelled",
         "unpaid",
       ],
-      expense_type: ["material", "labor"],
+      expense_type: ["material", "labor", "maps"],
       fund_type: ["client", "internal", "sale", "refund", "other"],
       offer_approvals_type: ["pending", "approved", "rejected"],
       offer_status: [
@@ -2656,7 +2809,7 @@ export const Constants = {
       owner_type: ["employee", "project", "company", "contractor"],
       payment_method: ["cash", "bank"],
       payment_type: ["cash", "cheque", "transfer", "deposit", "bank"],
-      phase_type: ["construction", "finishing"],
+      phase_type: ["construction", "finishing", "initial"],
       project_status_enum: ["active", "paused", "completed", "cancelled"],
       projects_type: ["construction", "consulting"],
       transaction_type: ["debit", "credit"],

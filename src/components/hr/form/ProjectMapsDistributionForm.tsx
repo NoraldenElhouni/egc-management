@@ -1,82 +1,33 @@
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-
-// Mock data
-const mockProject = {
-  id: "proj-123",
-  code: "PRJ-2024-001",
-  name: "مشروع البناء الرئيسي",
-  project_assignments: [
-    { user_id: "user-1", employees: { first_name: "أحمد", last_name: "محمد" } },
-    { user_id: "user-2", employees: { first_name: "فاطمة", last_name: "علي" } },
-    { user_id: "user-3", employees: { first_name: "خالد", last_name: "حسن" } },
-  ],
-};
+import {
+  MapsDistributionSchema,
+  MapsDistributionValues,
+} from "../../../types/schema/MapsDistribution.schema";
+import { useProjectWithAssignments } from "../../../hooks/useProjects";
+import { formatCurrency } from "../../../utils/helpper";
+import { usePayroll } from "../../../hooks/usePayroll";
+import { SelectField } from "../../ui/inputs/SelectField";
 
 const mockMapTypes = [
-  { id: "type-1", name: "خرائط تنفيذية" },
-  { id: "type-2", name: "خرائط معمارية" },
-  { id: "type-3", name: "خرائط إنشائية" },
-  { id: "type-4", name: "خرائط كهربائية" },
+  { id: "a808f4db-b1ef-4964-b4c9-0f345f647fa3", name: "خرائط تنفيذية" },
+  { id: "171fe56f-9646-4230-9d85-1d76672a6c53", name: "خرائط معمارية" },
+  { id: "85a56167-06d5-41c0-b119-20fc916579b1", name: "خرائط إنشائية" },
+  { id: "4b04c1f5-daa3-4807-ab51-e43a74770620", name: "خرائط كهربائية" },
 ];
 
-const employee = z.object({
-  employee_id: z.string(),
-  percentage: z.number().min(0).max(100),
-  amount: z.number(),
-});
-
-const company = z.object({
-  percentage: z.number().min(0).max(100),
-  amount: z.number(),
-});
-
-const map = z
-  .object({
-    type_id: z.string(),
-    price: z.number().min(0),
-    quantity: z.number().min(0),
-    total: z.number(),
-    employee: z.array(employee),
-    company: company,
-  })
-  .refine(
-    (data) => {
-      const employeeTotal = data.employee.reduce(
-        (sum, emp) => sum + emp.percentage,
-        0
-      );
-      const grandTotal = employeeTotal + data.company.percentage;
-      return grandTotal === 100;
-    },
-    {
-      message: "إجمالي النسب يجب أن يساوي 100% بالضبط",
-      path: ["company", "percentage"],
-    }
-  );
-
-const MapsDistributionSchema = z.object({
-  project_id: z.string(),
-  description: z.string().min(1, "الوصف مطلوب"),
-  map: z.array(map).min(1, "يجب إضافة خريطة واحدة على الأقل"),
-});
-
-type MapsDistributionValues = z.infer<typeof MapsDistributionSchema>;
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("ar-LY", {
-    style: "currency",
-    currency: "LYD",
-    minimumFractionDigits: 2,
-  }).format(amount);
-};
-
-const MapsDistributionForm = () => {
+interface ProjectMapsDistributionFormProps {
+  projectId: string;
+}
+const MapsDistributionForm = ({
+  projectId,
+}: ProjectMapsDistributionFormProps) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-  const project = mockProject;
+
+  const { project } = useProjectWithAssignments(projectId);
+  const { MapsDistribution } = usePayroll();
 
   const {
     register,
@@ -88,8 +39,7 @@ const MapsDistributionForm = () => {
   } = useForm<MapsDistributionValues>({
     resolver: zodResolver(MapsDistributionSchema),
     defaultValues: {
-      project_id: project.id,
-      description: "",
+      project_id: projectId,
       map: [],
     },
   });
@@ -132,19 +82,23 @@ const MapsDistributionForm = () => {
     watchMaps
       ?.map(
         (m) =>
-          `${m.price}-${m.quantity}-${m.employee?.map((e) => e.percentage).join("-")}-${m.company?.percentage}`
+          `${m.price}-${m.quantity}-${m.description}-${m.employee
+            ?.map((e) => e.percentage)
+            .join("-")}-${m.company?.percentage}`
       )
       .join("|"),
     setValue,
   ]);
 
   const addNewMap = () => {
+    const assignments = project?.project_assignments ?? [];
     appendMap({
       type_id: "",
+      description: "",
       price: 0,
       quantity: 0,
       total: 0,
-      employee: project.project_assignments.map((pa) => ({
+      employee: assignments.map((pa) => ({
         employee_id: pa.user_id,
         percentage: 0,
         amount: 0,
@@ -176,6 +130,7 @@ const MapsDistributionForm = () => {
       setLoading(true);
       try {
         console.log("Submitted data:", data);
+        await MapsDistribution(data);
         setSuccess("تم حفظ توزيع الخرائط بنجاح!");
         setTimeout(() => setSuccess(null), 3000);
       } catch (error) {
@@ -188,30 +143,17 @@ const MapsDistributionForm = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen" dir="rtl">
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h1 className="text-3xl font-bold mb-2 text-gray-800">
-          توزيع نسب الخرائط
-        </h1>
-        <div className="text-lg text-gray-600 mb-4">
-          <span className="font-semibold">{project.name}</span>
-          <span className="text-sm mr-2">({project.code})</span>
-        </div>
-
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            الوصف
-          </label>
-          <textarea
-            {...register("description")}
-            rows={3}
-            placeholder="أدخل وصف للتوزيع..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.description && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.description.message}
-            </p>
-          )}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6 justify-between flex flex-col md:flex-row md:items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2 text-gray-800">
+            توزيع نسب الخرائط
+          </h1>
+          <div className="text-lg text-gray-600 mb-4">
+            <span className="font-semibold">{project?.name ?? "..."}</span>
+            {project?.code && (
+              <span className="text-sm mr-2">({project.code})</span>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
@@ -221,6 +163,19 @@ const MapsDistributionForm = () => {
           <div className="text-2xl font-bold text-purple-900">
             {formatCurrency(getGrandTotal())}
           </div>
+        </div>
+
+        <div>
+          <SelectField
+            id="payment_method"
+            label="طريقة الدفع"
+            options={[
+              { value: "cash", label: "نقدًا" },
+              { value: "bank", label: "بنكي" },
+            ]}
+            register={register("payment_method")}
+            error={errors.payment_method}
+          />
         </div>
       </div>
 
@@ -279,6 +234,23 @@ const MapsDistributionForm = () => {
 
                 <div className="flex flex-col">
                   <label className="mb-1 text-sm font-medium text-gray-700">
+                    وصف الخريطة
+                  </label>
+                  <input
+                    type="text"
+                    {...register(`map.${mapIndex}.description`)}
+                    placeholder="أدخل وصفًا للخريطة..."
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {errors.map?.[mapIndex]?.description && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.map[mapIndex]?.description?.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="mb-1 text-sm font-medium text-gray-700">
                     السعر
                   </label>
                   <input
@@ -306,7 +278,7 @@ const MapsDistributionForm = () => {
                   />
                 </div>
 
-                <div className="flex flex-col">
+                <div className="flex flex-col md:col-span-4">
                   <label className="mb-1 text-sm font-medium text-gray-700">
                     الإجمالي
                   </label>
@@ -316,50 +288,6 @@ const MapsDistributionForm = () => {
                 </div>
               </div>
 
-              {/* Percentage Status */}
-              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="text-sm text-amber-800">
-                      النسبة المستخدمة:
-                    </span>
-                    <span
-                      className={`text-xl font-bold mr-2 ${
-                        totalPercentage !== 100
-                          ? "text-red-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {totalPercentage.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-sm text-amber-800">المتبقي:</span>
-                    <span
-                      className={`text-xl font-bold mr-2 ${
-                        remainingPercentage !== 0
-                          ? "text-red-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {remainingPercentage.toFixed(2)}%
-                    </span>
-                  </div>
-                </div>
-                {!isValidPercentage && (
-                  <div className="mt-2 text-sm text-red-600 font-medium">
-                    {totalPercentage > 100
-                      ? "⚠️ تحذير: النسبة الإجمالية تتجاوز 100%"
-                      : "⚠️ تحذير: النسبة الإجمالية أقل من 100%"}
-                  </div>
-                )}
-                {isValidPercentage && (
-                  <div className="mt-2 text-sm text-green-600 font-medium">
-                    ✓ النسبة الإجمالية صحيحة (100%)
-                  </div>
-                )}
-              </div>
-
               {/* Employees Distribution */}
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">
@@ -367,7 +295,12 @@ const MapsDistributionForm = () => {
                 </h3>
                 <div className="space-y-3">
                   {mapItem?.employee?.map((emp, empIndex) => {
-                    const employee = project.project_assignments[empIndex];
+                    const assignments = project?.project_assignments ?? [];
+                    const assignment = assignments[empIndex];
+                    const firstName =
+                      assignment?.employees?.first_name ??
+                      `الموظف ${empIndex + 1}`;
+                    const lastName = assignment?.employees?.last_name ?? "";
                     return (
                       <div
                         key={empIndex}
@@ -375,8 +308,7 @@ const MapsDistributionForm = () => {
                       >
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-medium text-gray-800">
-                            {employee.employees?.first_name}{" "}
-                            {employee.employees?.last_name}
+                            {firstName} {lastName}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -450,6 +382,52 @@ const MapsDistributionForm = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Percentage Status */}
+              {!isValidPercentage && (
+                <div className="my-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-sm text-amber-800">
+                        النسبة المستخدمة:
+                      </span>
+                      <span
+                        className={`text-xl font-bold mr-2 ${
+                          totalPercentage !== 100
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {totalPercentage.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm text-amber-800">المتبقي:</span>
+                      <span
+                        className={`text-xl font-bold mr-2 ${
+                          remainingPercentage !== 0
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {remainingPercentage.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                  {!isValidPercentage && (
+                    <div className="mt-2 text-sm text-red-600 font-medium">
+                      {totalPercentage > 100
+                        ? "⚠️ تحذير: النسبة الإجمالية تتجاوز 100%"
+                        : "⚠️ تحذير: النسبة الإجمالية أقل من 100%"}
+                    </div>
+                  )}
+                  {isValidPercentage && (
+                    <div className="mt-2 text-sm text-green-600 font-medium">
+                      ✓ النسبة الإجمالية صحيحة (100%)
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

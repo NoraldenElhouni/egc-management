@@ -83,12 +83,20 @@ const NewClientForm = () => {
           register={register("password")}
           error={errors.password}
         />
+
         <TextField
           id="nationality"
           label="الجنسية"
           type="text"
           register={register("nationality")}
           error={errors.nationality}
+        />
+        <TextField
+          id="phone"
+          label="رقم الهاتف"
+          type="text"
+          register={register("phone")}
+          error={errors.phone}
         />
         <TextField
           id="company"
@@ -100,22 +108,12 @@ const NewClientForm = () => {
 
         <SelectField
           id="gender"
-          label="الحالة"
+          label="الجنس"
           register={register("gender")}
           error={errors.gender}
           options={[
             { value: "Male", label: "ذكر" },
             { value: "Female", label: "أنثى" },
-          ]}
-        />
-        <SelectField
-          id="status"
-          label="الحالة"
-          register={register("status")}
-          error={errors.status}
-          options={[
-            { value: "Active", label: "نشط" },
-            { value: "Inactive", label: "غير نشط" },
           ]}
         />
 

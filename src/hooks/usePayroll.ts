@@ -3,8 +3,13 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
 import { PayrollWithRelations } from "../types/extended.type";
 import { PercentageDistributionFormValues } from "../types/schema/PercentageDistribution.schema";
-import { Employees } from "../types/global.type";
+import {
+  Employees,
+  ExpensePayments,
+  ProjectExpenses,
+} from "../types/global.type";
 import { FixedPayrollFormValues } from "../types/schema/fixedPayroll.schema";
+import { MapsDistributionValues } from "../types/schema/MapsDistribution.schema";
 
 export function usePayroll() {
   const [payroll, setPayroll] = useState<PayrollWithRelations[]>([]);
@@ -484,6 +489,326 @@ export function usePayroll() {
     }
   };
 
+  const MapsDistribution = async (form: MapsDistributionValues) => {
+    console.log("MapsDistribution form data:", form);
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData || !userData.user) {
+      return { success: false, message: "المستخدم غير مسجل الدخول" };
+    }
+    const user = userData.user;
+
+    // 1 fetch project
+    const { data: projectData, error: projectError } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", form.project_id)
+      .single();
+
+    if (projectError) {
+      console.error("error fetching project", projectError);
+      return { success: false, message: "خطأ في جلب بيانات المشروع" };
+    }
+
+    // 1.2 fetch project balance
+    const { data: projectBalanceData, error: projectBalanceError } =
+      await supabase
+        .from("project_balances")
+        .select("*")
+        .eq("project_id", form.project_id)
+        .eq("currency", "LYD")
+        .single();
+
+    if (projectBalanceError) {
+      console.error("error fetching project balance", projectBalanceError);
+      return { success: false, message: "خطأ في جلب رصيد المشروع" };
+    }
+
+    // 1.3 fetch company accounts
+    const { data: companyData, error: companyError } = await supabase
+      .from("company_account")
+      .select("*")
+      .eq("type", "maps")
+      .single();
+
+    if (companyError || !companyData) {
+      console.error("error fetching company accounts", companyError);
+      return { success: false, message: "خطأ في جلب بيانات حسابات الشركة" };
+    }
+
+    // 2  fetch Employee accounts
+    const employeeIds = [
+      ...new Set(form.map.flatMap((m) => m.employee.map((e) => e.employee_id))),
+    ];
+
+    const { data: employeeAccounts, error: employeeAccountsError } =
+      await supabase.from("employee_account").select("*").in("id", employeeIds);
+
+    if (employeeAccountsError) {
+      console.error("error fetching employee accounts", employeeAccountsError);
+      return { success: false, message: "خطأ في جلب بيانات حسابات الموظفين" };
+    }
+
+    // 3 insert expense for the project
+    const grandTotal = form.map.reduce((sum, map) => sum + map.total, 0);
+
+    const { data: expenseData, error: expenseError } = await supabase
+      .from("project_expenses")
+      .insert({
+        project_id: form.project_id,
+        description: `مصروفات خرائط للمشروع ${projectData?.name || ""}`,
+        created_by: user.id,
+        expense_date: new Date().toISOString(),
+        expense_type: "maps",
+        phase: "initial",
+        total_amount: grandTotal,
+        amount_paid: grandTotal,
+        payment_counter: 1,
+        serial_number: projectData?.expense_counter,
+      } as ProjectExpenses)
+      .select()
+      .single();
+
+    if (expenseError) {
+      console.error("error inserting project expense", expenseError);
+      return { success: false, message: "خطأ في تسجيل مصروف المشروع" };
+    }
+
+    //3.2 PAYMENT RECORD
+    const { error: paymentError } = await supabase
+      .from("expense_payments")
+      .insert({
+        amount: grandTotal,
+        expense_id: expenseData?.id,
+        payment_method: form.payment_method,
+        created_at: new Date().toISOString(),
+        created_by: user.id,
+        serial_number: 1,
+      } as ExpensePayments);
+
+    if (paymentError) {
+      console.error("error inserting expense payment", paymentError);
+      return { success: false, message: "خطأ في تسجيل دفعة المصروف" };
+    }
+
+    // 3.1 update peoject balance
+    const newProjectBalance = (projectBalanceData?.balance || 0) - grandTotal;
+    const { error: updateProjectBalanceError } = await supabase
+      .from("project_balances")
+      .update({
+        balance: newProjectBalance,
+        total_expense: (projectBalanceData?.total_expense || 0) + grandTotal,
+      })
+      .eq("id", projectBalanceData?.id);
+
+    if (updateProjectBalanceError) {
+      console.error(
+        "error updating project balance",
+        updateProjectBalanceError
+      );
+      return { success: false, message: "خطأ في تحديث رصيد المشروع" };
+    }
+
+    // 4 Create a maps distribution record
+    const { data: mapsDistributionData, error: mapsDistributionError } =
+      await supabase
+        .from("maps_distributions")
+        .insert({
+          created_by: user.id,
+          description: `توزيع خرائط للمشروع ${projectData?.name || ""}`,
+          project_id: form.project_id,
+          total_amount: grandTotal,
+        })
+        .select()
+        .single();
+
+    if (mapsDistributionError) {
+      console.error(
+        "error creating distribution record",
+        mapsDistributionError
+      );
+      return { success: false, message: "خطأ في إنشاء سجل التوزيع" };
+    }
+
+    const companyTotal = form.map.reduce(
+      (sum, map) => sum + map.company.amount,
+      0
+    );
+
+    // 5 Process each map
+    for (const mapItem of form.map) {
+      const { data: mapData, error: mapError } = await supabase
+        .from("maps_distribution_items")
+        .insert({
+          distribution_id: mapsDistributionData.id,
+          type_id: mapItem.type_id,
+          price: mapItem.price,
+          quantity: mapItem.quantity,
+          total: mapItem.total,
+        })
+        .select()
+        .single();
+
+      if (mapError) {
+        console.error("error creating map item", mapError);
+        return { success: false, message: "خطأ في إنشاء بند الخريطة" };
+      }
+
+      // 6 Process employees for this map
+      const employeeDistributions = mapItem.employee.map((emp) => ({
+        map_item_id: mapData.id,
+        employee_id: emp.employee_id,
+        percentage: emp.percentage,
+        amount: emp.amount,
+        distribution_type: "employee",
+      }));
+
+      const { error: empDistError } = await supabase
+        .from("maps_distribution_details")
+        .insert(employeeDistributions);
+
+      if (empDistError) {
+        console.error("error creating employee distributions", empDistError);
+        return {
+          success: false,
+          message: "خطأ في إنشاء توزيعات الموظفين",
+        };
+      }
+
+      // 6.1 Process company for this map
+      const { error: companyDistError } = await supabase
+        .from("maps_distribution_details")
+        .insert({
+          map_item_id: mapData.id,
+          employee_id: null,
+          percentage: mapItem.company.percentage,
+          amount: mapItem.company.amount,
+          distribution_type: "company",
+        });
+
+      if (companyDistError) {
+        console.error("error creating company distribution", companyDistError);
+        return { success: false, message: "خطأ في إنشاء توزيع الشركة" };
+      }
+
+      // 7 Update employee accounts
+      for (const emp of mapItem.employee) {
+        const empAccount = employeeAccounts?.find(
+          (acc) => acc.id === emp.employee_id
+        );
+
+        if (empAccount && emp.amount > 0) {
+          if (form.payment_method === "bank") {
+            const { error: updateAccountError } = await supabase
+              .from("employee_account")
+              .update({
+                bank_balance: empAccount.bank_balance + emp.amount,
+              })
+              .eq("id", empAccount.id);
+
+            if (updateAccountError) {
+              console.error(
+                "error updating bank employee account",
+                updateAccountError
+              );
+              return { success: false, message: "خطأ في تحديث حساب الموظف" };
+            }
+
+            // Create payroll entry
+            const { error: payrollError } = await supabase
+              .from("payroll")
+              .insert({
+                employee_id: emp.employee_id,
+                pay_date: new Date().toISOString(),
+                total_salary: emp.amount,
+                payment_method: "bank",
+                status: "pending",
+                basic_salary: 0,
+                percentage_salary: emp.amount,
+                created_by: user.id,
+              });
+
+            if (payrollError) {
+              console.error("error creating bank payroll entry", payrollError);
+              return { success: false, message: "فشل إنشاء قيد الرواتب" };
+            }
+          } else if (form.payment_method === "cash") {
+            const { error: updateAccountError } = await supabase
+              .from("employee_account")
+              .update({
+                cash_balance: empAccount.cash_balance + emp.amount,
+              })
+              .eq("id", empAccount.id);
+
+            if (updateAccountError) {
+              console.error(
+                "error updating cash employee account",
+                updateAccountError
+              );
+              return { success: false, message: "خطأ في تحديث حساب الموظف" };
+            }
+
+            // Create payroll entry
+            const { error: payrollError } = await supabase
+              .from("payroll")
+              .insert({
+                employee_id: emp.employee_id,
+                pay_date: new Date().toISOString(),
+                total_salary: emp.amount,
+                payment_method: "cash",
+                status: "pending",
+                basic_salary: 0,
+                percentage_salary: emp.amount,
+                created_by: user.id,
+              });
+
+            if (payrollError) {
+              console.error("error creating cash payroll entry", payrollError);
+              return { success: false, message: "فشل إنشاء قيد الرواتب" };
+            }
+          }
+        }
+      }
+    }
+
+    // 9 Update company account
+
+    const { error: updateCompanyAccountError } = await supabase
+      .from("company_account")
+      .update({
+        bank_balance:
+          companyData.bank_balance +
+          (form.payment_method === "bank" ? companyTotal : 0),
+        cash_balance:
+          companyData.cash_balance +
+          (form.payment_method === "cash" ? companyTotal : 0),
+      })
+      .eq("id", companyData.id);
+
+    if (updateCompanyAccountError) {
+      console.error(
+        "error updating company account",
+        updateCompanyAccountError
+      );
+      return { success: false, message: "خطأ في تحديث حساب الشركة" };
+    }
+    // 10 update project expense and maps counter
+    const { error: updateProjectError } = await supabase
+      .from("projects")
+      .update({
+        expense_counter: projectData.expense_counter + 1,
+        map_counter: projectData.map_counter + 1,
+      })
+      .eq("id", form.project_id);
+
+    if (updateProjectError) {
+      console.error("error updating project counters", updateProjectError);
+      return { success: false, message: "خطأ في تحديث عدادات المشروع" };
+    }
+
+    return { success: true };
+  };
+
   const fixedPayroll = async (form: FixedPayrollFormValues) => {
     const { data: userData } = await supabase.auth.getUser();
 
@@ -520,6 +845,7 @@ export function usePayroll() {
     error,
     PercentageDistribution,
     fixedPayroll,
+    MapsDistribution,
   };
 }
 
