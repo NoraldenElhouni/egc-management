@@ -1829,6 +1829,63 @@ export type Database = {
           },
         ]
       }
+      project_refund: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          description: string | null
+          id: string
+          income_date: string
+          payment_method: Database["public"]["Enums"]["payment_type"]
+          project_id: string
+          serial_number: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          description?: string | null
+          id?: string
+          income_date?: string
+          payment_method: Database["public"]["Enums"]["payment_type"]
+          project_id: string
+          serial_number: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          description?: string | null
+          id?: string
+          income_date?: string
+          payment_method?: Database["public"]["Enums"]["payment_type"]
+          project_id?: string
+          serial_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_refund_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_refund_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_roles: {
         Row: {
           id: string
@@ -1887,6 +1944,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
+          refund_counter: number
           serial_number: number | null
           status: Database["public"]["Enums"]["project_status_enum"]
         }
@@ -1902,6 +1960,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
+          refund_counter?: number
           serial_number?: number | null
           status?: Database["public"]["Enums"]["project_status_enum"]
         }
@@ -1917,6 +1976,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
+          refund_counter?: number
           serial_number?: number | null
           status?: Database["public"]["Enums"]["project_status_enum"]
         }

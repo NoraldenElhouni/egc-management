@@ -19,6 +19,7 @@ export type Bid = Tables<"bids">;
 export type RequestItem = Tables<"request_items">;
 export type ContractReport = Tables<"contract_reports">;
 export type ProjectIncome = Tables<"project_incomes">;
+export type ProjectRefund = Tables<"project_refund">;
 export type Services = Tables<"services">;
 export type ProjectExpenses = Tables<"project_expenses">;
 export type Account = Tables<"accounts">;

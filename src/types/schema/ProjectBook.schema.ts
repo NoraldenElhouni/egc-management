@@ -78,6 +78,17 @@ export const ExpensePaymentSchema = (
       { message: "الحساب لا يطابق العملة المختارة", path: ["account_id"] }
     );
 
+export const projectRefundSchema = z.object({
+  project_id: z.string().uuid(),
+  description: z.string().nullable(),
+  amount: z.number().positive(),
+  payment_method: z.enum(["cash", "bank", "cheque", "deposit"]),
+  income_date: z.string(),
+  currency: z.enum(["LYD", "USD", "EUR"]),
+});
+
+export type ProjectRefundValues = z.infer<typeof projectRefundSchema>;
+
 export type ExpensePaymentFormValues = z.infer<
   ReturnType<typeof ExpensePaymentSchema>
 >;

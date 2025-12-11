@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import {
   ProjectExpenseFormValues,
   ProjectIncomeFormValues,
+  ProjectRefundValues,
 } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
@@ -24,7 +25,7 @@ export function useBookProject(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "*, project_incomes(*), project_expenses(*), project_balances(*)"
+          "*, project_incomes(*), project_expenses(*), project_balances(*), project_refund(*)"
         )
         .eq("id", projectId)
         .single();
@@ -163,8 +164,6 @@ export function useBookProject(projectId: string) {
             processPayment.error || "RPC payment processing error"
           );
         }
-
-        console.log("RPC result:", processPayment);
 
         // Update local state with the RPC response data if needed
         if (processPayment.data) {
@@ -331,5 +330,168 @@ export function useBookProject(projectId: string) {
     }
   };
 
-  return { project, loading, error, addExpense, addIncome };
+  const addRefund = async (form: ProjectRefundValues) => {
+    // 1 fetch project percentage (cash or bank)
+    const { data: projectPercentage, error: projectPercentageError } =
+      await supabase
+        .from("project_percentage")
+        .select("*")
+        .eq("project_id", form.project_id)
+        .eq("type", form.payment_method)
+        .eq("currency", form.currency)
+        .single();
+
+    if (projectPercentageError) {
+      console.error(
+        "Error fetching project percentage",
+        projectPercentageError
+      );
+      return { success: false, message: "حدث خطأ أثناء جلب نسبة المشروع" };
+    }
+    // 2 fetch project account
+    const { data: projectAccount, error: projectAccountError } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("owner_id", form.project_id)
+      .eq("owner_type", "project")
+      .eq("type", form.payment_method === "cash" ? "cash" : "bank")
+      .eq("currency", form.currency)
+      .single();
+
+    if (projectAccountError || !projectAccount) {
+      console.error("Error fetching project account", projectAccountError);
+      return { success: false, message: "حدث خطأ أثناء جلب حساب المشروع" };
+    }
+    // 3 fetch project balance
+    const { data: projectBalance, error: projectBalanceError } = await supabase
+      .from("project_balances")
+      .select("*")
+      .eq("project_id", form.project_id)
+      .eq("currency", form.currency)
+      .single();
+
+    if (projectBalanceError) {
+      console.error("Error fetching project balance", projectBalanceError);
+      return { success: false, message: "حدث خطأ أثناء جلب رصيد المشروع" };
+    }
+    // 4 fetch project refund counter
+    const { data: companyData, error: companyDataError } = await supabase
+      .from("projects")
+      .select("refund_counter")
+      .eq("id", form.project_id)
+      .single();
+
+    if (companyDataError) {
+      console.error("Error fetching project refund counter", companyDataError);
+      return {
+        success: false,
+        message: "حدث خطأ أثناء جلب عداد استرداد المشروع",
+      };
+    }
+
+    // 5 insert project refund
+    if (!user?.id) {
+      return { success: false, message: "المستخدم غير مصرح له" };
+    }
+
+    // ensure required fields are present for the insert; cast/assign to ProjectRefund
+    const refundPayload = {
+      amount: form.amount as number,
+      project_id: form.project_id,
+      description: form.description ?? null,
+      created_by: user.id,
+      payment_method: form.payment_method,
+      income_date: form.income_date ?? undefined,
+      serial_number: companyData?.refund_counter || 0,
+      currency: form.currency,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: refundError } = await supabase
+      .from("project_refund")
+      .insert(refundPayload)
+      .select()
+      .single();
+
+    if (refundError) {
+      console.error("Error inserting project refund", refundError);
+      return { success: false, message: "حدث خطأ أثناء إضافة استرداد المشروع" };
+    }
+
+    // 6. Update project percentage - Calculate percentage and subtract (can go negative)
+    const percentageAmount =
+      form.amount * ((projectPercentage?.percentage || 0) / 100);
+
+    const { error: projectPercentageUpdateError } = await supabase
+      .from("project_percentage")
+      .update({
+        period_percentage:
+          (projectPercentage?.period_percentage || 0) - percentageAmount,
+        total_percentage:
+          (projectPercentage?.total_percentage || 0) - percentageAmount,
+      })
+      .eq("id", projectPercentage?.id);
+
+    if (projectPercentageUpdateError) {
+      console.error(
+        "Error updating project percentage",
+        projectPercentageUpdateError
+      );
+      return { success: false, message: "حدث خطأ أثناء تحديث نسبة المشروع" };
+    }
+    // 7 update project acccount
+    const { error: projectAccountUpdateError } = await supabase
+      .from("accounts")
+      .update({
+        balance: projectAccount.balance + form.amount,
+      })
+      .eq("id", projectAccount?.id);
+
+    if (projectAccountUpdateError) {
+      console.error(
+        "Error updating project account",
+        projectAccountUpdateError
+      );
+      return { success: false, message: "حدث خطأ أثناء تحديث حساب المشروع" };
+    }
+    // 8 update project balance
+    const { error: projectBalanceUpdateError } = await supabase
+      .from("project_balances")
+      .update({
+        balance: projectBalance.balance + form.amount,
+        total_expense: projectBalance.total_expense - form.amount,
+      })
+      .eq("id", projectBalance?.id);
+
+    if (projectBalanceUpdateError) {
+      console.error(
+        "Error updating project balance",
+        projectBalanceUpdateError
+      );
+      return { success: false, message: "حدث خطأ أثناء تحديث رصيد المشروع" };
+    }
+    // 9 update project refund counter
+    const { error: projectRefundCounterUpdateError } = await supabase
+      .from("projects")
+      .update({
+        refund_counter: (companyData?.refund_counter || 0) + 1,
+      })
+      .eq("id", form.project_id);
+
+    if (projectRefundCounterUpdateError) {
+      console.error(
+        "Error updating project refund counter",
+        projectRefundCounterUpdateError
+      );
+      return {
+        success: false,
+        message: "حدث خطأ أثناء تحديث عداد استرداد المشروع",
+      };
+    }
+
+    return { success: true };
+  };
+
+  return { project, loading, error, addExpense, addIncome, addRefund };
 }
