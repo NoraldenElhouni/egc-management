@@ -58,10 +58,13 @@ const Header = () => {
     contractors: "المقاولون",
     clients: "العملاء",
     expense: "المصروف",
+    expenses: "المصروفات",
     income: "الدخل",
     maps: "الخرائط",
     monthly: "الرواتب الشهرية",
     percentages: "النسب",
+    role: "الدور",
+    roles: "الأدوار",
   };
 
   return (

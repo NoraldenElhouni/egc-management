@@ -54,6 +54,9 @@ import PayrollDetailedPage from "../pages/hr/payroll/PayrollDetailedPage";
 import PayrollFinancePage from "../pages/finance/payroll/PayrollFinancePage";
 import ProjectPercentagesPayrollPage from "../pages/hr/payroll/project/ProjectPercentagesPayrollPage";
 import ProjectMapsPayrollPage from "../pages/hr/payroll/project/ProjectMapsPayrollPage";
+import SettingsRolesPage from "../pages/settings/SettingsRolesPage";
+import SettingsExpensesPage from "../pages/settings/SettingsExpensesPage";
+import SettingsLayout from "./sidebar/SettingsLayout";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -241,7 +244,14 @@ const AppRouter = () => {
 
           {/* Profile & Settings */}
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route element={<SettingsLayout />}>
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/roles" element={<SettingsRolesPage />} />
+            <Route
+              path="/settings/expenses"
+              element={<SettingsExpensesPage />}
+            />
+          </Route>
 
           {/* Website */}
           <Route path="/website" element={<WebsitePage />} />
