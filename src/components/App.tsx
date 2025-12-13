@@ -58,6 +58,7 @@ import SettingsRolesPage from "../pages/settings/roles/SettingsRolesPage";
 import SettingsExpensesPage from "../pages/settings/SettingsExpensesPage";
 import SettingsLayout from "./sidebar/SettingsLayout";
 import NewRolePage from "../pages/settings/roles/NewRolePage";
+import RolesDetailsPage from "../pages/settings/roles/RolesDetailsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -249,7 +250,7 @@ const AppRouter = () => {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/roles" element={<SettingsRolesPage />} />
             <Route path="/settings/roles/new" element={<NewRolePage />} />
-            <Route path="/settings/roles/:id" element={<SettingsRolesPage />} />
+            <Route path="/settings/roles/:id" element={<RolesDetailsPage />} />
             <Route
               path="/settings/expenses"
               element={<SettingsExpensesPage />}
