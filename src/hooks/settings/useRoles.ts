@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Roles } from "../../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabaseClient";
+import { RoleFormValues } from "../../types/schema/Role.schema";
 
 export function useRoles() {
   const [roles, setRoles] = useState<Roles[]>([]);
@@ -27,5 +28,16 @@ export function useRoles() {
     }
     fetchRoles();
   }, []);
-  return { roles, loading, error };
+
+  const addRoles = async (form: RoleFormValues) => {
+    const { error } = await supabase
+      .from("roles")
+      .insert({ name: form.name, code: form.code });
+    if (error) {
+      console.error("error adding role", error);
+      return { success: false, error: "خطأ في اضافة الدور" };
+    }
+    return { success: true };
+  };
+  return { roles, loading, error, addRoles };
 }
