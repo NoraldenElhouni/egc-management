@@ -108,12 +108,34 @@ export async function deleteFileFromSupabase(
   bucket = "uploads"
 ): Promise<void> {
   try {
-    // Extract the path from the public URL
-    const urlParts = url.split(`/storage/v1/object/public/${bucket}/`);
-    if (urlParts.length < 2) {
-      throw new Error("Invalid file URL");
+    // Support either a full public URL, a signed URL, or a direct path
+    let filePath = url;
+
+    // If the URL contains the Supabase public storage marker, extract the path
+    const publicMarker = `/storage/v1/object/public/${bucket}/`;
+    if (url.includes(publicMarker)) {
+      filePath = decodeURIComponent(url.split(publicMarker)[1].split("?")[0]);
+    } else if (url.includes(`${bucket}/`)) {
+      // If the string contains '<bucket>/', assume the path follows it
+      const parts = url.split(`${bucket}/`);
+      filePath = decodeURIComponent(parts[parts.length - 1].split("?")[0]);
+    } else {
+      // Try to parse as URL and find the bucket segment in pathname
+      try {
+        const parsed = new URL(url);
+        const pathParts = parsed.pathname.split("/").filter(Boolean);
+        const bucketIdx = pathParts.indexOf(bucket);
+        if (bucketIdx !== -1 && pathParts.length > bucketIdx + 1) {
+          filePath = decodeURIComponent(
+            pathParts.slice(bucketIdx + 1).join("/")
+          );
+        }
+      } catch (e) {
+        // If it's not a valid URL, assume it's already a file path
+      }
     }
-    const filePath = urlParts[1];
+
+    if (!filePath) throw new Error("Invalid file path");
 
     const { error } = await supabase.storage.from(bucket).remove([filePath]);
 

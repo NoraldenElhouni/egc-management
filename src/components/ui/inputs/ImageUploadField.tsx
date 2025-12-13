@@ -14,6 +14,7 @@ interface ImageUploadFieldProps {
   folder?: string;
   accept?: string;
   maxSizeMB?: number;
+  disabled?: boolean;
   preview?: boolean;
 }
 
@@ -28,6 +29,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   accept = "image/*",
   maxSizeMB = 5,
   preview = true,
+  disabled = false,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -110,7 +112,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
           type="file"
           accept={accept}
           onChange={handleFileSelect}
-          disabled={uploading}
+          disabled={uploading || disabled}
           className="block w-full text-sm text-gray-500
             file:mr-4 file:py-2 file:px-4
             file:rounded file:border-0

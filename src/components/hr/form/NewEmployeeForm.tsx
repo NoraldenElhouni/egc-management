@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "../../ui/Button";
 import { userSchema, UserFormValues } from "../../../types/schema/users.schema";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TextField } from "../../ui/inputs/TextField";
@@ -11,20 +11,25 @@ import { DateField } from "../../ui/inputs/DateField";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { createEmployee } from "../../../services/employees/setEmployeeService";
 import { useUtils } from "../../../hooks/useUtils";
+import { ImageUploadField } from "../../ui/inputs/ImageUploadField";
+import { useNavigate } from "react-router-dom";
 
 const NewEmployeeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { specializations, roles, managers } = useUtils();
+  const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors },
     trigger,
     setFocus,
     reset,
+    setValue,
   } = useForm<UserFormValues>({
     resolver: zodResolver(userSchema) as unknown as Resolver<UserFormValues>,
     defaultValues: {
@@ -47,6 +52,7 @@ const NewEmployeeForm: React.FC = () => {
       }
       setSuccess("تم اضافة الموظف بنجاح");
       reset();
+      navigate("/hr/employees");
     } catch (error) {
       console.error("Unexpected error creating employee:", error);
       alert("حدث خطأ غير متوقع أثناء إنشاء الموظف.");
@@ -65,12 +71,6 @@ const NewEmployeeForm: React.FC = () => {
   const salaryTypeOptions = [
     { value: "fixed", label: "ثابت" },
     { value: "percentage", label: "نسبة مئوية" },
-  ];
-
-  const statusOptions = [
-    { value: "Active", label: "نشط" },
-    { value: "Inactive", label: "غير نشط" },
-    { value: "On Leave", label: "في إجازة" },
   ];
 
   const maritalStatusOptions = [
@@ -108,6 +108,19 @@ const NewEmployeeForm: React.FC = () => {
   const showSpecializations = Boolean(
     selectedRole && /engineer|enger/i.test(selectedRole.name || "")
   );
+
+  // Use useWatch for real-time reactivity on firstName and lastName
+  const firstName = useWatch({ control, name: "firstName" });
+  const lastName = useWatch({ control, name: "lastName" });
+  const personalPhotoUrl = useWatch({ control, name: "personalPhotoUrl" });
+  const resumeUrl = useWatch({ control, name: "resumeUrl" });
+  const idProofUrl = useWatch({ control, name: "idProofUrl" });
+
+  // Compute the full name in real-time
+  const name = `${firstName || ""} ${lastName || ""}`.trim();
+
+  // Check if name is valid for enabling file uploads
+  const isNameValid = Boolean(name && name.length > 0);
 
   const stepFields: string[][] = [
     // Step 0 - Account
@@ -294,14 +307,6 @@ const NewEmployeeForm: React.FC = () => {
             />
 
             <SelectField
-              id="status"
-              label="الحالة"
-              options={statusOptions}
-              register={register("status")}
-              error={errors.status}
-            />
-
-            <SelectField
               id="employeeType"
               label="نوع الموظف"
               options={employeeTypeOptions}
@@ -372,12 +377,15 @@ const NewEmployeeForm: React.FC = () => {
               error={errors.nationality}
             />
 
-            <TextField
+            <ImageUploadField
               id="personalPhotoUrl"
-              label="رابط الصورة الشخصية (اختياري)"
-              type="text"
-              register={register("personalPhotoUrl")}
-              error={errors.personalPhotoUrl}
+              label="صورة شخصية"
+              value={personalPhotoUrl}
+              onChange={(url) => setValue("personalPhotoUrl", url)}
+              bucket="employees"
+              folder={name}
+              maxSizeMB={5}
+              disabled={!isNameValid}
             />
           </>
         )}
@@ -544,20 +552,28 @@ const NewEmployeeForm: React.FC = () => {
               error={errors.gpa}
             />
 
-            <TextField
+            <ImageUploadField
               id="resumeUrl"
-              label="رابط السيرة الذاتية (اختياري)"
-              type="text"
-              register={register("resumeUrl")}
-              error={errors.resumeUrl}
+              label="رفع السيرة الذاتية"
+              value={resumeUrl}
+              onChange={(url) => setValue("resumeUrl", url)}
+              bucket="employees"
+              folder={name}
+              maxSizeMB={10}
+              accept=".pdf,.doc,.docx"
+              disabled={!isNameValid}
             />
 
-            <TextField
+            <ImageUploadField
               id="idProofUrl"
-              label="رابط إثبات الهوية (اختياري)"
-              type="text"
-              register={register("idProofUrl")}
-              error={errors.idProofUrl}
+              label="رفع إثبات الهوية"
+              value={idProofUrl}
+              onChange={(url) => setValue("idProofUrl", url)}
+              bucket="employees"
+              folder={name}
+              maxSizeMB={5}
+              accept=".pdf,.jpg,.jpeg,.png"
+              disabled={!isNameValid}
             />
           </>
         )}
@@ -586,6 +602,12 @@ const NewEmployeeForm: React.FC = () => {
               error={errors.yearsOfExperience}
             />
           </>
+        )}
+
+        {!isNameValid && (currentStep === 1 || currentStep === 4) && (
+          <div className="md:col-span-2 p-3 rounded text-sm bg-yellow-50 text-yellow-800 border border-yellow-200">
+            يرجى إدخال الاسم الأول واسم العائلة لتفعيل رفع الملفات
+          </div>
         )}
 
         <div className="md:col-span-2 flex justify-between gap-2 mt-3">

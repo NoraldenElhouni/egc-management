@@ -10,10 +10,12 @@ import { TextField } from "../../ui/inputs/TextField";
 import { PasswordField } from "../../ui/inputs/PasswordField";
 import { SelectField } from "../../ui/inputs/SelectField";
 import { useClients } from "../../../hooks/useClients";
+import { useNavigate } from "react-router-dom";
 
 const NewClientForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const { addClient, error, loading } = useClients();
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
@@ -34,6 +36,7 @@ const NewClientForm = () => {
       }
       setSuccess("تم اضافة العميل بنجاح");
       reset();
+      navigate("/crm");
     } catch (error) {
       console.error("Unexpected error creating client:", error);
       alert("حدث خطأ غير متوقع أثناء إنشاء العميل.");

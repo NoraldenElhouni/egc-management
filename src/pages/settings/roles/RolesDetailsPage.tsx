@@ -171,10 +171,6 @@ const RolesDetailsPage = () => {
               <div className="grid gap-4">
                 <Field label="الاسم" value={role.name} />
                 <Field label="الكود" value={role.code} />
-                <Field
-                  label="المعرّف"
-                  value={<span className="font-mono">{role.id}</span>}
-                />
               </div>
             ) : (
               <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
@@ -215,21 +211,19 @@ const RolesDetailsPage = () => {
               </span>
             </div>
 
-            {permissions.length ? (
-              <div className="flex flex-wrap gap-2">
-                {permissions.map((p) => (
-                  <span
-                    key={p}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-800"
+            {role.role_permissions.length ? (
+              <ul className="flex flex-wrap gap-2">
+                {role.role_permissions.map((rp) => (
+                  <li
+                    key={rp.permission_id}
+                    className="px-3 py-1 rounded-full bg-slate-100 text-sm text-slate-800"
                   >
-                    {p}
-                  </span>
+                    {rp.permissions?.name ?? "غير معروفة"}
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                لا توجد صلاحيات مرتبطة بهذا الدور.
-              </div>
+              <div className="text-sm text-slate-400">لا توجد صلاحيات</div>
             )}
           </div>
         </div>
