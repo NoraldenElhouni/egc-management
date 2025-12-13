@@ -11,6 +11,9 @@ import {
   ColumnFiltersState,
   RowSelectionState,
 } from "@tanstack/react-table";
+import Button from "../ui/Button";
+import { Link } from "react-router-dom";
+import { ButtonVariant } from "../../types/global.type";
 
 // Generic reusable table component
 // Props:
@@ -38,6 +41,9 @@ type GenericTableProps<TData> = {
   className?: string;
   emptyMessage?: string;
   header?: React.ReactNode;
+  link?: string;
+  linkLabel?: string;
+  linkVariant?: ButtonVariant;
 };
 
 export default function GenericTable<TData extends object>({
@@ -55,6 +61,9 @@ export default function GenericTable<TData extends object>({
   className = "",
   emptyMessage = "لا توجد بيانات لعرضها.",
   header,
+  link,
+  linkLabel,
+  linkVariant,
 }: GenericTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -103,8 +112,17 @@ export default function GenericTable<TData extends object>({
 
   return (
     <div className={`w-full overflow-auto p-2 ${className}`}>
-      {/* Optional Header */}
-      {header && <div className="mb-4">{header}</div>}
+      {/* Optional Header / Link */}
+      {header || link ? (
+        <div className="mb-4 flex justify-between items-center">
+          {header && <div>{header}</div>}
+          {link && (
+            <Button variant={linkVariant || "primary"}>
+              <Link to={link}>{linkLabel}</Link>
+            </Button>
+          )}
+        </div>
+      ) : null}
 
       {/* Global Filter */}
       {showGlobalFilter && enableFiltering && (
