@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Contractors } from "../types/global.type";
 import { supabase } from "../lib/supabaseClient";
+import { PostgrestError } from "@supabase/supabase-js";
 
 export function useContractors() {
   const [contractors, setContractors] = useState<Contractors[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
     async function fetchContractors() {
@@ -31,7 +32,7 @@ export function useContractors() {
 export function useContractor(id: string) {
   const [contractor, setContractor] = useState<Contractors | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
     async function fetchContractor() {
