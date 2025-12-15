@@ -38,6 +38,7 @@ export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
     header: "الرقم",
     size: 32,
   },
+
   {
     accessorKey: "description",
     header: "الوصف",
@@ -50,6 +51,11 @@ export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
       </div>
     ),
     size: 300,
+  },
+  {
+    accessorKey: "client_name",
+    accessorFn: (row) => row.client_name || "N/A",
+    header: "اسم العميل",
   },
   {
     accessorKey: "fund",

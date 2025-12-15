@@ -1,5 +1,5 @@
 import ContractorsList from "../../components/supply-chain/lists/ContractorsList";
-import VindorsList from "../../components/supply-chain/lists/VindorsList";
+import VendorsList from "../../components/supply-chain/lists/VindorsList";
 
 const SupplyChainPage = () => {
   return (
@@ -9,7 +9,7 @@ const SupplyChainPage = () => {
           <ContractorsList />
         </div>
         <div>
-          <VindorsList />
+          <VendorsList />
         </div>
       </main>
     </div>

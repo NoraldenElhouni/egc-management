@@ -226,6 +226,7 @@ export function useBookProject(projectId: string) {
           payment_method:
             incomeData.payment_method === "cash" ? "cash" : "cheque",
           serial_number: projectRow?.income_counter || 0,
+          client_name: incomeData.client_name,
           // related_expense: incomeData.related_expense,
         })
         .select()

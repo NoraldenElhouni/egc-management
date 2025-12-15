@@ -8,6 +8,7 @@ export const ProjectExpenseSchema = z
       message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
     }),
     contractor_id: z.string().optional(),
+    vendor_id: z.string().optional(),
     phase: z.enum(["construction", "finishing"], {
       message: "المرحلة يجب أن تكون إما 'انشاء' أو 'تشطيب'",
     }),
@@ -49,6 +50,7 @@ export const ProjectIncomeSchema = z.object({
     message: "التاريخ غير صالح",
   }),
   currency: z.enum(["LYD", "USD", "EUR"]),
+  client_name: z.string(),
   // related_expense: z.string().nullable(),
 });
 

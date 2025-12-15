@@ -16,6 +16,7 @@ import { DateField } from "../../ui/inputs/DateField";
 
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../types/global.type";
+import { useVendors } from "../../../hooks/useVendors";
 
 interface ProjectExpenseFormProps {
   projectId: string;
@@ -56,6 +57,12 @@ const ProjectExpenseForm = ({
     loading: contractorsLoading,
     error: contractorsError,
   } = useContractors();
+
+  const {
+    vendors,
+    loading: vendorsLoading,
+    error: vendorsError,
+  } = useVendors();
 
   useEffect(() => {
     if (success) {
@@ -149,6 +156,27 @@ const ProjectExpenseForm = ({
               }
             />
           )}
+          {selectedType === "material" && (
+            <SearchableSelectField
+              id="vendor_id"
+              label="المورد"
+              value={watch("vendor_id")}
+              onChange={(value) => setValue("vendor_id", value)}
+              error={errors.vendor_id}
+              loading={vendorsLoading}
+              options={vendors
+                .sort((a, b) =>
+                  a.vendor_name.localeCompare(b.vendor_name, "ar", {
+                    sensitivity: "base",
+                  })
+                )
+                .map((v) => ({
+                  value: v.id,
+                  label: v.vendor_name,
+                }))}
+              placeholder={vendorsError ? "فشل تحميل الموردين" : "اختار المورد"}
+            />
+          )}
           <SelectField
             id="phase"
             label="المرحلة"
@@ -214,7 +242,6 @@ const ProjectExpenseForm = ({
               دفع كامل
             </Button>
           </div> */}
-          {(!selectedType || selectedType === "material") && <div />}
 
           <div className="flex justify-end items-end">
             <Button type="submit" size="sm" disabled={isSubmitting}>

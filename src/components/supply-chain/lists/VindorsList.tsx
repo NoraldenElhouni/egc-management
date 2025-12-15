@@ -1,23 +1,25 @@
-import { useVindors } from "../../../hooks/useVindors";
-import { VindorsColumns } from "../../tables/columns/VindorsColumns";
+import { useVendors } from "../../../hooks/useVendors";
+import { VendorsColumns } from "../../tables/columns/VindorsColumns";
 import GenericTable from "../../tables/table";
+import ErrorPage from "../../ui/errorPage";
+import LoadingPage from "../../ui/LoadingPage";
 
-const VindorsList = () => {
-  const { vindors, loading, error } = useVindors();
+const VendorsList = () => {
+  const { vendors, loading, error } = useVendors();
 
   if (loading) {
-    return <div>جاري التحميل...</div>;
+    return <LoadingPage label="جاري تحميل الموردين..." />;
   }
 
   if (error) {
-    return <div>خطأ في تحميل الموردين: {error}</div>;
+    return <ErrorPage error={error.message} label="خطأ في تحميل الموردين" />;
   }
 
   return (
     <div>
       <GenericTable
-        data={vindors}
-        columns={VindorsColumns}
+        data={vendors}
+        columns={VendorsColumns}
         enableSorting
         enablePagination
         enableFiltering
@@ -31,4 +33,4 @@ const VindorsList = () => {
   );
 };
 
-export default VindorsList;
+export default VendorsList;
