@@ -39,7 +39,7 @@ import { AuthProvider, useAuth } from "../hooks/useAuth";
 import ContractorDetailPage from "../pages/supply-chain/ContractorDetailPage";
 import VindorDetailPage from "../pages/supply-chain/VindorDetailPage";
 import NewContractorPage from "../pages/supply-chain/NewContractorPage";
-import NewVindorPage from "../pages/supply-chain/NewVindorPage";
+import NewVindorPage from "../pages/supply-chain/NewVendorPage";
 import ClientDetailPage from "../pages/crm/ClientDetailPage";
 import NewClientPage from "../pages/crm/NewClientPage";
 import BookkeeperLayout from "./sidebar/BookkeeperLayout";
