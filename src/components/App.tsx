@@ -59,6 +59,8 @@ import SettingsExpensesPage from "../pages/settings/SettingsExpensesPage";
 import SettingsLayout from "./sidebar/SettingsLayout";
 import NewRolePage from "../pages/settings/roles/NewRolePage";
 import RolesDetailsPage from "../pages/settings/roles/RolesDetailsPage";
+import ProjectTeamPage from "../pages/projects/team/ProjectTeamPage";
+import ProjectTeamDetailsPage from "../pages/projects/team/id/ProjectTeamDetailsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -204,6 +206,11 @@ const AppRouter = () => {
           <Route element={<ProjectsLayout />}>
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<NewProjectPage />} />
+            <Route path="/projects/team" element={<ProjectTeamPage />} />
+            <Route
+              path="/projects/team/:projectId"
+              element={<ProjectTeamDetailsPage />}
+            />
             <Route path="/projects/:id" element={<ProjectDetail />} />
           </Route>
 
