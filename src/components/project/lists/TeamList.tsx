@@ -1,29 +1,31 @@
-import { useTeam } from "../../../hooks/team/useTeam";
+import { TeamEmployee } from "../../../types/team.type";
 import { TeamEmployeesColumns } from "../../tables/columns/TeamEmployeesColumns";
 import GenericTable from "../../tables/table";
-import ErrorPage from "../../ui/errorPage";
-import LoadingPage from "../../ui/LoadingPage";
 
 interface TeamListProps {
-  projectId: string;
+  employees: TeamEmployee[] | null;
 }
-const TeamList = ({ projectId }: TeamListProps) => {
-  const { emplyees, loading, error } = useTeam(projectId);
 
-  if (loading) return <LoadingPage label="تحميل الفريق..." />;
-
-  if (error)
-    return <ErrorPage error={error.message} label="خطأ في تحميل الفريق" />;
-
+const TeamList = ({ employees }: TeamListProps) => {
   return (
-    <div>
-      <GenericTable
-        data={emplyees ?? []}
-        columns={TeamEmployeesColumns}
-        enableSorting
-        enableFiltering
-        showGlobalFilter
-      />
+    <div className="bg-white rounded-lg shadow-sm p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        قائمة أعضاء الفريق
+      </h3>
+
+      {employees && employees.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          لا يوجد أعضاء في الفريق بعد. قم بإضافة أعضاء جدد أعلاه.
+        </div>
+      ) : (
+        <GenericTable
+          data={employees ?? []}
+          columns={TeamEmployeesColumns}
+          enableSorting
+          enableFiltering
+          showGlobalFilter
+        />
+      )}
     </div>
   );
 };

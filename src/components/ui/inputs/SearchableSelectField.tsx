@@ -12,6 +12,7 @@ interface SearchableSelectFieldProps {
   loading?: boolean;
   value?: string;
   onChange?: (value: string) => void;
+  disabled?: boolean;
 }
 
 export const SearchableSelectField: React.FC<SearchableSelectFieldProps> = ({
@@ -23,6 +24,7 @@ export const SearchableSelectField: React.FC<SearchableSelectFieldProps> = ({
   loading,
   value,
   onChange,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -100,6 +102,7 @@ export const SearchableSelectField: React.FC<SearchableSelectFieldProps> = ({
                   type="text"
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
+                  disabled={loading || disabled}
                   placeholder="ابحث..."
                   className="w-full pr-10 pl-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 />
