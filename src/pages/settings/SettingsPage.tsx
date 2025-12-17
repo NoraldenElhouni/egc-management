@@ -18,6 +18,12 @@ const SettingsPage = () => {
       path: "/settings/expenses",
       description: "إدارة اسماء المصروفات",
     },
+    {
+      label: "اداره التخصصات",
+      icon: Box,
+      path: "/settings/specializations",
+      description: "إدارة التخصصات",
+    },
   ];
 
   return (

@@ -35,7 +35,7 @@ export async function addVendor(form: VendorFormValues) {
     };
   }
 
-    const { error } = await supabaseAdmin.from("vendors").insert({
+  const { error } = await supabaseAdmin.from("vendors").insert({
     id: userId,
     vendor_name: form.vendor_name,
     contact_name: form.contact_name,
@@ -57,6 +57,40 @@ export async function addVendor(form: VendorFormValues) {
       success: false,
       error,
       message: "فشل في إنشاء البائع",
+    };
+  }
+
+  //user role
+  const { error: userRoleError } = await supabaseAdmin
+    .from("user_roles")
+    .insert({
+      role_id: "7cfabb14-ee17-48bc-b03f-4199ef32d1e0",
+      user_id: userId,
+    });
+
+  if (userRoleError) {
+    console.error("Error inserting user role data:", userRoleError);
+    return {
+      success: false,
+      error: userRoleError,
+      message: "فشل في تعيين دور المستخدم",
+    };
+  }
+
+  // user specializations
+  const { error: userSpecError } = await supabaseAdmin
+    .from("user_specializations")
+    .insert({
+      specialization_id: form.specialization_id,
+      user_id: userId,
+    });
+
+  if (userSpecError) {
+    console.error("Error inserting user specialization data:", userSpecError);
+    return {
+      success: false,
+      error: userSpecError,
+      message: "فشل في تعيين تخصص المستخدم",
     };
   }
 

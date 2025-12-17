@@ -13,7 +13,8 @@ export function useUtils() {
       setLoading(true);
       const { data, error } = await supabase
         .from("specializations")
-        .select("*");
+        .select("*")
+        .order("name", { ascending: true });
       if (error) {
         console.error("error fetching specializations", error);
         setError(error);

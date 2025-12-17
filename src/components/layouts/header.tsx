@@ -65,6 +65,7 @@ const Header = () => {
     percentages: "النسب",
     role: "الدور",
     roles: "الأدوار",
+    specializations: "التخصصات",
   };
 
   return (

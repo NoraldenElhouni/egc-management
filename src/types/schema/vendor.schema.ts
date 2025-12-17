@@ -12,6 +12,7 @@ export const vendorsSchema = z.object({
   address: z.string(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  specialization_id: z.string().min(1),
 });
 
 export type VendorFormValues = z.infer<typeof vendorsSchema>;

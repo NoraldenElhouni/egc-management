@@ -10,11 +10,16 @@ import Button from "../../ui/Button";
 import { TextField } from "../../ui/inputs/TextField";
 import { PasswordField } from "../../ui/inputs/PasswordField";
 import { addVendor } from "../../../services/vendors/setVendors";
+import { useSpecializations } from "../../../hooks/useSpecializations";
+import { SelectField } from "../../ui/inputs/SelectField";
 
 const NewVendorForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const { data: specializations, loading: spLoading } =
+    useSpecializations("Vendor");
 
   const {
     register,
@@ -69,13 +74,13 @@ const NewVendorForm = () => {
       >
         <TextField
           id="vendor_name"
-          label="الاسم الأول"
+          label="اسم المورد"
           register={register("vendor_name")}
           error={errors.vendor_name}
         />
         <TextField
           id="contact_name"
-          label="الاسم الأخير"
+          label="اسم جهة الاتصال"
           register={register("contact_name")}
           error={errors.contact_name}
         />
@@ -92,6 +97,14 @@ const NewVendorForm = () => {
           label="كلمة المرور"
           register={register("password")}
           error={errors.password}
+        />
+
+        <SelectField
+          id="specializationIds"
+          options={specializations.map((s) => ({ value: s.id, label: s.name }))}
+          label="تخصص"
+          register={register("specialization_id")}
+          error={errors.specialization_id}
         />
 
         <TextField
@@ -128,7 +141,7 @@ const NewVendorForm = () => {
         />
 
         <div className="md:col-span-2 flex justify-end gap-2 mt-3">
-          <Button loading={isSubmitting} type="submit">
+          <Button loading={isSubmitting || spLoading} type="submit">
             إضافة مقاول
           </Button>
         </div>

@@ -61,6 +61,8 @@ import NewRolePage from "../pages/settings/roles/NewRolePage";
 import RolesDetailsPage from "../pages/settings/roles/RolesDetailsPage";
 import ProjectTeamPage from "../pages/projects/team/ProjectTeamPage";
 import ProjectTeamDetailsPage from "../pages/projects/team/id/ProjectTeamDetailsPage";
+import SettingsSpecializationsPage from "../pages/settings/specializations/SettingsSpecializationsPage";
+import SpecializationDetailsPage from "../pages/settings/specializations/id/SpecializationDetailsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -261,6 +263,14 @@ const AppRouter = () => {
             <Route
               path="/settings/expenses"
               element={<SettingsExpensesPage />}
+            />
+            <Route
+              path="/settings/specializations"
+              element={<SettingsSpecializationsPage />}
+            />
+            <Route
+              path="/settings/specializations/:id"
+              element={<SpecializationDetailsPage />}
             />
           </Route>
 
