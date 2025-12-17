@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 import { useContractors } from "../../../hooks/useContractors";
 import { NumberField } from "../../ui/inputs/NumberField";
 import Button from "../../ui/Button";
-import { TextField } from "../../ui/inputs/TextField";
 import { SelectField } from "../../ui/inputs/SelectField";
 import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
 import { DateField } from "../../ui/inputs/DateField";
@@ -17,6 +16,7 @@ import { DateField } from "../../ui/inputs/DateField";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../types/global.type";
 import { useVendors } from "../../../hooks/useVendors";
+import { useExpenses } from "../../../hooks/settings/useExpenses";
 
 interface ProjectExpenseFormProps {
   projectId: string;
@@ -32,6 +32,11 @@ const ProjectExpenseForm = ({
 }: ProjectExpenseFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const {
+    expenses,
+    loading: expensesLoading,
+    error: expensesError,
+  } = useExpenses();
 
   const {
     register,
@@ -116,12 +121,30 @@ const ProjectExpenseForm = ({
       )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <TextField
-            id="description"
-            label="الوصف"
-            register={register("description")}
-            error={errors.description}
+          <SearchableSelectField
+            id="expense_id"
+            label="المصروف"
+            value={watch("expense_id")}
+            onChange={(value) => {
+              setValue("expense_id", value);
+              const selected = expenses.find((e) => e.id === value);
+              setValue("description", selected ? selected.name : "");
+            }}
+            loading={expensesLoading}
+            options={expenses
+              .sort((a, b) =>
+                a.name.localeCompare(b.name, "ar", { sensitivity: "base" })
+              )
+              .map((expense) => ({
+                value: expense.id,
+                label: expense.name,
+              }))}
+            placeholder={
+              expensesError ? "فشل تحميل المصروفات" : "اختار المصروف"
+            }
+            error={errors.expense_id}
           />
+
           <SelectField
             id="type"
             label="نوع المصروف"

@@ -1183,6 +1183,27 @@ export type Database = {
           },
         ];
       };
+      expenses: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          usage_count: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          usage_count?: number;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          usage_count?: number;
+        };
+        Relationships: [];
+      };
       leave_types: {
         Row: {
           created_at: string;
@@ -1631,6 +1652,7 @@ export type Database = {
           description: string | null;
           Discounting: number | null;
           expense_date: string;
+          expense_id: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id: string;
           payment_counter: number;
@@ -1650,6 +1672,7 @@ export type Database = {
           description?: string | null;
           Discounting?: number | null;
           expense_date?: string;
+          expense_id?: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id?: string;
           payment_counter?: number;
@@ -1669,6 +1692,7 @@ export type Database = {
           description?: string | null;
           Discounting?: number | null;
           expense_date?: string;
+          expense_id?: string | null;
           expense_type?: Database["public"]["Enums"]["expense_type"];
           id?: string;
           payment_counter?: number;
@@ -1699,6 +1723,13 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_expenses_expense_id_fkey";
+            columns: ["expense_id"];
+            isOneToOne: false;
+            referencedRelation: "expenses";
             referencedColumns: ["id"];
           },
           {

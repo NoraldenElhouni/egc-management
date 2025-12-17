@@ -55,7 +55,7 @@ import PayrollFinancePage from "../pages/finance/payroll/PayrollFinancePage";
 import ProjectPercentagesPayrollPage from "../pages/hr/payroll/project/ProjectPercentagesPayrollPage";
 import ProjectMapsPayrollPage from "../pages/hr/payroll/project/ProjectMapsPayrollPage";
 import SettingsRolesPage from "../pages/settings/roles/SettingsRolesPage";
-import SettingsExpensesPage from "../pages/settings/SettingsExpensesPage";
+import SettingsExpensesPage from "../pages/settings/expenses/SettingsExpensesPage";
 import SettingsLayout from "./sidebar/SettingsLayout";
 import NewRolePage from "../pages/settings/roles/NewRolePage";
 import RolesDetailsPage from "../pages/settings/roles/RolesDetailsPage";

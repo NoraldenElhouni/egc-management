@@ -88,6 +88,7 @@ export function useBookProject(projectId: string) {
           status: initialStatus,
           contractor_id: expenseData.contractor_id || null,
           amount_paid: 0, // Start at 0, RPC will update if there's a payment
+          expense_id: expenseData.expense_id || null,
         } as ProjectExpenses)
         .select()
         .single();

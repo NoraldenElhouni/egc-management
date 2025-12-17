@@ -34,6 +34,7 @@ export type AuditLog = Tables<"audit_log">;
 export type EmployeeLeaves = Tables<"employee_leaves">;
 export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
+export type expenses = Tables<"expenses">;
 
 // Additional types for tables not in your original export
 export type ContractorSpecializations = Tables<"contractor_specializations">;

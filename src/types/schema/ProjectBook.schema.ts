@@ -4,6 +4,8 @@ export const ProjectExpenseSchema = z
   .object({
     project_id: z.string(),
     description: z.string().min(1, "الوصف مطلوب"),
+    expense_id: z.string().optional(),
+
     type: z.enum(["labor", "material"], {
       message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
     }),
