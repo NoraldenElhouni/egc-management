@@ -69,9 +69,11 @@ export function useBookProject(projectId: string) {
 
       // Calculate initial status
       const initialStatus =
-        expenseData.total_amount === expenseData.paid_amount
+        expenseData.paid_amount === expenseData.total_amount
           ? "paid"
-          : "partially_paid";
+          : expenseData.paid_amount > 0
+            ? "partially_paid"
+            : "unpaid";
 
       // Insert the expense
       const { data, error } = await supabase

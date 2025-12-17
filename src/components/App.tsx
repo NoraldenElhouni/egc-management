@@ -63,6 +63,8 @@ import ProjectTeamPage from "../pages/projects/team/ProjectTeamPage";
 import ProjectTeamDetailsPage from "../pages/projects/team/id/ProjectTeamDetailsPage";
 import SettingsSpecializationsPage from "../pages/settings/specializations/SettingsSpecializationsPage";
 import SpecializationDetailsPage from "../pages/settings/specializations/id/SpecializationDetailsPage";
+import InvoicesPage from "../pages/finance/invoices/ProjectsInvoicesPage";
+import ProjectInvoicesDetailsPage from "../pages/finance/invoices/ProjectInvoicesDetailsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -229,6 +231,11 @@ const AppRouter = () => {
             <Route
               path="/finance/treasury/project/:id"
               element={<TreasuryProjectPage />}
+            />
+            <Route path="/finance/invoices/" element={<InvoicesPage />} />
+            <Route
+              path="/finance/invoices/:projectId"
+              element={<ProjectInvoicesDetailsPage />}
             />
             <Route path="/finance/payments" element={<PaymentsPage />} />
             <Route path="/finance/company" element={<CompanyPage />} />{" "}

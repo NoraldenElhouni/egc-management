@@ -42,6 +42,13 @@ const FinancePage = () => {
       role: ["Admin", "Finance", "Bookkeeper"],
     },
     {
+      label: "الفواتير",
+      icon: Building2,
+      path: "/finance/invoices",
+      description: "بيانات الفواتير المالية",
+      role: ["Admin", "Finance", "Bookkeeper"],
+    },
+    {
       label: "الشركة",
       icon: Building2,
       path: "/finance/company",

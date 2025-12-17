@@ -1135,8 +1135,11 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           expense_id: string;
+          expense_no: number | null;
           id: string;
+          invoice_no: number | null;
           payment_method: string | null;
+          payment_no: number | null;
           serial_number: number | null;
         };
         Insert: {
@@ -1145,8 +1148,11 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           expense_id: string;
+          expense_no?: number | null;
           id?: string;
+          invoice_no?: number | null;
           payment_method?: string | null;
+          payment_no?: number | null;
           serial_number?: number | null;
         };
         Update: {
@@ -1155,8 +1161,11 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           expense_id?: string;
+          expense_no?: number | null;
           id?: string;
+          invoice_no?: number | null;
           payment_method?: string | null;
+          payment_no?: number | null;
           serial_number?: number | null;
         };
         Relationships: [
@@ -2133,6 +2142,7 @@ export type Database = {
           expense_counter: number;
           id: string;
           income_counter: number;
+          invoice_counter: number;
           latitude: number | null;
           longitude: number | null;
           map_counter: number;
@@ -2150,6 +2160,7 @@ export type Database = {
           expense_counter?: number;
           id?: string;
           income_counter?: number;
+          invoice_counter?: number;
           latitude?: number | null;
           longitude?: number | null;
           map_counter?: number;
@@ -2167,6 +2178,7 @@ export type Database = {
           expense_counter?: number;
           id?: string;
           income_counter?: number;
+          invoice_counter?: number;
           latitude?: number | null;
           longitude?: number | null;
           map_counter?: number;

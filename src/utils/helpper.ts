@@ -1,4 +1,4 @@
-export function formatCurrency(amount: number, currency = "USD"): string {
+export function formatCurrency(amount: number, currency = "LYD"): string {
   const curr = currency.toUpperCase();
 
   // Choose locale and fraction digits based on currency

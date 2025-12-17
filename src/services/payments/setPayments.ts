@@ -108,6 +108,10 @@ export async function processExpensePayment(
     return { success: false, error: "خطأ: لا توجد نسبة مشروع مفعّلة" };
   }
 
+  const expenseNo = Number(expense.serial_number || 0);
+  const paymentNo = Number(expense.payment_counter || 1);
+  const invoiceNo = Number(project.invoice_counter || 1);
+
   // 5 insert expense payment record
   const { data: payment, error: insertError } = await supabase
     .from("expense_payments")
@@ -117,7 +121,11 @@ export async function processExpensePayment(
       payment_method,
       account_id: account.id,
       created_by,
-      serial_number: expense.serial_number,
+      invoice_no: invoiceNo,
+      payment_no: paymentNo,
+      expense_no: expenseNo,
+      // i want it to be like 5.1 , 5.2 etc
+      serial_number: parseFloat(`${expenseNo}.${paymentNo}`),
     })
     .select()
     .single();
@@ -209,6 +217,22 @@ export async function processExpensePayment(
   if (totalPaymentsError) {
     console.error("Error updating expense after payment:", totalPaymentsError);
     return { success: false, error: "خطأ في تحديث المصروف بعد الدفع" };
+  }
+
+  // invoice_counter
+  const { error: updateProjectError } = await supabase
+    .from("projects")
+    .update({
+      invoice_counter: invoiceNo + 1,
+    })
+    .eq("id", project.id);
+
+  if (updateProjectError) {
+    console.error(
+      "Error updating project expense counter:",
+      updateProjectError
+    );
+    return { success: false, error: "خطأ في تحديث عداد المصروفات" };
   }
 
   return { success: true, data: updatedExpense };
@@ -346,7 +370,12 @@ export async function acceptContractPayment(
       created_by: approved_by,
       payment_method: payment_method,
       account_id: projectaAccount.id,
-      serial_number: expenseData?.payment_counter,
+      payment_no: expenseData?.payment_counter,
+      expense_no: expenseData?.serial_number,
+      // i want it to be like 5.1 , 5.2 etc
+      serial_number: parseFloat(
+        `${expenseData?.serial_number}.${expenseData?.payment_counter || 0}`
+      ),
     } as ExpensePayments)
     .select()
     .single();

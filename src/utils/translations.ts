@@ -27,27 +27,39 @@ export const translateFundSource = (
 };
 
 // For expense type if needed
-export const translateExpenseType = (type: "material" | "labor"): string => {
+export const translateExpenseType = (
+  type: "material" | "labor" | "maps"
+): string => {
   const translations = {
     material: "مواد",
     labor: "عمالة",
+    maps: "خرائط",
   };
 
   return translations[type] || type;
 };
 
 // For phase if needed
-export const translatePhase = (phase: "construction" | "finishing"): string => {
+export const translatePhase = (
+  phase: "construction" | "finishing" | "initial"
+): string => {
   const translations = {
     construction: "بناء",
     finishing: "تشطيب",
+    initial: "مبدئي",
   };
 
   return translations[phase] || phase;
 };
 
 export const translateExpenseStatus = (
-  status: "pending" | "partially_paid" | "paid" | "overdue" | "cancelled"
+  status:
+    | "pending"
+    | "partially_paid"
+    | "paid"
+    | "overdue"
+    | "cancelled"
+    | "unpaid"
 ): string => {
   const translations = {
     pending: "قيد الانتظار",
@@ -55,6 +67,7 @@ export const translateExpenseStatus = (
     paid: "مدفوع",
     overdue: "متأخر",
     cancelled: "ملغي",
+    unpaid: "غير مدفوع",
   };
 
   return translations[status] || status;
