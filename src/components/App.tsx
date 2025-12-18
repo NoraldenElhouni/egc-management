@@ -65,6 +65,7 @@ import SettingsSpecializationsPage from "../pages/settings/specializations/Setti
 import SpecializationDetailsPage from "../pages/settings/specializations/id/SpecializationDetailsPage";
 import InvoicesPage from "../pages/finance/invoices/ProjectsInvoicesPage";
 import ProjectInvoicesDetailsPage from "../pages/finance/invoices/ProjectInvoicesDetailsPage";
+import BulkExpensesPage from "../pages/finance/bookkeeper/Bulk/BulkExpensesPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -238,13 +239,17 @@ const AppRouter = () => {
               element={<ProjectInvoicesDetailsPage />}
             />
             <Route path="/finance/payments" element={<PaymentsPage />} />
-            <Route path="/finance/company" element={<CompanyPage />} />{" "}
+            <Route path="/finance/company" element={<CompanyPage />} />
             <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
           </Route>
           <Route element={<BookkeeperLayout />}>
             <Route
               path="/finance/bookkeeping/project/:id"
               element={<ProjectBookDetailsPage />}
+            />
+            <Route
+              path="/finance/bookkeeping/project/:id/bulk-expenses"
+              element={<BulkExpensesPage />}
             />
             <Route
               path="/finance/bookkeeping/project/:id/expense/:expenseId"

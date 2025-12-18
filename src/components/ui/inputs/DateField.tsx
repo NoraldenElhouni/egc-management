@@ -3,12 +3,13 @@ import { UseFormRegister, FieldError, FieldValues } from "react-hook-form";
 
 interface DateFieldProps {
   id: string;
-  label: string;
+  label?: string;
   placeholder?: string;
   register: ReturnType<UseFormRegister<FieldValues>>;
   error?: FieldError;
   min?: string;
   max?: string;
+  hideLabel?: boolean;
 }
 
 export const DateField: React.FC<DateFieldProps> = ({
@@ -19,12 +20,15 @@ export const DateField: React.FC<DateFieldProps> = ({
   error,
   min,
   max,
+  hideLabel = false,
 }) => {
   return (
     <div className="flex flex-col">
-      <label htmlFor={id} className="mb-1 text-sm text-foreground">
-        {label}
-      </label>
+      {!hideLabel && label && (
+        <label htmlFor={id} className="mb-1 text-sm text-foreground">
+          {label}
+        </label>
+      )}
       <input
         id={id}
         type="date"

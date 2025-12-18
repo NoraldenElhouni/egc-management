@@ -8,6 +8,8 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../../types/global.type";
 import OverviewStatus from "../../../ui/OverviewStatus";
 import { Hash } from "lucide-react";
+import Button from "../../../ui/Button";
+import { Link } from "react-router-dom";
 
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -23,6 +25,9 @@ const BookProjectExpenseTab = ({
 }: BookProjectExpenseTabProps) => {
   return (
     <div className="space-y-4">
+      <Button variant="secondary">
+        <Link to={`./bulk-expenses`}>إضافة مصروفات بالجملة</Link>
+      </Button>
       <div>
         <OverviewStatus
           stats={[

@@ -46,7 +46,7 @@ export function useInvoices(projectId: string) {
             invoice_no,
             payment_no,
             payment_method,
-            project_expenses (
+            project_expenses!inner (
               id,
               project_id,
               description,

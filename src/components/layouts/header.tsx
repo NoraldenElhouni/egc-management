@@ -66,6 +66,7 @@ const Header = () => {
     role: "الدور",
     roles: "الأدوار",
     specializations: "التخصصات",
+    invoices: "الفواتير",
   };
 
   return (

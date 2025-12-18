@@ -5,7 +5,7 @@ type Option = { value: string; label: string };
 
 interface SearchableSelectFieldProps {
   id: string;
-  label: string;
+  label?: string;
   placeholder?: string;
   error?: { message?: string };
   options: Option[];
@@ -13,6 +13,7 @@ interface SearchableSelectFieldProps {
   value?: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
+  hideLabel?: boolean;
 }
 
 export const SearchableSelectField: React.FC<SearchableSelectFieldProps> = ({
@@ -25,6 +26,7 @@ export const SearchableSelectField: React.FC<SearchableSelectFieldProps> = ({
   value,
   onChange,
   disabled = false,
+  hideLabel = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -79,9 +81,11 @@ export const SearchableSelectField: React.FC<SearchableSelectFieldProps> = ({
 
   return (
     <div className="flex flex-col">
-      <label htmlFor={id} className="mb-1 text-sm text-foreground">
-        {label}
-      </label>
+      {!hideLabel && label && (
+        <label htmlFor={id} className="mb-1 text-sm text-foreground">
+          {label}
+        </label>
+      )}
 
       <div className="relative" ref={containerRef}>
         <button

@@ -3,13 +3,15 @@ import { UseFormRegister, FieldError, FieldValues } from "react-hook-form";
 
 interface NumberFieldProps {
   id: string;
-  label: string;
+  label?: string;
   placeholder?: string;
   register: ReturnType<UseFormRegister<FieldValues>>;
   error?: FieldError;
   min?: number;
   max?: number;
   step?: string | number;
+  hideLabel?: boolean;
+  // Add this prop
 }
 
 export const NumberField: React.FC<NumberFieldProps> = ({
@@ -21,12 +23,16 @@ export const NumberField: React.FC<NumberFieldProps> = ({
   min,
   max,
   step,
+  hideLabel = false,
 }) => {
   return (
     <div className="flex flex-col">
-      <label htmlFor={id} className="mb-1 text-sm text-foreground">
-        {label}
-      </label>
+      {!hideLabel && label && (
+        <label htmlFor={id} className="mb-1 text-sm text-foreground">
+          {label}
+        </label>
+      )}
+
       <input
         id={id}
         type="number"

@@ -1,4 +1,4 @@
-import { Box, Users } from "lucide-react";
+import { BookText, Box, Users } from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -20,7 +20,7 @@ const SettingsPage = () => {
     },
     {
       label: "اداره التخصصات",
-      icon: Box,
+      icon: BookText,
       path: "/settings/specializations",
       description: "إدارة التخصصات",
     },

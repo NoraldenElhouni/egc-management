@@ -8,11 +8,12 @@ interface SelectOption {
 
 interface SelectFieldProps {
   id: string;
-  label: string;
+  label?: string;
   options: SelectOption[];
   register: ReturnType<UseFormRegister<FieldValues>>;
   error?: FieldError;
   placeholder?: string;
+  hideLabel?: boolean;
 }
 
 export const SelectField: React.FC<SelectFieldProps> = ({
@@ -22,12 +23,15 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   register,
   error,
   placeholder,
+  hideLabel = false,
 }) => {
   return (
     <div className="flex flex-col">
-      <label htmlFor={id} className="mb-1 text-sm text-foreground">
-        {label}
-      </label>
+      {!hideLabel && label && (
+        <label htmlFor={id} className="mb-1 text-sm text-foreground">
+          {label}
+        </label>
+      )}
       <select
         id={id}
         {...register}

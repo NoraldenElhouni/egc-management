@@ -100,3 +100,9 @@ export type ExpensePaymentFormValues = z.infer<
 export type ProjectIncomeFormValues = z.infer<typeof ProjectIncomeSchema>;
 
 export type ProjectExpenseFormValues = z.infer<typeof ProjectExpenseSchema>;
+
+export const ProjectExpenseBulkSchema = z.object({
+  rows: z.array(ProjectExpenseSchema).min(1, "لازم تضيف مصروف واحد على الأقل"),
+});
+
+export type ProjectExpenseBulkValues = z.infer<typeof ProjectExpenseBulkSchema>;
