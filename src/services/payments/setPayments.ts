@@ -1,5 +1,4 @@
 import { supabase } from "../../lib/supabaseClient";
-import { ExpensePayments } from "../../types/global.type";
 
 interface ProcessExpensePaymentParams {
   expense_id: string;
@@ -254,6 +253,7 @@ export async function acceptContractPayment(
     console.error("Error fetching contract payment:", contractPaymentError);
     return { success: false, error: "خطأ في جلب دفع العقد" };
   }
+
   // 2) fetch contract
   const { data: contract, error: contractError } = await supabase
     .from("contracts")
@@ -278,68 +278,29 @@ export async function acceptContractPayment(
     return { success: false, error: "خطأ في جلب المشروع" };
   }
 
-  // 4) determine account type
-  const accountType = payment_method === "cash" ? "cash" : "bank";
-
-  // 5) find and lock account
-  const { data: projectaAccount, error: projectAccountError } = await supabase
-    .from("accounts")
+  // 4) fetch or verify expense exists
+  const { data: expenseData, error: expenseError } = await supabase
+    .from("project_expenses")
     .select("*")
-    .eq("owner_id", project.id)
-    .eq("type", accountType)
+    .eq("contract_id", contract.id)
     .single();
 
-  if (projectAccountError || !projectaAccount) {
-    console.error("Error fetching account:", projectAccountError);
-    return { success: false, error: "خطأ في جلب الحساب" };
+  if (expenseError && expenseError.code !== "PGRST116") {
+    console.error("Error fetching associated expense:", expenseError);
+    return { success: false, error: "خطأ في جلب المصروف المرتبط" };
   }
 
-  // 6) ensure account has enough balance
-  if ((projectaAccount.balance || 0) < contractPayment.amount) {
-    console.error("Insufficient account balance to accept payment");
-    return { success: false, error: "رصيد الحساب غير كافٍ لقبول الدفع" };
+  if (!expenseData) {
+    console.error("No expense found for contract:", contract.id);
+    return { success: false, error: "خطأ: لا يوجد مصروف مرتبط بهذا العقد" };
   }
 
-  // 7) fetch project_balance
-  const { data: projectBalance, error: projectBalanceError } = await supabase
-    .from("project_balances")
-    .select("*")
-    .eq("project_id", project.id)
-    .eq("currency", currency as string)
-    .single();
-
-  if (projectBalanceError || !projectBalance) {
-    console.error("Error fetching project balance:", projectBalanceError);
-    return { success: false, error: "خطأ في جلب رصيد المشروع" };
-  }
-
-  // 8) fetch active project_percentage (use limit(1).maybeSingle() to avoid PGRST116 when duplicates exist)
-  const { data: projectPercentage, error: projectPercentageError } =
-    await supabase
-      .from("project_percentage")
-      .select("*")
-      .eq("project_id", project.id)
-      .eq("currency", currency)
-      .eq("type", accountType)
-      .limit(1)
-      .maybeSingle();
-
-  if (projectPercentageError) {
-    console.error("Error fetching project percentage:", projectPercentageError);
-    return { success: false, error: "خطأ في جلب نسبة المشروع" };
-  }
-  if (!projectPercentage) {
-    console.error("No project_percentage row found for project/currency/type");
-    return { success: false, error: "خطأ: لا توجد نسبة مشروع مفعّلة" };
-  }
-
-  // 9) approve contract_payment
+  // 5) approve contract_payment
   const { error: approveError } = await supabase
     .from("contract_payments")
     .update({
       status: "approved",
       approved_by,
-      payment_method,
       updated_at: new Date().toISOString(),
     })
     .eq("id", payment_id);
@@ -349,125 +310,30 @@ export async function acceptContractPayment(
     return { success: false, error: "خطأ في الموافقة على دفع العقد" };
   }
 
-  // 10) if expense exists, fetch & update
-  const { data: expenseData, error: expenseError } = await supabase
-    .from("project_expenses")
-    .select("*")
-    .eq("contract_id", payment_id)
-    .single();
+  // 6) Process the expense payment using the centralized function
+  const paymentResult = await processExpensePayment({
+    expense_id: expenseData.id,
+    project_id: project.id,
+    amount: contractPayment.amount,
+    currency: currency,
+    payment_method: payment_method,
+    created_by: approved_by,
+  });
 
-  if ((expenseError && expenseError.code !== "PGRST116") || !expenseData) {
-    console.error("Error fetching associated expense:", expenseError);
-    return { success: false, error: "خطأ في جلب المصروف المرتبط" };
-  }
-
-  // 12) insert expense_payment
-  const { data: payment, error: insertPaymentError } = await supabase
-    .from("expense_payments")
-    .insert({
-      amount: contractPayment.amount,
-      expense_id: expenseData?.id,
-      created_by: approved_by,
-      payment_method: payment_method,
-      account_id: projectaAccount.id,
-      payment_no: expenseData?.payment_counter,
-      expense_no: expenseData?.serial_number,
-      // i want it to be like 5.1 , 5.2 etc
-      serial_number: parseFloat(
-        `${expenseData?.serial_number}.${expenseData?.payment_counter || 0}`
-      ),
-    } as ExpensePayments)
-    .select()
-    .single();
-
-  if (insertPaymentError || !payment) {
-    console.error("Error inserting expense payment:", insertPaymentError);
-    return { success: false, error: "خطأ في تسجيل دفع المصروف" };
-  }
-
-  // increment payment_counter
-  if (expenseData) {
-    const totalPaid = expenseData.amount_paid + contractPayment.amount;
-    const status =
-      totalPaid === expenseData.total_amount ? "paid" : "partially_paid";
-    const { error: updateExpenseError } = await supabase
-      .from("project_expenses")
+  if (!paymentResult.success) {
+    console.error("Error processing expense payment:", paymentResult.error);
+    // Rollback contract payment approval
+    await supabase
+      .from("contract_payments")
       .update({
-        amount_paid: totalPaid,
-        status: status,
-        payment_counter: (expenseData.payment_counter || 0) + 1,
+        status: "pending",
+        approved_by: null,
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", expenseData.id);
-    if (updateExpenseError) {
-      console.error("Error updating associated expense:", updateExpenseError);
-      return { success: false, error: "خطأ في تحديث المصروف المرتبط" };
-    }
+      .eq("id", payment_id);
+
+    return { success: false, error: paymentResult.error };
   }
 
-  // 13) insert into project_percentage_logs
-  const company_fee =
-    contractPayment.amount * (projectPercentage.percentage / 100);
-  const total_cost = contractPayment.amount + company_fee;
-
-  const { error: insertLogError } = await supabase
-    .from("project_percentage_logs")
-    .insert({
-      amount: company_fee,
-      expense_id: expenseData?.id,
-      payment_id: payment.id,
-      percentage: projectPercentage.percentage,
-      project_id: project.id,
-      created_at: new Date().toISOString(),
-    });
-
-  if (insertLogError) {
-    console.error("Error inserting project percentage log:", insertLogError);
-    return { success: false, error: "خطأ في تسجيل سجل نسبة المشروع" };
-  }
-
-  // 14) update account balance
-  const { error: updateAccountError } = await supabase
-    .from("accounts")
-    .update({
-      balance: (projectaAccount.balance || 0) - total_cost,
-    })
-    .eq("id", projectaAccount.id);
-
-  if (updateAccountError) {
-    console.error("Error updating account balance:", updateAccountError);
-    return { success: false, error: "خطأ في تحديث رصيد الحساب" };
-  }
-  // 15) update project_balance
-  const { error: updateProjectBalanceError } = await supabase
-    .from("project_balances")
-    .update({
-      balance: (projectBalance.balance || 0) - total_cost,
-      held: (projectBalance.held || 0) - contractPayment.amount,
-    })
-    .eq("id", projectBalance.id);
-
-  if (updateProjectBalanceError) {
-    console.error("Error updating project balance:", updateProjectBalanceError);
-    return { success: false, error: "خطأ في تحديث رصيد المشروع" };
-  }
-
-  // 16) update project_percentage totals
-  const { error: updateProjectPercentageError } = await supabase
-    .from("project_percentage")
-    .update({
-      period_percentage:
-        (projectPercentage.period_percentage || 0) + company_fee,
-      total_percentage: (projectPercentage.total_percentage || 0) + company_fee,
-    })
-    .eq("id", projectPercentage.id);
-
-  if (updateProjectPercentageError) {
-    console.error(
-      "Error updating project percentage:",
-      updateProjectPercentageError
-    );
-    return { success: false, error: "خطأ في تحديث نسبة المشروع" };
-  }
-
-  return { success: true };
+  return { success: true, data: paymentResult.data };
 }

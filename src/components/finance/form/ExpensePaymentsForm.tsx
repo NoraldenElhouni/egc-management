@@ -70,6 +70,10 @@ const ExpensePaymentsForm = ({
       }
       setSuccess("تمت إضافة الدفعة بنجاح");
       reset();
+      // refresh the page after a short delay to allow user to see success message
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
     } catch (error) {
       setSubmitError("حدث خطأ غير متوقع أثناء إضافة المصروف");
     }
