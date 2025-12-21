@@ -3,15 +3,21 @@ import { useExpensePayments } from "../../../hooks/finance/usePayments";
 import ExpensePaymentList from "../../../components/finance/lists/ExpensePaymentList";
 import ExpensePaymentSummary from "../../../components/finance/cards/ExpensePaymentSummary";
 import ExpensePaymentsForm from "../../../components/finance/form/ExpensePaymentsForm";
+import GenericTable from "../../../components/tables/table";
+import { ContractReportColumns } from "../../../components/tables/columns/ContractReportColumns";
+import { useContractReport } from "../../../hooks/finance/useContractReport";
 
 const ExpensePaymentsPage = () => {
   const { expenseId } = useParams<{ expenseId: string }>();
   const { error, loading, payment, expense, accounts } = useExpensePayments(
     expenseId ?? ""
   );
+  const { report } = useContractReport(expenseId ?? "");
 
   const totalPayments = payment?.reduce((s, p) => s + (p.amount || 0), 0) || 0;
-  const remaining = expense ? expense.total_amount - expense.amount_paid : 0;
+  const remaining = expense
+    ? expense.total_amount - expense.amount_paid - (expense.Discounting ?? 0)
+    : 0;
 
   if (loading) {
     return (
@@ -86,6 +92,20 @@ const ExpensePaymentsPage = () => {
 
       {/* Payments Table */}
       <ExpensePaymentList payment={payment} totalPayments={totalPayments} />
+      {expense.contract_id && (
+        <div>
+          <h2 className="text-xl font-bold mb-4">تقرير العقد المرتبط</h2>
+          <GenericTable
+            data={report ?? []}
+            columns={ContractReportColumns}
+            enableSorting
+            enablePagination
+            enableFiltering
+            enableRowSelection
+            showGlobalFilter
+          />
+        </div>
+      )}
     </div>
   );
 };
