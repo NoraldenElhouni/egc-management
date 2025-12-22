@@ -66,6 +66,8 @@ import SpecializationDetailsPage from "../pages/settings/specializations/id/Spec
 import InvoicesPage from "../pages/finance/invoices/ProjectsInvoicesPage";
 import ProjectInvoicesDetailsPage from "../pages/finance/invoices/ProjectInvoicesDetailsPage";
 import BulkExpensesPage from "../pages/finance/bookkeeper/Bulk/BulkExpensesPage";
+import RequirePasswordChange from "./auth/RequirePasswordChange";
+import ChangePasswordPage from "./auth/ChangePasswordPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -138,156 +140,175 @@ const AppRouter = () => {
 
       {/* Protected routes with Layout wrapper */}
       {session && (
-        <Route element={<MainMenuLayout />}>
-          <Route path="/" element={<MainMenu />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+        <Route element={<RequirePasswordChange />}>
+          <Route element={<MainMenuLayout />}>
+            {/* add this route somewhere inside protected */}
+            <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/" element={<MainMenu />} />
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* HR */}
-          <Route element={<HRLayout />}>
-            <Route path="/hr" element={<HrPage />} />
-            <Route path="/hr/employees/new" element={<NewEmployeePage />} />
-            <Route
-              path="/hr/payroll/monthly"
-              element={<MonthlyPayrollPage />}
-            />
-            <Route
-              path="/hr/payroll/percentages"
-              element={<PercentagesPayrollPage />}
-            />
-            <Route
-              path="/hr/payroll/percentages/:projectId"
-              element={<ProjectPercentagesPayrollPage />}
-            />
-            <Route path="/hr/payroll/maps" element={<MapsPayrollPage />} />
-            <Route
-              path="/hr/payroll/maps/:projectId"
-              element={<ProjectMapsPayrollPage />}
-            />
-            <Route path="/hr/payroll" element={<PayrollPage />} />
-            <Route path="/hr/payroll/:id" element={<PayrollDetailedPage />} />
-            <Route path="/hr/loans-advances" element={<LoansAdvancesPage />} />
-            <Route path="/hr/attendance" element={<AttendancePage />} />
-            <Route path="/hr/announcements" element={<AnnouncementsPage />} />
-            <Route path="/hr/rest-password" element={<RestPasswordPage />} />
-            <Route path="/hr/employees" element={<EmployeesPage />} />
-            <Route path="/hr/employees/:id" element={<EmployeeDetailsPage />} />
-            <Route path="/hr/employees/:id/edit" element={<EmployeesPage />} />
-          </Route>
+            {/* HR */}
+            <Route element={<HRLayout />}>
+              <Route path="/hr" element={<HrPage />} />
+              <Route path="/hr/employees/new" element={<NewEmployeePage />} />
+              <Route
+                path="/hr/payroll/monthly"
+                element={<MonthlyPayrollPage />}
+              />
+              <Route
+                path="/hr/payroll/percentages"
+                element={<PercentagesPayrollPage />}
+              />
+              <Route
+                path="/hr/payroll/percentages/:projectId"
+                element={<ProjectPercentagesPayrollPage />}
+              />
+              <Route path="/hr/payroll/maps" element={<MapsPayrollPage />} />
+              <Route
+                path="/hr/payroll/maps/:projectId"
+                element={<ProjectMapsPayrollPage />}
+              />
+              <Route path="/hr/payroll" element={<PayrollPage />} />
+              <Route path="/hr/payroll/:id" element={<PayrollDetailedPage />} />
+              <Route
+                path="/hr/loans-advances"
+                element={<LoansAdvancesPage />}
+              />
+              <Route path="/hr/attendance" element={<AttendancePage />} />
+              <Route path="/hr/announcements" element={<AnnouncementsPage />} />
+              <Route path="/hr/rest-password" element={<RestPasswordPage />} />
+              <Route path="/hr/employees" element={<EmployeesPage />} />
+              <Route
+                path="/hr/employees/:id"
+                element={<EmployeeDetailsPage />}
+              />
+              <Route
+                path="/hr/employees/:id/edit"
+                element={<EmployeesPage />}
+              />
+            </Route>
 
-          {/* CRM */}
-          <Route element={<CRMLayout />}>
-            <Route path="/crm" element={<CrmPage />} />
-            <Route path="/crm/clients/new" element={<NewClientPage />} />
-            <Route path="/crm/clients/:id" element={<ClientDetailPage />} />
-          </Route>
+            {/* CRM */}
+            <Route element={<CRMLayout />}>
+              <Route path="/crm" element={<CrmPage />} />
+              <Route path="/crm/clients/new" element={<NewClientPage />} />
+              <Route path="/crm/clients/:id" element={<ClientDetailPage />} />
+            </Route>
 
-          {/* Supply Chain */}
-          <Route element={<SupplyChainLayout />}>
-            <Route path="/supply-chain" element={<SupplyChainPage />} />
-            <Route
-              path="/supply-chain/contractors"
-              element={<ContractorPage />}
-            />
-            <Route
-              path="/supply-chain/contractors/new"
-              element={<NewContractorPage />}
-            />
-            <Route
-              path="/supply-chain/contractors/:id"
-              element={<ContractorDetailPage />}
-            />
-            <Route path="/supply-chain/vendors" element={<VendorsPage />} />
-            <Route
-              path="/supply-chain/vendors/new"
-              element={<NewVindorPage />}
-            />
-            <Route
-              path="/supply-chain/vendors/:id"
-              element={<VindorDetailPage />}
-            />
-          </Route>
+            {/* Supply Chain */}
+            <Route element={<SupplyChainLayout />}>
+              <Route path="/supply-chain" element={<SupplyChainPage />} />
+              <Route
+                path="/supply-chain/contractors"
+                element={<ContractorPage />}
+              />
+              <Route
+                path="/supply-chain/contractors/new"
+                element={<NewContractorPage />}
+              />
+              <Route
+                path="/supply-chain/contractors/:id"
+                element={<ContractorDetailPage />}
+              />
+              <Route path="/supply-chain/vendors" element={<VendorsPage />} />
+              <Route
+                path="/supply-chain/vendors/new"
+                element={<NewVindorPage />}
+              />
+              <Route
+                path="/supply-chain/vendors/:id"
+                element={<VindorDetailPage />}
+              />
+            </Route>
 
-          {/* Projects */}
-          <Route element={<ProjectsLayout />}>
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/new" element={<NewProjectPage />} />
-            <Route path="/projects/team" element={<ProjectTeamPage />} />
-            <Route
-              path="/projects/team/:projectId"
-              element={<ProjectTeamDetailsPage />}
-            />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-          </Route>
+            {/* Projects */}
+            <Route element={<ProjectsLayout />}>
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/new" element={<NewProjectPage />} />
+              <Route path="/projects/team" element={<ProjectTeamPage />} />
+              <Route
+                path="/projects/team/:projectId"
+                element={<ProjectTeamDetailsPage />}
+              />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
+            </Route>
 
-          {/* Finance */}
-          <Route element={<FinanceLayout />}>
-            <Route path="/finance" element={<FinancePage />} />
-            <Route path="/finance/payroll" element={<PayrollFinancePage />} />
-            <Route path="/finance/accounting" element={<AccountingPage />} />
-            <Route
-              path="/finance/accounting/project/:id"
-              element={<CompanyPage />}
-            />
-            <Route path="/finance/treasury" element={<TreasuryPage />} />
-            <Route
-              path="/finance/treasury/project/:id"
-              element={<TreasuryProjectPage />}
-            />
-            <Route path="/finance/invoices/" element={<InvoicesPage />} />
-            <Route
-              path="/finance/invoices/:projectId"
-              element={<ProjectInvoicesDetailsPage />}
-            />
-            <Route path="/finance/payments" element={<PaymentsPage />} />
-            <Route path="/finance/company" element={<CompanyPage />} />
-            <Route path="/finance/bookkeeping" element={<BookkeepingPage />} />
-          </Route>
-          <Route element={<BookkeeperLayout />}>
-            <Route
-              path="/finance/bookkeeping/project/:id"
-              element={<ProjectBookDetailsPage />}
-            />
-            <Route
-              path="/finance/bookkeeping/project/:id/bulk-expenses"
-              element={<BulkExpensesPage />}
-            />
-            <Route
-              path="/finance/bookkeeping/project/:id/expense/:expenseId"
-              element={<ExpensePaymentsPage />}
-            />
-            <Route
-              path="/finance/bookkeeping/project/:id/expense/:expenseId/new"
-              element={<ExpensePaymentsPage />}
-            />
-            <Route
-              path="finance/bookkeeping/projects"
-              element={<BookkeepingPage />}
-            />
-          </Route>
+            {/* Finance */}
+            <Route element={<FinanceLayout />}>
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/finance/payroll" element={<PayrollFinancePage />} />
+              <Route path="/finance/accounting" element={<AccountingPage />} />
+              <Route
+                path="/finance/accounting/project/:id"
+                element={<CompanyPage />}
+              />
+              <Route path="/finance/treasury" element={<TreasuryPage />} />
+              <Route
+                path="/finance/treasury/project/:id"
+                element={<TreasuryProjectPage />}
+              />
+              <Route path="/finance/invoices/" element={<InvoicesPage />} />
+              <Route
+                path="/finance/invoices/:projectId"
+                element={<ProjectInvoicesDetailsPage />}
+              />
+              <Route path="/finance/payments" element={<PaymentsPage />} />
+              <Route path="/finance/company" element={<CompanyPage />} />
+              <Route
+                path="/finance/bookkeeping"
+                element={<BookkeepingPage />}
+              />
+            </Route>
+            <Route element={<BookkeeperLayout />}>
+              <Route
+                path="/finance/bookkeeping/project/:id"
+                element={<ProjectBookDetailsPage />}
+              />
+              <Route
+                path="/finance/bookkeeping/project/:id/bulk-expenses"
+                element={<BulkExpensesPage />}
+              />
+              <Route
+                path="/finance/bookkeeping/project/:id/expense/:expenseId"
+                element={<ExpensePaymentsPage />}
+              />
+              <Route
+                path="/finance/bookkeeping/project/:id/expense/:expenseId/new"
+                element={<ExpensePaymentsPage />}
+              />
+              <Route
+                path="finance/bookkeeping/projects"
+                element={<BookkeepingPage />}
+              />
+            </Route>
 
-          {/* Profile & Settings */}
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route element={<SettingsLayout />}>
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/roles" element={<SettingsRolesPage />} />
-            <Route path="/settings/roles/new" element={<NewRolePage />} />
-            <Route path="/settings/roles/:id" element={<RolesDetailsPage />} />
-            <Route
-              path="/settings/expenses"
-              element={<SettingsExpensesPage />}
-            />
-            <Route
-              path="/settings/specializations"
-              element={<SettingsSpecializationsPage />}
-            />
-            <Route
-              path="/settings/specializations/:id"
-              element={<SpecializationDetailsPage />}
-            />
-          </Route>
+            {/* Profile & Settings */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route element={<SettingsLayout />}>
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/roles" element={<SettingsRolesPage />} />
+              <Route path="/settings/roles/new" element={<NewRolePage />} />
+              <Route
+                path="/settings/roles/:id"
+                element={<RolesDetailsPage />}
+              />
+              <Route
+                path="/settings/expenses"
+                element={<SettingsExpensesPage />}
+              />
+              <Route
+                path="/settings/specializations"
+                element={<SettingsSpecializationsPage />}
+              />
+              <Route
+                path="/settings/specializations/:id"
+                element={<SpecializationDetailsPage />}
+              />
+            </Route>
 
-          {/* Website */}
-          <Route path="/website" element={<WebsitePage />} />
+            {/* Website */}
+            <Route path="/website" element={<WebsitePage />} />
+          </Route>
         </Route>
       )}
 

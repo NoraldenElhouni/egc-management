@@ -21,7 +21,7 @@ export const authService = {
     // 2. Fetch user profile with role from your profiles table
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("first_name, last_name")
+      .select("first_name, last_name, first_login")
       .eq("id", data.user.id)
       .single();
 
@@ -61,6 +61,7 @@ export const authService = {
         "User",
       role: userRole?.name || "user",
       email: data.user.email,
+      first_login: profile?.first_login || false,
     };
 
     // 4. Save to localForage for fast access next time
@@ -100,7 +101,7 @@ export const authService = {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("first_name, last_name, role_id")
+      .select("first_name, last_name, role_id, first_login")
       .eq("id", user.id)
       .single();
 
@@ -126,6 +127,7 @@ export const authService = {
         "User",
       role: userRole?.name || "user",
       email: user.email,
+      first_login: profile?.first_login || false,
     };
 
     await saveUserData(userData);

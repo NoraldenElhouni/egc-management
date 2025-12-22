@@ -11,6 +11,7 @@ export interface UserData {
   role: string;
   email?: string;
   lastSync?: number;
+  first_login: boolean;
 }
 
 export const saveUserData = async (userData: UserData): Promise<void> => {

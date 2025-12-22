@@ -515,6 +515,7 @@ export type Database = {
           description: string | null;
           expense_id: string | null;
           id: string;
+          project_id: string;
           status: string;
           updated_at: string | null;
         };
@@ -528,6 +529,7 @@ export type Database = {
           description?: string | null;
           expense_id?: string | null;
           id?: string;
+          project_id: string;
           status?: string;
           updated_at?: string | null;
         };
@@ -541,6 +543,7 @@ export type Database = {
           description?: string | null;
           expense_id?: string | null;
           id?: string;
+          project_id?: string;
           status?: string;
           updated_at?: string | null;
         };
@@ -578,6 +581,13 @@ export type Database = {
             columns: ["expense_id"];
             isOneToOne: false;
             referencedRelation: "project_expenses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contract_payments_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
             referencedColumns: ["id"];
           },
         ];
@@ -1484,6 +1494,7 @@ export type Database = {
       };
       payroll: {
         Row: {
+          approved_at: string | null;
           approved_by: string | null;
           basic_salary: number | null;
           created_at: string;
@@ -1498,6 +1509,7 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
+          approved_at?: string | null;
           approved_by?: string | null;
           basic_salary?: number | null;
           created_at?: string;
@@ -1512,6 +1524,7 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
+          approved_at?: string | null;
           approved_by?: string | null;
           basic_salary?: number | null;
           created_at?: string;
@@ -2573,9 +2586,11 @@ export type Database = {
       };
       users: {
         Row: {
+          change_password_at: string | null;
           created_at: string;
           dob: string | null;
           email: string;
+          first_login: boolean;
           first_name: string;
           id: string;
           last_name: string | null;
@@ -2584,9 +2599,11 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
+          change_password_at?: string | null;
           created_at?: string;
           dob?: string | null;
           email: string;
+          first_login?: boolean;
           first_name: string;
           id?: string;
           last_name?: string | null;
@@ -2595,9 +2612,11 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
+          change_password_at?: string | null;
           created_at?: string;
           dob?: string | null;
           email?: string;
+          first_login?: boolean;
           first_name?: string;
           id?: string;
           last_name?: string | null;
