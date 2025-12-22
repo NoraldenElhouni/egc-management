@@ -1,7 +1,9 @@
 // types/database.ts
-import { Tables } from "../lib/supabase";
+import { Database, Tables } from "../lib/supabase";
 
 export type Currency = "LYD" | "USD" | "EUR";
+
+export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 
 // Core entity types
 export type Clients = Tables<"clients">;
