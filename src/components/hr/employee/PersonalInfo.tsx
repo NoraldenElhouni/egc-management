@@ -1,30 +1,66 @@
+import { supabase } from "../../../lib/supabaseClient";
 import { FullEmployee } from "../../../types/extended.type";
-import AddressCard from "./cards/AddressCard";
-import BasicInfoCard from "./cards/BasicInfoCard";
-import EducationCard from "./cards/EducationCard";
-import EmergencyContactCard from "./cards/EmergencyContactCard";
+import AddressCard, { AddressValues } from "./cards/AddressCard";
+import BasicInfoCard, { BasicInfoValues } from "./cards/BasicInfoCard";
+import EducationCard, { EducationValues } from "./cards/EducationCard";
+import EmergencyContactCard, {
+  EmergencyContactValues,
+} from "./cards/EmergencyContactCard";
 
 interface PersonalInfoProps {
   employee: FullEmployee;
+  onUpdated: () => void | Promise<void>;
 }
 
-const PersonalInfo = ({ employee }: PersonalInfoProps) => {
-  const handleSaveBasic = (data: FullEmployee) => {
-    console.log("Save basic:", data);
-    // TODO: call API / persist changes
+const PersonalInfo = ({ employee, onUpdated }: PersonalInfoProps) => {
+  const handleSaveBasic = async (data: BasicInfoValues) => {
+    const { error } = await supabase
+      .from("employees")
+      .update(data)
+      .eq("id", employee.id);
+
+    if (error) throw error;
+
+    new Notification("Employee Updated", {
+      body: "Basic information saved successfully",
+    });
+    await onUpdated();
   };
 
-  const handleSaveAddress = (data: FullEmployee) => {
-    console.log("Save address:", data);
+  const handleSaveAddress = async (data: AddressValues) => {
+    const { error } = await supabase
+      .from("employees")
+      .update(data)
+      .eq("id", employee.id);
+
+    if (error) throw error;
+
+    await onUpdated();
+  };
+  const handleSaveEducation = async (data: EducationValues) => {
+    // IMPORTANT: This is usually NOT a single update call,
+    // because certifications are in a separate table.
+    // You'll likely do: delete+insert OR upsert.
+
+    // Example upsert (depends on your table structure):
+    // await supabase.from("employee_certifications").delete().eq("employee_id", employee.id);
+    // await supabase.from("employee_certifications").insert(
+    //   data.employee_certifications.map(c => ({ employee_id: employee.id, certification: c.certification }))
+    // );
+
+    await onUpdated();
+  };
+  const handleSaveEmergency = async (data: EmergencyContactValues) => {
+    const { error } = await supabase
+      .from("employees")
+      .update(data)
+      .eq("id", employee.id);
+
+    if (error) throw error;
+
+    await onUpdated();
   };
 
-  const handleSaveEducation = (data: FullEmployee) => {
-    console.log("Save education:", data);
-  };
-
-  const handleSaveEmergency = (data: FullEmployee) => {
-    console.log("Save emergency:", data);
-  };
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="p-6">

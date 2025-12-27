@@ -1,16 +1,17 @@
 import { FullEmployee } from "../../../types/extended.type";
-import EmployeeHeaderCard from "./EmployeeHeaderCard";
+import EmployeeHeaderCard from "./cards/EmployeeHeaderCard";
 import ProjectsCard from "./ProjectsCard";
 import QuickStats from "./QuickStats";
 
 interface EmployeeDetailsProps {
   employee: FullEmployee;
+  onUpdated: () => void | Promise<void>;
 }
 
-const EmployeeDetails = ({ employee }: EmployeeDetailsProps) => {
+const EmployeeDetails = ({ employee, onUpdated }: EmployeeDetailsProps) => {
   const handleSave = (data: FullEmployee) => {
     console.log("Saved employee details:", data);
-    // TODO: persist changes via API / supabase
+    onUpdated?.(); // ✅ works for sync or async
   };
 
   return (

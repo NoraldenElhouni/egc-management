@@ -10,7 +10,7 @@ export default function EmployeeDetailsPage() {
   const [activeTab, setActiveTab] = useState("personal-info");
   const { id } = useParams<{ id: string }>();
   const employeeId = id || "";
-  const { employee, loading, error } = useEmployee(employeeId);
+  const { employee, loading, error, refetch } = useEmployee(employeeId);
 
   if (loading) return <div>جاري التحميل...</div>;
   if (error || !employee) return <div>خطأ في تحميل بيانات الموظف.</div>;
@@ -19,12 +19,12 @@ export default function EmployeeDetailsPage() {
     {
       id: "personal-info",
       label: "المعلومات الشخصية",
-      content: <PersonalInfo employee={employee} />,
+      content: <PersonalInfo employee={employee} onUpdated={refetch} />,
     },
     {
       id: "employee-details",
       label: "تفاصيل الموظف",
-      content: <EmployeeDetails employee={employee} />,
+      content: <EmployeeDetails employee={employee} onUpdated={refetch} />,
     },
     {
       id: "salary-details",

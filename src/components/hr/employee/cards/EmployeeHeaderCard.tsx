@@ -1,7 +1,8 @@
 import { Edit } from "lucide-react";
-import { FullEmployee } from "../../../types/extended.type";
-import { formatDate } from "../../../utils/helpper";
+
 import { useEffect, useState } from "react";
+import { FullEmployee } from "../../../../types/extended.type";
+import { formatDate } from "../../../../utils/helpper";
 
 interface EmployeeHeaderCardProps {
   employee: FullEmployee;
