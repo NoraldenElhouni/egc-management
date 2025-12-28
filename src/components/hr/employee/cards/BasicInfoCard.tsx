@@ -1,6 +1,7 @@
-import { ArrowRight, Edit, Phone, User } from "lucide-react";
+import { ArrowRight, Edit, Phone, User, Camera } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { FullEmployee } from "../../../../types/extended.type";
+import { ImageUploadField } from "../../../ui/inputs/ImageUploadField";
 
 export type BasicInfoValues = Pick<
   FullEmployee,
@@ -14,6 +15,7 @@ export type BasicInfoValues = Pick<
   | "blood_type"
   | "marital_status"
   | "nationality"
+  | "personal_photo_url"
 >;
 
 interface BasicInfoCardProps {
@@ -37,6 +39,7 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
       blood_type: employee.blood_type ?? null,
       marital_status: employee.marital_status ?? null,
       nationality: employee.nationality ?? null,
+      personal_photo_url: employee.personal_photo_url ?? null,
     }),
     [employee]
   );
@@ -74,6 +77,10 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
       setSaving(false);
     }
   };
+
+  // Bucket and folder for profile image
+  const bucket = "employees";
+  const folder = employee.employee_id || employee.id;
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border">
@@ -114,9 +121,47 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-center">
         {/* Avatar + name */}
         <div className="flex items-center gap-4 col-span-1 md:col-span-2">
-          <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-primary/10 to-primary/50 flex items-center justify-center text-2xl font-semibold text-foreground">
-            {(formData.first_name ?? employee.first_name ?? "")?.[0] ?? ""}
-            {(formData.last_name ?? employee.last_name ?? "")?.[0] ?? ""}
+          {/* Profile Image */}
+          <div className="relative group">
+            {formData.personal_photo_url || employee.personal_photo_url ? (
+              <div className="relative">
+                <img
+                  src={
+                    formData.personal_photo_url ??
+                    employee.personal_photo_url ??
+                    undefined
+                  }
+                  alt="Profile"
+                  className="w-28 h-28 rounded-full object-cover border-4 border-gray-100"
+                />
+                {editMode && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-primary/10 to-primary/50 flex items-center justify-center text-2xl font-semibold text-foreground border-4 border-gray-100">
+                {(formData.first_name ?? employee.first_name ?? "")?.[0] ?? ""}
+                {(formData.last_name ?? employee.last_name ?? "")?.[0] ?? ""}
+              </div>
+            )}
+
+            {editMode && (
+              <div className="absolute -bottom-2 -right-2">
+                <ImageUploadField
+                  id={`profile-photo-${employee.id}`}
+                  label=""
+                  value={formData.personal_photo_url ?? ""}
+                  onChange={(url) => updateField("personal_photo_url", url)}
+                  bucket={bucket}
+                  folder={folder}
+                  maxSizeMB={5}
+                  disabled={saving}
+                  preview={false}
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -144,7 +189,7 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
             </div>
 
             <div className="text-sm text-gray-500 mt-1">
-              {employee.id?.slice(0, 13) ?? "N/A"}
+              {employee.employee_id ?? employee.id?.slice(0, 13) ?? "N/A"}
             </div>
 
             <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-600">

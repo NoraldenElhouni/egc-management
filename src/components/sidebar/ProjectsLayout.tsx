@@ -7,8 +7,6 @@ import {
   BarChart3,
   FileText,
   Users,
-  Calendar,
-  DollarSign,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
@@ -47,18 +45,6 @@ const ProjectsLayout = () => {
       icon: Users,
       path: "/projects/team",
       description: "إدارة فريق المشاريع",
-    },
-    {
-      title: "الجدول الزمني",
-      icon: Calendar,
-      path: "/projects/timeline",
-      description: "الجداول الزمنية",
-    },
-    {
-      title: "الميزانية",
-      icon: DollarSign,
-      path: "/projects/budget",
-      description: "ميزانيات المشاريع",
     },
   ];
 
