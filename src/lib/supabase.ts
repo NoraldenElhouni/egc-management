@@ -632,6 +632,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "contract_reports_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "contract_reports_project_id_fkey";
             columns: ["project_id"];
             isOneToOne: false;
@@ -2582,6 +2589,13 @@ export type Database = {
             referencedRelation: "specializations";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "user_specializations_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
         ];
       };
       users: {
@@ -2596,6 +2610,7 @@ export type Database = {
           last_name: string | null;
           phone: string | null;
           role_id: string;
+          status: Database["public"]["Enums"]["user_status_enum"];
           updated_at: string | null;
         };
         Insert: {
@@ -2609,6 +2624,7 @@ export type Database = {
           last_name?: string | null;
           phone?: string | null;
           role_id: string;
+          status?: Database["public"]["Enums"]["user_status_enum"];
           updated_at?: string | null;
         };
         Update: {
@@ -2622,6 +2638,7 @@ export type Database = {
           last_name?: string | null;
           phone?: string | null;
           role_id?: string;
+          status?: Database["public"]["Enums"]["user_status_enum"];
           updated_at?: string | null;
         };
         Relationships: [

@@ -2,12 +2,19 @@ import { supabaseAdmin } from "../../lib/adminSupabase";
 import { Employees } from "../../types/global.type";
 import { UserFormValues } from "../../types/schema/users.schema";
 
+const ENGINEER_ROLE_ID = "212424d8-219a-4899-a24b-5d5bf05546e8";
+const DEFAULT_ROLE_ID = "803c44ac-0af1-4586-81a2-67e1bc7eb7ef"; // choose your real default role
+
 export const createEmployee = async (data: UserFormValues) => {
   const normalizeEmptyToNull = (v?: string | null) => {
     if (v === undefined || v === null) return null;
     const t = String(v).trim();
     return t === "" ? null : t;
   };
+
+  const uploaded_by = await supabaseAdmin.auth
+    .getUser()
+    .then(({ data }) => data.user?.id ?? null);
 
   const { data: userData, error: userError } =
     await supabaseAdmin.auth.admin.createUser({
@@ -22,7 +29,7 @@ export const createEmployee = async (data: UserFormValues) => {
         nationality: data.nationality,
         dob: data.dob,
         employeeType: data.employeeType,
-        roleId: data.roleId ?? "803c44ac-0af1-4586-81a2-67e1bc7eb7ef",
+        roleId: data.roleId ?? DEFAULT_ROLE_ID,
       },
     });
 
@@ -45,33 +52,12 @@ export const createEmployee = async (data: UserFormValues) => {
     };
   }
 
-  // certfication
-  const { error: certError } = await supabaseAdmin
-    .from("employee_certifications")
-    .insert({
-      employee_id: userId,
-      certification: [
-        data.university,
-        data.highestQualification,
-        data.graduationYear,
-      ]
-        .filter((v) => v !== undefined && v !== null && String(v).trim() !== "")
-        .join(" - "),
-    });
-
-  if (certError) {
-    console.error("Error creating employee certification:", certError);
-    return {
-      success: false,
-      error: certError,
-      message: "فشل في إنشاء شهادة الموظف",
-    };
-  }
+  // certification will be inserted after the employee profile is created
 
   const { data: roleData, error: userRoleError } = await supabaseAdmin
     .from("roles")
     .select("*")
-    .eq("id", data.roleId ?? "212424d8-219a-4899-a24b-5d5bf05546e8")
+    .eq("id", data.roleId ?? ENGINEER_ROLE_ID)
     .single();
 
   if (userRoleError) {
@@ -144,11 +130,31 @@ export const createEmployee = async (data: UserFormValues) => {
     };
   }
 
+  // certfication (moved after creating employee to satisfy FK constraint)
+  const { error: certError } = await supabaseAdmin
+    .from("employee_certifications")
+    .insert({
+      employee_id: userId,
+      certification: [
+        data.university,
+        data.highestQualification,
+        data.graduationYear,
+      ]
+        .filter((v) => v !== undefined && v !== null && String(v).trim() !== "")
+        .join(" - "),
+    });
+
+  if (certError) {
+    console.error("Error creating employee certification:", certError);
+    return {
+      success: false,
+      error: certError,
+      message: "فشل في إنشاء شهادة الموظف",
+    };
+  }
+
   // role
-  const roleToAssign = normalizeUuidOrDefault(
-    data.roleId,
-    "212424d8-219a-4899-a24b-5d5bf05546e8"
-  );
+  const roleToAssign = normalizeUuidOrDefault(data.roleId, ENGINEER_ROLE_ID);
 
   const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
     role_id: roleToAssign,
@@ -176,6 +182,56 @@ export const createEmployee = async (data: UserFormValues) => {
       success: false,
       error: updateRoleError,
       message: "فشل في تحديث رقم الدور",
+    };
+  }
+
+  // if the role engerineer, insert default specializations
+  if (roleToAssign === ENGINEER_ROLE_ID && data.specializationsId) {
+    const { error: specError } = await supabaseAdmin
+      .from("user_specializations")
+      .insert({
+        user_id: userId,
+        specialization_id: data.specializationsId ?? null,
+      });
+    if (specError) {
+      console.error("Error inserting default specializations:", specError);
+      return {
+        success: false,
+        error: specError,
+        message: "فشل في إضافة التخصصات الافتراضية",
+      };
+    }
+  }
+
+  // insert employee files
+  const { error: filesError } = await supabaseAdmin
+    .from("employee_documents")
+    .insert([
+      {
+        employee_id: userId,
+        doc_type: "Resume",
+        url: data.resumeUrl ?? "",
+        uploaded_by: uploaded_by,
+      },
+      {
+        employee_id: userId,
+        doc_type: "ID Proof",
+        url: data.idProofUrl ?? "",
+        uploaded_by: uploaded_by,
+      },
+      {
+        employee_id: userId,
+        doc_type: "Personal Photo",
+        url: data.personalPhotoUrl ?? "",
+        uploaded_by: uploaded_by,
+      },
+    ]);
+  if (filesError) {
+    console.error("Error inserting employee documents:", filesError);
+    return {
+      success: false,
+      error: filesError,
+      message: "فشل في إضافة مستندات الموظف",
     };
   }
 

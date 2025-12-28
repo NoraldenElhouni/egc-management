@@ -37,7 +37,7 @@ const NewEmployeeForm: React.FC = () => {
       employeeType: "Full-Time",
       roleId: "212424d8-219a-4899-a24b-5d5bf05546e8",
       salaryType: "fixed",
-      status: "Active",
+      status: "active",
     },
   });
 

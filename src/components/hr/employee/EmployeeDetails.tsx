@@ -1,7 +1,10 @@
+import { supabase } from "../../../lib/supabaseClient";
 import { FullEmployee } from "../../../types/extended.type";
-import EmployeeHeaderCard from "./cards/EmployeeHeaderCard";
+import EmployeeHeaderCard, {
+  EmployeeHeaderValues,
+} from "./cards/EmployeeHeaderCard";
 import ProjectsCard from "./ProjectsCard";
-import QuickStats from "./QuickStats";
+import QuickStats, { QuickStatsValues } from "./QuickStats";
 
 interface EmployeeDetailsProps {
   employee: FullEmployee;
@@ -9,9 +12,53 @@ interface EmployeeDetailsProps {
 }
 
 const EmployeeDetails = ({ employee, onUpdated }: EmployeeDetailsProps) => {
-  const handleSave = (data: FullEmployee) => {
-    console.log("Saved employee details:", data);
-    onUpdated?.(); // ✅ works for sync or async
+  const handleSave = async (data: EmployeeHeaderValues) => {
+    try {
+      const { error } = await supabase
+        .from("employees")
+        .update(data)
+        .eq("id", employee.id);
+
+      if (error) {
+        console.error(error);
+        throw error;
+      }
+
+      const status = (data.status ?? undefined) as
+        | "active"
+        | "inactive"
+        | undefined;
+      const { error: usererror } = await supabase
+        .from("users")
+        .update({ status })
+        .eq("id", employee.id);
+
+      if (usererror) {
+        console.error(usererror);
+        throw usererror;
+      }
+
+      await onUpdated(); // ✅ await refetch
+    } catch (e) {
+      console.error(e);
+      throw e; // keeps edit mode open if you choose
+    }
+  };
+
+  const handleSaveQuickStats = async (data: QuickStatsValues) => {
+    // convert explicit nulls to undefined so Supabase accepts optional numeric fields
+    const sanitized = Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k, v === null ? undefined : v])
+    ) as Record<string, unknown>;
+
+    const { error } = await supabase
+      .from("employees")
+      .update(sanitized)
+      .eq("id", employee.id);
+
+    if (error) throw error;
+
+    await onUpdated();
   };
 
   return (
@@ -25,7 +72,7 @@ const EmployeeDetails = ({ employee, onUpdated }: EmployeeDetailsProps) => {
 
         <ProjectsCard projects={employee.projects || []} />
 
-        <QuickStats employee={employee} />
+        <QuickStats employee={employee} onSave={handleSaveQuickStats} />
       </div>
     </div>
   );
