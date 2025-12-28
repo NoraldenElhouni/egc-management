@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalNumber } from "../../utils/zodHelpers";
+import { emptyToUndefined } from "./helper.schema";
 
 // Exporting the schema so UI/form code can import it for validation
 export const userSchema = z.object({
@@ -12,12 +13,16 @@ export const userSchema = z.object({
   lastName: z.string().min(2, "اسم العائلة يجب أن يكون على الأقل حرفين"),
   dob: z.string().min(1, "تاريخ الميلاد مطلوب"),
   placeOfBirth: z.string().optional(),
-  maritalStatus: z.enum(["Single", "Married", "Divorced", "Widowed"]),
-  bloodType: z
-    .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
-    .optional(),
+  maritalStatus: z.preprocess(
+    emptyToUndefined,
+    z.enum(["Single", "Married", "Divorced", "Widowed"]).optional()
+  ),
+  bloodType: z.preprocess(
+    emptyToUndefined,
+    z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional()
+  ),
   nationality: z.string().optional(),
-  gender: z.enum(["Male", "Female"]),
+  gender: z.preprocess(emptyToUndefined, z.enum(["Male", "Female"]).optional()),
 
   // Contact Information
   email: z.string().email("البريد الإلكتروني غير صالح"),
@@ -35,7 +40,7 @@ export const userSchema = z.object({
   managerId: z.string().optional(),
   status: z.enum(["Active", "Inactive", "On Leave"]),
   roleId: z.string().optional(),
-  specializationsId: z.string().optional(),
+  specializationsId: z.string().min(1, "يجب اختيار تخصص"),
 
   //Compensation & Payroll
   salaryType: z.enum(["fixed", "percentage"]),
