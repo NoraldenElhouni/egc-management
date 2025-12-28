@@ -34,7 +34,14 @@ export default function EmployeeDetailsPage() {
     {
       id: "documents",
       label: "الوثائق",
-      content: <EmployeeDocuments documents={employee.employee_documents} />,
+      content: (
+        <EmployeeDocuments
+          empId={employee.id ?? ""}
+          employeeId={employee.employee_id ?? ""}
+          documents={employee.employee_documents}
+          onUpdated={refetch}
+        />
+      ),
     },
   ];
 

@@ -13,6 +13,7 @@ import { createEmployee } from "../../../services/employees/setEmployeeService";
 import { useUtils } from "../../../hooks/useUtils";
 import { ImageUploadField } from "../../ui/inputs/ImageUploadField";
 import { useNavigate } from "react-router-dom";
+import { EMPLOYEE_TYPE } from "../../../enum/employee";
 
 const NewEmployeeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
@@ -60,13 +61,6 @@ const NewEmployeeForm: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const employeeTypeOptions = [
-    { value: "Full-Time", label: "دوام كامل" },
-    { value: "Part-Time", label: "دوام جزئي" },
-    { value: "Contractor", label: "متعاقد" },
-    { value: "Intern", label: "متدرب" },
-  ];
 
   const salaryTypeOptions = [
     { value: "fixed", label: "ثابت" },
@@ -304,7 +298,10 @@ const NewEmployeeForm: React.FC = () => {
             <SelectField
               id="employeeType"
               label="نوع الموظف"
-              options={employeeTypeOptions}
+              options={EMPLOYEE_TYPE.map((type) => ({
+                value: type.value,
+                label: type.label,
+              }))}
               register={register("employeeType")}
               error={errors.employeeType}
             />

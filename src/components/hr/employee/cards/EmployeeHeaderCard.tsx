@@ -2,7 +2,12 @@ import { Edit } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { FullEmployee } from "../../../../types/extended.type";
 import { formatDate } from "../../../../utils/helpper";
-import { EmployeeStatus, STATUS_OPTIONS } from "../../../../enum/employee";
+import {
+  EMPLOYEE_TYPE,
+  EmployeeStatus,
+  EmployeeType,
+  STATUS_OPTIONS,
+} from "../../../../enum/employee";
 
 export type EmployeeHeaderValues = Pick<
   FullEmployee,
@@ -187,16 +192,33 @@ const EmployeeHeaderCard = ({ employee, onSave }: EmployeeHeaderCardProps) => {
               <div className="text-xs text-gray-400">نوع التوظيف</div>
               <div className="mt-1">
                 {editMode ? (
-                  <input
+                  <select
                     className="border rounded px-2 py-1 text-sm"
                     value={formData.employee_type ?? ""}
                     onChange={(e) =>
-                      updateField("employee_type", e.target.value)
+                      updateField(
+                        "employee_type",
+                        e.target.value as EmployeeType
+                      )
                     }
                     disabled={saving}
-                  />
+                  >
+                    <option value="" disabled>
+                      اختر النوع
+                    </option>
+                    {EMPLOYEE_TYPE.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
-                  <>{employee.employee_type ?? "غير محدد"}</>
+                  <>
+                    {" "}
+                    {EMPLOYEE_TYPE.find(
+                      (o) => o.value === employee.employee_type
+                    )?.label ?? "غير محدد"}
+                  </>
                 )}
               </div>
             </div>

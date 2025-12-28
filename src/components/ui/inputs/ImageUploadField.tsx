@@ -26,7 +26,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   error,
   bucket = "uploads",
   folder = "images",
-  accept = "image/*",
+  accept = "image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx,application/pdf",
   maxSizeMB = 5,
   preview = true,
   disabled = false,
@@ -46,8 +46,27 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       return;
     }
 
-    // Validate file type
-    if (accept && !file.type.match(accept.replace("*", ".*"))) {
+    // Validate file type (support comma-separated MIME types and extensions)
+    const isAccepted = (file: File, acceptStr?: string) => {
+      if (!acceptStr) return true;
+      const parts = acceptStr
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      for (const p of parts) {
+        if (p.startsWith(".")) {
+          if (file.name.toLowerCase().endsWith(p.toLowerCase())) return true;
+        } else if (p.endsWith("/*")) {
+          const prefix = p.slice(0, -1); // keep trailing '/'
+          if (file.type.startsWith(prefix)) return true;
+        } else {
+          if (file.type === p) return true;
+        }
+      }
+      return false;
+    };
+
+    if (!isAccepted(file, accept)) {
       setUploadError("نوع الملف غير مدعوم");
       return;
     }

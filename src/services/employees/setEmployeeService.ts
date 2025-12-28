@@ -80,7 +80,7 @@ export const createEmployee = async (data: UserFormValues) => {
 
   const employeePayload: Employees = {
     id: userId,
-    employee_id: `${roleData.code}${roleData.number}`,
+    employee_id: `${roleData.code}-${roleData.number}`,
     first_name: data.firstName ?? "",
     last_name: data.lastName ?? null,
     email: data.email ?? "",
