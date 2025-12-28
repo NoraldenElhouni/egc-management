@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import Button from "../../ui/Button";
 import { userSchema, UserFormValues } from "../../../types/schema/users.schema";
 import { useForm, useWatch } from "react-hook-form";
@@ -110,17 +110,12 @@ const NewEmployeeForm: React.FC = () => {
   );
 
   // Use useWatch for real-time reactivity on firstName and lastName
-  const firstName = useWatch({ control, name: "firstName" });
-  const lastName = useWatch({ control, name: "lastName" });
   const personalPhotoUrl = useWatch({ control, name: "personalPhotoUrl" });
   const resumeUrl = useWatch({ control, name: "resumeUrl" });
   const idProofUrl = useWatch({ control, name: "idProofUrl" });
 
   // Compute the full name in real-time
-  const name = `${firstName || ""} ${lastName || ""}`.trim();
-
-  // Check if name is valid for enabling file uploads
-  const isNameValid = Boolean(name && name.length > 0);
+  const fileName = `${selectedRole?.code}-${selectedRole?.number}`;
 
   const stepFields: string[][] = [
     // Step 0 - Account
@@ -383,9 +378,9 @@ const NewEmployeeForm: React.FC = () => {
               value={personalPhotoUrl}
               onChange={(url) => setValue("personalPhotoUrl", url)}
               bucket="employees"
-              folder={name}
+              folder={fileName}
               maxSizeMB={5}
-              disabled={!isNameValid}
+              disabled={!fileName}
             />
           </>
         )}
@@ -547,7 +542,7 @@ const NewEmployeeForm: React.FC = () => {
             <NumberField
               id="gpa"
               label="المعدل (اختياري)"
-              step={0.01}
+              step={0.1}
               register={register("gpa", { valueAsNumber: true })}
               error={errors.gpa}
             />
@@ -558,10 +553,10 @@ const NewEmployeeForm: React.FC = () => {
               value={resumeUrl}
               onChange={(url) => setValue("resumeUrl", url)}
               bucket="employees"
-              folder={name}
+              folder={fileName}
               maxSizeMB={10}
               accept=".pdf,.doc,.docx"
-              disabled={!isNameValid}
+              disabled={!fileName}
             />
 
             <ImageUploadField
@@ -570,10 +565,10 @@ const NewEmployeeForm: React.FC = () => {
               value={idProofUrl}
               onChange={(url) => setValue("idProofUrl", url)}
               bucket="employees"
-              folder={name}
+              folder={fileName}
               maxSizeMB={5}
               accept=".pdf,.jpg,.jpeg,.png"
-              disabled={!isNameValid}
+              disabled={!fileName}
             />
           </>
         )}
@@ -604,7 +599,7 @@ const NewEmployeeForm: React.FC = () => {
           </>
         )}
 
-        {!isNameValid && (currentStep === 1 || currentStep === 4) && (
+        {!fileName && (currentStep === 1 || currentStep === 4) && (
           <div className="md:col-span-2 p-3 rounded text-sm bg-yellow-50 text-yellow-800 border border-yellow-200">
             يرجى إدخال الاسم الأول واسم العائلة لتفعيل رفع الملفات
           </div>
