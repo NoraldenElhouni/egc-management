@@ -45,6 +45,29 @@ export const createEmployee = async (data: UserFormValues) => {
     };
   }
 
+  // certfication
+  const { error: certError } = await supabaseAdmin
+    .from("employee_certifications")
+    .insert({
+      employee_id: userId,
+      certification: [
+        data.university,
+        data.highestQualification,
+        data.graduationYear,
+      ]
+        .filter((v) => v !== undefined && v !== null && String(v).trim() !== "")
+        .join(" - "),
+    });
+
+  if (certError) {
+    console.error("Error creating employee certification:", certError);
+    return {
+      success: false,
+      error: certError,
+      message: "فشل في إنشاء شهادة الموظف",
+    };
+  }
+
   const { data: roleData, error: userRoleError } = await supabaseAdmin
     .from("roles")
     .select("*")

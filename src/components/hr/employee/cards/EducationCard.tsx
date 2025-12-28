@@ -4,9 +4,9 @@ import { FullEmployee } from "../../../../types/extended.type";
 
 type CertificationRow = {
   id?: string;
-  certification?: string | null;
+  certification: string;
 };
-
+1;
 export type EducationValues = {
   employee_certifications: CertificationRow[];
 };
@@ -30,7 +30,7 @@ const EducationCard = ({ employee, onSave }: EducationCardProps) => {
     return {
       employee_certifications: certs.map((c) => ({
         id: c.id,
-        certification: c.certification ?? null,
+        certification: c.certification ?? "",
       })),
     };
   }, [employee.employee_certifications]);

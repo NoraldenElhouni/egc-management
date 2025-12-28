@@ -19,7 +19,10 @@ const PersonalInfo = ({ employee, onUpdated }: PersonalInfoProps) => {
       .update(data)
       .eq("id", employee.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error(error);
+      throw error;
+    }
 
     new Notification("Employee Updated", {
       body: "Basic information saved successfully",
@@ -33,23 +36,60 @@ const PersonalInfo = ({ employee, onUpdated }: PersonalInfoProps) => {
       .update(data)
       .eq("id", employee.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error(error);
+      throw error;
+    }
 
     await onUpdated();
   };
   const handleSaveEducation = async (data: EducationValues) => {
-    // IMPORTANT: This is usually NOT a single update call,
-    // because certifications are in a separate table.
-    // You'll likely do: delete+insert OR upsert.
+    // 1) نظّف البيانات
+    const rows = (data.employee_certifications ?? [])
+      .map((c) => ({
+        id: c.id, // ✅ مهم للتحديث
+        employee_id: employee.id,
+        certification: (c.certification || "").trim(),
+      }))
+      .filter((c) => c.certification.length > 0);
 
-    // Example upsert (depends on your table structure):
-    // await supabase.from("employee_certifications").delete().eq("employee_id", employee.id);
-    // await supabase.from("employee_certifications").insert(
-    //   data.employee_certifications.map(c => ({ employee_id: employee.id, certification: c.certification }))
-    // );
+    // 2) upsert (تحديث + إضافة)
+    const { error: upsertError } = await supabase
+      .from("employee_certifications")
+      .upsert(rows, { onConflict: "id" }); // ✅ يعتمد على PK id
+
+    if (upsertError) {
+      console.error(upsertError);
+      throw upsertError;
+    }
+
+    // 3) حذف الشهادات التي انمسحت من الواجهة
+    const keepIds = rows.map((r) => r.id).filter(Boolean) as string[];
+
+    // كل شهادات الموظف الحالية من employee.employee_certifications
+    const existingIds =
+      ((employee.employee_certifications as { id?: string }[] | null)
+        ?.map((c) => c.id)
+        .filter(Boolean) as string[]) || [];
+
+    const toDelete = existingIds.filter((id) => !keepIds.includes(id));
+
+    if (toDelete.length) {
+      const { error: deleteError } = await supabase
+        .from("employee_certifications")
+        .delete()
+        .in("id", toDelete)
+        .eq("employee_id", employee.id);
+
+      if (deleteError) {
+        console.error(deleteError);
+        throw deleteError;
+      }
+    }
 
     await onUpdated();
   };
+
   const handleSaveEmergency = async (data: EmergencyContactValues) => {
     const { error } = await supabase
       .from("employees")
