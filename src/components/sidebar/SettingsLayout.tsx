@@ -1,7 +1,14 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Users, Box, ChevronRight, ChevronLeft, BookText } from "lucide-react";
+import {
+  Users,
+  Box,
+  ChevronRight,
+  ChevronLeft,
+  BookText,
+  Map,
+} from "lucide-react";
 
 const SettingsLayout = () => {
   const location = useLocation();
@@ -25,6 +32,12 @@ const SettingsLayout = () => {
       icon: BookText,
       path: "/settings/specializations",
       description: "إدارة التخصصات",
+    },
+    {
+      title: "اداره الخرائط",
+      icon: Map,
+      path: "/settings/maps",
+      description: "إدارة الخرائط",
     },
   ];
 

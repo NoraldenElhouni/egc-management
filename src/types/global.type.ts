@@ -52,6 +52,7 @@ export type SpecializationPermissions = Tables<"specialization_permissions">;
 export type UserPermissions = Tables<"user_permissions">;
 export type UserRoles = Tables<"user_roles">;
 export type UserSpecializations = Tables<"user_specializations">;
+export type MapType = Tables<"map_types">;
 
 export type ButtonVariant =
   | "primary"
