@@ -209,7 +209,7 @@ export const createEmployee = async (data: UserFormValues) => {
     .insert([
       {
         employee_id: userId,
-        doc_type: "resume",
+        doc_type: "CV",
         url: data.resumeUrl ?? "",
         uploaded_by: uploaded_by,
       },
@@ -217,12 +217,6 @@ export const createEmployee = async (data: UserFormValues) => {
         employee_id: userId,
         doc_type: "id_proof",
         url: data.idProofUrl ?? "",
-        uploaded_by: uploaded_by,
-      },
-      {
-        employee_id: userId,
-        doc_type: "personal_photo",
-        url: data.personalPhotoUrl ?? "",
         uploaded_by: uploaded_by,
       },
     ]);

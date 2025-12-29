@@ -24,20 +24,6 @@ const PersonalInfo = ({ employee, onUpdated }: PersonalInfoProps) => {
       throw error;
     }
 
-    // update images in docus
-    const { error: updateDocumentsError } = await supabase
-      .from("employee_documents")
-      .update({
-        url: data.personal_photo_url || "",
-      })
-      .eq("employee_id", employee.id)
-      .eq("type", "personal_photo");
-
-    if (updateDocumentsError) {
-      console.error(updateDocumentsError);
-      throw updateDocumentsError;
-    }
-
     new Notification("تم التحديث", {
       body: "تم حفظ المعلومات الأساسية بنجاح.",
     });
