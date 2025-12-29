@@ -44,10 +44,7 @@ export function usePayroll() {
     }
 
     async function fetchFixedEmployees() {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("*")
-        .eq("salary_type", "fixed");
+      const { data, error } = await supabase.from("employees").select("*");
 
       if (error) {
         console.error("error fetching fixed employees", error);

@@ -1,4 +1,4 @@
-import { Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import SupplyChainLayout from "../sidebar/SupplyChainLayout";
 import SupplyChainPage from "../../pages/supply-chain/SupplyChainPage";
 import ContractorPage from "../../pages/supply-chain/ContractorPage";
@@ -10,21 +10,17 @@ import VendorDetailPage from "../../pages/supply-chain/VendorDetailPage";
 
 const SupplyChainRoutes = () => {
   return (
-    <Route element={<SupplyChainLayout />}>
-      <Route path="/supply-chain" element={<SupplyChainPage />} />
-      <Route path="/supply-chain/contractors" element={<ContractorPage />} />
-      <Route
-        path="/supply-chain/contractors/new"
-        element={<NewContractorPage />}
-      />
-      <Route
-        path="/supply-chain/contractors/:id"
-        element={<ContractorDetailPage />}
-      />
-      <Route path="/supply-chain/vendors" element={<VendorsPage />} />
-      <Route path="/supply-chain/vendors/new" element={<NewVendorPage />} />
-      <Route path="/supply-chain/vendors/:id" element={<VendorDetailPage />} />
-    </Route>
+    <Routes>
+      <Route element={<SupplyChainLayout />}>
+        <Route index element={<SupplyChainPage />} />
+        <Route path="contractors" element={<ContractorPage />} />
+        <Route path="contractors/new" element={<NewContractorPage />} />
+        <Route path="contractors/:id" element={<ContractorDetailPage />} />
+        <Route path="vendors" element={<VendorsPage />} />
+        <Route path="vendors/new" element={<NewVendorPage />} />
+        <Route path="vendors/:id" element={<VendorDetailPage />} />
+      </Route>
+    </Routes>
   );
 };
 

@@ -14,7 +14,6 @@ import HRRoutes from "./pages/HRRoutes";
 import CRMRoutes from "./pages/CRMRoutes";
 import SupplyChainRoutes from "./pages/SupplyChainRoutes";
 import ProjectsRoutes from "./pages/ProjectsRoutes";
-import BookkeepingRoutes from "./pages/BookkeepingRoutes";
 import FinanceRoutes from "./pages/FinanceRoutes";
 import SettingsRoutes from "./pages/SettingsRoutes";
 
@@ -109,9 +108,6 @@ const AppRouter = () => {
 
             {/* Finance */}
             <Route path="/finance/*" element={<FinanceRoutes />} />
-
-            {/* Bookkeeping */}
-            <Route path="/bookkeeping/*" element={<BookkeepingRoutes />} />
 
             <Route path="/profile" element={<ProfilePage />} />
 

@@ -1,4 +1,4 @@
-import { Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import ProjectsLayout from "../sidebar/ProjectsLayout";
 import ProjectsPage from "../../pages/projects/Projects";
 import NewProjectPage from "../../pages/projects/NewProject";
@@ -8,16 +8,15 @@ import ProjectDetailsPage from "../../pages/projects/ProjectDetail";
 
 const ProjectsRoutes = () => {
   return (
-    <Route element={<ProjectsLayout />}>
-      <Route path="/projects" element={<ProjectsPage />} />
-      <Route path="/projects/new" element={<NewProjectPage />} />
-      <Route path="/projects/team" element={<ProjectTeamPage />} />
-      <Route
-        path="/projects/team/:projectId"
-        element={<ProjectTeamDetailsPage />}
-      />
-      <Route path="/projects/:id" element={<ProjectDetailsPage />} />
-    </Route>
+    <Routes>
+      <Route element={<ProjectsLayout />}>
+        <Route index element={<ProjectsPage />} />
+        <Route path="new" element={<NewProjectPage />} />
+        <Route path="team" element={<ProjectTeamPage />} />
+        <Route path="team/:projectId" element={<ProjectTeamDetailsPage />} />
+        <Route path=":id" element={<ProjectDetailsPage />} />
+      </Route>
+    </Routes>
   );
 };
 
