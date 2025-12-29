@@ -3,71 +3,20 @@ import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import Dashboard from "./dashboard/dashboard";
 import LoginForm from "./auth/LoginForm";
-// import Layout from "./layouts/Layout";
-import ProjectDetail from "../pages/projects/ProjectDetail";
 import MainMenu from "../pages/MainMenu";
-import ProjectsPage from "../pages/projects/Projects";
-import NewProjectPage from "../pages/projects/NewProject";
 import ProfilePage from "../pages/profile/profile";
 import MainMenuLayout from "./layouts/MainMenuLayout";
-import HrPage from "../pages/hr/HrPage";
-import CrmPage from "../pages/crm/crmPage";
-import FinancePage from "../pages/finance/FinancePage";
-import SupplyChainPage from "../pages/supply-chain/SupplyChainPage";
-import SettingsPage from "../pages/settings/SettingsPage";
 import WebsitePage from "../pages/website/WebsitePage";
-import NewEmployeePage from "../pages/hr/NewEmployeePage";
-import LoansAdvancesPage from "../pages/hr/LoansAdvancesPage";
-import AttendancePage from "../pages/hr/AttendancePage";
-import AnnouncementsPage from "../pages/hr/AnnouncementsPage";
-import RestPasswordPage from "../pages/hr/RestPasswordPage";
-import EmployeesPage from "../pages/hr/EmployeesPage";
-import EmployeeDetailsPage from "../pages/hr/EmployeeDetailsPage";
-import ContractorPage from "../pages/supply-chain/ContractorPage";
-import VendorsPage from "../pages/supply-chain/VendorsPage";
-import AccountingPage from "../pages/finance/accounting/AccountingPage";
-import BookkeepingPage from "../pages/finance/bookkeeper/BookkeepingPage";
-import TreasuryPage from "../pages/finance/treasury/TreasuryPage";
-import PaymentsPage from "../pages/finance/PaymentsPage";
-import CompanyPage from "../pages/finance/CompanyPage";
-import HRLayout from "./sidebar/HRLayout";
-import SupplyChainLayout from "./sidebar/SupplyChainLayout";
-import ProjectsLayout from "./sidebar/ProjectsLayout";
-import FinanceLayout from "./sidebar/FinanceLayout";
-import CRMLayout from "./sidebar/CRMLayout";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
-import ContractorDetailPage from "../pages/supply-chain/ContractorDetailPage";
-import VindorDetailPage from "../pages/supply-chain/VindorDetailPage";
-import NewContractorPage from "../pages/supply-chain/NewContractorPage";
-import NewVindorPage from "../pages/supply-chain/NewVendorPage";
-import ClientDetailPage from "../pages/crm/ClientDetailPage";
-import NewClientPage from "../pages/crm/NewClientPage";
-import BookkeeperLayout from "./sidebar/BookkeeperLayout";
-import ProjectBookDetailsPage from "../pages/finance/bookkeeper/ProjectBookDetailsPage";
-import ExpensePaymentsPage from "../pages/finance/bookkeeper/ExpensePaymentsPage";
-import TreasuryProjectPage from "../pages/finance/treasury/TreasuryProjectPage";
-import PayrollPage from "../pages/hr/payroll/PayrollPage";
-import MonthlyPayrollPage from "../pages/hr/payroll/MonthlyPayrollPage";
-import PercentagesPayrollPage from "../pages/hr/payroll/PercentagesPayrollPage";
-import MapsPayrollPage from "../pages/hr/payroll/MapsPayrollPage";
-import PayrollDetailedPage from "../pages/hr/payroll/PayrollDetailedPage";
-import PayrollFinancePage from "../pages/finance/payroll/PayrollFinancePage";
-import ProjectPercentagesPayrollPage from "../pages/hr/payroll/project/ProjectPercentagesPayrollPage";
-import ProjectMapsPayrollPage from "../pages/hr/payroll/project/ProjectMapsPayrollPage";
-import SettingsRolesPage from "../pages/settings/roles/SettingsRolesPage";
-import SettingsExpensesPage from "../pages/settings/expenses/SettingsExpensesPage";
-import SettingsLayout from "./sidebar/SettingsLayout";
-import NewRolePage from "../pages/settings/roles/NewRolePage";
-import RolesDetailsPage from "../pages/settings/roles/RolesDetailsPage";
-import ProjectTeamPage from "../pages/projects/team/ProjectTeamPage";
-import ProjectTeamDetailsPage from "../pages/projects/team/id/ProjectTeamDetailsPage";
-import SettingsSpecializationsPage from "../pages/settings/specializations/SettingsSpecializationsPage";
-import SpecializationDetailsPage from "../pages/settings/specializations/id/SpecializationDetailsPage";
-import InvoicesPage from "../pages/finance/invoices/ProjectsInvoicesPage";
-import ProjectInvoicesDetailsPage from "../pages/finance/invoices/ProjectInvoicesDetailsPage";
-import BulkExpensesPage from "../pages/finance/bookkeeper/Bulk/BulkExpensesPage";
 import RequirePasswordChange from "./auth/RequirePasswordChange";
 import ChangePasswordPage from "./auth/ChangePasswordPage";
+import HRRoutes from "./pages/HRRoutes";
+import CRMRoutes from "./pages/CRMRoutes";
+import SupplyChainRoutes from "./pages/SupplyChainRoutes";
+import ProjectsRoutes from "./pages/ProjectsRoutes";
+import BookkeepingRoutes from "./pages/BookkeepingRoutes";
+import FinanceRoutes from "./pages/FinanceRoutes";
+import SettingsRoutes from "./pages/SettingsRoutes";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -142,171 +91,33 @@ const AppRouter = () => {
       {session && (
         <Route element={<RequirePasswordChange />}>
           <Route element={<MainMenuLayout />}>
-            {/* add this route somewhere inside protected */}
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/" element={<MainMenu />} />
             <Route path="/dashboard" element={<Dashboard />} />
 
             {/* HR */}
-            <Route element={<HRLayout />}>
-              <Route path="/hr" element={<HrPage />} />
-              <Route path="/hr/employees/new" element={<NewEmployeePage />} />
-              <Route
-                path="/hr/payroll/monthly"
-                element={<MonthlyPayrollPage />}
-              />
-              <Route
-                path="/hr/payroll/percentages"
-                element={<PercentagesPayrollPage />}
-              />
-              <Route
-                path="/hr/payroll/percentages/:projectId"
-                element={<ProjectPercentagesPayrollPage />}
-              />
-              <Route path="/hr/payroll/maps" element={<MapsPayrollPage />} />
-              <Route
-                path="/hr/payroll/maps/:projectId"
-                element={<ProjectMapsPayrollPage />}
-              />
-              <Route path="/hr/payroll" element={<PayrollPage />} />
-              <Route path="/hr/payroll/:id" element={<PayrollDetailedPage />} />
-              <Route
-                path="/hr/loans-advances"
-                element={<LoansAdvancesPage />}
-              />
-              <Route path="/hr/attendance" element={<AttendancePage />} />
-              <Route path="/hr/announcements" element={<AnnouncementsPage />} />
-              <Route path="/hr/rest-password" element={<RestPasswordPage />} />
-              <Route path="/hr/employees" element={<EmployeesPage />} />
-              <Route
-                path="/hr/employees/:id"
-                element={<EmployeeDetailsPage />}
-              />
-              <Route
-                path="/hr/employees/:id/edit"
-                element={<EmployeesPage />}
-              />
-            </Route>
+            <Route path="/hr/*" element={<HRRoutes />} />
 
             {/* CRM */}
-            <Route element={<CRMLayout />}>
-              <Route path="/crm" element={<CrmPage />} />
-              <Route path="/crm/clients/new" element={<NewClientPage />} />
-              <Route path="/crm/clients/:id" element={<ClientDetailPage />} />
-            </Route>
+            <Route path="/crm/*" element={<CRMRoutes />} />
 
             {/* Supply Chain */}
-            <Route element={<SupplyChainLayout />}>
-              <Route path="/supply-chain" element={<SupplyChainPage />} />
-              <Route
-                path="/supply-chain/contractors"
-                element={<ContractorPage />}
-              />
-              <Route
-                path="/supply-chain/contractors/new"
-                element={<NewContractorPage />}
-              />
-              <Route
-                path="/supply-chain/contractors/:id"
-                element={<ContractorDetailPage />}
-              />
-              <Route path="/supply-chain/vendors" element={<VendorsPage />} />
-              <Route
-                path="/supply-chain/vendors/new"
-                element={<NewVindorPage />}
-              />
-              <Route
-                path="/supply-chain/vendors/:id"
-                element={<VindorDetailPage />}
-              />
-            </Route>
+            <Route path="/supply-chain/*" element={<SupplyChainRoutes />} />
 
             {/* Projects */}
-            <Route element={<ProjectsLayout />}>
-              <Route path="/projects" element={<ProjectsPage />} />
-              <Route path="/projects/new" element={<NewProjectPage />} />
-              <Route path="/projects/team" element={<ProjectTeamPage />} />
-              <Route
-                path="/projects/team/:projectId"
-                element={<ProjectTeamDetailsPage />}
-              />
-              <Route path="/projects/:id" element={<ProjectDetail />} />
-            </Route>
+            <Route path="/projects/*" element={<ProjectsRoutes />} />
 
             {/* Finance */}
-            <Route element={<FinanceLayout />}>
-              <Route path="/finance" element={<FinancePage />} />
-              <Route path="/finance/payroll" element={<PayrollFinancePage />} />
-              <Route path="/finance/accounting" element={<AccountingPage />} />
-              <Route
-                path="/finance/accounting/project/:id"
-                element={<CompanyPage />}
-              />
-              <Route path="/finance/treasury" element={<TreasuryPage />} />
-              <Route
-                path="/finance/treasury/project/:id"
-                element={<TreasuryProjectPage />}
-              />
-              <Route path="/finance/invoices/" element={<InvoicesPage />} />
-              <Route
-                path="/finance/invoices/:projectId"
-                element={<ProjectInvoicesDetailsPage />}
-              />
-              <Route path="/finance/payments" element={<PaymentsPage />} />
-              <Route path="/finance/company" element={<CompanyPage />} />
-              <Route
-                path="/finance/bookkeeping"
-                element={<BookkeepingPage />}
-              />
-            </Route>
-            <Route element={<BookkeeperLayout />}>
-              <Route
-                path="/finance/bookkeeping/project/:id"
-                element={<ProjectBookDetailsPage />}
-              />
-              <Route
-                path="/finance/bookkeeping/project/:id/bulk-expenses"
-                element={<BulkExpensesPage />}
-              />
-              <Route
-                path="/finance/bookkeeping/project/:id/expense/:expenseId"
-                element={<ExpensePaymentsPage />}
-              />
-              <Route
-                path="/finance/bookkeeping/project/:id/expense/:expenseId/new"
-                element={<ExpensePaymentsPage />}
-              />
-              <Route
-                path="finance/bookkeeping/projects"
-                element={<BookkeepingPage />}
-              />
-            </Route>
+            <Route path="/finance/*" element={<FinanceRoutes />} />
 
-            {/* Profile & Settings */}
+            {/* Bookkeeping */}
+            <Route path="/bookkeeping/*" element={<BookkeepingRoutes />} />
+
             <Route path="/profile" element={<ProfilePage />} />
-            <Route element={<SettingsLayout />}>
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/roles" element={<SettingsRolesPage />} />
-              <Route path="/settings/roles/new" element={<NewRolePage />} />
-              <Route
-                path="/settings/roles/:id"
-                element={<RolesDetailsPage />}
-              />
-              <Route
-                path="/settings/expenses"
-                element={<SettingsExpensesPage />}
-              />
-              <Route
-                path="/settings/specializations"
-                element={<SettingsSpecializationsPage />}
-              />
-              <Route
-                path="/settings/specializations/:id"
-                element={<SpecializationDetailsPage />}
-              />
-            </Route>
 
-            {/* Website */}
+            {/* Settings */}
+            <Route path="/settings/*" element={<SettingsRoutes />} />
+
             <Route path="/website" element={<WebsitePage />} />
           </Route>
         </Route>
