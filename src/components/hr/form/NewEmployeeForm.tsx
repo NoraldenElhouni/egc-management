@@ -35,7 +35,7 @@ const NewEmployeeForm: React.FC = () => {
     resolver: zodResolver(userSchema) as unknown as Resolver<UserFormValues>,
     defaultValues: {
       employeeId: "EMP-001",
-      employeeType: "Full-Time",
+      employeeType: "full-time",
       roleId: "212424d8-219a-4899-a24b-5d5bf05546e8",
       salaryType: "fixed",
       status: "active",

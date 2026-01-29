@@ -40,7 +40,7 @@ export const userSchema = z
     emergencyContactRelation: z.string().optional(),
 
     // Job Details
-    employeeType: z.enum(["Full-Time", "Part-Time", "Contractor", "Intern"]),
+    employeeType: z.enum(["full-time", "part-time", "contractor", "intern"]),
     dateOfJoining: z.string().optional(),
     managerId: z.string().optional(),
     status: z.enum(["active", "inactive", "on leave"]),
