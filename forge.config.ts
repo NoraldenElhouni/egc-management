@@ -5,20 +5,36 @@ import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerRpm } from "@electron-forge/maker-rpm";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
+import { PublisherGithub } from "@electron-forge/publisher-github";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
+import path from "node:path";
 
 const config: ForgeConfig = {
   packagerConfig: {
-    icon: "./public/icon",
+    icon: path.resolve(__dirname, "assets", "icons", "icon"), // بدون امتداد
     asar: true,
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      setupIcon: path.resolve(__dirname, "assets", "icons", "icon.ico"),
+    }),
     new MakerZIP({}, ["darwin"]),
     new MakerRpm({}),
     new MakerDeb({}),
   ],
+
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: "NoraldenElhouni",
+        name: "egc-management",
+      },
+      draft: true, // خليها true بالبداية عشان تراجع الريليز قبل النشر
+      prerelease: false, // لو تبي alpha/beta خليها true
+    }),
+  ],
+
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
