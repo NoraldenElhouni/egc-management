@@ -8,12 +8,10 @@ import {
 } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
-import { ProjectExpenses } from "../../types/global.type";
-import { processExpensePayment } from "../../services/payments/setPayments";
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
@@ -25,7 +23,7 @@ export function useBookProject(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "*, project_incomes(*), project_expenses(*), project_balances(*), project_refund(*)"
+          "*, project_incomes(*), project_expenses(*), project_balances(*), project_refund(*)",
         )
         .eq("id", projectId)
         .single();
@@ -52,135 +50,57 @@ export function useBookProject(projectId: string) {
         throw new Error("User not authenticated");
       }
 
-      // Get the project for expense counter (serial number)
-      const { data: project, error: projectError } = await supabase
-        .from("projects")
-        .select("expense_counter")
-        .eq("id", expenseData.project_id)
-        .single();
+      // ✅ Basic validations (optional but recommended)
+      if (!expenseData.project_id) throw new Error("Project is required");
+      if (!expenseData.total_amount || expenseData.total_amount <= 0)
+        throw new Error("Total amount must be > 0");
+      if (!expenseData.currency) throw new Error("Currency is required");
+      if (!expenseData.type) throw new Error("Expense type is required");
+      if (!expenseData.phase) throw new Error("Phase is required");
 
-      if (projectError) {
-        console.error(
-          "Error fetching project for expense counter",
-          projectError
-        );
-        throw projectError;
+      // ✅ If paid_amount > 0, ensure payment_method exists
+      if ((expenseData.paid_amount ?? 0) > 0 && !expenseData.payment_method) {
+        throw new Error("payment_method is required when paid_amount > 0");
       }
 
-      // Calculate initial status
-      const initialStatus =
-        expenseData.paid_amount === expenseData.total_amount
-          ? "paid"
-          : expenseData.paid_amount > 0
-            ? "partially_paid"
-            : "unpaid";
-
-      // Insert the expense
-      const { data, error } = await supabase
-        .from("project_expenses")
-        .insert({
-          project_id: expenseData.project_id,
-          description: expenseData.description,
-          total_amount: expenseData.total_amount,
-          expense_date: expenseData.date,
-          created_by: user.id,
-          expense_type: expenseData.type,
-          serial_number: project?.expense_counter || 0,
-          phase: expenseData.phase,
-          status: initialStatus,
-          contractor_id: expenseData.contractor_id || null,
-          amount_paid: 0, // Start at 0, RPC will update if there's a payment
-          expense_id: expenseData.expense_id || null,
-        } as ProjectExpenses)
-        .select()
-        .single();
+      // ✅ Call DB RPC that does:
+      // - lock project
+      // - insert expense + serial_number
+      // - increment expense_counter
+      // - update project_balances (held + total_expense)
+      // - if paid_amount > 0: calls rpc_process_expense_payment internally
+      const { data, error } = await supabase.rpc("rpc_add_project_expense", {
+        p_project_id: expenseData.project_id,
+        p_description: expenseData.description ?? null,
+        p_total_amount: expenseData.total_amount,
+        p_expense_date: expenseData.date ?? null,
+        p_created_by: user.id,
+        p_expense_type: expenseData.type, // ✅ must match enum expense_type
+        p_phase: expenseData.phase, // ✅ must match enum phase_type
+        p_currency: expenseData.currency, // ✅ must match enum currency_type
+        p_contractor_id: expenseData.contractor_id ?? undefined,
+        p_expense_id: expenseData.expense_id ?? undefined,
+        p_paid_amount: expenseData.paid_amount ?? 0,
+        p_payment_method:
+          (expenseData.paid_amount ?? 0) > 0
+            ? expenseData.payment_method
+            : undefined, // ✅ enum payment_method
+      });
 
       if (error) {
-        console.error("Error adding expense", error);
+        console.error("Error adding expense via RPC", error);
         throw error;
       }
 
-      // Update project expense counter
-      const { error: counterError } = await supabase
-        .from("projects")
-        .update({
-          expense_counter: (project?.expense_counter || 0) + 1,
-        })
-        .eq("id", expenseData.project_id);
-
-      if (counterError) {
-        console.error("Error updating project expense counter", counterError);
-        throw counterError;
-      }
-
-      // Update project_balances: add to held and total_expense
-      const { data: projectBalance, error: projectBalanceError } =
-        await supabase
-          .from("project_balances")
-          .select("*")
-          .eq("project_id", expenseData.project_id)
-          .eq("currency", expenseData.currency)
-          .single();
-
-      if (projectBalanceError) {
-        console.error("Error fetching project balance", projectBalanceError);
-        throw projectBalanceError;
-      }
-
-      // Add unpaid amount to held, and total amount to total_expense
-
-      const { error: projectBalanceUpdateError } = await supabase
-        .from("project_balances")
-        .update({
-          held: projectBalance.held + expenseData.total_amount,
-          total_expense:
-            projectBalance.total_expense + expenseData.total_amount,
-        })
-        .eq("project_id", expenseData.project_id)
-        .eq("currency", expenseData.currency);
-
-      if (projectBalanceUpdateError) {
-        console.error(
-          "Error updating project balance",
-          projectBalanceUpdateError
-        );
-        throw projectBalanceUpdateError;
-      }
-
-      // If there's a paid amount, process the payment via RPC
-      if (expenseData.paid_amount > 0) {
-        const processPayment = await processExpensePayment({
-          expense_id: data.id,
-          project_id: expenseData.project_id,
-          amount: expenseData.paid_amount,
-          currency: expenseData.currency,
-          payment_method: expenseData.payment_method,
-          created_by: user.id,
+      // ✅ Update local state (same idea you had before)
+      if (data) {
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            project_expenses: [data, ...(prev.project_expenses ?? [])],
+          };
         });
-
-        if (!processPayment.success) {
-          console.error(
-            "Error processing expense payment via RPC",
-            processPayment.error
-          );
-          throw new Error(
-            processPayment.error || "RPC payment processing error"
-          );
-        }
-
-        // Update local state with the RPC response data if needed
-        if (processPayment.data) {
-          const paymentData = processPayment.data;
-          setProject((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              project_expenses: prev.project_expenses?.map((exp) =>
-                exp.id === data.id ? paymentData : exp
-              ),
-            };
-          });
-        }
       }
 
       return { data, error: null };
@@ -212,7 +132,7 @@ export function useBookProject(projectId: string) {
       if (projectError) {
         console.error(
           "Error fetching project for income counter",
-          projectError
+          projectError,
         );
         throw projectError;
       }
@@ -319,7 +239,7 @@ export function useBookProject(projectId: string) {
       if (projectBalanceUpdateError) {
         console.error(
           "Error updating project balance",
-          projectBalanceUpdateError
+          projectBalanceUpdateError,
         );
         throw projectBalanceUpdateError;
       }
@@ -348,7 +268,7 @@ export function useBookProject(projectId: string) {
     if (projectPercentageError) {
       console.error(
         "Error fetching project percentage",
-        projectPercentageError
+        projectPercentageError,
       );
       return { success: false, message: "حدث خطأ أثناء جلب نسبة المشروع" };
     }
@@ -440,7 +360,7 @@ export function useBookProject(projectId: string) {
     if (projectPercentageUpdateError) {
       console.error(
         "Error updating project percentage",
-        projectPercentageUpdateError
+        projectPercentageUpdateError,
       );
       return { success: false, message: "حدث خطأ أثناء تحديث نسبة المشروع" };
     }
@@ -455,7 +375,7 @@ export function useBookProject(projectId: string) {
     if (projectAccountUpdateError) {
       console.error(
         "Error updating project account",
-        projectAccountUpdateError
+        projectAccountUpdateError,
       );
       return { success: false, message: "حدث خطأ أثناء تحديث حساب المشروع" };
     }
@@ -471,7 +391,7 @@ export function useBookProject(projectId: string) {
     if (projectBalanceUpdateError) {
       console.error(
         "Error updating project balance",
-        projectBalanceUpdateError
+        projectBalanceUpdateError,
       );
       return { success: false, message: "حدث خطأ أثناء تحديث رصيد المشروع" };
     }
@@ -486,7 +406,7 @@ export function useBookProject(projectId: string) {
     if (projectRefundCounterUpdateError) {
       console.error(
         "Error updating project refund counter",
-        projectRefundCounterUpdateError
+        projectRefundCounterUpdateError,
       );
       return {
         success: false,
