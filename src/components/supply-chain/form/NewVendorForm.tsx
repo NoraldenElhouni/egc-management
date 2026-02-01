@@ -5,7 +5,7 @@ import {
   vendorsSchema,
 } from "../../../types/schema/vendor.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import Button from "../../ui/Button";
 import { TextField } from "../../ui/inputs/TextField";
 import { PasswordField } from "../../ui/inputs/PasswordField";
@@ -27,7 +27,7 @@ const NewVendorForm = () => {
     formState: { errors, isSubmitting },
     reset,
   } = useForm<VendorFormValues>({
-    resolver: zodResolver(vendorsSchema),
+    resolver: zodResolver(vendorsSchema) as Resolver<VendorFormValues>,
   });
 
   const onSubmit = async (values: VendorFormValues) => {
@@ -54,7 +54,7 @@ const NewVendorForm = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      <h1 className="text-2xl font-semibold mb-4">اضافة مقاول جديد</h1>
+      <h1 className="text-2xl font-semibold mb-4">اضافة مورد جديد</h1>
 
       {success && (
         <div className="mb-4 p-3 rounded text-sm bg-green-50 text-green-700">

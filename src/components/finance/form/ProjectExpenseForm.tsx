@@ -94,6 +94,8 @@ const ProjectExpenseForm = ({
       }
 
       setSuccess("تم إضافة المصروف بنجاح!");
+      window.location.reload();
+
       reset({ project_id: projectId });
     } catch (error) {
       console.error("Submit error:", error);
@@ -133,7 +135,7 @@ const ProjectExpenseForm = ({
             loading={expensesLoading}
             options={expenses
               .sort((a, b) =>
-                a.name.localeCompare(b.name, "ar", { sensitivity: "base" })
+                a.name.localeCompare(b.name, "ar", { sensitivity: "base" }),
               )
               .map((expense) => ({
                 value: expense.id,
@@ -191,7 +193,7 @@ const ProjectExpenseForm = ({
                 .sort((a, b) =>
                   a.vendor_name.localeCompare(b.vendor_name, "ar", {
                     sensitivity: "base",
-                  })
+                  }),
                 )
                 .map((v) => ({
                   value: v.id,

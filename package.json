@@ -2,7 +2,7 @@
   "name": "egc-management",
   "productName": "egc-management",
   "version": "1.0.1",
-  "description": "My Electron application description",
+  "description": "Finance and management Application for EGC",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",

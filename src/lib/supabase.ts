@@ -234,7 +234,15 @@ export type Database = {
           last_name?: string | null;
           phone_number?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "clients_id_fkey";
+            columns: ["id"];
+            isOneToOne: true;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       company: {
         Row: {
@@ -680,36 +688,39 @@ export type Database = {
       contractors: {
         Row: {
           created_at: string;
-          email: string;
+          email: string | null;
           first_name: string;
           id: string;
           last_name: string | null;
-          phone_number: string;
+          phone_number: string | null;
           updated_at: string;
+          user_id: string | null;
         };
         Insert: {
           created_at?: string;
-          email: string;
+          email?: string | null;
           first_name: string;
           id?: string;
           last_name?: string | null;
-          phone_number: string;
+          phone_number?: string | null;
           updated_at?: string;
+          user_id?: string | null;
         };
         Update: {
           created_at?: string;
-          email?: string;
+          email?: string | null;
           first_name?: string;
           id?: string;
           last_name?: string | null;
-          phone_number?: string;
+          phone_number?: string | null;
           updated_at?: string;
+          user_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "contractors_id_fkey";
-            columns: ["id"];
-            isOneToOne: true;
+            foreignKeyName: "contractors_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
@@ -908,7 +919,7 @@ export type Database = {
           employee_id: string;
           id: string;
           uploaded_by: string | null;
-          url: string;
+          url: string | null;
         };
         Insert: {
           created_at?: string;
@@ -916,7 +927,7 @@ export type Database = {
           employee_id: string;
           id?: string;
           uploaded_by?: string | null;
-          url: string;
+          url?: string | null;
         };
         Update: {
           created_at?: string;
@@ -924,7 +935,7 @@ export type Database = {
           employee_id?: string;
           id?: string;
           uploaded_by?: string | null;
-          url?: string;
+          url?: string | null;
         };
         Relationships: [
           {
@@ -1021,8 +1032,8 @@ export type Database = {
           emergency_contact: string | null;
           emergency_contact_phone: string | null;
           emergency_contact_relation: string | null;
-          employee_id: string | null;
-          employee_type: string | null;
+          employee_id: string;
+          employee_type: Database["public"]["Enums"]["employee_type"] | null;
           first_name: string;
           gender: string | null;
           gpa: number | null;
@@ -1059,8 +1070,8 @@ export type Database = {
           emergency_contact?: string | null;
           emergency_contact_phone?: string | null;
           emergency_contact_relation?: string | null;
-          employee_id?: string | null;
-          employee_type?: string | null;
+          employee_id: string;
+          employee_type?: Database["public"]["Enums"]["employee_type"] | null;
           first_name: string;
           gender?: string | null;
           gpa?: number | null;
@@ -1097,8 +1108,8 @@ export type Database = {
           emergency_contact?: string | null;
           emergency_contact_phone?: string | null;
           emergency_contact_relation?: string | null;
-          employee_id?: string | null;
-          employee_type?: string | null;
+          employee_id?: string;
+          employee_type?: Database["public"]["Enums"]["employee_type"] | null;
           first_name?: string;
           gender?: string | null;
           gpa?: number | null;
@@ -2654,54 +2665,60 @@ export type Database = {
       vendors: {
         Row: {
           address: string | null;
-          alt_phone_number: string;
-          city: string;
+          alt_phone_number: string | null;
+          city: string | null;
           contact_name: string | null;
-          country: string;
+          country: string | null;
           created_at: string;
-          email: string;
+          email: string | null;
           id: string;
           latitude: number | null;
           longitude: number | null;
-          phone_number: string;
+          phone_number: string | null;
+          specialization_id: string | null;
           updated_at: string;
+          user_id: string | null;
           vendor_name: string;
         };
         Insert: {
           address?: string | null;
-          alt_phone_number: string;
-          city: string;
+          alt_phone_number?: string | null;
+          city?: string | null;
           contact_name?: string | null;
-          country: string;
+          country?: string | null;
           created_at?: string;
-          email: string;
+          email?: string | null;
           id?: string;
           latitude?: number | null;
           longitude?: number | null;
-          phone_number: string;
+          phone_number?: string | null;
+          specialization_id?: string | null;
           updated_at?: string;
+          user_id?: string | null;
           vendor_name: string;
         };
         Update: {
           address?: string | null;
-          alt_phone_number?: string;
-          city?: string;
+          alt_phone_number?: string | null;
+          city?: string | null;
           contact_name?: string | null;
-          country?: string;
+          country?: string | null;
           created_at?: string;
-          email?: string;
+          email?: string | null;
           id?: string;
           latitude?: number | null;
           longitude?: number | null;
-          phone_number?: string;
+          phone_number?: string | null;
+          specialization_id?: string | null;
           updated_at?: string;
+          user_id?: string | null;
           vendor_name?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "vendors_id_fkey";
-            columns: ["id"];
-            isOneToOne: true;
+            foreignKeyName: "vendors_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
@@ -2772,6 +2789,7 @@ export type Database = {
       approval_type: "technical" | "finance";
       contractor_mode: "open" | "direct";
       currency_type: "LYD" | "USD" | "EUR";
+      employee_type: "intern" | "contractor" | "part-time" | "full-time";
       expense_status:
         | "pending"
         | "partially_paid"
@@ -2797,7 +2815,7 @@ export type Database = {
       project_status_enum: "active" | "paused" | "completed" | "cancelled";
       projects_type: "construction" | "consulting";
       transaction_type: "debit" | "credit";
-      user_status_enum: "active" | "inactive";
+      user_status_enum: "active" | "inactive" | "on leave" | "on holiday";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -2935,6 +2953,7 @@ export const Constants = {
       approval_type: ["technical", "finance"],
       contractor_mode: ["open", "direct"],
       currency_type: ["LYD", "USD", "EUR"],
+      employee_type: ["intern", "contractor", "part-time", "full-time"],
       expense_status: [
         "pending",
         "partially_paid",
@@ -2962,7 +2981,7 @@ export const Constants = {
       project_status_enum: ["active", "paused", "completed", "cancelled"],
       projects_type: ["construction", "consulting"],
       transaction_type: ["debit", "credit"],
-      user_status_enum: ["active", "inactive"],
+      user_status_enum: ["active", "inactive", "on leave", "on holiday"],
     },
   },
 } as const;
