@@ -6,11 +6,15 @@ import GenericTable from "../../tables/table";
 interface ExpensePaymentListProps {
   payment: projectExpensePayments[];
   totalPayments: number;
+  onEdit?: (p: projectExpensePayments) => void;
+  onDelete?: (p: projectExpensePayments) => void; // ✅ add
 }
 
 const ExpensePaymentList = ({
   payment,
   totalPayments,
+  onEdit,
+  onDelete,
 }: ExpensePaymentListProps) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
@@ -20,10 +24,11 @@ const ExpensePaymentList = ({
           إجمالي المدفوعات المسجلة: {formatCurrency(totalPayments, "LYD")}
         </div>
       </div>
+
       {payment.length > 0 ? (
         <GenericTable
           data={payment}
-          columns={ExpensePaymentsColumns}
+          columns={ExpensePaymentsColumns({ onEdit, onDelete })}
           enableSorting
           enablePagination
           enableFiltering

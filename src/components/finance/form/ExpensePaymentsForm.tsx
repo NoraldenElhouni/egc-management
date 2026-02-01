@@ -10,22 +10,32 @@ import {
 } from "../../../types/schema/ProjectBook.schema";
 import { Account, ProjectExpenses } from "../../../types/global.type";
 import { useExpensePayments } from "../../../hooks/finance/usePayments";
+import { projectExpensePayments } from "../../../types/extended.type";
 
 interface ExpensePaymentsFormProps {
   expense: ProjectExpenses;
   accounts: Account[];
   remaining: number;
+  editingPayment?: projectExpensePayments | null;
+  onCancelEdit?: () => void;
 }
 
 const ExpensePaymentsForm = ({
   expense,
   accounts,
   remaining,
+  editingPayment,
+  onCancelEdit,
 }: ExpensePaymentsFormProps) => {
-  const { submitting, addPayment } = useExpensePayments(expense.id);
+  const { submitting, addPayment, editPayment } = useExpensePayments(
+    expense.id,
+  );
   const [success, setSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const effectiveRemaining = editingPayment
+    ? remaining + (editingPayment.amount ?? 0)
+    : remaining;
   const {
     register,
     handleSubmit,
@@ -34,7 +44,7 @@ const ExpensePaymentsForm = ({
     watch,
     setValue,
   } = useForm<ExpensePaymentFormValues>({
-    resolver: zodResolver(ExpensePaymentSchema(accounts, remaining)),
+    resolver: zodResolver(ExpensePaymentSchema(accounts, effectiveRemaining)),
     defaultValues: {
       expenseId: expense.id,
       amount: 0,
@@ -59,29 +69,48 @@ const ExpensePaymentsForm = ({
     if (acc && acc.currency !== selectedCurrency) setValue("account_id", "");
   }, [selectedCurrency, accounts, setValue, watch]);
 
+  useEffect(() => {
+    if (editingPayment) {
+      setValue("amount", Number(editingPayment.amount ?? 0));
+      setValue("currency", editingPayment.accounts?.currency ?? "LYD");
+      setValue("account_id", editingPayment.account_id ?? "");
+    }
+  }, [editingPayment, setValue]);
+
   const onSubmit = async (vals: ExpensePaymentFormValues) => {
     setSubmitError(null);
     setSuccess(null);
+
     try {
-      const { error } = await addPayment(vals);
-      if (error) {
-        setSubmitError("حدث خطأ أثناء إضافة المصروف");
-        return;
+      if (editingPayment?.id) {
+        const res = await editPayment(editingPayment.id, vals);
+        if (!res.success) {
+          setSubmitError(res.error || "حدث خطأ أثناء تعديل الدفعة");
+          return;
+        }
+        setSuccess("تم تعديل الدفعة بنجاح");
+        onCancelEdit?.();
+      } else {
+        const res = await addPayment(vals);
+        if (!res.success) {
+          setSubmitError(res.error || "حدث خطأ أثناء إضافة الدفعة");
+          return;
+        }
+        setSuccess("تمت إضافة الدفعة بنجاح");
       }
-      setSuccess("تمت إضافة الدفعة بنجاح");
+
       reset();
-      // refresh the page after a short delay to allow user to see success message
-      setTimeout(() => {
-        window.location.reload();
-      }, 800);
-    } catch (error) {
-      setSubmitError("حدث خطأ غير متوقع أثناء إضافة المصروف");
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      setSubmitError("حدث خطأ غير متوقع");
     }
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">إضافة دفعة</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">
+        {editingPayment ? "تعديل دفعة" : "إضافة دفعة"}
+      </h3>
 
       {success && (
         <div className="mb-3 p-2 rounded text-xs bg-success/10 text-success">
@@ -129,15 +158,33 @@ const ExpensePaymentsForm = ({
             }
           />
 
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <Button
               type="submit"
               size="sm"
               loading={submitting}
-              disabled={submitting || remaining <= 0}
+              disabled={submitting}
             >
-              {submitting ? "جاري الإضافة..." : "إضافة الدفعة"}
+              {submitting
+                ? "جاري الحفظ..."
+                : editingPayment
+                  ? "حفظ التعديل"
+                  : "إضافة الدفعة"}
             </Button>
+
+            {editingPayment && (
+              <Button
+                type="button"
+                size="sm"
+                variant="primary-light"
+                onClick={() => {
+                  onCancelEdit?.();
+                  reset();
+                }}
+              >
+                إلغاء
+              </Button>
+            )}
           </div>
         </div>
       </form>

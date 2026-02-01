@@ -6,12 +6,15 @@ import ExpensePaymentsForm from "../../../components/finance/form/ExpensePayment
 import GenericTable from "../../../components/tables/table";
 import { ContractReportColumns } from "../../../components/tables/columns/ContractReportColumns";
 import { useContractReport } from "../../../hooks/finance/useContractReport";
+import { useState } from "react";
+import { projectExpensePayments } from "../../../types/extended.type";
 
 const ExpensePaymentsPage = () => {
   const { expenseId } = useParams<{ expenseId: string }>();
-  const { error, loading, payment, expense, accounts } = useExpensePayments(
-    expenseId ?? ""
-  );
+  const [editing, setEditing] = useState<projectExpensePayments | null>(null);
+
+  const { error, loading, payment, expense, accounts, deletePayment } =
+    useExpensePayments(expenseId ?? "");
   const { report } = useContractReport(expenseId ?? "");
 
   const totalPayments = payment?.reduce((s, p) => s + (p.amount || 0), 0) || 0;
@@ -88,10 +91,22 @@ const ExpensePaymentsPage = () => {
         expense={expense}
         accounts={accounts ?? []}
         remaining={remaining}
+        editingPayment={editing}
+        onCancelEdit={() => setEditing(null)}
       />
 
       {/* Payments Table */}
-      <ExpensePaymentList payment={payment} totalPayments={totalPayments} />
+      <ExpensePaymentList
+        payment={payment}
+        totalPayments={totalPayments}
+        onEdit={(p) => setEditing(p)}
+        onDelete={async (p) => {
+          if (!confirm("هل أنت متأكد من حذف هذه الدفعة؟ سيتم عكس الأرصدة."))
+            return;
+          const res = await deletePayment(p.id);
+          if (!res.success) alert(res.error);
+        }}
+      />
       {expense.contract_id && (
         <div>
           <h2 className="text-xl font-bold mb-4">تقرير العقد المرتبط</h2>

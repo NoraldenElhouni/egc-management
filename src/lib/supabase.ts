@@ -1689,6 +1689,8 @@ export type Database = {
           contractor_id: string | null;
           created_at: string;
           created_by: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
           description: string | null;
           Discounting: number | null;
           expense_date: string;
@@ -1709,6 +1711,8 @@ export type Database = {
           contractor_id?: string | null;
           created_at?: string;
           created_by: string;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
           description?: string | null;
           Discounting?: number | null;
           expense_date?: string;
@@ -1729,6 +1733,8 @@ export type Database = {
           contractor_id?: string | null;
           created_at?: string;
           created_by?: string;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
           description?: string | null;
           Discounting?: number | null;
           expense_date?: string;
@@ -2783,6 +2789,178 @@ export type Database = {
           project_balance: Json;
         }[];
       };
+      rpc_add_project_expense: {
+        Args: {
+          p_contractor_id?: string;
+          p_created_by: string;
+          p_currency: Database["public"]["Enums"]["currency_type"];
+          p_description: string;
+          p_expense_date: string;
+          p_expense_id?: string;
+          p_expense_type: Database["public"]["Enums"]["expense_type"];
+          p_paid_amount?: number;
+          p_payment_method?: Database["public"]["Enums"]["payment_method"];
+          p_phase: Database["public"]["Enums"]["phase_type"];
+          p_project_id: string;
+          p_total_amount: number;
+        };
+        Returns: {
+          amount_paid: number;
+          contract_id: string | null;
+          contractor_id: string | null;
+          created_at: string;
+          created_by: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          description: string | null;
+          Discounting: number | null;
+          expense_date: string;
+          expense_id: string | null;
+          expense_type: Database["public"]["Enums"]["expense_type"];
+          id: string;
+          payment_counter: number;
+          phase: Database["public"]["Enums"]["phase_type"];
+          project_id: string;
+          serial_number: number | null;
+          status: Database["public"]["Enums"]["expense_status"] | null;
+          total_amount: number;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "project_expenses";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      rpc_delete_expense_payment: {
+        Args: { p_deleted_by: string; p_payment_id: string };
+        Returns: Json;
+      };
+      rpc_process_expense_payment: {
+        Args: {
+          p_amount: number;
+          p_created_by: string;
+          p_currency: Database["public"]["Enums"]["currency_type"];
+          p_expense_id: string;
+          p_payment_method: Database["public"]["Enums"]["payment_method"];
+          p_project_id: string;
+        };
+        Returns: {
+          amount_paid: number;
+          contract_id: string | null;
+          contractor_id: string | null;
+          created_at: string;
+          created_by: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          description: string | null;
+          Discounting: number | null;
+          expense_date: string;
+          expense_id: string | null;
+          expense_type: Database["public"]["Enums"]["expense_type"];
+          id: string;
+          payment_counter: number;
+          phase: Database["public"]["Enums"]["phase_type"];
+          project_id: string;
+          serial_number: number | null;
+          status: Database["public"]["Enums"]["expense_status"] | null;
+          total_amount: number;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "project_expenses";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      rpc_soft_delete_project_expense: {
+        Args: {
+          p_currency: Database["public"]["Enums"]["currency_type"];
+          p_deleted_by: string;
+          p_expense_id: string;
+        };
+        Returns: Json;
+      };
+      rpc_update_expense_payment: {
+        Args: {
+          p_new_account_id: string;
+          p_new_amount: number;
+          p_payment_id: string;
+          p_updated_by: string;
+        };
+        Returns: {
+          amount_paid: number;
+          contract_id: string | null;
+          contractor_id: string | null;
+          created_at: string;
+          created_by: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          description: string | null;
+          Discounting: number | null;
+          expense_date: string;
+          expense_id: string | null;
+          expense_type: Database["public"]["Enums"]["expense_type"];
+          id: string;
+          payment_counter: number;
+          phase: Database["public"]["Enums"]["phase_type"];
+          project_id: string;
+          serial_number: number | null;
+          status: Database["public"]["Enums"]["expense_status"] | null;
+          total_amount: number;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "project_expenses";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      rpc_update_project_expense: {
+        Args: {
+          p_contractor_id?: string;
+          p_currency: Database["public"]["Enums"]["currency_type"];
+          p_description: string;
+          p_expense_date: string;
+          p_expense_id: string;
+          p_expense_ref_id?: string;
+          p_expense_type: Database["public"]["Enums"]["expense_type"];
+          p_phase: Database["public"]["Enums"]["phase_type"];
+          p_total_amount: number;
+          p_updated_by?: string;
+        };
+        Returns: {
+          amount_paid: number;
+          contract_id: string | null;
+          contractor_id: string | null;
+          created_at: string;
+          created_by: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          description: string | null;
+          Discounting: number | null;
+          expense_date: string;
+          expense_id: string | null;
+          expense_type: Database["public"]["Enums"]["expense_type"];
+          id: string;
+          payment_counter: number;
+          phase: Database["public"]["Enums"]["phase_type"];
+          project_id: string;
+          serial_number: number | null;
+          status: Database["public"]["Enums"]["expense_status"] | null;
+          total_amount: number;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "project_expenses";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
       account_type: "cash" | "bank";
@@ -2796,7 +2974,8 @@ export type Database = {
         | "paid"
         | "overdue"
         | "cancelled"
-        | "unpaid";
+        | "unpaid"
+        | "deleted";
       expense_type: "material" | "labor" | "maps";
       fund_type: "client" | "internal" | "sale" | "refund" | "other";
       offer_approvals_type: "pending" | "approved" | "rejected";
@@ -2961,6 +3140,7 @@ export const Constants = {
         "overdue",
         "cancelled",
         "unpaid",
+        "deleted",
       ],
       expense_type: ["material", "labor", "maps"],
       fund_type: ["client", "internal", "sale", "refund", "other"],

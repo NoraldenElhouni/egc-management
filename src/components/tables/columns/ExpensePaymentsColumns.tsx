@@ -1,8 +1,17 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { projectExpensePayments } from "../../../types/extended.type";
 import { translatePaymentMethod } from "../../../utils/translations";
+import Button from "../../ui/Button";
 
-export const ExpensePaymentsColumns: ColumnDef<projectExpensePayments>[] = [
+type ColumnsProps = {
+  onEdit?: (p: projectExpensePayments) => void;
+  onDelete?: (p: projectExpensePayments) => void;
+};
+
+export const ExpensePaymentsColumns = ({
+  onEdit,
+  onDelete,
+}: ColumnsProps = {}): ColumnDef<projectExpensePayments>[] => [
   // SELECT CHECKBOX
   {
     id: "select",
@@ -14,6 +23,7 @@ export const ExpensePaymentsColumns: ColumnDef<projectExpensePayments>[] = [
           onChange={table.getToggleAllPageRowsSelectedHandler()}
           checked={table.getIsAllPageRowsSelected()}
           className="w-4 h-4 rounded border-gray-300"
+          onClick={(e) => e.stopPropagation()}
         />
       </div>
     ),
@@ -25,6 +35,7 @@ export const ExpensePaymentsColumns: ColumnDef<projectExpensePayments>[] = [
           onChange={row.getToggleSelectedHandler()}
           checked={row.getIsSelected()}
           className="w-4 h-4 rounded border-gray-300"
+          onClick={(e) => e.stopPropagation()}
         />
       </div>
     ),
@@ -85,5 +96,47 @@ export const ExpensePaymentsColumns: ColumnDef<projectExpensePayments>[] = [
     accessorKey: "created_at",
     header: "تاريخ الإنشاء",
     cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
+  },
+
+  // ✅ EDIT BUTTON
+  {
+    id: "actions",
+    header: "إجراء",
+    enableSorting: false,
+    cell: ({ row }) => {
+      if (!onEdit && !onDelete) return "-";
+
+      return (
+        <div className="flex gap-2">
+          {onEdit && (
+            <Button
+              type="button"
+              variant="primary-light"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(row.original);
+              }}
+            >
+              تعديل
+            </Button>
+          )}
+
+          {onDelete && (
+            <Button
+              type="button"
+              variant="error"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.(row.original);
+              }}
+            >
+              حذف
+            </Button>
+          )}
+        </div>
+      );
+    },
   },
 ];

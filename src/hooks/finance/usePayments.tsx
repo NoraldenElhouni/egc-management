@@ -13,7 +13,6 @@ import {
 import { PostgrestError } from "@supabase/supabase-js";
 import { ExpensePaymentFormValues } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
-import { processExpensePayment } from "../../services/payments/setPayments";
 
 export function usePayments() {
   const [payments, setPayments] = useState<ProjectExpenseWithName[]>([]);
@@ -40,7 +39,7 @@ export function usePayments() {
         supabase
           .from("contract_payments")
           .select(
-            "*, contractors(first_name, last_name), contracts(projects(name))"
+            "*, contractors(first_name, last_name), contracts(projects(name))",
           )
           .eq("status", "pending"),
       ]);
@@ -53,7 +52,7 @@ export function usePayments() {
 
       // get unique employee ids and fetch employees only if needed
       const employeeIds = Array.from(
-        new Set(contractData.map((cp) => cp.created_by).filter(Boolean))
+        new Set(contractData.map((cp) => cp.created_by).filter(Boolean)),
       );
 
       let employeeData: Employees[] = [];
@@ -76,7 +75,7 @@ export function usePayments() {
 
       setPayments(expenses as ProjectExpenseWithName[]);
       setContractPayments(
-        contractPaymentsWithEmployees as ContractPaymentWithRelations[]
+        contractPaymentsWithEmployees as ContractPaymentWithRelations[],
       );
     } catch (err: unknown) {
       if (!mountedRef.current) return;
@@ -149,56 +148,137 @@ export function useExpensePayments(expenseId: string) {
   const addPayment = async (form: ExpensePaymentFormValues) => {
     setSubmitting(true);
     try {
-      // Validate user
-      if (!user?.id) {
+      if (!user?.id)
         return { success: false, error: "غير مصرح — المستخدم غير معروف" };
-      }
 
-      // Validate expense and project_id
-      if (!expense?.project_id) {
+      if (!expense?.project_id)
         return { success: false, error: "معلومات المشروع غير متوفرة" };
-      }
 
-      // Validate amount
-      if (!form.amount || form.amount <= 0) {
+      if (!expenseId) return { success: false, error: "المصروف غير متوفر" };
+
+      if (!form.amount || form.amount <= 0)
         return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
-      }
 
-      // Validate currency
-      if (!form.currency) {
-        return { success: false, error: "العملة مطلوبة" };
-      }
+      if (!form.currency) return { success: false, error: "العملة مطلوبة" };
 
-      //fetch the account type
+      if (!form.account_id) return { success: false, error: "الحساب مطلوب" };
+
+      // fetch account type + currency
       const { data: accountData, error: accountError } = await supabase
         .from("accounts")
-        .select("type")
+        .select("type, currency")
         .eq("id", form.account_id)
         .single();
 
-      if (accountError) {
+      if (accountError || !accountData) {
         console.error("Error fetching account data", accountError);
         return { success: false, error: "لا يمكن جلب بيانات الحساب" };
       }
 
-      const processPayment = await processExpensePayment({
-        expense_id: expenseId,
-        project_id: expense?.project_id,
-        amount: form.amount,
-        currency: form.currency,
-        payment_method: accountData?.type,
-        created_by: user.id,
-      });
-
-      if (!processPayment.success) {
-        console.error("Error processing expense payment", processPayment.error);
-        return { success: false, error: processPayment.error };
+      // ensure currency matches
+      if (accountData.currency !== form.currency) {
+        return { success: false, error: "الحساب لا يطابق العملة المختارة" };
       }
 
-      return { success: true, error: null };
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      // ✅ call DB RPC (enums)
+      const { data, error } = await supabase.rpc(
+        "rpc_process_expense_payment",
+        {
+          p_expense_id: expenseId,
+          p_project_id: expense.project_id,
+          p_amount: form.amount,
+
+          // IMPORTANT: send enum values exactly (LYD/USD/EUR)
+          p_currency: form.currency,
+
+          // IMPORTANT: send enum values exactly (cash/bank)
+          p_payment_method: accountData.type,
+
+          p_created_by: user.id,
+        },
+      );
+
+      if (error) {
+        console.error("Error processing expense payment via RPC", error);
+        return {
+          success: false,
+          error: error.message || "حدث خطأ أثناء إضافة الدفعة",
+        };
+      }
+
+      // optionally you can update UI with returned updated expense "data"
+      return { success: true, error: null, data };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       return { success: false, error: msg };
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const editPayment = async (
+    paymentId: string,
+    form: ExpensePaymentFormValues,
+  ) => {
+    setSubmitting(true);
+    try {
+      if (!user?.id) return { success: false, error: "غير مصرح" };
+      if (!paymentId) return { success: false, error: "paymentId مطلوب" };
+      if (!expense?.project_id)
+        return { success: false, error: "معلومات المشروع غير متوفرة" };
+
+      if (!form.amount || form.amount <= 0)
+        return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
+
+      if (!form.account_id) return { success: false, error: "الحساب مطلوب" };
+
+      const { data, error } = await supabase.rpc("rpc_update_expense_payment", {
+        p_payment_id: paymentId,
+        p_new_amount: form.amount,
+        p_new_account_id: form.account_id,
+        p_updated_by: user.id,
+      });
+
+      if (error) {
+        console.error("Error editing payment via RPC", error);
+        return { success: false, error: error.message || "فشل تعديل الدفعة" };
+      }
+
+      return { success: true, error: null, data };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { success: false, error: msg };
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deletePayment = async (paymentId: string) => {
+    setSubmitting(true);
+    try {
+      if (!user?.id) return { success: false, error: "غير مصرح" };
+      if (!paymentId) return { success: false, error: "الدفعة غير متوفرة" };
+
+      const { data, error } = await supabase.rpc("rpc_delete_expense_payment", {
+        p_payment_id: paymentId,
+        p_deleted_by: user.id,
+      });
+
+      if (error) {
+        console.error("delete payment rpc error", error);
+        return { success: false, error: error.message };
+      }
+
+      // refresh local state بدون reload
+      setPayment((prev) =>
+        prev ? prev.filter((p) => p.id !== paymentId) : prev,
+      );
+
+      // expense يرجع من rpc داخل data.expense
+      const rpcResult = data as { expense?: ProjectExpenses } | null;
+      if (rpcResult?.expense) setExpense(rpcResult.expense);
+
+      return { success: true, data };
     } finally {
       setSubmitting(false);
     }
@@ -212,5 +292,7 @@ export function useExpensePayments(expenseId: string) {
     error,
     submitting,
     addPayment,
+    editPayment,
+    deletePayment,
   };
 }
