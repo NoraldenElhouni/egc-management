@@ -10,6 +10,7 @@ import {
 
 import { getExpenseStatusColor } from "../../../utils/colors/status";
 import { Link } from "react-router-dom";
+import { ExpenseActionsDialog } from "../actions/expense/ExpenseActionsDialog";
 
 // Safe number conversion
 const toNum = (v: unknown) => (typeof v === "number" ? v : Number(v || 0));
@@ -42,6 +43,7 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     ),
     size: 32,
   },
+
   {
     accessorKey: "serial_number",
     header: "الرقم",
@@ -118,6 +120,7 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     ),
     size: 120,
   },
+
   // REMAINING AMOUNT (handles negative / overpay)
   {
     accessorKey: "remaining_amount",
@@ -188,12 +191,23 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     cell: ({ row }) => (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getExpenseStatusColor(
-          row.original.status || "pending"
+          row.original.status || "pending",
         )}`}
       >
         {translateExpenseStatus(row.original.status || "pending")}
       </span>
     ),
     size: 140,
+  },
+
+  {
+    accessorKey: "actions",
+    header: "الإجراءات",
+    cell: ({ row }) => (
+      <ExpenseActionsDialog
+        projectId={row.original.project_id}
+        expenseId={row.original.id}
+      />
+    ),
   },
 ];

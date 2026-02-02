@@ -1,5 +1,7 @@
+import { ExpenseStatus } from "../types/global.type";
+
 export const translatePaymentMethod = (
-  method: "cash" | "cheque" | "transfer" | "deposit" | "bank"
+  method: "cash" | "cheque" | "transfer" | "deposit" | "bank",
 ): string => {
   const translations = {
     cash: "نقدي",
@@ -13,7 +15,7 @@ export const translatePaymentMethod = (
 };
 
 export const translateFundSource = (
-  fund: "client" | "internal" | "sale" | "refund" | "other"
+  fund: "client" | "internal" | "sale" | "refund" | "other",
 ): string => {
   const translations = {
     client: "عميل",
@@ -28,7 +30,7 @@ export const translateFundSource = (
 
 // For expense type if needed
 export const translateExpenseType = (
-  type: "material" | "labor" | "maps"
+  type: "material" | "labor" | "maps",
 ): string => {
   const translations = {
     material: "مواد",
@@ -41,7 +43,7 @@ export const translateExpenseType = (
 
 // For phase if needed
 export const translatePhase = (
-  phase: "construction" | "finishing" | "initial"
+  phase: "construction" | "finishing" | "initial",
 ): string => {
   const translations = {
     construction: "بناء",
@@ -52,15 +54,7 @@ export const translatePhase = (
   return translations[phase] || phase;
 };
 
-export const translateExpenseStatus = (
-  status:
-    | "pending"
-    | "partially_paid"
-    | "paid"
-    | "overdue"
-    | "cancelled"
-    | "unpaid"
-): string => {
+export const translateExpenseStatus = (status: ExpenseStatus): string => {
   const translations = {
     pending: "قيد الانتظار",
     partially_paid: "مدفوع جزئياً",
@@ -68,6 +62,7 @@ export const translateExpenseStatus = (
     overdue: "متأخر",
     cancelled: "ملغي",
     unpaid: "غير مدفوع",
+    deleted: "محذوف",
   };
 
   return translations[status] || status;

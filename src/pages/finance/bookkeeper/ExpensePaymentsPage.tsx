@@ -8,10 +8,14 @@ import { ContractReportColumns } from "../../../components/tables/columns/Contra
 import { useContractReport } from "../../../hooks/finance/useContractReport";
 import { useState } from "react";
 import { projectExpensePayments } from "../../../types/extended.type";
+import Button from "../../../components/ui/Button";
+import DeleteExpenseDialog from "../../../components/finance/expense/DeleteExpenseDialog";
 
 const ExpensePaymentsPage = () => {
   const { expenseId } = useParams<{ expenseId: string }>();
   const [editing, setEditing] = useState<projectExpensePayments | null>(null);
+  const [expenseEdit, setExpenseEdit] = useState<boolean>(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { error, loading, payment, expense, accounts, deletePayment } =
     useExpensePayments(expenseId ?? "");
@@ -78,7 +82,37 @@ const ExpensePaymentsPage = () => {
             تاريخ المصروف: {new Date(expense.expense_date).toLocaleDateString()}
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          {expenseEdit ? (
+            <Button
+              variant="primary-outline"
+              onClick={() => setExpenseEdit(false)}
+            >
+              الغاء تعديل المصروف
+            </Button>
+          ) : (
+            <Button
+              variant="primary-light"
+              onClick={() => setExpenseEdit(true)}
+            >
+              تعديل المصروف
+            </Button>
+          )}
+          <Button variant="error" onClick={() => setDeleteOpen(true)}>
+            حذف المصروف
+          </Button>
+        </div>
       </div>
+
+      <DeleteExpenseDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        expense={{
+          id: expense.id,
+          serial_number: expense.serial_number,
+          description: expense.description,
+        }}
+      />
 
       {/* Expense Summary */}
       <ExpensePaymentSummary

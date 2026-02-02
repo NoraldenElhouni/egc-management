@@ -1,4 +1,4 @@
-import { Projects } from "../../types/global.type";
+import { ExpenseStatus, Projects } from "../../types/global.type";
 
 export const projectStatusColor = (s: Projects["status"]) => {
   switch (s) {
@@ -35,15 +35,7 @@ export const statusColor = (s: string) => {
   }
 };
 
-export const getExpenseStatusColor = (
-  status:
-    | "pending"
-    | "partially_paid"
-    | "paid"
-    | "overdue"
-    | "cancelled"
-    | "unpaid"
-): string => {
+export const getExpenseStatusColor = (status: ExpenseStatus): string => {
   const colors = {
     pending: "bg-yellow-100 text-yellow-800",
     partially_paid: "bg-blue-100 text-blue-800",
@@ -51,6 +43,7 @@ export const getExpenseStatusColor = (
     overdue: "bg-red-100 text-red-800",
     cancelled: "bg-gray-100 text-gray-800",
     unpaid: "bg-red-100 text-red-800",
+    deleted: "bg-gray-100 text-gray-800",
   };
 
   return colors[status] || "bg-gray-100 text-gray-800";

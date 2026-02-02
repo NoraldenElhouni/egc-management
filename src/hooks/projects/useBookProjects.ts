@@ -8,6 +8,12 @@ import {
 } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
+import {
+  Currency,
+  ExpenseType,
+  Phase,
+  ProjectExpenses,
+} from "../../types/global.type";
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
@@ -417,5 +423,67 @@ export function useBookProject(projectId: string) {
     return { success: true };
   };
 
-  return { project, loading, error, addExpense, addIncome, addRefund };
+  return {
+    project,
+    loading,
+    error,
+    addExpense,
+    addIncome,
+    addRefund,
+  };
+}
+
+export function useProjectExpenseActions() {
+  const { user } = useAuth();
+
+  const updateExpense = async (payload: {
+    expense_id: string;
+    description?: string | null;
+    total_amount?: number | null;
+    expense_date?: string | null; // yyyy-mm-dd
+    expense_type: ExpenseType; // expense_type
+    phase: Phase; // phase_type
+    currency: Currency; // currency_type
+    contractor_id?: string | null;
+    expense_ref_id?: string | null;
+  }) => {
+    if (!user?.id) return { success: false, error: "غير مصرح" };
+
+    const { data, error } = await supabase.rpc("rpc_update_project_expense", {
+      p_expense_id: payload.expense_id,
+      p_description: payload.description ?? "",
+      p_total_amount: payload.total_amount ?? 0,
+      p_expense_date: payload.expense_date ?? "",
+      p_expense_type: payload.expense_type,
+      p_phase: payload.phase,
+      p_currency: payload.currency,
+      p_contractor_id: payload.contractor_id ?? "",
+      p_expense_ref_id: payload.expense_ref_id ?? "",
+      p_updated_by: user.id,
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data as ProjectExpenses };
+  };
+
+  const deleteExpense = async (payload: {
+    expense_id: string;
+    currency: Currency; // currency_type
+  }) => {
+    if (!user?.id) return { success: false, error: "غير مصرح" };
+
+    const { data, error } = await supabase.rpc(
+      "rpc_soft_delete_project_expense",
+      {
+        p_expense_id: payload.expense_id,
+        p_currency: payload.currency,
+        p_deleted_by: user.id,
+      },
+    );
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data };
+  };
+
+  return { updateExpense, deleteExpense };
 }

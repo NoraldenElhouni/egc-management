@@ -5,6 +5,12 @@ export type Currency = "LYD" | "USD" | "EUR";
 
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 
+export type ExpenseType = Database["public"]["Enums"]["expense_type"];
+
+export type Phase = Database["public"]["Enums"]["phase_type"];
+
+export type ExpenseStatus = Database["public"]["Enums"]["expense_status"];
+
 // Core entity types
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;

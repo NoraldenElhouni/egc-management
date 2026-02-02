@@ -4,6 +4,7 @@ import ProjectBookDetailsPage from "../../pages/finance/bookkeeper/ProjectBookDe
 import BulkExpensesPage from "../../pages/finance/bookkeeper/Bulk/BulkExpensesPage";
 import ExpensePaymentsPage from "../../pages/finance/bookkeeper/ExpensePaymentsPage";
 import BookkeepingPage from "../../pages/finance/bookkeeper/BookkeepingPage";
+import ExpenseEditPage from "../../pages/finance/bookkeeper/ExpenseEditPage";
 
 const BookkeepingRoutes = () => {
   return (
@@ -19,6 +20,10 @@ const BookkeepingRoutes = () => {
         <Route
           path="project/:id/expense/:expenseId"
           element={<ExpensePaymentsPage />}
+        />
+        <Route
+          path="project/:id/expense/:expenseId/edit"
+          element={<ExpenseEditPage />}
         />
         <Route
           path="project/:id/expense/:expenseId/new"
