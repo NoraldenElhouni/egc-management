@@ -475,7 +475,10 @@ export function useProjectExpenseActions() {
     expense_id: string;
     currency: Currency; // currency_type
   }) => {
-    if (!user?.id) return { success: false, error: "غير مصرح" };
+    if (!user?.id) {
+      console.log("Delete expense failed: User not authenticated");
+      return { success: false, error: "غير مصرح" };
+    }
 
     const { data, error } = await supabase.rpc(
       "rpc_soft_delete_project_expense",

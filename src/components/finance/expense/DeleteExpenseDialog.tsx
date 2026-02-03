@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useProjectExpenseActions } from "../../../hooks/projects/useBookProjects";
+import { Currency } from "../../../types/global.type";
+import { useNavigate } from "react-router-dom";
 
 type ExpenseLite = {
   id: string;
@@ -10,16 +13,20 @@ interface DeleteExpenseDialogProps {
   open: boolean;
   onClose: () => void;
   expense: ExpenseLite;
+  currency?: Currency | null;
 }
 
 const DeleteExpenseDialog = ({
   open,
   onClose,
   expense,
+  currency = "LYD",
 }: DeleteExpenseDialogProps) => {
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const { deleteExpense } = useProjectExpenseActions();
+  const navigate = useNavigate();
 
   // ✅ confirmation code = last 4 digits from serial_number (fallback 1234)
   const confirmCode = useMemo(() => {
@@ -61,10 +68,22 @@ const DeleteExpenseDialog = ({
       setDeleteError("الكود غير صحيح. أدخل آخر 4 أرقام من رقم المصروف.");
       return;
     }
+    if (!currency) {
+      setDeleteError("عملة المصروف غير محددة.");
+      return;
+    }
+    const payload = { expense_id: expense.id, currency: currency };
 
     try {
       setDeleteLoading(true);
-      console.log("🚨 Deleting expense with ID:", expense.id);
+      const res = await deleteExpense(payload);
+      if (!res.success) {
+        console.log("❌ Delete expense failed:", res.error);
+        setDeleteError(res.error || "فشل حذف المصروف. حاول مرة أخرى.");
+        return;
+      }
+      // Navigate back to expenses list after deletion
+      navigate(-1);
 
       handleCloseDelete();
     } catch (e) {

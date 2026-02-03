@@ -120,6 +120,7 @@ const ExpensePaymentsPage = () => {
           serial_number: expense.serial_number,
           description: expense.description,
         }}
+        currency={payment[0]?.accounts?.currency || null}
       />
 
       {/* Expense Summary */}
@@ -179,7 +180,7 @@ const ExpensePaymentsPage = () => {
             total_amount={expense.total_amount}
             expense_date={expense.expense_date}
             contractor_id={expense.contractor_id}
-            expense_ref_id={expense.expense_id} // ⚠️ هنا راجع تصميمك: هل expense_id عندك هو ref للمورد؟ غالباً لا.
+            expense_ref_id={expense.expense_id}
             currency={payment[0]?.accounts?.currency || null}
           />
         </div>
