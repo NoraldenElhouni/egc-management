@@ -58,7 +58,7 @@ export const ProjectIncomeSchema = z.object({
 
 export const ExpensePaymentSchema = (
   accounts: { id: string; currency: "LYD" | "USD" | "EUR" }[],
-  remaining = Number.MAX_SAFE_INTEGER
+  remaining = Number.MAX_SAFE_INTEGER,
 ) =>
   z
     .object({
@@ -79,7 +79,7 @@ export const ExpensePaymentSchema = (
         if (!acc) return false;
         return acc.currency === vals.currency;
       },
-      { message: "الحساب لا يطابق العملة المختارة", path: ["account_id"] }
+      { message: "الحساب لا يطابق العملة المختارة", path: ["account_id"] },
     );
 
 export const projectRefundSchema = z.object({
@@ -91,7 +91,25 @@ export const projectRefundSchema = z.object({
   currency: z.enum(["LYD", "USD", "EUR"]),
 });
 
+export const updateProjectExpense = z.object({
+  expense_id: z.string().uuid(),
+  description: z.string().min(1, "الوصف مطلوب"),
+  total_amount: z.number().min(0, "القيمة يجب أن تكون غير سالبة"),
+  expense_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "التاريخ غير صالح",
+  }),
+  expense_type: z.enum(["labor", "material"]),
+  phase: z.enum(["construction", "finishing"]),
+  currency: z.enum(["LYD", "USD", "EUR"]),
+
+  contractor_id: z.string().nullable(),
+  expense_ref_id: z.string().uuid().optional().nullable(),
+  vendor_id: z.string().nullable(),
+});
+
 export type ProjectRefundValues = z.infer<typeof projectRefundSchema>;
+
+export type UpdateProjectExpenseValues = z.infer<typeof updateProjectExpense>;
 
 export type ExpensePaymentFormValues = z.infer<
   ReturnType<typeof ExpensePaymentSchema>

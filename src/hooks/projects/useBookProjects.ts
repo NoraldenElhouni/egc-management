@@ -14,6 +14,7 @@ import {
   Phase,
   ProjectExpenses,
 } from "../../types/global.type";
+import { normalizeUuid } from "../../utils/helpper";
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
@@ -448,6 +449,7 @@ export function useProjectExpenseActions() {
     expense_ref_id?: string | null;
   }) => {
     if (!user?.id) return { success: false, error: "غير مصرح" };
+    console.log("Updating expense with payload:", payload);
 
     const { data, error } = await supabase.rpc("rpc_update_project_expense", {
       p_expense_id: payload.expense_id,
@@ -457,12 +459,15 @@ export function useProjectExpenseActions() {
       p_expense_type: payload.expense_type,
       p_phase: payload.phase,
       p_currency: payload.currency,
-      p_contractor_id: payload.contractor_id ?? "",
-      p_expense_ref_id: payload.expense_ref_id ?? "",
+      p_contractor_id: normalizeUuid(payload.contractor_id),
+      p_expense_ref_id: normalizeUuid(payload.expense_ref_id),
       p_updated_by: user.id,
     });
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      console.log("RPC error:", error);
+      return { success: false, error: error.message };
+    }
     return { success: true, data: data as ProjectExpenses };
   };
 
@@ -481,7 +486,10 @@ export function useProjectExpenseActions() {
       },
     );
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      console.log("RPC error:", error);
+      return { success: false, error: error.message };
+    }
     return { success: true, data };
   };
 

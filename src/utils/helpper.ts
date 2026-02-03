@@ -42,3 +42,10 @@ export function formatDate(dateString: string | undefined): string {
     day: "2-digit",
   }).format(date);
 }
+
+export const normalizeUuid = (v?: string | null) =>
+  v && v.trim() ? v : undefined;
+export const normalizeText = (v?: string | null) =>
+  v && v.trim() ? v : undefined;
+export const normalizeDate = (v?: string | null) =>
+  v && v.trim() ? v : undefined;
