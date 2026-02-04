@@ -71,7 +71,7 @@ export const createEmployee = async (data: UserFormValues) => {
 
   const normalizeUuidOrDefault = (
     v: string | undefined | null,
-    def: string
+    def: string,
   ) => {
     if (v === undefined || v === null) return def;
     const t = String(v).trim();

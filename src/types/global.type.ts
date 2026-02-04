@@ -4,14 +4,22 @@ import { Database, Tables } from "../lib/supabase";
 export type Currency = "LYD" | "USD" | "EUR";
 
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
-
 export type ExpenseType = Database["public"]["Enums"]["expense_type"];
-
 export type Phase = Database["public"]["Enums"]["phase_type"];
-
 export type ExpenseStatus = Database["public"]["Enums"]["expense_status"];
 
+/**
+ * ✅ IMPORTANT:
+ * Your schema shows some columns as USER-DEFINED (enums/domains).
+ * If your Supabase generated types include them under Database["public"]["Enums"],
+ * you should use them.
+ *
+ * If NOT, you can safely fallback to union literals ("bank" | "cash").
+ */
+
+// ------------------------------------------------------------
 // Core entity types
+// ------------------------------------------------------------
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
 export type Contractors = Tables<"contractors">;
@@ -44,7 +52,7 @@ export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
 export type expenses = Tables<"expenses">;
 
-// Additional types for tables not in your original export
+// Additional
 export type ContractorSpecializations = Tables<"contractor_specializations">;
 export type EmployeeHistory = Tables<"employee_history">;
 export type ExpensePayments = Tables<"expense_payments">;
@@ -60,6 +68,44 @@ export type UserRoles = Tables<"user_roles">;
 export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
 
+export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
+
+// ------------------------------------------------------------
+// ✅ NEW: Types for PercentageDistribution periods
+// ------------------------------------------------------------
+
+/**
+ * This matches what you insert into project_percentage_periods.type.
+ * If your DB enum exists in generated types, use it.
+ * Otherwise keep the literal union.
+ */
+export type PercentagePeriodType =
+  | (Database["public"]["Enums"] extends { percentage_period_type: infer T }
+      ? T
+      : never)
+  | "bank"
+  | "cash";
+
+/**
+ * Mode used in code when writing items to a period.
+ */
+export type DistributionMode = "bank" | "cash" | "both";
+
+/**
+ * Strong typed period rows returned from inserts/selects.
+ * (This replaces `any` for bankPeriodData / cashPeriodData)
+ */
+export type ProjectPercentagePeriodRow = ProjectPercentagePeriods;
+
+/**
+ * Helpers for your function variables:
+ */
+export type BankPeriodData = ProjectPercentagePeriodRow | null;
+export type CashPeriodData = ProjectPercentagePeriodRow | null;
+
+// ------------------------------------------------------------
+// UI types
+// ------------------------------------------------------------
 export type ButtonVariant =
   | "primary"
   | "primary-light"

@@ -9,12 +9,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "../../ui/Button";
 import { Search, Wallet, AlertCircle } from "lucide-react";
 
-const EmployeesPayrollForm = () => {
+interface EmployeesPayrollFormProps {
+  projectId: string;
+}
+
+const EmployeesPayrollForm = ({ projectId }: EmployeesPayrollFormProps) => {
   const { fixedEmployees } = usePayroll();
 
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { fixedPayroll } = usePayroll();
 
   const {
     register,
@@ -25,6 +30,7 @@ const EmployeesPayrollForm = () => {
   } = useForm<FixedPayrollFormValues>({
     resolver: zodResolver(FixedEmployeesPayrollSchema),
     defaultValues: {
+      project_id: projectId,
       employees: [],
     },
   });
@@ -71,14 +77,19 @@ const EmployeesPayrollForm = () => {
 
     try {
       // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Submitted data:", data);
+      const res = await fixedPayroll(data);
+      if (!res.success) {
+        setSubmitError(res.message || "حدث خطأ أثناء الحفظ");
+        throw new Error("Payroll submission failed");
+      }
+      new Notification("تم حفظ الرواتب الثابتة بنجاح", {
+        body: "تم تحديث رواتب الموظفين الأساسيين.",
+      });
 
-      // Show success feedback
-      // You might want to add a toast notification here
+      reset({ project_id: projectId, employees: data.employees });
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "حدث خطأ أثناء الحفظ"
+        error instanceof Error ? error.message : "حدث خطأ أثناء الحفظ",
       );
     } finally {
       setLoading(false);
