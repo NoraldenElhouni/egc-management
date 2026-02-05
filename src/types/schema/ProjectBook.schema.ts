@@ -91,21 +91,43 @@ export const projectRefundSchema = z.object({
   currency: z.enum(["LYD", "USD", "EUR"]),
 });
 
-export const updateProjectExpense = z.object({
-  expense_id: z.string().uuid(),
-  description: z.string().min(1, "الوصف مطلوب"),
-  total_amount: z.number().min(0, "القيمة يجب أن تكون غير سالبة"),
-  expense_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "التاريخ غير صالح",
-  }),
-  expense_type: z.enum(["labor", "material"]),
-  phase: z.enum(["construction", "finishing"]),
-  currency: z.enum(["LYD", "USD", "EUR"]),
+export const updateProjectExpense = z
+  .object({
+    expense_id: z.string().uuid(),
+    description: z.string().min(1, "الوصف مطلوب"),
+    total_amount: z.number().min(0, "القيمة يجب أن تكون غير سالبة"),
+    expense_date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+      message: "التاريخ غير صالح",
+    }),
+    expense_type: z.enum(["labor", "material"]),
+    phase: z.enum(["construction", "finishing"]),
+    currency: z.enum(["LYD", "USD", "EUR"]),
 
-  contractor_id: z.string().nullable(),
-  expense_ref_id: z.string().uuid().optional().nullable(),
-  vendor_id: z.string().nullable(),
-});
+    contractor_id: z.string().uuid().nullish(),
+    vendor_id: z.string().uuid().nullish(),
+    expense_ref_id: z.string().uuid().nullish(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.expense_type === "labor") {
+      if (!data.contractor_id) {
+        ctx.addIssue({
+          code: "custom",
+          message: "يجب اختيار مقاول للأعمال",
+          path: ["contractor_id"],
+        });
+      }
+    }
+
+    if (data.expense_type === "material") {
+      if (!data.vendor_id) {
+        ctx.addIssue({
+          code: "custom",
+          message: "يجب اختيار مورد للمواد",
+          path: ["vendor_id"],
+        });
+      }
+    }
+  });
 
 export type ProjectRefundValues = z.infer<typeof projectRefundSchema>;
 

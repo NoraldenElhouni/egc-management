@@ -10,7 +10,6 @@ import {
 
 import { getExpenseStatusColor } from "../../../utils/colors/status";
 import { Link } from "react-router-dom";
-import { ExpenseActionsDialog } from "../actions/expense/ExpenseActionsDialog";
 
 // Safe number conversion
 const toNum = (v: unknown) => (typeof v === "number" ? v : Number(v || 0));
@@ -67,7 +66,10 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
         className="max-w-[200px] truncate whitespace-nowrap"
         title={row.original.description || ""}
       >
-        {row.original.description || "N/A"}
+        {row.original.description || "N/A"}{" "}
+        <span className="text-red-500">
+          {row.original.status === "deleted" ? "(محذوف)" : ""}
+        </span>
       </div>
     ),
     size: 200,
@@ -198,16 +200,5 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
       </span>
     ),
     size: 140,
-  },
-
-  {
-    accessorKey: "actions",
-    header: "الإجراءات",
-    cell: ({ row }) => (
-      <ExpenseActionsDialog
-        projectId={row.original.project_id}
-        expenseId={row.original.id}
-      />
-    ),
   },
 ];

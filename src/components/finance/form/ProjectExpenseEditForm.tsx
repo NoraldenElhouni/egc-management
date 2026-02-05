@@ -91,13 +91,22 @@ const ProjectExpenseEditForm = (props: ProjectExpenseEditFormProps) => {
         props.expense_type === "maps" ? undefined : props.expense_type,
       phase: props.phase === "initial" ? undefined : props.phase,
       currency: props.currency ?? undefined,
-      contractor_id: props.contractor_id || undefined,
-      expense_ref_id: props.expense_ref_id || undefined,
-      vendor_id: props.vendor_id || undefined,
+      contractor_id: props.contractor_id ?? null, // ✅
+      vendor_id: props.vendor_id ?? null, // ✅
+      expense_ref_id: props.expense_ref_id ?? null, // ✅
     },
   });
 
   const selectedType = watch("expense_type");
+
+  useEffect(() => {
+    if (selectedType === "labor") {
+      setValue("vendor_id", null);
+      setValue("expense_ref_id", null); // لو تبيها فقط للمواد
+    } else if (selectedType === "material") {
+      setValue("contractor_id", null);
+    }
+  }, [selectedType, setValue]);
 
   useEffect(() => {
     if (!success) return;
@@ -119,9 +128,13 @@ const ProjectExpenseEditForm = (props: ProjectExpenseEditFormProps) => {
       const payload: UpdateProjectExpenseValues = {
         ...data,
         contractor_id:
-          data.expense_type === "labor" ? data.contractor_id : null,
+          data.expense_type === "labor" ? (data.contractor_id ?? null) : null,
+        vendor_id:
+          data.expense_type === "material" ? (data.vendor_id ?? null) : null,
         expense_ref_id:
-          data.expense_type === "material" ? data.expense_ref_id : null,
+          data.expense_type === "material"
+            ? (data.expense_ref_id ?? null)
+            : null,
       };
 
       const { error } = await updateExpense(payload);
@@ -163,7 +176,7 @@ const ProjectExpenseEditForm = (props: ProjectExpenseEditFormProps) => {
             label="المصروف"
             value={watch("expense_ref_id") ?? undefined}
             onChange={(value) => {
-              setValue("expense_ref_id", value);
+              setValue("expense_ref_id", value ?? null);
               const selected = expenses.find((e) => e.id === value);
               setValue("description", selected ? selected.name : "");
             }}
@@ -200,7 +213,7 @@ const ProjectExpenseEditForm = (props: ProjectExpenseEditFormProps) => {
               id="contractor_id"
               label="المقاول"
               value={watch("contractor_id") || undefined}
-              onChange={(value) => setValue("contractor_id", value)}
+              onChange={(value) => setValue("contractor_id", value ?? null)}
               error={errors.contractor_id}
               loading={contractorsLoading}
               options={contractors
@@ -223,8 +236,7 @@ const ProjectExpenseEditForm = (props: ProjectExpenseEditFormProps) => {
               id="vendor_id"
               label="المورد"
               value={watch("vendor_id") || undefined}
-              onChange={(value) => setValue("vendor_id", value)}
-              error={errors.vendor_id}
+              onChange={(value) => setValue("vendor_id", value ?? null)}
               loading={vendorsLoading}
               options={vendors
                 .sort((a, b) =>

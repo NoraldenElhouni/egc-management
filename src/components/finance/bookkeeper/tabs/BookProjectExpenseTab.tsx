@@ -34,10 +34,9 @@ const BookProjectExpenseTab = ({
             {
               label: "اجمالي المصروفات",
               value:
-                project?.project_expenses?.reduce(
-                  (acc, expense) => acc + expense.total_amount,
-                  0
-                ) || 0,
+                project?.project_expenses
+                  ?.filter((expense) => expense.status !== "deleted")
+                  .reduce((acc, expense) => acc + expense.total_amount, 0) || 0,
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
@@ -45,10 +44,9 @@ const BookProjectExpenseTab = ({
             {
               label: "إجمالي مصروفات المدفوعه",
               value:
-                project?.project_expenses?.reduce(
-                  (acc, expense) => acc + expense.amount_paid,
-                  0
-                ) || 0,
+                project?.project_expenses
+                  ?.filter((expense) => expense.status !== "deleted")
+                  .reduce((acc, expense) => acc + expense.amount_paid, 0) || 0,
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
@@ -58,7 +56,7 @@ const BookProjectExpenseTab = ({
               value:
                 project?.project_balances.reduce(
                   (acc, balance) => acc + balance.held,
-                  0
+                  0,
                 ) || 0,
               icon: Hash,
               iconBgColor: "bg-green-100",
@@ -70,7 +68,7 @@ const BookProjectExpenseTab = ({
               value:
                 project?.project_balances.reduce(
                   (acc, balance) => acc + balance.balance,
-                  0
+                  0,
                 ) || 0,
               icon: Hash,
               iconBgColor: "bg-green-100",

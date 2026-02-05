@@ -152,7 +152,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
               email,
               phone_number
             )
-          `
+          `,
           )
           .eq("id", projectId)
           .single();
@@ -178,14 +178,14 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             project_role:project_roles(
               name
             )
-          `
+          `,
           )
           .eq("project_id", projectId);
 
         if (assignmentsError) {
           console.error(
             "Error fetching project assignments:",
-            assignmentsError
+            assignmentsError,
           );
           throw assignmentsError;
         }
@@ -233,7 +233,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
                 )
               )
             )
-          `
+          `,
           )
           .eq("project_id", projectId);
 
@@ -276,7 +276,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
         if (projectPercentageError) {
           console.warn(
             "Non-fatal: projectPercentage query returned an error:",
-            projectPercentageError
+            projectPercentageError,
           );
         }
 
@@ -295,17 +295,19 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           projectBalances?.find((pb) => pb.currency === "LYD")?.held || 0;
 
         const totalPaid =
-          expenses?.reduce(
-            (sum, exp) => sum + parseFloat(String(exp.amount_paid || 0)),
-            0
-          ) || 0;
+          expenses
+            ?.filter((expense) => expense.status !== "deleted")
+            .reduce(
+              (sum, exp) => sum + parseFloat(String(exp.amount_paid || 0)),
+              0,
+            ) || 0;
 
         const totalreturned =
           incomes?.reduce(
             (sum, inc) =>
               sum +
               (inc.fund === "refund" ? parseFloat(String(inc.amount ?? 0)) : 0),
-            0
+            0,
           ) || 0;
 
         const totalinvoices = expenses?.length || 0;
@@ -333,7 +335,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             completionPercentage:
               projectPercentages?.reduce(
                 (s: number, p: projectPercentage) => s + (p.percentage || 0),
-                0
+                0,
               ) || 0,
           },
         };
@@ -427,7 +429,7 @@ const ProjectDetailsPage = () => {
   // Project percentage
   const totalPercentages = project.project_percentages.reduce(
     (acc, p) => acc + (p.total_percentage || 0),
-    0
+    0,
   );
 
   return (
@@ -505,7 +507,7 @@ const ProjectDetailsPage = () => {
               secondaryLabel: "المدفوع",
               secondaryValue: formatCurrency(
                 project.financial.totalPaid,
-                "LYD"
+                "LYD",
               ),
             },
             {
@@ -685,7 +687,7 @@ const ProjectDetailsPage = () => {
                           Object.values(types)
                             .flat()
                             .reduce((s, a) => s + (a.balance || 0), 0),
-                          currency
+                          currency,
                         )}
                       </span>
                     </div>
@@ -693,12 +695,12 @@ const ProjectDetailsPage = () => {
                       {Object.entries(types).map(([type, accounts]) => {
                         const totalBalance = accounts.reduce(
                           (s, a) => s + (a.balance || 0),
-                          0
+                          0,
                         );
 
                         const totalTransactions = accounts.reduce(
                           (s, a) => s + (a.total_transactions || 0),
-                          0
+                          0,
                         );
                         return (
                           <div key={type} className="bg-gray-50 rounded p-3">
@@ -731,7 +733,7 @@ const ProjectDetailsPage = () => {
                       })}
                     </div>
                   </div>
-                )
+                ),
               )}
             </div>
           ) : (

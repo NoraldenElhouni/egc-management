@@ -43,7 +43,7 @@ export const getExpenseStatusColor = (status: ExpenseStatus): string => {
     overdue: "bg-red-100 text-red-800",
     cancelled: "bg-gray-100 text-gray-800",
     unpaid: "bg-red-100 text-red-800",
-    deleted: "bg-gray-100 text-gray-800",
+    deleted: "bg-red-300 text-red-900",
   };
 
   return colors[status] || "bg-gray-100 text-gray-800";
