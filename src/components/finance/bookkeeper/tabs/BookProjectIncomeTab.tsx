@@ -6,6 +6,7 @@ import { ProjectsIncomeColumns } from "../../../tables/columns/ProjectIncomeColu
 import GenericTable from "../../../tables/table";
 import OverviewStatus from "../../../ui/OverviewStatus";
 import ProjectIncomeForm from "../../form/ProjectIncomeForm";
+import { formatCurrency } from "../../../../utils/helpper";
 
 interface BookProjectIncomeTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -26,13 +27,13 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
   const totalBalance =
     project?.project_balances?.reduce(
       (acc, balance) => acc + (balance.balance || 0),
-      0
+      0,
     ) || 0;
 
   const totalHeld =
     project?.project_balances?.reduce(
       (acc, balance) => acc + (balance.held || 0),
-      0
+      0,
     ) || 0;
 
   const totalAvailable = totalBalance - totalHeld;
@@ -47,11 +48,12 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
         stats={[
           {
             label: "إجمالي الدخل",
-            value:
+            value: formatCurrency(
               project?.project_incomes?.reduce(
                 (acc, income) => acc + income.amount,
-                0
+                0,
               ) ?? 0,
+            ),
             icon: Hash,
             iconBgColor: "bg-blue-100",
             iconColor: "text-blue-600",
@@ -60,36 +62,38 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
           },
           {
             label: "إجمالي الدخل (نقدي)",
-            value:
+            value: formatCurrency(
               project?.project_incomes?.reduce(
                 (acc, income) =>
                   income.payment_method === "cash" ? acc + income.amount : acc,
-                0
+                0,
               ) ?? 0,
+            ),
             icon: DollarSign,
             iconBgColor: "bg-green-100",
             iconColor: "text-green-600",
             secondaryLabel: "إجمالي الدخل (بنكي)",
-            secondaryValue:
+            secondaryValue: formatCurrency(
               project?.project_incomes?.reduce(
                 (acc, income) =>
                   income.payment_method === "bank" ||
                   income.payment_method === "cheque"
                     ? acc + income.amount
                     : acc,
-                0
+                0,
               ) ?? 0,
+            ),
           },
           {
             label: "الرصيد المحتجز",
-            value: totalHeld,
+            value: formatCurrency(totalHeld),
             icon: Activity,
             iconBgColor: "bg-orange-100",
             iconColor: "text-orange-600",
           },
           {
             label: "الرصيد المتاح",
-            value: totalAvailable,
+            value: formatCurrency(totalAvailable),
             icon: DollarSign,
             iconBgColor: "bg-green-100",
             iconColor: "text-green-600",

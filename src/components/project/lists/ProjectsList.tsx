@@ -4,6 +4,7 @@ import { createProjectsColumns } from "../../tables/columns/ProjectsColumns";
 import GenericTable from "../../tables/table";
 import OverviewStatus from "../../ui/OverviewStatus";
 import { DollarSign, Target, Workflow } from "lucide-react";
+import { formatCurrency } from "../../../utils/helpper";
 
 interface ProjectsListProps {
   basePath?: string; // Renamed for clarity
@@ -19,13 +20,13 @@ const ProjectsList = ({
   // Create columns with the desired link path
   const columns = useMemo(
     () => createProjectsColumns((id) => `${basePath}/${id}`, version),
-    [basePath, version]
+    [basePath, version],
   );
 
   const totalActiveProjects =
     projects?.reduce(
       (acc, project) => acc + (project.status === "active" ? 1 : 0),
-      0
+      0,
     ) || 0;
 
   const totalBalance =
@@ -34,9 +35,9 @@ const ProjectsList = ({
         acc +
         (project.project_balances?.reduce(
           (bAcc, balance) => bAcc + (balance.balance || 0),
-          0
+          0,
         ) || 0),
-      0
+      0,
     ) || 0;
 
   const totalHeld =
@@ -45,9 +46,9 @@ const ProjectsList = ({
         acc +
         (project.project_balances?.reduce(
           (hAcc, held) => hAcc + (held.held || 0),
-          0
+          0,
         ) || 0),
-      0
+      0,
     ) || 0;
 
   const toalAvailable = totalBalance - totalHeld;
@@ -68,21 +69,21 @@ const ProjectsList = ({
                 },
                 {
                   label: "الرصيد الحالي",
-                  value: totalBalance,
+                  value: formatCurrency(totalBalance),
                   icon: DollarSign,
                   iconBgColor: "bg-green-100",
                   iconColor: "text-green-600",
                 },
                 {
                   label: "الرصيد المتاح",
-                  value: toalAvailable,
+                  value: formatCurrency(toalAvailable),
                   icon: Workflow,
                   iconBgColor: "bg-orange-100",
                   iconColor: "text-orange-600",
                 },
                 {
                   label: "الرصيد المحتجز",
-                  value: totalHeld,
+                  value: formatCurrency(totalHeld),
                   icon: DollarSign,
                   iconBgColor: "bg-green-100",
                   iconColor: "text-green-600",

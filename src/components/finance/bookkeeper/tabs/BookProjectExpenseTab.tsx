@@ -10,6 +10,7 @@ import OverviewStatus from "../../../ui/OverviewStatus";
 import { Hash } from "lucide-react";
 import Button from "../../../ui/Button";
 import { Link } from "react-router-dom";
+import { formatCurrency } from "../../../../utils/helpper";
 
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -33,31 +34,34 @@ const BookProjectExpenseTab = ({
           stats={[
             {
               label: "اجمالي المصروفات",
-              value:
+              value: formatCurrency(
                 project?.project_expenses
                   ?.filter((expense) => expense.status !== "deleted")
                   .reduce((acc, expense) => acc + expense.total_amount, 0) || 0,
+              ),
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
             },
             {
               label: "إجمالي مصروفات المدفوعه",
-              value:
+              value: formatCurrency(
                 project?.project_expenses
                   ?.filter((expense) => expense.status !== "deleted")
                   .reduce((acc, expense) => acc + expense.amount_paid, 0) || 0,
+              ),
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
             },
             {
               label: "اجمالي المحجوز",
-              value:
+              value: formatCurrency(
                 project?.project_balances.reduce(
                   (acc, balance) => acc + balance.held,
                   0,
                 ) || 0,
+              ),
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
