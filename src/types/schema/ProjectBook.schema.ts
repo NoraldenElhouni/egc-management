@@ -38,6 +38,48 @@ export const ProjectExpenseSchema = z
     path: ["paid_amount"],
   });
 
+export const ProjectExpensePercentageSchema = z
+  .object({
+    project_id: z.string(),
+    description: z.string().min(1, "الوصف مطلوب"),
+    expense_id: z.string().optional(),
+
+    type: z.enum(["labor", "material"], {
+      message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
+    }),
+    contractor_id: z.string().optional(),
+    vendor_id: z.string().optional(),
+    phase: z.enum(["construction", "finishing"], {
+      message: "المرحلة يجب أن تكون إما 'انشاء' أو 'تشطيب'",
+    }),
+    total_amount: z.number().min(0, "القيمة يجب أن تكون غير سالبة").default(0),
+    paid_amount: z
+      .number()
+      .min(0, "القيمة المدفوعة يجب أن تكون غير سالبة")
+      .default(0),
+    payment_method: z.enum(["cash", "bank"], {
+      message: "طريقة الدفع غير صالحة",
+    }),
+    date: z.string().refine((date) => !isNaN(Date.parse(date)), {
+      message: "التاريخ غير صالح",
+    }),
+    currency: z.enum(["LYD", "USD", "EUR"], {
+      message: "العملة غير صالحة",
+    }),
+    percentage: z
+      .number()
+      .min(0, "النسبة يجب أن تكون بين 0 و 100")
+      .max(100, "النسبة يجب أن تكون بين 0 و 100"),
+  })
+  .refine((data) => (data.type === "labor" ? !!data.contractor_id : true), {
+    message: "يجب اختيار مقاول للأعمال",
+    path: ["contractor_id"],
+  })
+  .refine((data) => data.paid_amount <= data.total_amount, {
+    message: "القيمة المدفوعة لا يمكن أن تتجاوز القيمة الإجمالية",
+    path: ["paid_amount"],
+  });
+
 export const ProjectIncomeSchema = z.object({
   project_id: z.string(),
   description: z.string().nullable(),
@@ -140,6 +182,10 @@ export type ExpensePaymentFormValues = z.infer<
 export type ProjectIncomeFormValues = z.infer<typeof ProjectIncomeSchema>;
 
 export type ProjectExpenseFormValues = z.infer<typeof ProjectExpenseSchema>;
+
+export type ProjectExpensePercentageFormValues = z.infer<
+  typeof ProjectExpensePercentageSchema
+>;
 
 export const ProjectExpenseBulkSchema = z.object({
   rows: z.array(ProjectExpenseSchema).min(1, "لازم تضيف مصروف واحد على الأقل"),

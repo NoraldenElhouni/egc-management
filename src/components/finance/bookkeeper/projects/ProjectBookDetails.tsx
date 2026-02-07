@@ -1,10 +1,12 @@
 import { useBookProject } from "../../../../hooks/projects/useBookProjects";
 import Tabs from "../../../ui/Tabs";
+import BookProjectExpensePercentageTab from "../tabs/BookProjectExpensePercentageTab";
 import BookProjectExpenseTab from "../tabs/BookProjectExpenseTab";
 import BookRefundTab from "../tabs/BookRefundTab";
 
 const ProjectBookDetails = ({ id }: { id: string }) => {
-  const { project, loading, error, addExpense } = useBookProject(id);
+  const { project, loading, error, addExpense, addExpensePercentage } =
+    useBookProject(id);
 
   const tabs = [
     {
@@ -19,6 +21,16 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
       label: "الراجع",
       content: (
         <BookRefundTab refunds={project?.project_refund ?? []} projectId={id} />
+      ),
+    },
+    {
+      id: "percentage",
+      label: "النسبة المئوية",
+      content: (
+        <BookProjectExpensePercentageTab
+          project={project}
+          addExpensePercentage={addExpensePercentage}
+        />
       ),
     },
   ];

@@ -1522,6 +1522,7 @@ export type Database = {
           pay_date: string;
           payment_method: Database["public"]["Enums"]["payment_method"];
           percentage_salary: number | null;
+          project_id: string | null;
           status: string;
           total_salary: number;
           updated_at: string | null;
@@ -1537,6 +1538,7 @@ export type Database = {
           pay_date: string;
           payment_method: Database["public"]["Enums"]["payment_method"];
           percentage_salary?: number | null;
+          project_id?: string | null;
           status?: string;
           total_salary?: number;
           updated_at?: string | null;
@@ -1552,6 +1554,7 @@ export type Database = {
           pay_date?: string;
           payment_method?: Database["public"]["Enums"]["payment_method"];
           percentage_salary?: number | null;
+          project_id?: string | null;
           status?: string;
           total_salary?: number;
           updated_at?: string | null;
@@ -1576,6 +1579,13 @@ export type Database = {
             columns: ["employee_id"];
             isOneToOne: false;
             referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payroll_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
             referencedColumns: ["id"];
           },
         ];
@@ -1697,6 +1707,8 @@ export type Database = {
           expense_id: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id: string;
+          is_edited: boolean | null;
+          is_percentage: boolean | null;
           payment_counter: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
@@ -1704,6 +1716,7 @@ export type Database = {
           status: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at: string;
+          vendor_id: string | null;
         };
         Insert: {
           amount_paid?: number;
@@ -1719,6 +1732,8 @@ export type Database = {
           expense_id?: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id?: string;
+          is_edited?: boolean | null;
+          is_percentage?: boolean | null;
           payment_counter?: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
@@ -1726,6 +1741,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at?: string;
+          vendor_id?: string | null;
         };
         Update: {
           amount_paid?: number;
@@ -1741,6 +1757,8 @@ export type Database = {
           expense_id?: string | null;
           expense_type?: Database["public"]["Enums"]["expense_type"];
           id?: string;
+          is_edited?: boolean | null;
+          is_percentage?: boolean | null;
           payment_counter?: number;
           phase?: Database["public"]["Enums"]["phase_type"];
           project_id?: string;
@@ -1748,6 +1766,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["expense_status"] | null;
           total_amount?: number;
           updated_at?: string;
+          vendor_id?: string | null;
         };
         Relationships: [
           {
@@ -1783,6 +1802,13 @@ export type Database = {
             columns: ["project_id"];
             isOneToOne: false;
             referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_expenses_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
             referencedColumns: ["id"];
           },
         ];
@@ -2352,47 +2378,6 @@ export type Database = {
           },
         ];
       };
-      roject_percentage_period_items: {
-        Row: {
-          amount: number;
-          created_at: string;
-          id: string;
-          payment_type: Database["public"]["Enums"]["payment_type"];
-          percentage: number;
-          period_id: string;
-          refrence_id: string;
-          type: string;
-        };
-        Insert: {
-          amount: number;
-          created_at?: string;
-          id?: string;
-          payment_type: Database["public"]["Enums"]["payment_type"];
-          percentage: number;
-          period_id: string;
-          refrence_id?: string;
-          type: string;
-        };
-        Update: {
-          amount?: number;
-          created_at?: string;
-          id?: string;
-          payment_type?: Database["public"]["Enums"]["payment_type"];
-          percentage?: number;
-          period_id?: string;
-          refrence_id?: string;
-          type?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "roject_percentage_period_items_period_id_fkey";
-            columns: ["period_id"];
-            isOneToOne: false;
-            referencedRelation: "project_percentage_periods";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       role_permissions: {
         Row: {
           permission_id: string;
@@ -2789,7 +2774,104 @@ export type Database = {
           project_balance: Json;
         }[];
       };
-      rpc_add_project_expense: {
+      reset_project_fresh: { Args: { p_project_id: string }; Returns: Json };
+      rpc_add_project_expense:
+        | {
+            Args: {
+              p_contractor_id?: string;
+              p_created_by: string;
+              p_currency: Database["public"]["Enums"]["currency_type"];
+              p_description: string;
+              p_expense_date: string;
+              p_expense_id?: string;
+              p_expense_type: Database["public"]["Enums"]["expense_type"];
+              p_paid_amount?: number;
+              p_payment_method?: Database["public"]["Enums"]["payment_method"];
+              p_phase: Database["public"]["Enums"]["phase_type"];
+              p_project_id: string;
+              p_total_amount: number;
+            };
+            Returns: {
+              amount_paid: number;
+              contract_id: string | null;
+              contractor_id: string | null;
+              created_at: string;
+              created_by: string;
+              deleted_at: string | null;
+              deleted_by: string | null;
+              description: string | null;
+              Discounting: number | null;
+              expense_date: string;
+              expense_id: string | null;
+              expense_type: Database["public"]["Enums"]["expense_type"];
+              id: string;
+              is_edited: boolean | null;
+              is_percentage: boolean | null;
+              payment_counter: number;
+              phase: Database["public"]["Enums"]["phase_type"];
+              project_id: string;
+              serial_number: number | null;
+              status: Database["public"]["Enums"]["expense_status"] | null;
+              total_amount: number;
+              updated_at: string;
+              vendor_id: string | null;
+            };
+            SetofOptions: {
+              from: "*";
+              to: "project_expenses";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
+          }
+        | {
+            Args: {
+              p_contractor_id?: string;
+              p_created_by: string;
+              p_currency: Database["public"]["Enums"]["currency_type"];
+              p_description: string;
+              p_expense_date: string;
+              p_expense_id?: string;
+              p_expense_type: Database["public"]["Enums"]["expense_type"];
+              p_paid_amount?: number;
+              p_payment_method?: Database["public"]["Enums"]["payment_method"];
+              p_phase: Database["public"]["Enums"]["phase_type"];
+              p_project_id: string;
+              p_total_amount: number;
+              p_vendor_id?: string;
+            };
+            Returns: {
+              amount_paid: number;
+              contract_id: string | null;
+              contractor_id: string | null;
+              created_at: string;
+              created_by: string;
+              deleted_at: string | null;
+              deleted_by: string | null;
+              description: string | null;
+              Discounting: number | null;
+              expense_date: string;
+              expense_id: string | null;
+              expense_type: Database["public"]["Enums"]["expense_type"];
+              id: string;
+              is_edited: boolean | null;
+              is_percentage: boolean | null;
+              payment_counter: number;
+              phase: Database["public"]["Enums"]["phase_type"];
+              project_id: string;
+              serial_number: number | null;
+              status: Database["public"]["Enums"]["expense_status"] | null;
+              total_amount: number;
+              updated_at: string;
+              vendor_id: string | null;
+            };
+            SetofOptions: {
+              from: "*";
+              to: "project_expenses";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
+          };
+      rpc_add_project_expense_percentage: {
         Args: {
           p_contractor_id?: string;
           p_created_by: string;
@@ -2800,9 +2882,11 @@ export type Database = {
           p_expense_type: Database["public"]["Enums"]["expense_type"];
           p_paid_amount?: number;
           p_payment_method?: Database["public"]["Enums"]["payment_method"];
+          p_percentage?: number;
           p_phase: Database["public"]["Enums"]["phase_type"];
           p_project_id: string;
           p_total_amount: number;
+          p_vendor_id?: string;
         };
         Returns: {
           amount_paid: number;
@@ -2818,6 +2902,8 @@ export type Database = {
           expense_id: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id: string;
+          is_edited: boolean | null;
+          is_percentage: boolean | null;
           payment_counter: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
@@ -2825,6 +2911,7 @@ export type Database = {
           status: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at: string;
+          vendor_id: string | null;
         };
         SetofOptions: {
           from: "*";
@@ -2860,6 +2947,8 @@ export type Database = {
           expense_id: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id: string;
+          is_edited: boolean | null;
+          is_percentage: boolean | null;
           payment_counter: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
@@ -2867,6 +2956,49 @@ export type Database = {
           status: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at: string;
+          vendor_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "project_expenses";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      rpc_process_expense_payment_percentage: {
+        Args: {
+          p_amount: number;
+          p_created_by: string;
+          p_currency: Database["public"]["Enums"]["currency_type"];
+          p_expense_id: string;
+          p_payment_method: Database["public"]["Enums"]["payment_method"];
+          p_percentage: number;
+          p_project_id: string;
+        };
+        Returns: {
+          amount_paid: number;
+          contract_id: string | null;
+          contractor_id: string | null;
+          created_at: string;
+          created_by: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          description: string | null;
+          Discounting: number | null;
+          expense_date: string;
+          expense_id: string | null;
+          expense_type: Database["public"]["Enums"]["expense_type"];
+          id: string;
+          is_edited: boolean | null;
+          is_percentage: boolean | null;
+          payment_counter: number;
+          phase: Database["public"]["Enums"]["phase_type"];
+          project_id: string;
+          serial_number: number | null;
+          status: Database["public"]["Enums"]["expense_status"] | null;
+          total_amount: number;
+          updated_at: string;
+          vendor_id: string | null;
         };
         SetofOptions: {
           from: "*";
@@ -2890,34 +3022,7 @@ export type Database = {
           p_payment_id: string;
           p_updated_by: string;
         };
-        Returns: {
-          amount_paid: number;
-          contract_id: string | null;
-          contractor_id: string | null;
-          created_at: string;
-          created_by: string;
-          deleted_at: string | null;
-          deleted_by: string | null;
-          description: string | null;
-          Discounting: number | null;
-          expense_date: string;
-          expense_id: string | null;
-          expense_type: Database["public"]["Enums"]["expense_type"];
-          id: string;
-          payment_counter: number;
-          phase: Database["public"]["Enums"]["phase_type"];
-          project_id: string;
-          serial_number: number | null;
-          status: Database["public"]["Enums"]["expense_status"] | null;
-          total_amount: number;
-          updated_at: string;
-        };
-        SetofOptions: {
-          from: "*";
-          to: "project_expenses";
-          isOneToOne: true;
-          isSetofReturn: false;
-        };
+        Returns: Json;
       };
       rpc_update_project_expense: {
         Args: {
@@ -2946,6 +3051,8 @@ export type Database = {
           expense_id: string | null;
           expense_type: Database["public"]["Enums"]["expense_type"];
           id: string;
+          is_edited: boolean | null;
+          is_percentage: boolean | null;
           payment_counter: number;
           phase: Database["public"]["Enums"]["phase_type"];
           project_id: string;
@@ -2953,6 +3060,7 @@ export type Database = {
           status: Database["public"]["Enums"]["expense_status"] | null;
           total_amount: number;
           updated_at: string;
+          vendor_id: string | null;
         };
         SetofOptions: {
           from: "*";

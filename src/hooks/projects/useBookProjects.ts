@@ -3,6 +3,7 @@ import { ProjectWithDetailsForBook } from "../../types/projects.type";
 import { supabase } from "../../lib/supabaseClient";
 import {
   ProjectExpenseFormValues,
+  ProjectExpensePercentageFormValues,
   ProjectIncomeFormValues,
   ProjectRefundValues,
 } from "../../types/schema/ProjectBook.schema";
@@ -86,6 +87,7 @@ export function useBookProject(projectId: string) {
         p_phase: expenseData.phase, // ✅ must match enum phase_type
         p_currency: expenseData.currency, // ✅ must match enum currency_type
         p_contractor_id: expenseData.contractor_id ?? undefined,
+        p_vendor_id: expenseData.vendor_id ?? undefined,
         p_expense_id: expenseData.expense_id ?? undefined,
         p_paid_amount: expenseData.paid_amount ?? 0,
         p_payment_method:
@@ -93,6 +95,90 @@ export function useBookProject(projectId: string) {
             ? expenseData.payment_method
             : undefined, // ✅ enum payment_method
       });
+
+      if (error) {
+        console.error("Error adding expense via RPC", error);
+        throw error;
+      }
+
+      // ✅ Update local state (same idea you had before)
+      if (data) {
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            project_expenses: [data, ...(prev.project_expenses ?? [])],
+          };
+        });
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      const error = err as PostgrestError;
+      setError(error);
+      return { data: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+  const addExpensePercentage = async (
+    expenseData: ProjectExpensePercentageFormValues,
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      // ✅ Basic validations (optional but recommended)
+      if (!expenseData.project_id) throw new Error("Project is required");
+      if (!expenseData.total_amount || expenseData.total_amount <= 0)
+        throw new Error("Total amount must be > 0");
+      if (!expenseData.currency) throw new Error("Currency is required");
+      if (!expenseData.type) throw new Error("Expense type is required");
+      if (!expenseData.phase) throw new Error("Phase is required");
+
+      // ✅ If paid_amount > 0, ensure payment_method exists
+      if ((expenseData.paid_amount ?? 0) > 0 && !expenseData.payment_method) {
+        throw new Error("payment_method is required when paid_amount > 0");
+      }
+      if (
+        expenseData.percentage &&
+        (expenseData.percentage < 0 || expenseData.percentage > 100)
+      ) {
+        throw new Error("Percentage must be between 0 and 100");
+      }
+
+      // ✅ Call DB RPC that does:
+      // - lock project
+      // - insert expense + serial_number
+      // - increment expense_counter
+      // - update project_balances (held + total_expense)
+      // - if paid_amount > 0: calls rpc_process_expense_payment internally
+      const { data, error } = await supabase.rpc(
+        "rpc_add_project_expense_percentage",
+        {
+          p_project_id: expenseData.project_id,
+          p_description: expenseData.description ?? null,
+          p_total_amount: expenseData.total_amount,
+          p_expense_date: expenseData.date ?? null,
+          p_created_by: user.id,
+          p_expense_type: expenseData.type, // ✅ must match enum expense_type
+          p_phase: expenseData.phase, // ✅ must match enum phase_type
+          p_currency: expenseData.currency, // ✅ must match enum currency_type
+          p_contractor_id: expenseData.contractor_id ?? undefined,
+          p_vendor_id: expenseData.vendor_id ?? undefined,
+          p_expense_id: expenseData.expense_id ?? undefined,
+          p_paid_amount: expenseData.paid_amount ?? 0,
+          p_payment_method:
+            (expenseData.paid_amount ?? 0) > 0
+              ? expenseData.payment_method
+              : undefined, // ✅ enum payment_method
+          p_percentage: expenseData.percentage,
+        },
+      );
 
       if (error) {
         console.error("Error adding expense via RPC", error);
@@ -431,6 +517,7 @@ export function useBookProject(projectId: string) {
     addExpense,
     addIncome,
     addRefund,
+    addExpensePercentage,
   };
 }
 

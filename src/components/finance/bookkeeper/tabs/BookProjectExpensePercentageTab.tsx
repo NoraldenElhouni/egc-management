@@ -1,34 +1,29 @@
-// BookProjectExpenseTab.tsx
+// BookProjectExpensePercentageTab.tsx
 import { ProjectWithDetailsForBook } from "../../../../types/projects.type";
 import { ProjectsExpensesColumns } from "../../../tables/columns/ProjectExpenseColumns";
 import GenericTable from "../../../tables/table";
-import ProjectExpenseForm from "../../form/ProjectExpenseForm";
-import { ProjectExpenseFormValues } from "../../../../types/schema/ProjectBook.schema";
+import { ProjectExpensePercentageFormValues } from "../../../../types/schema/ProjectBook.schema";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../../types/global.type";
 import OverviewStatus from "../../../ui/OverviewStatus";
 import { Hash } from "lucide-react";
-import Button from "../../../ui/Button";
-import { Link } from "react-router-dom";
 import { formatCurrency } from "../../../../utils/helpper";
+import ProjectExpensePercentageForm from "../../form/ProjectExpensePercentageForm";
 
-interface BookProjectExpenseTabProps {
+interface BookProjectExpensePercentageTabProps {
   project: ProjectWithDetailsForBook | null;
-  addExpense: (data: ProjectExpenseFormValues) => Promise<{
+  addExpensePercentage: (data: ProjectExpensePercentageFormValues) => Promise<{
     data: ProjectExpenses | null; // ✅ Correct type
     error: PostgrestError | null;
   }>;
 }
 
-const BookProjectExpenseTab = ({
+const BookProjectExpensePercentageTab = ({
   project,
-  addExpense,
-}: BookProjectExpenseTabProps) => {
+  addExpensePercentage,
+}: BookProjectExpensePercentageTabProps) => {
   return (
     <div className="space-y-4">
-      <Button variant="secondary">
-        <Link to={`./bulk-expenses`}>إضافة مصروفات بالجملة</Link>
-      </Button>
       <div>
         <OverviewStatus
           stats={[
@@ -83,9 +78,9 @@ const BookProjectExpenseTab = ({
         />
       </div>
       <div>
-        <ProjectExpenseForm
+        <ProjectExpensePercentageForm
           projectId={project?.id || ""}
-          addExpense={addExpense}
+          addExpensePercentage={addExpensePercentage}
         />
       </div>
 
@@ -104,4 +99,4 @@ const BookProjectExpenseTab = ({
   );
 };
 
-export default BookProjectExpenseTab;
+export default BookProjectExpensePercentageTab;

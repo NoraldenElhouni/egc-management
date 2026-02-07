@@ -68,7 +68,8 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
       >
         {row.original.description || "N/A"}{" "}
         <span className="text-red-500">
-          {row.original.status === "deleted" ? "(محذوف)" : ""}
+          {row.original.status === "deleted" ? "(محذوف)" : ""}{" "}
+          {row.original.is_percentage ? "(نسبة مئوية متغيرة)" : ""}
         </span>
       </div>
     ),
