@@ -32,7 +32,7 @@ const MainMenu = () => {
       label: "سلسلة التوريد",
       icon: LinkIcon,
       path: "/supply-chain",
-      role: ["Admin", "Manager"],
+      role: ["Admin", "Manager", "Finance"],
     },
     {
       label: "المشاريع",
@@ -52,7 +52,7 @@ const MainMenu = () => {
       label: "الموقع الإلكتروني",
       icon: Globe,
       path: "/website",
-      role: ["Admin", "Manager"],
+      role: ["Admin", "Manager", "Finance"],
     },
   ];
 
