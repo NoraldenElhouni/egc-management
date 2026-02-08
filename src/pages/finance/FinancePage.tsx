@@ -62,6 +62,13 @@ const FinancePage = () => {
       description: "إدارة الرواتب",
       role: ["Admin", "Finance"],
     },
+    {
+      label: "اضافة مشاريع",
+      icon: Building2,
+      path: "/finance/projects/add",
+      description: "إضافة مشاريع جديدة",
+      role: ["Admin", "Finance"],
+    },
   ];
 
   return (

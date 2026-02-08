@@ -10,6 +10,7 @@ import ProjectInvoicesDetailsPage from "../../pages/finance/invoices/ProjectInvo
 import PaymentsPage from "../../pages/finance/PaymentsPage";
 import BookkeepingRoutes from "./BookkeepingRoutes";
 import BookkeepingPage from "../../pages/finance/bookkeeper/BookkeepingPage";
+import NewProjectFinance from "../../pages/finance/NewProjectFinance";
 
 const FinanceRoutes = () => {
   return (
@@ -37,6 +38,7 @@ const FinanceRoutes = () => {
 
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="bookkeeping" element={<BookkeepingPage />} />
+        <Route path="projects/add" element={<NewProjectFinance />} />
       </Route>
     </Routes>
   );
