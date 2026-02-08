@@ -60,6 +60,8 @@ const ProjectIncomeForm = ({ projectId }: ProjectIncomeFormProps) => {
       }
 
       setSuccess("تم إضافة الدخل بنجاح!");
+      //refetch or update the list of incomes in the parent component if needed
+      window.location.reload();
       reset({ project_id: projectId });
     } catch (error) {
       console.error("Submit error:", error);
