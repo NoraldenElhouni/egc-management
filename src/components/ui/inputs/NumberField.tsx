@@ -22,7 +22,7 @@ export const NumberField: React.FC<NumberFieldProps> = ({
   error,
   min,
   max,
-  step,
+  step = "0.01",
   hideLabel = false,
 }) => {
   return (

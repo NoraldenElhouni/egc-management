@@ -131,7 +131,7 @@ const ExpensePaymentsForm = ({
             register={register("amount", { valueAsNumber: true })}
             error={errors.amount}
             min={0}
-            step="1"
+            step="0.01"
           />
 
           <SelectField

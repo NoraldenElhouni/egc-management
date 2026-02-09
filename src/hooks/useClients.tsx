@@ -29,26 +29,29 @@ export function useClients() {
     setLoading(true);
     setError(null);
     try {
-      const { data: userData, error: userError } =
-        await supabaseAdmin.auth.admin.createUser({
-          email: payload.email,
-          password: payload.password,
-          email_confirm: true,
-          user_metadata: {
-            role: "Client",
-            firstName: payload.firstName,
-            lastName: payload.lastName,
-            phone: payload.phone,
-            nationality: payload.nationality,
-            roleId: "803c44ac-0af1-4586-81a2-67e1bc7eb7ef",
-          },
-        });
+      let userData = null;
+      if (!payload.email) {
+        const { data: userData, error: userError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email: payload.email,
+            password: payload.password,
+            email_confirm: true,
+            user_metadata: {
+              role: "Client",
+              firstName: payload.firstName,
+              lastName: payload.lastName,
+              phone: payload.phone,
+              nationality: payload.nationality,
+              roleId: "803c44ac-0af1-4586-81a2-67e1bc7eb7ef",
+            },
+          });
 
-      if (userError) {
-        console.error("Error creating auth user:", userError);
-        setError(userError);
-        setLoading(false);
-        return { data: null, error: userError };
+        if (userError) {
+          console.error("Error creating auth user:", userError);
+          setError(userError);
+          setLoading(false);
+          return { data: null, error: userError };
+        }
       }
       // Insert and return the inserted row
       const { data, error } = await supabase
