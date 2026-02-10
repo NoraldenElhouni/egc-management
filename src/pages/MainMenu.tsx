@@ -47,12 +47,17 @@ const MainMenu = () => {
       role: ["Admin", "Manager", "Finance", "Bookkeeper", "Accountant"],
     },
     { label: "الملف الشخصي", icon: User, path: "/profile" },
-    { label: "الإعدادات", icon: Settings, path: "/settings", role: ["Admin"] },
+    {
+      label: "الإعدادات",
+      icon: Settings,
+      path: "/settings",
+      role: ["Admin", "Finance"],
+    },
     {
       label: "الموقع الإلكتروني",
       icon: Globe,
       path: "/website",
-      role: ["Admin", "Manager", "Finance"],
+      role: ["Admin", "Manager"],
     },
   ];
 

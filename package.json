@@ -1,7 +1,7 @@
 {
   "name": "egc-management",
   "productName": "egc-management",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Finance and management Application for EGC",
   "main": ".vite/build/main.js",
   "scripts": {
