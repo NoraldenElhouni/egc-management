@@ -128,7 +128,7 @@ export const projectRefundSchema = z.object({
   project_id: z.string().uuid(),
   description: z.string().nullable(),
   amount: z.number().positive(),
-  payment_method: z.enum(["cash", "bank", "cheque", "deposit"]),
+  payment_method: z.enum(["cash", "bank"]),
   income_date: z.string(),
   currency: z.enum(["LYD", "USD", "EUR"]),
 });
