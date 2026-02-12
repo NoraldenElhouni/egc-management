@@ -181,7 +181,8 @@ const ExpensePaymentsPage = () => {
             expense_date={expense.expense_date}
             contractor_id={expense.contractor_id}
             expense_ref_id={expense.expense_id}
-            currency={payment[0]?.accounts?.currency || null}
+            currency={expense.currency}
+            vendor_id={expense.vendor_id}
           />
         </div>
       )}

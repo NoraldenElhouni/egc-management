@@ -91,9 +91,9 @@ const ProjectExpenseEditForm = (props: ProjectExpenseEditFormProps) => {
         props.expense_type === "maps" ? undefined : props.expense_type,
       phase: props.phase === "initial" ? undefined : props.phase,
       currency: props.currency ?? undefined,
-      contractor_id: props.contractor_id ?? null, // ✅
+      contractor_id: props.contractor_id ?? null,
       vendor_id: props.vendor_id ?? null, // ✅
-      expense_ref_id: props.expense_ref_id ?? null, // ✅
+      expense_ref_id: props.expense_ref_id,
     },
   });
 

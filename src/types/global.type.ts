@@ -1,7 +1,7 @@
 // types/database.ts
 import { Database, Tables } from "../lib/supabase";
 
-export type Currency = "LYD" | "USD" | "EUR";
+export type Currency = Database["public"]["Enums"]["currency_type"];
 
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 export type ExpenseType = Database["public"]["Enums"]["expense_type"];
