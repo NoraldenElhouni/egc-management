@@ -198,7 +198,7 @@ export function useBookProject(projectId: string) {
 
         // Optional: if project_percentage totals are meant to track PAID percentage (cash basis)
         // keep this update; otherwise remove it.
-        await supabase
+        const { error: UpdatePPError } = await supabase
           .from("project_percentage")
           .update({
             total_percentage: pp?.percentage + percentageAmount,
@@ -207,12 +207,17 @@ export function useBookProject(projectId: string) {
           .eq("project_id", expenseData.project_id)
           .eq("currency", expenseData.currency)
           .eq("type", expenseData.payment_method ?? "cash");
+
+        if (UpdatePPError) throw UpdatePPError;
       }
 
       // counters (leave as you had)
       await supabase
         .from("projects")
-        .update({ expense_counter: (project?.expense_counter || 0) + 1 })
+        .update({
+          expense_counter: (project?.expense_counter || 0) + 1,
+          invoice_counter: (project?.income_counter || 0) + 1,
+        })
         .eq("id", expenseData.project_id);
 
       await supabase

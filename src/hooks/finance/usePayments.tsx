@@ -147,6 +147,7 @@ export function useExpensePayments(expenseId: string) {
 
   const addPayment = async (form: ExpensePaymentFormValues) => {
     setSubmitting(true);
+
     try {
       if (!user?.id)
         return { success: false, error: "غير مصرح — المستخدم غير معروف" };
@@ -156,17 +157,17 @@ export function useExpensePayments(expenseId: string) {
 
       if (!expenseId) return { success: false, error: "المصروف غير متوفر" };
 
-      if (!form.amount || form.amount <= 0)
+      const paidAmount = Number(form.amount);
+      if (!paidAmount || paidAmount <= 0)
         return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
 
       if (!form.currency) return { success: false, error: "العملة مطلوبة" };
-
       if (!form.account_id) return { success: false, error: "الحساب مطلوب" };
 
-      // fetch account type + currency
+      // 1) Get account (for method + currency)
       const { data: accountData, error: accountError } = await supabase
         .from("accounts")
-        .select("type, currency")
+        .select("*")
         .eq("id", form.account_id)
         .single();
 
@@ -175,39 +176,161 @@ export function useExpensePayments(expenseId: string) {
         return { success: false, error: "لا يمكن جلب بيانات الحساب" };
       }
 
-      // ensure currency matches
       if (accountData.currency !== form.currency) {
         return { success: false, error: "الحساب لا يطابق العملة المختارة" };
       }
 
-      // ✅ call DB RPC (enums)
-      const { data, error } = await supabase.rpc(
-        "rpc_process_expense_payment",
-        {
-          p_expense_id: expenseId,
-          p_project_id: expense.project_id,
-          p_amount: form.amount,
+      // 2) Get project
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", accountData.owner_id)
+        .single();
 
-          // IMPORTANT: send enum values exactly (LYD/USD/EUR)
-          p_currency: form.currency,
+      if (projectError || !project) {
+        console.error("Error fetching project data", projectError);
+        return { success: false, error: "لا يمكن جلب بيانات المشروع" };
+      }
 
-          // IMPORTANT: send enum values exactly (cash/bank)
-          p_payment_method: accountData.type,
+      // 3) Get percentage config
+      const { data: pp, error: ppError } = await supabase
+        .from("project_percentage")
+        .select("percentage, total_percentage, period_percentage")
+        .eq("project_id", accountData.owner_id)
+        .eq("currency", accountData.currency)
+        .eq("type", accountData.type)
+        .maybeSingle();
 
-          p_created_by: user.id,
-        },
-      );
+      if (ppError || !pp) {
+        console.error("Error fetching project percentage", ppError);
+        throw ppError || new Error("Project percentage not found");
+      }
 
-      if (error) {
-        console.error("Error processing expense payment via RPC", error);
+      const paymentMethod = accountData.type; // cash / bank
+      const rate = Number(pp.percentage ?? 0) / 100;
+
+      const totalAmount = Number(expense.total_amount ?? 0);
+      const alreadyPaid = Number(expense.amount_paid ?? 0);
+
+      if (totalAmount > 0 && paidAmount > totalAmount - alreadyPaid) {
         return {
           success: false,
-          error: error.message || "حدث خطأ أثناء إضافة الدفعة",
+          error: `المبلغ أكبر من المتبقي. المتبقي: ${totalAmount - alreadyPaid}`,
         };
       }
 
-      // optionally you can update UI with returned updated expense "data"
-      return { success: true, error: null, data };
+      const paymentNo = Number(expense.payment_counter ?? 1);
+      const expenseNo = Number(expense.serial_number);
+
+      // IMPORTANT: if expenseNo is null/0 -> your serial will be bad
+      if (!expenseNo || Number.isNaN(expenseNo)) {
+        return {
+          success: false,
+          error: "رقم المصروف (serial_number) غير موجود",
+        };
+      }
+
+      const serial_number = Number(`${expenseNo}.${paymentNo}`);
+
+      // ✅ 5) Insert payment
+      const { data: expensePayment, error: paymentError } = await supabase
+        .from("expense_payments")
+        .insert({
+          expense_id: expense.id,
+          amount: paidAmount,
+          payment_method: paymentMethod,
+          account_id: accountData.id,
+          created_by: user.id,
+          serial_number,
+          expense_no: expenseNo,
+          payment_no: paymentNo,
+          invoice_no: Number(project.invoice_counter),
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        // If still conflict, it means another payment was inserted at same time
+        // Return a clean message
+        if (paymentError?.code === "23505") {
+          return {
+            success: false,
+            error: "تم تسجيل دفعة بنفس الرقم قبل قليل، حاول مرة أخرى",
+          };
+        }
+        throw paymentError;
+      }
+
+      // ✅ 6) Now update expense counter + amount_paid (ADD, not overwrite)
+      const newAmountPaid = alreadyPaid + paidAmount;
+
+      const { error: bumpCounterError } = await supabase
+        .from("project_expenses")
+        .update({
+          payment_counter: paymentNo + 1,
+          amount_paid: newAmountPaid,
+          status: newAmountPaid >= totalAmount ? "paid" : "partially_paid",
+        })
+        .eq("id", expense.id)
+        .eq("payment_counter", paymentNo); // ✅ optimistic lock: only update if counter hasn't changed
+
+      if (bumpCounterError) throw bumpCounterError;
+
+      // ✅ 7) percentage log
+      const percentageAmount = paidAmount * rate;
+
+      const { error: logError } = await supabase
+        .from("project_percentage_logs")
+        .insert({
+          project_id: accountData.owner_id,
+          expense_id: expense.id,
+          payment_id: expensePayment.id,
+          amount: percentageAmount,
+          percentage: Number(pp.percentage ?? 0),
+        });
+
+      if (logError) throw logError;
+
+      // ✅ 8) update account totals
+      const accountTotal = paidAmount + percentageAmount;
+
+      const { error: accountUpdateError } = await supabase
+        .from("accounts")
+        .update({
+          balance: Number(accountData.balance) - accountTotal,
+          total_expense: Number(accountData.total_expense) + paidAmount,
+          total_percentage:
+            Number(accountData.total_percentage) + percentageAmount,
+        })
+        .eq("id", accountData.id);
+
+      if (accountUpdateError) throw accountUpdateError;
+
+      // ✅ 9) update project_percentage totals (AMOUNTS)
+      const { error: updatePPError } = await supabase
+        .from("project_percentage")
+        .update({
+          total_percentage: Number(pp.total_percentage ?? 0) + percentageAmount,
+          period_percentage:
+            Number(pp.period_percentage ?? 0) + percentageAmount,
+        })
+        .eq("project_id", accountData.owner_id)
+        .eq("currency", accountData.currency)
+        .eq("type", accountData.type);
+
+      if (updatePPError) throw updatePPError;
+
+      //update project invoice counter
+      const { error: updateProjectError } = await supabase
+        .from("projects")
+        .update({
+          invoice_counter: Number(project.invoice_counter) + 1,
+        })
+        .eq("id", accountData.owner_id);
+
+      if (updateProjectError) throw updateProjectError;
+
+      return { success: true, error: null, data: expensePayment };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return { success: false, error: msg };
@@ -215,7 +338,6 @@ export function useExpensePayments(expenseId: string) {
       setSubmitting(false);
     }
   };
-
   const editPayment = async (
     paymentId: string,
     form: ExpensePaymentFormValues,

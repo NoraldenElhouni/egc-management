@@ -1,0 +1,2 @@
+$env:GITHUB_TOKEN="PASTE_YOUR_REAL_TOKEN_HERE"
+npm run publish
