@@ -15,24 +15,20 @@ export const userSchema = z
     lastName: z.string().min(2, "اسم العائلة يجب أن يكون على الأقل حرفين"),
     dob: z.string().min(1, "تاريخ الميلاد مطلوب"),
     placeOfBirth: z.string().optional(),
-    maritalStatus: z.preprocess(
-      emptyToUndefined,
-      z.enum(["Single", "Married", "Divorced", "Widowed"]).optional()
-    ),
     bloodType: z.preprocess(
       emptyToUndefined,
-      z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional()
+      z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
     ),
     nationality: z.string().optional(),
     gender: z.preprocess(
       emptyToUndefined,
-      z.enum(["Male", "Female"]).optional()
+      z.enum(["Male", "Female"]).optional(),
     ),
 
     // Contact Information
     email: z.string().email("البريد الإلكتروني غير صالح"),
     personalEmail: z.string().optional(),
-    phone: z.string().optional(),
+    phone: z.string().min(10, "رقم الهاتف يجب أن يكون على الأقل 10 أرقام"),
     alternatePhone: z.string().optional(),
     address: z.string().optional(),
     emergencyContact: z.string().optional(),

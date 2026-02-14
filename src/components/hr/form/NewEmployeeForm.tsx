@@ -67,13 +67,6 @@ const NewEmployeeForm: React.FC = () => {
     { value: "percentage", label: "نسبة مئوية" },
   ];
 
-  const maritalStatusOptions = [
-    { value: "Single", label: "أعزب" },
-    { value: "Married", label: "متزوج" },
-    { value: "Divorced", label: "مطلق" },
-    { value: "Widowed", label: "أرمل" },
-  ];
-
   const bloodTypeOptions = [
     { value: "A+", label: "A+" },
     { value: "A-", label: "A-" },
@@ -100,7 +93,7 @@ const NewEmployeeForm: React.FC = () => {
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
   // show specializations only for roles that look like 'engineer' (accept small typo 'enger')
   const showSpecializations = Boolean(
-    selectedRole && /engineer|enger/i.test(selectedRole.name || "")
+    selectedRole && /engineer|enger/i.test(selectedRole.name || ""),
   );
 
   // Use useWatch for real-time reactivity on firstName and lastName
@@ -121,7 +114,6 @@ const NewEmployeeForm: React.FC = () => {
       "dob",
       "placeOfBirth",
       "gender",
-      "maritalStatus",
       "bloodType",
       "nationality",
       "personalPhotoUrl",
@@ -284,8 +276,8 @@ const NewEmployeeForm: React.FC = () => {
                 .filter(
                   (role) =>
                     !["client", "contractor", "supplier"].includes(
-                      (role.name || "").toLowerCase()
-                    )
+                      (role.name || "").toLowerCase(),
+                    ),
                 )
                 .map((role) => ({
                   value: role.id,
@@ -344,14 +336,6 @@ const NewEmployeeForm: React.FC = () => {
               options={genderOptions}
               register={register("gender")}
               error={errors.gender}
-            />
-
-            <SelectField
-              id="maritalStatus"
-              label="الحالة الاجتماعية"
-              options={maritalStatusOptions}
-              register={register("maritalStatus")}
-              error={errors.maritalStatus}
             />
 
             <SelectField
