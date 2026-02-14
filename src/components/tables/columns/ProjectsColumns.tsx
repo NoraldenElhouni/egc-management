@@ -8,7 +8,7 @@ import { FullProject } from "../../../types/extended.type";
 // Convert to a function that accepts the link path builder and version
 export const createProjectsColumns = (
   getLinkPath: (id: string | number) => string,
-  version = "default"
+  version = "default",
 ): ColumnDef<FullProject>[] => {
   const allColumns: ColumnDef<FullProject>[] = [
     {
@@ -56,22 +56,31 @@ export const createProjectsColumns = (
       ),
     },
 
-    {
-      accessorKey: "code",
-      header: "الكود",
-    },
+    // {
+    //   accessorKey: "code",
+    //   header: "الكود",
+    // },
 
     {
       accessorKey: "percentage",
-      header: "الحصه المشروع مع نسبة",
+      header: "احمالي النسية",
       cell: ({ row }) => {
         const data = row.original.project_percentage;
+        const accounts = row.original.accounts;
         const lydItem = data.find((item) => item.currency === "LYD");
+        const lydItems = accounts?.filter(
+          (account) => account.currency === "LYD",
+        );
+        const totalPercentage =
+          lydItems?.reduce(
+            (sum, item) => sum + (item.total_percentage ?? 0),
+            0,
+          ) || 0;
 
         return (
           <div className="flex items-center gap-3">
             <div className="text-sm font-medium">
-              {formatCurrency(lydItem?.total_percentage ?? 0, "LYD")}
+              {formatCurrency(totalPercentage, "LYD")}
             </div>
             <div className="text-xs text-gray-500">{lydItem?.percentage}%</div>
           </div>
@@ -79,20 +88,23 @@ export const createProjectsColumns = (
       },
     },
     {
-      accessorKey: "project_balances",
-      header: "قيمة المشروع",
+      accessorKey: "expenses",
+      header: "اجمالي المصاريف",
       cell: ({ row }) => {
-        const balances = row.original.project_balances;
-        const lydBalance = balances.find(
-          (balance) => balance.currency === "LYD"
+        const accounts = row.original.accounts;
+        const lydItems = accounts?.filter(
+          (account) => account.currency === "LYD",
         );
+        const totalExpense =
+          lydItems?.reduce((sum, item) => sum + (item.total_expense ?? 0), 0) ||
+          0;
 
-        return lydBalance ? (
+        return totalExpense ? (
           <div className="flex items-center gap-3">
             <div
-              className={`text-sm font-medium ${lydBalance.balance < 0 ? "text-red-600" : ""}`}
+              className={`text-sm font-medium ${totalExpense < 0 ? "text-red-600" : ""}`}
             >
-              {formatCurrency(lydBalance?.balance ?? 0, "LYD")}
+              {formatCurrency(totalExpense, "LYD")}
             </div>
           </div>
         ) : (
@@ -101,20 +113,25 @@ export const createProjectsColumns = (
       },
     },
     {
-      accessorKey: "project_balances.held",
-      header: "قيمة المحتجز",
+      accessorKey: "income",
+      header: "اجمالي الايرادات",
       cell: ({ row }) => {
-        const balances = row.original.project_balances;
-        const lydBalance = balances.find(
-          (balance) => balance.currency === "LYD"
+        const accounts = row.original.accounts;
+        const lydItems = accounts?.filter(
+          (account) => account.currency === "LYD",
         );
+        const totalIncome =
+          lydItems?.reduce(
+            (sum, item) => sum + (item.total_transactions ?? 0),
+            0,
+          ) || 0;
 
-        return lydBalance ? (
+        return totalIncome ? (
           <div className="flex items-center gap-3">
             <div
-              className={`text-sm font-medium ${lydBalance.held < 0 ? "text-red-600" : ""}`}
+              className={`text-sm font-medium ${totalIncome < 0 ? "text-red-600" : ""}`}
             >
-              {formatCurrency(lydBalance?.held ?? 0, "LYD")}
+              {formatCurrency(totalIncome, "LYD")}
             </div>
           </div>
         ) : (
@@ -123,20 +140,22 @@ export const createProjectsColumns = (
       },
     },
     {
-      accessorKey: "project_balances.total_transactions",
-      header: "اجمالي ايداع",
+      accessorKey: "balance",
+      header: "الرصيد الحالي",
       cell: ({ row }) => {
-        const balances = row.original.project_balances;
-        const lydBalance = balances.find(
-          (balance) => balance.currency === "LYD"
+        const accounts = row.original.accounts;
+        const lydItems = accounts?.filter(
+          (account) => account.currency === "LYD",
         );
+        const totalBalance =
+          lydItems?.reduce((sum, item) => sum + (item.balance ?? 0), 0) || 0;
 
-        return lydBalance ? (
+        return totalBalance ? (
           <div className="flex items-center gap-3">
             <div
-              className={`text-sm font-medium ${lydBalance.total_transactions < 0 ? "text-red-600" : ""}`}
+              className={`text-sm font-medium ${totalBalance < 0 ? "text-red-600" : ""}`}
             >
-              {formatCurrency(lydBalance?.total_transactions ?? 0, "LYD")}
+              {formatCurrency(totalBalance, "LYD")}
             </div>
           </div>
         ) : (
@@ -172,14 +191,14 @@ export const createProjectsColumns = (
       cell: ({ row }) => row.original.address ?? "—",
     },
 
-    {
-      accessorKey: "created_at",
-      header: "تاريخ الإنشاء",
-      cell: ({ row }) => {
-        const date = new Date(row.original.created_at);
-        return date.toLocaleDateString("ar-LY");
-      },
-    },
+    // {
+    //   accessorKey: "created_at",
+    //   header: "تاريخ الإنشاء",
+    //   cell: ({ row }) => {
+    //     const date = new Date(row.original.created_at);
+    //     return date.toLocaleDateString("ar-LY");
+    //   },
+    // },
   ];
 
   // Filter columns based on version
@@ -192,7 +211,7 @@ export const createProjectsColumns = (
     });
   }
   if (version === "finance") {
-    // Show only essential columns for compact view
+    // Show only essential columns for finance view
     return allColumns.filter((col) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const key = col.id || (col as any).accessorKey;
@@ -201,9 +220,9 @@ export const createProjectsColumns = (
         "serial_number",
         "name",
         "percentage",
-        "project_balances",
-        "project_balances.held",
-        "project_balances.total_transactions",
+        "expenses",
+        "income",
+        "balance",
         "status",
       ].includes(key);
     });
@@ -214,7 +233,7 @@ export const createProjectsColumns = (
     return allColumns.filter((col) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const key = col.id || (col as any).accessorKey;
-      return ["serial_number", "name", "code"].includes(key);
+      return ["serial_number", "name"].includes(key);
     });
   }
 

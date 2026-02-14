@@ -16,7 +16,7 @@ export function useProjects() {
       setLoading(true);
       const { data, error } = await supabase
         .from("projects")
-        .select("*, project_balances(*), project_percentage(*)")
+        .select("*, project_balances(*), project_percentage(*), accounts(*)")
         .order("serial_number", { ascending: true });
 
       if (error) {
@@ -73,7 +73,7 @@ export function useProjects() {
 
     // insert project_balances
     const balancesToInsert: Database["public"]["Tables"]["project_balances"]["Insert"][] =
-      ["USD", "EUR", "LYD"].map((currency) => ({
+      (["USD", "EUR", "LYD"] as const).map((currency) => ({
         project_id: data.id,
         balance: 0,
         held: 0,
@@ -183,7 +183,7 @@ export function useProjects() {
     setLoading(true);
     const { data, error } = await supabase
       .from("projects")
-      .select("*, project_balances(*), project_percentage(*)");
+      .select("*, project_balances(*), project_percentage(*), accounts(*)");
 
     if (error) {
       console.error("error refreshing projects", error);
@@ -242,7 +242,7 @@ export function useProjectsWithAssignments() {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          `id, code, name, project_assignments(user_id, employees(first_name,last_name))`
+          `id, code, name, project_assignments(user_id, employees(first_name,last_name))`,
         );
 
       if (error) {
@@ -253,7 +253,7 @@ export function useProjectsWithAssignments() {
       const { data: percentage, error: percentageError } = await supabase
         .from("project_percentage")
         .select(
-          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`
+          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`,
         )
         .in("project_id", data?.map((p) => p.id) || [])
         .eq("currency", "LYD");
@@ -284,7 +284,7 @@ export function useProjectsWithAssignments() {
       });
 
       setProjects(
-        projectsWithPercentages as unknown as ProjectWithAssignments[]
+        projectsWithPercentages as unknown as ProjectWithAssignments[],
       );
       setLoading(false);
     };
@@ -305,7 +305,7 @@ export function useProjectWithAssignments(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          `id, code, name, project_assignments(user_id, percentage,employees(first_name,last_name))`
+          `id, code, name, project_assignments(user_id, percentage,employees(first_name,last_name))`,
         )
         .eq("id", projectId)
         .single();
@@ -318,7 +318,7 @@ export function useProjectWithAssignments(projectId: string) {
       const { data: percentage, error: percentageError } = await supabase
         .from("project_percentage")
         .select(
-          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`
+          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`,
         )
         .eq("project_id", data?.id || "")
         .eq("currency", "LYD");

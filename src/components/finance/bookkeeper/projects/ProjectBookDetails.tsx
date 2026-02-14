@@ -11,7 +11,7 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
   const tabs = [
     {
       id: "materials",
-      label: "مواد",
+      label: "مواد و الخدمات",
       content: (
         <BookProjectExpenseTab project={project} addExpense={addExpense} />
       ),

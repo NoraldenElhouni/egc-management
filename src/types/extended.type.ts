@@ -21,6 +21,7 @@ import {
 } from "./global.type";
 
 export type FullProject = Projects & {
+  accounts: Account[] | null;
   project_balances: ProjectBalances[];
   project_percentage: ProjectPercentage[];
 };

@@ -25,7 +25,7 @@ export function useBookProject(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "*, project_incomes(*), project_expenses(*), project_balances(*), project_refund(*)",
+          "*, project_incomes(*), project_expenses(*), project_balances(*), project_refund(*), accounts(*)",
         )
         .eq("id", projectId)
         .single();
@@ -141,12 +141,28 @@ export function useBookProject(projectId: string) {
           `${project?.expense_counter}.${expense.payment_counter}`,
         );
 
+        // fetch account
+        const { data: accountData, error: accountError } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("owner_id", expenseData.project_id)
+          .eq("owner_type", "project")
+          .eq("type", expenseData.payment_method ?? "cash")
+          .eq("currency", expenseData.currency)
+          .single();
+
+        if (accountError || !accountData) {
+          console.error("Error fetching project account", accountError);
+          throw accountError || new Error("Project account not found");
+        }
+
         const { data: expensePayment, error: paymentError } = await supabase
           .from("expense_payments")
           .insert({
             expense_id: expense.id,
             amount: paidAmount,
             payment_method: paymentMethod,
+            account_id: accountData.id,
             created_by: user.id,
             serial_number,
             expense_no: expense.serial_number,
@@ -172,17 +188,6 @@ export function useBookProject(projectId: string) {
 
         if (logError) throw logError;
 
-        const { data: accountData, error: accountError } = await supabase
-          .from("accounts")
-          .select("*")
-          .eq("owner_id", expenseData.project_id)
-          .eq("owner_type", "project")
-          .eq("type", paymentMethod) // cash / bank
-          .eq("currency", expenseData.currency)
-          .single();
-
-        if (accountError) throw accountError;
-
         const accountTotal = paidAmount + percentageAmount;
 
         const { error: accountUpdateError } = await supabase
@@ -201,7 +206,7 @@ export function useBookProject(projectId: string) {
         const { error: UpdatePPError } = await supabase
           .from("project_percentage")
           .update({
-            total_percentage: pp?.percentage + percentageAmount,
+            total_percentage: pp?.total_percentage + percentageAmount,
             period_percentage: pp?.period_percentage + percentageAmount,
           })
           .eq("project_id", expenseData.project_id)
@@ -216,7 +221,7 @@ export function useBookProject(projectId: string) {
         .from("projects")
         .update({
           expense_counter: (project?.expense_counter || 0) + 1,
-          invoice_counter: (project?.income_counter || 0) + 1,
+          invoice_counter: (project?.invoice_counter || 0) + 1,
         })
         .eq("id", expenseData.project_id);
 

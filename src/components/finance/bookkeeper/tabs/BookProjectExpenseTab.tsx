@@ -15,7 +15,7 @@ import { formatCurrency } from "../../../../utils/helpper";
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
   addExpense: (data: ProjectExpenseFormValues) => Promise<{
-    data: ProjectExpenses | null; // ✅ Correct type
+    data: ProjectExpenses | null;
     error: PostgrestError | null;
   }>;
 }
@@ -33,47 +33,54 @@ const BookProjectExpenseTab = ({
         <OverviewStatus
           stats={[
             {
+              label: "اجمالي النسبة",
+              value: formatCurrency(
+                project?.accounts
+                  .filter((account) => account.currency === "LYD")
+                  .reduce(
+                    (acc, account) => acc + (account.total_percentage || 0),
+                    0,
+                  ) || 0,
+              ),
+              icon: Hash,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+            {
               label: "اجمالي المصروفات",
               value: formatCurrency(
-                project?.project_expenses
-                  ?.filter((expense) => expense.status !== "deleted")
-                  .reduce((acc, expense) => acc + expense.total_amount, 0) || 0,
+                project?.accounts
+                  .filter((account) => account.currency === "LYD")
+                  .reduce(
+                    (acc, account) => acc + (account.total_expense || 0),
+                    0,
+                  ) || 0,
               ),
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
             },
             {
-              label: "إجمالي مصروفات المدفوعه",
+              label: "اجمالي الدخل",
               value: formatCurrency(
-                project?.project_expenses
-                  ?.filter((expense) => expense.status !== "deleted")
-                  .reduce((acc, expense) => acc + expense.amount_paid, 0) || 0,
+                project?.accounts
+                  .filter((account) => account.currency === "LYD")
+                  .reduce(
+                    (acc, account) => acc + (account.total_transactions || 0),
+                    0,
+                  ) || 0,
               ),
               icon: Hash,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
             },
             {
-              label: "اجمالي المحجوز",
+              label: "الرصيد الحالي",
               value: formatCurrency(
-                project?.project_balances.reduce(
-                  (acc, balance) => acc + balance.held,
+                project?.accounts
+                  .filter((account) => account.currency === "LYD")
+                  .reduce((acc, account) => acc + (account.balance || 0), 0) ||
                   0,
-                ) || 0,
-              ),
-              icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
-            },
-
-            {
-              label: "اجمالي المتاح",
-              value: formatCurrency(
-                project?.project_balances.reduce(
-                  (acc, balance) => acc + balance.balance,
-                  0,
-                ) || 0,
               ),
               icon: Hash,
               iconBgColor: "bg-green-100",
