@@ -343,30 +343,262 @@ export function useExpensePayments(expenseId: string) {
     form: ExpensePaymentFormValues,
   ) => {
     setSubmitting(true);
+
     try {
-      if (!user?.id) return { success: false, error: "غير مصرح" };
+      if (!user?.id)
+        return { success: false, error: "غير مصرح — المستخدم غير معروف" };
       if (!paymentId) return { success: false, error: "paymentId مطلوب" };
       if (!expense?.project_id)
         return { success: false, error: "معلومات المشروع غير متوفرة" };
 
-      if (!form.amount || form.amount <= 0)
+      const newPaidAmount = Number(form.amount);
+      if (!newPaidAmount || newPaidAmount <= 0)
         return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
 
+      if (!form.currency) return { success: false, error: "العملة مطلوبة" };
       if (!form.account_id) return { success: false, error: "الحساب مطلوب" };
 
-      const { data, error } = await supabase.rpc("rpc_update_expense_payment", {
-        p_payment_id: paymentId,
-        p_new_amount: form.amount,
-        p_new_account_id: form.account_id,
-        p_updated_by: user.id,
-      });
+      // 0) Fetch old payment (we need old amount + old account_id + expense_id)
+      const { data: oldPayment, error: oldPaymentError } = await supabase
+        .from("expense_payments")
+        .select("*")
+        .eq("id", paymentId)
+        .single();
 
-      if (error) {
-        console.error("Error editing payment via RPC", error);
-        return { success: false, error: error.message || "فشل تعديل الدفعة" };
+      if (oldPaymentError || !oldPayment) {
+        console.error("Error fetching old payment", oldPaymentError);
+        return { success: false, error: "لا يمكن جلب بيانات الدفعة القديمة" };
       }
 
-      return { success: true, error: null, data };
+      // 1) Fetch expense (fresh) because we need totals + amount_paid
+      const { data: expenseData, error: expenseError } = await supabase
+        .from("project_expenses")
+        .select("*")
+        .eq("id", oldPayment.expense_id)
+        .single();
+
+      if (expenseError || !expenseData) {
+        console.error("Error fetching expense", expenseError);
+        return { success: false, error: "لا يمكن جلب بيانات المصروف" };
+      }
+
+      const totalAmount = Number(expenseData.total_amount ?? 0);
+      const alreadyPaid = Number(expenseData.amount_paid ?? 0);
+
+      const oldPaidAmount = Number(oldPayment.amount ?? 0);
+      if (!oldPaidAmount || oldPaidAmount <= 0) {
+        return { success: false, error: "مبلغ الدفعة القديمة غير صالح" };
+      }
+
+      // Remaining check (allow editing within remaining + old amount)
+      // remaining = total - (alreadyPaid - oldPaidAmount)
+      const remaining = totalAmount - (alreadyPaid - oldPaidAmount);
+
+      if (totalAmount > 0 && newPaidAmount > remaining) {
+        return {
+          success: false,
+          error: `المبلغ أكبر من المتبقي. المتبقي: ${remaining}`,
+        };
+      }
+
+      // 2) Fetch OLD account (to reverse)
+      if (!oldPayment.account_id) {
+        return { success: false, error: "الحساب القديم غير متوفر" };
+      }
+      const { data: oldAccount, error: oldAccountError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("id", oldPayment.account_id)
+        .single();
+
+      if (oldAccountError || !oldAccount) {
+        console.error("Error fetching old account", oldAccountError);
+        return { success: false, error: "لا يمكن جلب بيانات الحساب القديم" };
+      }
+
+      // 3) Fetch NEW account (to apply)
+      const { data: newAccount, error: newAccountError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("id", form.account_id)
+        .single();
+
+      if (newAccountError || !newAccount) {
+        console.error("Error fetching new account", newAccountError);
+        return { success: false, error: "لا يمكن جلب بيانات الحساب الجديد" };
+      }
+
+      // currency checks (same as addPayment idea)
+      if (newAccount.currency !== form.currency) {
+        return { success: false, error: "الحساب لا يطابق العملة المختارة" };
+      }
+      // IMPORTANT: payment currency must match the expense currency (usually)
+      if (newAccount.currency !== expenseData.currency) {
+        return { success: false, error: "عملة الحساب لا تطابق عملة المصروف" };
+      }
+
+      // 4) Fetch project (same as addPayment; invoice_counter not touched)
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", newAccount.owner_id)
+        .single();
+
+      if (projectError || !project) {
+        console.error("Error fetching project data", projectError);
+        return { success: false, error: "لا يمكن جلب بيانات المشروع" };
+      }
+
+      // 5) Fetch OLD percentage config (based on oldAccount.type + currency)
+      const { data: oldPP, error: oldPPError } = await supabase
+        .from("project_percentage")
+        .select("percentage, total_percentage, period_percentage")
+        .eq("project_id", oldAccount.owner_id)
+        .eq("currency", oldAccount.currency)
+        .eq("type", oldAccount.type)
+        .maybeSingle();
+
+      if (oldPPError || !oldPP) {
+        console.error("Error fetching old project percentage", oldPPError);
+        return {
+          success: false,
+          error: "لا يمكن جلب إعدادات النسبة (الحساب القديم)",
+        };
+      }
+
+      // 6) Fetch NEW percentage config (based on newAccount.type + currency)
+      const { data: newPP, error: newPPError } = await supabase
+        .from("project_percentage")
+        .select("percentage, total_percentage, period_percentage")
+        .eq("project_id", newAccount.owner_id)
+        .eq("currency", newAccount.currency)
+        .eq("type", newAccount.type)
+        .maybeSingle();
+
+      if (newPPError || !newPP) {
+        console.error("Error fetching new project percentage", newPPError);
+        return {
+          success: false,
+          error: "لا يمكن جلب إعدادات النسبة (الحساب الجديد)",
+        };
+      }
+
+      const oldRate = Number(oldPP.percentage ?? 0) / 100;
+      const newRate = Number(newPP.percentage ?? 0) / 100;
+
+      const oldPercentageAmount = oldPaidAmount * oldRate;
+      const newPercentageAmount = newPaidAmount * newRate;
+
+      const oldAccountTotal = oldPaidAmount + oldPercentageAmount;
+      const newAccountTotal = newPaidAmount + newPercentageAmount;
+
+      // 7) Reverse OLD effects
+      // 7.1 reverse account totals (give money back to old account)
+      const { error: reverseOldAccountError } = await supabase
+        .from("accounts")
+        .update({
+          balance: Number(oldAccount.balance) + oldAccountTotal,
+          total_expense: Number(oldAccount.total_expense) - oldPaidAmount,
+          total_percentage:
+            Number(oldAccount.total_percentage) - oldPercentageAmount,
+        })
+        .eq("id", oldAccount.id);
+
+      if (reverseOldAccountError) throw reverseOldAccountError;
+
+      // 7.2 reverse project_percentage totals (subtract old percentage)
+      const { error: reverseOldPPError } = await supabase
+        .from("project_percentage")
+        .update({
+          total_percentage:
+            Number(oldPP.total_percentage ?? 0) - oldPercentageAmount,
+          period_percentage:
+            Number(oldPP.period_percentage ?? 0) - oldPercentageAmount,
+        })
+        .eq("project_id", oldAccount.owner_id)
+        .eq("currency", oldAccount.currency)
+        .eq("type", oldAccount.type);
+
+      if (reverseOldPPError) throw reverseOldPPError;
+
+      // 7.3 reverse expense.amount_paid (remove old paid)
+      const amountPaidAfterReverse = alreadyPaid - oldPaidAmount;
+
+      // 8) Apply NEW effects
+      // 8.1 update payment row (amount + account_id + payment_method)
+      const { data: updatedPayment, error: updatePaymentError } = await supabase
+        .from("expense_payments")
+        .update({
+          amount: newPaidAmount,
+          account_id: newAccount.id,
+          payment_method: newAccount.type, // cash/bank
+          updated_by: user.id,
+        })
+        .eq("id", paymentId)
+        .select()
+        .single();
+
+      if (updatePaymentError) throw updatePaymentError;
+
+      // 8.2 update percentage log row for this payment (same payment_id)
+      // if you might have multiple logs, keep it .eq("payment_id", paymentId) and update all
+      const { error: updateLogError } = await supabase
+        .from("project_percentage_logs")
+        .update({
+          amount: newPercentageAmount,
+          percentage: Number(newPP.percentage ?? 0),
+        })
+        .eq("payment_id", paymentId);
+
+      if (updateLogError) throw updateLogError;
+
+      // 8.3 apply to new account (subtract money from new account)
+      const { error: applyNewAccountError } = await supabase
+        .from("accounts")
+        .update({
+          balance: Number(newAccount.balance) - newAccountTotal,
+          total_expense: Number(newAccount.total_expense) + newPaidAmount,
+          total_percentage:
+            Number(newAccount.total_percentage) + newPercentageAmount,
+        })
+        .eq("id", newAccount.id);
+
+      if (applyNewAccountError) throw applyNewAccountError;
+
+      // 8.4 apply to new project_percentage
+      const { error: applyNewPPError } = await supabase
+        .from("project_percentage")
+        .update({
+          total_percentage:
+            Number(newPP.total_percentage ?? 0) + newPercentageAmount,
+          period_percentage:
+            Number(newPP.period_percentage ?? 0) + newPercentageAmount,
+        })
+        .eq("project_id", newAccount.owner_id)
+        .eq("currency", newAccount.currency)
+        .eq("type", newAccount.type);
+
+      if (applyNewPPError) throw applyNewPPError;
+
+      // 8.5 update expense.amount_paid + status
+      const newAmountPaid = amountPaidAfterReverse + newPaidAmount;
+
+      const nextStatus =
+        totalAmount > 0 && newAmountPaid >= totalAmount
+          ? "paid"
+          : "partially_paid";
+
+      const { error: updateExpenseError2 } = await supabase
+        .from("project_expenses")
+        .update({
+          amount_paid: newAmountPaid,
+          status: nextStatus,
+        })
+        .eq("id", expenseData.id);
+
+      if (updateExpenseError2) throw updateExpenseError2;
+
+      return { success: true, error: null, data: updatedPayment };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return { success: false, error: msg };

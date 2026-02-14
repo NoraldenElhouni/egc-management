@@ -92,3 +92,7 @@ typings/
 out/
 
 .vscode/
+
+# Supabase CLI local state
+.supabase/
+supabase/.temp/

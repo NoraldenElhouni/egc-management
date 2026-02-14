@@ -393,6 +393,7 @@ export function useBookProject(projectId: string) {
         .from("projects")
         .update({
           income_counter: (projectRow?.income_counter || 0) + 1,
+          invoice_counter: (projectRow?.income_counter || 0) + 1,
         })
         .eq("id", incomeData.project_id);
 
@@ -585,6 +586,9 @@ export function useBookProject(projectId: string) {
       .from("accounts")
       .update({
         balance: projectAccount.balance + form.amount,
+        refund: (projectAccount.refund || 0) + form.amount,
+        total_percentage:
+          (projectAccount.total_percentage || 0) - percentageAmount,
       })
       .eq("id", projectAccount?.id);
 
@@ -601,6 +605,9 @@ export function useBookProject(projectId: string) {
       .update({
         balance: projectBalance.balance + form.amount,
         total_expense: projectBalance.total_expense - form.amount,
+        refund: (projectBalance.refund || 0) + form.amount,
+        total_percentage:
+          (projectBalance.total_percentage || 0) - percentageAmount,
       })
       .eq("id", projectBalance?.id);
 
@@ -709,12 +716,6 @@ export function useProjectExpenseActions() {
 
     // ✅ prevent total < paid (basic safety)
     const paid = data.amount_paid ?? 0;
-    if (changedAmount && nextTotalAmount < paid) {
-      return {
-        success: false,
-        error: `لا يمكن جعل إجمالي المصروف أقل من المدفوع (${paid})`,
-      };
-    }
 
     if (
       changedVendor ||

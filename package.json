@@ -1,7 +1,7 @@
 {
   "name": "egc-management",
   "productName": "egc-management",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Finance and management Application for EGC",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "types": "supabase gen types typescript --linked --schema public > src/lib/supabase.ts"
   },
   "keywords": [],
   "author": {
@@ -40,6 +41,7 @@
     "eslint-plugin-import": "^2.32.0",
     "png-to-ico": "^3.0.1",
     "postcss": "^8.5.6",
+    "supabase": "^2.76.8",
     "tailwindcss": "^3.4.18",
     "typescript": "~4.5.4",
     "vite": "^5.4.21"
