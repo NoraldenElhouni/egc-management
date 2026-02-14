@@ -378,7 +378,7 @@ const NewEmployeeForm: React.FC = () => {
 
             <TextField
               id="phone"
-              label="الهاتف (اختياري)"
+              label="الهاتف"
               register={register("phone")}
               error={errors.phone}
             />
