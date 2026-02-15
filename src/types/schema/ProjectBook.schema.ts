@@ -44,13 +44,13 @@ export const ProjectExpensePercentageSchema = z
     description: z.string().min(1, "الوصف مطلوب"),
     expense_id: z.string().optional(),
 
-    type: z.enum(["labor", "material"], {
-      message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد'",
+    type: z.enum(["labor", "material", "maps"], {
+      message: "نوع المصروف يجب أن يكون إما 'اعمال' أو 'مواد' أو 'خرائط'",
     }),
     contractor_id: z.string().optional(),
     vendor_id: z.string().optional(),
-    phase: z.enum(["construction", "finishing"], {
-      message: "المرحلة يجب أن تكون إما 'انشاء' أو 'تشطيب'",
+    phase: z.enum(["construction", "finishing", "initial"], {
+      message: "المرحلة يجب أن تكون إما 'انشاء' أو 'تشطيب' أو 'مبدئي'",
     }),
     total_amount: z.number().min(0, "القيمة يجب أن تكون غير سالبة").default(0),
     paid_amount: z

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, DollarSign, MapPin, Workflow } from "lucide-react";
+import { Users, DollarSign, MapPin, Workflow, ChevronDown } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useParams } from "react-router-dom";
 import { translateProjectStatus } from "../../utils/translations";
@@ -64,25 +64,23 @@ interface Account {
   currency: string;
   type: string;
   total_transactions: number;
+  total_percentage: number;
+  total_expense: number;
 }
 
-interface FinancialData {
-  totalExpenses: number;
-  totalPaid: number;
-  totalIncome: number;
-  refunded: number;
+interface ProjectBalance {
   balance: number;
+  currency: string;
   held: number;
-  totalinvoices: number;
+  id: string;
+  project_id: string;
+  refund: number;
+  total_expense: number;
+  total_percentage: number;
+  total_transactions: number;
 }
 
-interface ProjectStats {
-  teamSize: number;
-  activeContracts: number;
-  completionPercentage: number;
-}
-
-interface projectPercentage {
+interface ProjectPercentage {
   created_at: string;
   currency: "LYD" | "USD" | "EUR" | null;
   id: string;
@@ -106,14 +104,13 @@ interface Project {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
-  project_percentages: projectPercentage[];
+  project_percentages: ProjectPercentage[];
   serial_number: number | null;
   client: Client;
   teamMembers: ProjectAssignment[];
   contracts: Contract[];
   accounts: Account[];
-  financial: FinancialData;
-  stats: ProjectStats;
+  balance: ProjectBalance[];
 }
 
 interface UseProjectReturn {
@@ -157,10 +154,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           .eq("id", projectId)
           .single();
 
-        if (projectError) {
-          console.error("Error fetching project:", projectError);
-          throw projectError;
-        }
+        if (projectError) throw projectError;
 
         // Fetch project assignments (team members)
         const { data: assignments, error: assignmentsError } = await supabase
@@ -182,35 +176,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           )
           .eq("project_id", projectId);
 
-        if (assignmentsError) {
-          console.error(
-            "Error fetching project assignments:",
-            assignmentsError,
-          );
-          throw assignmentsError;
-        }
-
-        // Fetch financial data - expenses
-        const { data: expenses, error: expensesError } = await supabase
-          .from("project_expenses")
-          .select("total_amount, amount_paid, status")
-          .eq("project_id", projectId);
-
-        if (expensesError) {
-          console.error("Error fetching expenses:", expensesError);
-          throw expensesError;
-        }
-
-        // Fetch financial data - incomes
-        const { data: incomes, error: incomesError } = await supabase
-          .from("project_incomes")
-          .select("*")
-          .eq("project_id", projectId);
-
-        if (incomesError) {
-          console.error("Error fetching incomes:", incomesError);
-          throw incomesError;
-        }
+        if (assignmentsError) throw assignmentsError;
 
         // Fetch contracts
         const { data: contracts, error: contractsError } = await supabase
@@ -237,10 +203,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           )
           .eq("project_id", projectId);
 
-        if (contractsError) {
-          console.error("Error fetching contracts:", contractsError);
-          throw contractsError;
-        }
+        if (contractsError) throw contractsError;
 
         // Fetch project balances per currency (authoritative totals)
         const { data: projectBalances, error: balancesError } = await supabase
@@ -248,24 +211,20 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           .select("*")
           .eq("project_id", projectId);
 
-        if (balancesError) {
-          console.error("Error fetching project balances:", balancesError);
-          throw balancesError;
-        }
+        if (balancesError) throw balancesError;
 
-        // Fetch accounts for this project (informational, no held/transactions)
+        // Fetch accounts for this project
         const { data: accounts, error: accountsError } = await supabase
           .from("accounts")
-          .select("balance, currency, type, total_transactions")
+          .select(
+            "balance, currency, type, total_transactions, total_percentage, total_expense",
+          )
           .eq("owner_type", "project")
           .eq("owner_id", projectId);
 
-        if (accountsError) {
-          console.error("Error fetching accounts:", accountsError);
-          throw accountsError;
-        }
+        if (accountsError) throw accountsError;
 
-        // fetch project percentages (may include multiple rows for different types like 'cash' and 'bank')
+        // Fetch project percentages
         const { data: projectPercentages, error: projectPercentageError } =
           await supabase
             .from("project_percentage")
@@ -280,38 +239,6 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           );
         }
 
-        const totalExpenses =
-          projectBalances?.find((pb) => pb.currency === "LYD")?.total_expense ||
-          0;
-
-        const totalIncome =
-          projectBalances?.find((pb) => pb.currency === "LYD")
-            ?.total_transactions || 0;
-
-        const balance =
-          projectBalances?.find((pb) => pb.currency === "LYD")?.balance || 0;
-
-        const held =
-          projectBalances?.find((pb) => pb.currency === "LYD")?.held || 0;
-
-        const totalPaid =
-          expenses
-            ?.filter((expense) => expense.status !== "deleted")
-            .reduce(
-              (sum, exp) => sum + parseFloat(String(exp.amount_paid || 0)),
-              0,
-            ) || 0;
-
-        const totalreturned =
-          incomes?.reduce(
-            (sum, inc) =>
-              sum +
-              (inc.fund === "refund" ? parseFloat(String(inc.amount ?? 0)) : 0),
-            0,
-          ) || 0;
-
-        const totalinvoices = expenses?.length || 0;
-
         // Compile all data
         const compiledProject: Project = {
           ...projectData,
@@ -319,25 +246,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           teamMembers: assignments || [],
           contracts: contracts || [],
           accounts: accounts || [],
-          financial: {
-            totalExpenses,
-            totalPaid,
-            totalIncome,
-            refunded: totalreturned,
-            balance,
-            held,
-            totalinvoices,
-          },
-          stats: {
-            teamSize: assignments?.length || 0,
-            activeContracts:
-              contracts?.filter((c) => c.status === "approved").length || 0,
-            completionPercentage:
-              projectPercentages?.reduce(
-                (s: number, p: projectPercentage) => s + (p.percentage || 0),
-                0,
-              ) || 0,
-          },
+          balance: projectBalances || [],
         };
 
         setProject(compiledProject);
@@ -358,6 +267,8 @@ const useProject = (projectId: string | null): UseProjectReturn => {
 // Project Details Component
 const ProjectDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
+  const [isFinancialDropdownOpen, setIsFinancialDropdownOpen] = useState(false);
+
   if (!id) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -365,6 +276,7 @@ const ProjectDetailsPage = () => {
       </div>
     );
   }
+
   const { project, loading, error } = useProject(id);
 
   if (loading) {
@@ -386,11 +298,10 @@ const ProjectDetailsPage = () => {
   }
 
   const formatCurrency = (amount: number, currency = "LYD"): string => {
-    // Choose a locale based on currency for better formatting defaults
     const localeMap: Record<string, string> = {
       LYD: "en-LY",
       USD: "en-US",
-      EUR: "de-DE", // German locale commonly used for EUR formatting
+      EUR: "de-DE",
     };
     const locale = localeMap[currency] || "en-US";
     try {
@@ -401,7 +312,6 @@ const ProjectDetailsPage = () => {
         maximumFractionDigits: 2,
       }).format(amount || 0);
     } catch {
-      // Fallback if Intl cannot format given currency
       return `${amount?.toFixed(2)} ${currency}`;
     }
   };
@@ -414,7 +324,6 @@ const ProjectDetailsPage = () => {
         byCurrency[acc.currency][acc.type] = [];
       byCurrency[acc.currency][acc.type].push(acc);
     });
-    // Sort to ensure LYD comes first
     const sortedEntries = Object.entries(byCurrency).sort(([a], [b]) => {
       if (a === "LYD") return -1;
       if (b === "LYD") return 1;
@@ -426,11 +335,43 @@ const ProjectDetailsPage = () => {
   const typeLabel = (type: string) =>
     type === "bank" ? "بنك" : type === "cash" ? "نقدي" : type;
 
-  // Project percentage
-  const totalPercentages = project.project_percentages.reduce(
-    (acc, p) => acc + (p.total_percentage || 0),
+  // Get LYD balance and accounts
+  const lydBalance = project.balance.find((b) => b.currency === "LYD");
+  const lydAccounts = project.accounts.filter((acc) => acc.currency === "LYD");
+
+  // Calculate financial metrics
+  const deposits = lydBalance?.total_transactions || 0;
+  const totalExpense = lydBalance?.total_expense || 0;
+  const totalPercentage = lydBalance?.total_percentage || 0;
+  const currentBalance = lydBalance?.balance || 0;
+
+  const balance = deposits - totalExpense - totalPercentage;
+
+  // calculate accoount deposits
+  const accountDeposits = lydAccounts.reduce(
+    (sum, acc) => sum + (acc.total_transactions || 0),
     0,
   );
+
+  // calculate account balance
+  const accountBalance = lydAccounts.reduce(
+    (sum, acc) => sum + (acc.balance || 0),
+    0,
+  );
+
+  // Calculate paid amounts from accounts
+  const paidExpenses = lydAccounts.reduce(
+    (sum, acc) => sum + acc.total_expense,
+    0,
+  );
+  const paidPercentage = lydAccounts.reduce(
+    (sum, acc) => sum + acc.total_percentage,
+    0,
+  );
+
+  // Calculate outstanding (payables)
+  const outstanding =
+    totalExpense - paidExpenses + (totalPercentage - paidPercentage);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -482,37 +423,35 @@ const ProjectDetailsPage = () => {
           stats={[
             {
               label: "أعضاء الفريق",
-              value: project.stats.teamSize,
+              value: project.teamMembers.length,
               icon: Users,
               iconBgColor: "bg-blue-100",
               iconColor: "text-blue-600",
               secondaryLabel: "العقود النشطة",
-              secondaryValue: project.stats.activeContracts,
-            },
-            {
-              label: "الرصيد الحالي",
-              value: formatCurrency(project.financial.balance, "LYD"),
-              icon: DollarSign,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
-              secondaryLabel: "المحتجز",
-              secondaryValue: formatCurrency(project.financial.held, "LYD"),
+              secondaryValue: project.contracts.filter(
+                (c) => c.status === "approved",
+              ).length,
             },
             {
               label: "اجمالي المصروفات",
-              value: formatCurrency(project.financial.totalExpenses, "LYD"),
+              value: formatCurrency(paidExpenses, "LYD"),
+              icon: DollarSign,
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+              secondaryLabel: `نسبة الشركة ${project.project_percentages[0].percentage}%`,
+              secondaryValue: formatCurrency(paidPercentage, "LYD"),
+            },
+            {
+              label: "اجمالي الدخل",
+              value: formatCurrency(accountDeposits, "LYD"),
               icon: Workflow,
               iconBgColor: "bg-orange-100",
               iconColor: "text-orange-600",
-              secondaryLabel: "المدفوع",
-              secondaryValue: formatCurrency(
-                project.financial.totalPaid,
-                "LYD",
-              ),
             },
             {
-              label: `نسبة الشركة ${project.project_percentages[0].percentage}%`,
-              value: formatCurrency(totalPercentages ?? 0, "LYD"),
+              label: "الرصيد الحالي",
+              value: formatCurrency(accountBalance, "LYD"),
+
               icon: DollarSign,
               iconBgColor: "bg-green-100",
               iconColor: "text-green-600",
@@ -546,67 +485,68 @@ const ProjectDetailsPage = () => {
 
           {/* Financial Overview */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              نظرة عامة مالية
+            <h2
+              className="text-xl font-semibold text-gray-900 mb-4 flex items-center justify-between cursor-pointer"
+              onClick={() => setIsFinancialDropdownOpen((open) => !open)}
+            >
+              <span>نظرة عامة مالية</span>
+              <ChevronDown
+                className={`w-5 h-5 ml-2 transition-transform duration-200 ${isFinancialDropdownOpen ? "rotate-180" : ""}`}
+              />
             </h2>
-            <div className="space-y-3">
-              <StatListItems
-                value={project.financial.totalIncome}
-                currency="LYD"
-                label="اجمالي ايداع"
-                positiveColor="text-emerald-700"
-              />
-              <StatListItems
-                value={project.financial.totalPaid}
-                currency="LYD"
-                label="اجمالي السحب"
-                positiveColor="text-gray-800"
-              />
-              <StatListItems
-                value={project.financial.held}
-                currency="LYD"
-                label="قيم المحجوزة"
-                positiveColor="text-amber-700"
-              />
-              <StatListItems
-                value={project.financial.balance - project.financial.held}
-                currency="LYD"
-                label="رصيد المتاح"
-                positiveColor="text-emerald-700"
-              />
-              <StatListItems
-                value={project.financial.balance}
-                currency="LYD"
-                label="رصيد الحالي"
-                positiveColor="text-emerald-700"
-              />
-              {project.project_percentages.map((pp) => (
+            {isFinancialDropdownOpen ? (
+              <>
+                <div className="space-y-3">
+                  <StatListItems
+                    value={currentBalance}
+                    currency="LYD"
+                    label="الرصيد الحالي"
+                    positiveColor="text-emerald-700"
+                  />
+                  <StatListItems
+                    value={deposits}
+                    currency="LYD"
+                    label="اجمالي الدخل"
+                    positiveColor="text-gray-800"
+                  />
+                  <StatListItems
+                    value={outstanding}
+                    currency="LYD"
+                    label="المستحقات (التي لم تدفع بعد)"
+                    positiveColor="text-amber-700"
+                  />
+                  <StatListItems
+                    value={totalExpense}
+                    currency="LYD"
+                    label="اجمالي المصروفات"
+                    positiveColor="text-amber-700"
+                  />
+                  <StatListItems
+                    value={totalPercentage}
+                    currency="LYD"
+                    label="نسبة الشركة"
+                    positiveColor="text-amber-700"
+                  />
+                </div>
+                {balance !== currentBalance && (
+                  <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
+                    <p className="text-sm">
+                      هناك اختلاف في الرصيد: الرصيد المحسوب هو {balance} بينما
+                      الرصيد الحالي هو {currentBalance}.
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
                 <StatListItems
-                  key={pp.id}
-                  value={pp.total_percentage ?? 0}
+                  value={currentBalance}
                   currency="LYD"
-                  label={`حصه الشركة (${pp.type === "cash" ? "نقدي" : "بنك"})`}
-                  positiveColor="text-sky-600"
+                  label="الرصيد الحالي"
+                  positiveColor="text-emerald-700"
                 />
-              ))}
-              <StatListItems
-                value={totalPercentages ?? 0}
-                currency="LYD"
-                label="حصه الشركه (الإجمالي)"
-                positiveColor="text-sky-700"
-              />
-              <StatListItems
-                value={project.financial.refunded}
-                currency="LYD"
-                label="قيم الراجع"
-                positiveColor="text-gray-800"
-              />
-              <StatListItems
-                value={project.financial.totalinvoices}
-                label="عدد الفواتير"
-                positiveColor="text-gray-700"
-              />
-            </div>
+              </>
+            )}
           </div>
         </div>
 

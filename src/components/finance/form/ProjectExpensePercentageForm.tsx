@@ -51,6 +51,7 @@ const ProjectExpensePercentageForm = ({
       project_id: projectId,
       date: new Date().toISOString().split("T")[0],
       type: "material",
+      currency: "LYD",
     },
   });
 
@@ -155,6 +156,7 @@ const ProjectExpensePercentageForm = ({
             options={[
               { value: "labor", label: "اعمال" },
               { value: "material", label: "مواد" },
+              { value: "maps", label: "خرائط" },
             ]}
             placeholder="اختار نوع المصروف"
           />
@@ -210,6 +212,7 @@ const ProjectExpensePercentageForm = ({
             options={[
               { value: "construction", label: "انشاء" },
               { value: "finishing", label: "تشطيب" },
+              { value: "initial", label: "مبدئي" },
             ]}
             placeholder="اختار المرحلة"
           />

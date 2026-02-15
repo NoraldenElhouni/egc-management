@@ -256,11 +256,8 @@ export function useBookProject(projectId: string) {
       setLoading(true);
       setError(null);
 
-      if (!user?.id) {
-        throw new Error("User not authenticated");
-      }
+      if (!user?.id) throw new Error("User not authenticated");
 
-      // ✅ Basic validations (optional but recommended)
       if (!expenseData.project_id) throw new Error("Project is required");
       if (!expenseData.total_amount || expenseData.total_amount <= 0)
         throw new Error("Total amount must be > 0");
@@ -268,10 +265,12 @@ export function useBookProject(projectId: string) {
       if (!expenseData.type) throw new Error("Expense type is required");
       if (!expenseData.phase) throw new Error("Phase is required");
 
-      // ✅ If paid_amount > 0, ensure payment_method exists
-      if ((expenseData.paid_amount ?? 0) > 0 && !expenseData.payment_method) {
+      const paidAmount = expenseData.paid_amount ?? 0;
+
+      if (paidAmount > 0 && !expenseData.payment_method) {
         throw new Error("payment_method is required when paid_amount > 0");
       }
+
       if (
         expenseData.percentage &&
         (expenseData.percentage < 0 || expenseData.percentage > 100)
@@ -279,52 +278,184 @@ export function useBookProject(projectId: string) {
         throw new Error("Percentage must be between 0 and 100");
       }
 
-      // ✅ Call DB RPC that does:
-      // - lock project
-      // - insert expense + serial_number
-      // - increment expense_counter
-      // - update project_balances (held + total_expense)
-      // - if paid_amount > 0: calls rpc_process_expense_payment internally
-      const { data, error } = await supabase.rpc(
-        "rpc_add_project_expense_percentage",
-        {
-          p_project_id: expenseData.project_id,
-          p_description: expenseData.description ?? null,
-          p_total_amount: expenseData.total_amount,
-          p_expense_date: expenseData.date ?? null,
-          p_created_by: user.id,
-          p_expense_type: expenseData.type, // ✅ must match enum expense_type
-          p_phase: expenseData.phase, // ✅ must match enum phase_type
-          p_currency: expenseData.currency, // ✅ must match enum currency_type
-          p_contractor_id: expenseData.contractor_id ?? undefined,
-          p_vendor_id: expenseData.vendor_id ?? undefined,
-          p_expense_id: expenseData.expense_id ?? undefined,
-          p_paid_amount: expenseData.paid_amount ?? 0,
-          p_payment_method:
-            (expenseData.paid_amount ?? 0) > 0
-              ? expenseData.payment_method
-              : undefined, // ✅ enum payment_method
-          p_percentage: expenseData.percentage,
-        },
-      );
+      // ✅ Get percentage rate (do NOT depend on payment_method if it's global)
+      const { data: pp, error: ppError } = await supabase
+        .from("project_percentage")
+        .select("total_percentage, period_percentage")
+        .eq("project_id", expenseData.project_id)
+        .eq("currency", expenseData.currency)
+        .eq("type", expenseData.payment_method ?? "cash")
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error adding expense via RPC", error);
-        throw error;
+      if (ppError || !pp) {
+        console.error("Error fetching project percentage", ppError);
+        throw ppError || new Error("Project percentage not found");
       }
 
-      // ✅ Update local state (same idea you had before)
-      if (data) {
-        setProject((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            project_expenses: [data, ...(prev.project_expenses ?? [])],
-          };
-        });
+      const rate = (expenseData.percentage ?? 0) / 100;
+
+      let status: "unpaid" | "paid" | "partially_paid";
+      if (paidAmount === 0) status = "unpaid";
+      else if (paidAmount === expenseData.total_amount) status = "paid";
+      else status = "partially_paid";
+
+      // 1) Insert expense invoice
+      const { data: expense, error: expenseErr } = await supabase
+        .from("project_expenses")
+        .insert({
+          project_id: expenseData.project_id,
+          description: expenseData.description,
+          total_amount: expenseData.total_amount,
+          expense_date: expenseData.date,
+          created_by: user.id,
+          phase: expenseData.phase,
+          expense_type: expenseData.type,
+          status,
+          amount_paid: paidAmount,
+          serial_number: project?.expense_counter || 0,
+          contractor_id: expenseData.contractor_id ?? undefined,
+          vendor_id: expenseData.vendor_id ?? undefined,
+          currency: expenseData.currency,
+          is_percentage: true,
+        })
+        .select()
+        .single();
+
+      if (expenseErr) throw expenseErr;
+
+      // ✅ 2) Update project_balances (invoice-based net)
+      const invoicePercentage = expenseData.total_amount * rate;
+      const netDelta = expenseData.total_amount + invoicePercentage;
+
+      const { data: balanceData, error: balanceError } = await supabase
+        .from("project_balances")
+        .select("*")
+        .eq("project_id", expenseData.project_id)
+        .eq("currency", expenseData.currency)
+        .single();
+
+      if (balanceError) throw balanceError;
+
+      const { error: balanceUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance: (balanceData?.balance || 0) - netDelta,
+          total_expense:
+            (balanceData?.total_expense || 0) + expenseData.total_amount,
+          total_percentage:
+            (balanceData?.total_percentage || 0) + invoicePercentage,
+        })
+        .eq("id", balanceData?.id);
+
+      if (balanceUpdateError) throw balanceUpdateError;
+
+      // 3) If paid > 0, insert payment + percentage log + update account
+      if (paidAmount > 0) {
+        const paymentMethod = expenseData.payment_method; // safe now
+
+        const serial_number = Number(
+          `${project?.expense_counter}.${expense.payment_counter}`,
+        );
+
+        // fetch account
+        const { data: accountData, error: accountError } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("owner_id", expenseData.project_id)
+          .eq("owner_type", "project")
+          .eq("type", expenseData.payment_method ?? "cash")
+          .eq("currency", expenseData.currency)
+          .single();
+
+        if (accountError || !accountData) {
+          console.error("Error fetching project account", accountError);
+          throw accountError || new Error("Project account not found");
+        }
+
+        const { data: expensePayment, error: paymentError } = await supabase
+          .from("expense_payments")
+          .insert({
+            expense_id: expense.id,
+            amount: paidAmount,
+            payment_method: paymentMethod,
+            account_id: accountData.id,
+            created_by: user.id,
+            serial_number,
+            expense_no: expense.serial_number,
+            payment_no: expense.payment_counter,
+            invoice_no: project?.invoice_counter,
+          })
+          .select()
+          .single();
+
+        if (paymentError) throw paymentError;
+
+        const percentageAmount = paidAmount * rate;
+
+        const { error: logError } = await supabase
+          .from("project_percentage_logs")
+          .insert({
+            project_id: expenseData.project_id,
+            expense_id: expense.id,
+            payment_id: expensePayment.id,
+            amount: percentageAmount,
+            percentage: expenseData.percentage ?? 0,
+          });
+
+        if (logError) throw logError;
+
+        const accountTotal = paidAmount + percentageAmount;
+
+        const { error: accountUpdateError } = await supabase
+          .from("accounts")
+          .update({
+            balance: accountData.balance - accountTotal,
+            total_expense: accountData.total_expense + paidAmount,
+            total_percentage: accountData.total_percentage + percentageAmount,
+          })
+          .eq("id", accountData.id);
+
+        if (accountUpdateError) throw accountUpdateError;
+
+        // Optional: if project_percentage totals are meant to track PAID percentage (cash basis)
+        // keep this update; otherwise remove it.
+        const { error: UpdatePPError } = await supabase
+          .from("project_percentage")
+          .update({
+            total_percentage: pp?.total_percentage + percentageAmount,
+            period_percentage: pp?.period_percentage + percentageAmount,
+          })
+          .eq("project_id", expenseData.project_id)
+          .eq("currency", expenseData.currency)
+          .eq("type", expenseData.payment_method ?? "cash");
+
+        if (UpdatePPError) throw UpdatePPError;
       }
 
-      return { data, error: null };
+      // counters (leave as you had)
+      await supabase
+        .from("projects")
+        .update({
+          expense_counter: (project?.expense_counter || 0) + 1,
+          invoice_counter: (project?.invoice_counter || 0) + 1,
+        })
+        .eq("id", expenseData.project_id);
+
+      await supabase
+        .from("project_expenses")
+        .update({ payment_counter: expense.payment_counter + 1 })
+        .eq("id", expense.id);
+
+      // update local state
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          project_expenses: [expense, ...(prev.project_expenses ?? [])],
+        };
+      });
+
+      return { data: expense, error: null };
     } catch (err) {
       const error = err as PostgrestError;
       setError(error);
@@ -523,7 +654,7 @@ export function useBookProject(projectId: string) {
     // 4 fetch project refund counter
     const { data: companyData, error: companyDataError } = await supabase
       .from("projects")
-      .select("refund_counter")
+      .select("refund_counter, invoice_counter")
       .eq("id", form.project_id)
       .single();
 
@@ -566,8 +697,9 @@ export function useBookProject(projectId: string) {
     }
 
     // 6. Update project percentage - Calculate percentage and subtract (can go negative)
-    const percentageAmount =
-      form.amount * ((projectPercentage?.percentage || 0) / 100);
+    const rate = (projectPercentage?.percentage || 0) / 100;
+    const percentageAmount = form.amount * rate;
+    const totalAmount = form.amount + percentageAmount;
 
     const { error: projectPercentageUpdateError } = await supabase
       .from("project_percentage")
@@ -590,10 +722,11 @@ export function useBookProject(projectId: string) {
     const { error: projectAccountUpdateError } = await supabase
       .from("accounts")
       .update({
-        balance: projectAccount.balance + form.amount,
-        refund: (projectAccount.refund || 0) + form.amount,
+        balance: projectAccount.balance + totalAmount,
+        refund: (projectAccount.refund || 0) + totalAmount,
         total_percentage:
           (projectAccount.total_percentage || 0) - percentageAmount,
+        total_expense: (projectAccount.total_expense || 0) - form.amount,
       })
       .eq("id", projectAccount?.id);
 
@@ -608,9 +741,9 @@ export function useBookProject(projectId: string) {
     const { error: projectBalanceUpdateError } = await supabase
       .from("project_balances")
       .update({
-        balance: projectBalance.balance + form.amount,
+        balance: projectBalance.balance + totalAmount,
         total_expense: projectBalance.total_expense - form.amount,
-        refund: (projectBalance.refund || 0) + form.amount,
+        refund: (projectBalance.refund || 0) + totalAmount,
         total_percentage:
           (projectBalance.total_percentage || 0) - percentageAmount,
       })
@@ -628,6 +761,7 @@ export function useBookProject(projectId: string) {
       .from("projects")
       .update({
         refund_counter: (companyData?.refund_counter || 0) + 1,
+        invoice_counter: (companyData?.invoice_counter || 0) + 1,
       })
       .eq("id", form.project_id);
 

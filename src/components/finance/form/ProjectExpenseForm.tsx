@@ -51,6 +51,7 @@ const ProjectExpenseForm = ({
       project_id: projectId,
       date: new Date().toISOString().split("T")[0],
       type: "material",
+      currency: "LYD",
     },
   });
 
