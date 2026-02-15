@@ -125,6 +125,7 @@ export const ExpensePaymentSchema = (
     );
 
 export const projectRefundSchema = z.object({
+  expense_id: z.string(),
   project_id: z.string().uuid(),
   description: z.string().nullable(),
   amount: z.number().positive(),

@@ -11,6 +11,8 @@ import { NumberField } from "../../ui/inputs/NumberField";
 import { TextField } from "../../ui/inputs/TextField";
 import { DateField } from "../../ui/inputs/DateField";
 import Button from "../../ui/Button";
+import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import { useExpenses } from "../../../hooks/settings/useExpenses";
 
 interface ProjectRefundFormProps {
   projectId: string;
@@ -22,8 +24,16 @@ const ProjectRefundForm = ({ projectId }: ProjectRefundFormProps) => {
   const { addRefund } = useBookProject(projectId);
 
   const {
+    expenses,
+    loading: expensesLoading,
+    error: expensesError,
+  } = useExpenses();
+
+  const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<ProjectRefundValues>({
@@ -80,6 +90,29 @@ const ProjectRefundForm = ({ projectId }: ProjectRefundFormProps) => {
       )}
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+          <SearchableSelectField
+            id="expense_id"
+            label="المصروف"
+            value={watch("expense_id")}
+            onChange={(value) => {
+              setValue("expense_id", value);
+              const selected = expenses.find((e) => e.id === value);
+              setValue("description", selected ? selected.name : "");
+            }}
+            loading={expensesLoading}
+            options={expenses
+              .sort((a, b) =>
+                a.name.localeCompare(b.name, "ar", { sensitivity: "base" }),
+              )
+              .map((expense) => ({
+                value: expense.id,
+                label: expense.name,
+              }))}
+            placeholder={
+              expensesError ? "فشل تحميل المصروفات" : "اختار المصروف"
+            }
+            error={errors.expense_id}
+          />
           <NumberField
             id="amount"
             label="القيمة"

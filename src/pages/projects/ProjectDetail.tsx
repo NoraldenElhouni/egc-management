@@ -7,6 +7,7 @@ import OverviewStatus from "../../components/ui/OverviewStatus";
 import StatListItems from "../../components/ui/StatListItems";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
+import Separator from "../../components/ui/separator";
 
 // Type definitions
 interface Client {
@@ -111,6 +112,7 @@ interface Project {
   contracts: Contract[];
   accounts: Account[];
   balance: ProjectBalance[];
+  expense_percentage_total: number;
 }
 
 interface UseProjectReturn {
@@ -239,6 +241,27 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           );
         }
 
+        // fetch the expense that have percentage changes
+        const { data: percentageExpenses, error: percentageExpensesError } =
+          await supabase
+            .from("project_expenses")
+            .select("amount_paid")
+            .eq("project_id", projectId)
+            .eq("is_percentage", true);
+
+        if (percentageExpensesError) {
+          console.warn(
+            "Non-fatal: percentageExpenses query returned an error:",
+            percentageExpensesError,
+          );
+        }
+
+        const totalPercentageExpenses =
+          percentageExpenses?.reduce(
+            (sum, exp) => sum + (exp.amount_paid || 0),
+            0,
+          ) || 0;
+
         // Compile all data
         const compiledProject: Project = {
           ...projectData,
@@ -247,6 +270,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
           contracts: contracts || [],
           accounts: accounts || [],
           balance: projectBalances || [],
+          expense_percentage_total: totalPercentageExpenses,
         };
 
         setProject(compiledProject);
@@ -335,6 +359,7 @@ const ProjectDetailsPage = () => {
   const typeLabel = (type: string) =>
     type === "bank" ? "بنك" : type === "cash" ? "نقدي" : type;
 
+  const rate = project.project_percentages[0]?.percentage / 100 + 1;
   // Get LYD balance and accounts
   const lydBalance = project.balance.find((b) => b.currency === "LYD");
   const lydAccounts = project.accounts.filter((acc) => acc.currency === "LYD");
@@ -369,9 +394,16 @@ const ProjectDetailsPage = () => {
     0,
   );
 
+  // refund
+  const refund = lydBalance?.refund || 0;
+  const netRefund = refund / rate;
+  const percentageRefund = refund - netRefund;
+
   // Calculate outstanding (payables)
   const outstanding =
     totalExpense - paidExpenses + (totalPercentage - paidPercentage);
+  const netOutstanding = outstanding / rate;
+  const percentageOutsanding = outstanding - netOutstanding;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -510,12 +542,6 @@ const ProjectDetailsPage = () => {
                     positiveColor="text-gray-800"
                   />
                   <StatListItems
-                    value={outstanding}
-                    currency="LYD"
-                    label="المستحقات (التي لم تدفع بعد)"
-                    positiveColor="text-amber-700"
-                  />
-                  <StatListItems
                     value={totalExpense}
                     currency="LYD"
                     label="اجمالي المصروفات"
@@ -527,6 +553,52 @@ const ProjectDetailsPage = () => {
                     label="نسبة الشركة"
                     positiveColor="text-amber-700"
                   />
+
+                  <Separator />
+
+                  {outstanding > 0 && (
+                    <>
+                      <StatListItems
+                        value={netOutstanding}
+                        currency="LYD"
+                        label="المستحقات (التي لم تدفع بعد)"
+                        positiveColor="text-amber-700"
+                      />
+                      <StatListItems
+                        value={percentageOutsanding}
+                        currency="LYD"
+                        label="نسبة المستحقات (التي لم تدفع بعد)"
+                        positiveColor="text-amber-700"
+                      />
+                    </>
+                  )}
+                  <Separator />
+
+                  {project.expense_percentage_total > 0 && (
+                    <StatListItems
+                      value={project.expense_percentage_total}
+                      currency="LYD"
+                      label="قيمة الفواتير متغيرة النسبة"
+                      positiveColor="text-amber-700"
+                    />
+                  )}
+
+                  {refund > 0 && (
+                    <>
+                      <StatListItems
+                        value={netRefund}
+                        currency="LYD"
+                        label="الراجع"
+                        positiveColor="text-gray-800"
+                      />
+                      <StatListItems
+                        value={percentageRefund}
+                        currency="LYD"
+                        label="نسبة الراجع"
+                        positiveColor="text-gray-800"
+                      />
+                    </>
+                  )}
                 </div>
                 {balance !== currentBalance && (
                   <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">

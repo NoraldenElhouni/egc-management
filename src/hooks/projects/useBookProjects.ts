@@ -680,7 +680,9 @@ export function useBookProject(projectId: string) {
       payment_method: form.payment_method,
       income_date: form.income_date ?? undefined,
       serial_number: companyData?.refund_counter || 0,
+      invoice_number: companyData?.invoice_counter || 0,
       currency: form.currency,
+      expense_id: form.expense_id ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

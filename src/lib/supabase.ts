@@ -1693,7 +1693,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
-          Discounting: number | null
+          discounting: number | null
           expense_date: string
           expense_id: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
@@ -1719,7 +1719,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
-          Discounting?: number | null
+          discounting?: number | null
           expense_date?: string
           expense_id?: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
@@ -1745,7 +1745,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
-          Discounting?: number | null
+          discounting?: number | null
           expense_date?: string
           expense_id?: string | null
           expense_type?: Database["public"]["Enums"]["expense_type"]
@@ -2096,8 +2096,10 @@ export type Database = {
           created_by: string
           currency: Database["public"]["Enums"]["currency_type"]
           description: string | null
+          expense_id: string | null
           id: string
           income_date: string
+          invoice_number: number | null
           payment_method: Database["public"]["Enums"]["account_type"]
           project_id: string
           serial_number: number
@@ -2109,8 +2111,10 @@ export type Database = {
           created_by: string
           currency: Database["public"]["Enums"]["currency_type"]
           description?: string | null
+          expense_id?: string | null
           id?: string
           income_date?: string
+          invoice_number?: number | null
           payment_method: Database["public"]["Enums"]["account_type"]
           project_id: string
           serial_number: number
@@ -2122,8 +2126,10 @@ export type Database = {
           created_by?: string
           currency?: Database["public"]["Enums"]["currency_type"]
           description?: string | null
+          expense_id?: string | null
           id?: string
           income_date?: string
+          invoice_number?: number | null
           payment_method?: Database["public"]["Enums"]["account_type"]
           project_id?: string
           serial_number?: number
@@ -2135,6 +2141,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_refund_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
           {
@@ -2801,7 +2814,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
-          Discounting: number | null
+          discounting: number | null
           expense_date: string
           expense_id: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
@@ -2851,7 +2864,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
-          Discounting: number | null
+          discounting: number | null
           expense_date: string
           expense_id: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
@@ -2897,7 +2910,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
-          Discounting: number | null
+          discounting: number | null
           expense_date: string
           expense_id: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
@@ -2940,7 +2953,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
-          Discounting: number | null
+          discounting: number | null
           expense_date: string
           expense_id: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
@@ -3003,7 +3016,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
-          Discounting: number | null
+          discounting: number | null
           expense_date: string
           expense_id: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
