@@ -1,5 +1,4 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { ProjectExpenses } from "../../../types/global.type";
 
 // ⬅ Your translation utils
 import {
@@ -10,11 +9,12 @@ import {
 
 import { getExpenseStatusColor } from "../../../utils/colors/status";
 import { Link } from "react-router-dom";
+import { Expense } from "../../../types/projects.type";
 
 // Safe number conversion
 const toNum = (v: unknown) => (typeof v === "number" ? v : Number(v || 0));
 
-export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
+export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
   // SELECT CHECKBOX
   {
     id: "select",
@@ -69,11 +69,23 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
         {row.original.description || "N/A"}{" "}
         <span className="text-red-500">
           {row.original.status === "deleted" ? "(محذوف)" : ""}{" "}
-          {row.original.is_percentage ? "(نسبة مئوية متغيرة)" : ""}
+          {row.original.is_percentage ? "%" : ""}
         </span>
       </div>
     ),
     size: 200,
+  },
+
+  {
+    id: "vendor_or_contract",
+    header: "الاسم",
+    accessorFn: (row) => row.vendor_name ?? row.contract_name,
+    cell: ({ row }) => (
+      <span>
+        {row.original.vendor_name || row.original.contract_name || "N/A"}
+      </span>
+    ),
+    size: 150,
   },
 
   // EXPENSE TYPE (عمالة / مواد)
@@ -131,7 +143,7 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
     cell: ({ row }) => {
       const total = toNum(row.original.total_amount);
       const paid = toNum(row.original.amount_paid);
-      const discount = toNum(row.original.Discounting);
+      const discount = toNum(row.original.discounting);
       const rawRemaining = total - paid - discount;
 
       const isOverpaid = rawRemaining < 0;
@@ -163,12 +175,12 @@ export const ProjectsExpensesColumns: ColumnDef<ProjectExpenses>[] = [
 
   // DISCOUNTING
   {
-    accessorKey: "Discounting",
+    accessorKey: "discounting",
     header: "الخصم",
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
-        {row.original.Discounting
-          ? `${toNum(row.original.Discounting).toLocaleString()} LYD`
+        {row.original.discounting
+          ? `${toNum(row.original.discounting).toLocaleString()} LYD`
           : "N/A"}
       </div>
     ),

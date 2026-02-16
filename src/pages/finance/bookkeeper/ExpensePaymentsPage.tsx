@@ -29,7 +29,7 @@ const ExpensePaymentsPage = () => {
 
   const totalPayments = payment?.reduce((s, p) => s + (p.amount || 0), 0) || 0;
   const remaining = expense
-    ? expense.total_amount - expense.amount_paid - (expense.Discounting ?? 0)
+    ? expense.total_amount - expense.amount_paid - (expense.discounting ?? 0)
     : 0;
 
   if (loading) {

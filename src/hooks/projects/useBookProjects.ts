@@ -25,7 +25,7 @@ export function useBookProject(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "*, project_incomes(*), project_expenses(*), project_balances(*), project_refund(*), accounts(*)",
+          "*, project_incomes(*), project_expenses(*, vendors(vendor_name), contractors(first_name,last_name)), project_balances(*), project_refund(*), accounts(*)",
         )
         .eq("id", projectId)
         .single();
@@ -34,7 +34,25 @@ export function useBookProject(projectId: string) {
         console.error("error fetching project", error);
         setError(error);
       } else {
-        setProject(data);
+        const projectWithNames: ProjectWithDetailsForBook = {
+          ...data,
+          project_expenses: (data.project_expenses ?? []).map((expense) => {
+            const contractorName = [
+              expense.contractors?.first_name,
+              expense.contractors?.last_name,
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return {
+              ...expense,
+              vendor_name: expense.vendors?.vendor_name ?? undefined,
+              contract_name: contractorName || undefined,
+            };
+          }),
+        };
+
+        setProject(projectWithNames);
       }
 
       setLoading(false);

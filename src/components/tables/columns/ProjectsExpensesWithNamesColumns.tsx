@@ -141,7 +141,7 @@ export const ProjectsExpensesWithNamesColumns: ColumnDef<ProjectExpenseWithName>
       cell: ({ row }) => {
         const total = toNum(row.original.total_amount);
         const paid = toNum(row.original.amount_paid);
-        const discount = toNum(row.original.Discounting);
+        const discount = toNum(row.original.discounting);
         const rawRemaining = total - paid - discount;
 
         const isOverpaid = rawRemaining < 0;
@@ -177,8 +177,8 @@ export const ProjectsExpensesWithNamesColumns: ColumnDef<ProjectExpenseWithName>
       header: "الخصم",
       cell: ({ row }) => (
         <div className="whitespace-nowrap">
-          {row.original.Discounting
-            ? `${toNum(row.original.Discounting).toLocaleString()} LYD`
+          {row.original.discounting
+            ? `${toNum(row.original.discounting).toLocaleString()} LYD`
             : "N/A"}
         </div>
       ),
@@ -204,7 +204,7 @@ export const ProjectsExpensesWithNamesColumns: ColumnDef<ProjectExpenseWithName>
       cell: ({ row }) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getExpenseStatusColor(
-            row.original.status || "pending"
+            row.original.status || "pending",
           )}`}
         >
           {translateExpenseStatus(row.original.status || "pending")}
