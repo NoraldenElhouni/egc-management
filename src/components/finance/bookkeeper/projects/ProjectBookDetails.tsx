@@ -2,6 +2,7 @@ import { useBookProject } from "../../../../hooks/projects/useBookProjects";
 import Tabs from "../../../ui/Tabs";
 import BookProjectExpensePercentageTab from "../tabs/BookProjectExpensePercentageTab";
 import BookProjectExpenseTab from "../tabs/BookProjectExpenseTab";
+import BookProjectMapsTab from "../tabs/BookProjectMapsTab";
 import BookRefundTab from "../tabs/BookRefundTab";
 
 const ProjectBookDetails = ({ id }: { id: string }) => {
@@ -21,6 +22,16 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
       label: "الراجع",
       content: (
         <BookRefundTab refunds={project?.project_refund ?? []} projectId={id} />
+      ),
+    },
+    {
+      id: "maps",
+      label: "الخرائط",
+      content: (
+        <BookProjectMapsTab
+          projectId={id}
+          projectMaps={project?.project_maps ?? []}
+        />
       ),
     },
     {
