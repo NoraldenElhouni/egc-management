@@ -172,6 +172,17 @@ export const updateProjectExpense = z
     }
   });
 
+export const ProjectMapsSchema = z.object({
+  project_id: z.string().min(1, "معرف المشروع مطلوب"),
+  map_id: z.string().min(1, "معرف المصروف مطلوب"),
+  description: z.string().nullable(),
+  amount: z.number().min(0, "المبلغ يجب أن يكون غير سالب"),
+  date: z.string(),
+  payment_method: z.enum(["cash", "bank"]),
+});
+
+export type ProjectMapsValues = z.input<typeof ProjectMapsSchema>;
+
 export type ProjectRefundValues = z.infer<typeof projectRefundSchema>;
 
 export type UpdateProjectExpenseValues = z.infer<typeof updateProjectExpense>;

@@ -294,49 +294,65 @@ export function useProjectsWithAssignments() {
 
   return { projects, loading, error };
 }
+
 export function useProjectWithAssignments(projectId: string) {
   const [project, setProject] = useState<ProjectWithAssignments | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchProject = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("projects")
-        .select(
-          `id, code, name, project_assignments(user_id, percentage,employees(first_name,last_name))`,
-        )
-        .eq("id", projectId)
-        .single();
+      try {
+        setLoading(true);
+        setError(null);
 
-      if (error) {
-        console.error("error fetching project", error);
-        setError(error);
-        setProject(null);
+        const { data, error } = await supabase
+          .from("projects")
+          .select(
+            `id, code, name, project_assignments(user_id, percentage,employees(first_name,last_name))`,
+          )
+          .eq("id", projectId)
+          .single();
+
+        if (error) throw error;
+        if (!data) throw { message: "Project not found" } as PostgrestError;
+
+        const { data: percentage, error: percentageError } = await supabase
+          .from("project_percentage")
+          .select(
+            `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`,
+          )
+          .eq("project_id", data.id)
+          .eq("currency", "LYD");
+
+        if (percentageError) throw percentageError;
+
+        const projectWithPercentages = {
+          ...data,
+          project_percentage: percentage ?? [],
+        };
+
+        if (!cancelled)
+          setProject(
+            projectWithPercentages as unknown as ProjectWithAssignments,
+          );
+      } catch (e) {
+        if (!cancelled) {
+          setProject(null);
+          setError(e as PostgrestError);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      const { data: percentage, error: percentageError } = await supabase
-        .from("project_percentage")
-        .select(
-          `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`,
-        )
-        .eq("project_id", data?.id || "")
-        .eq("currency", "LYD");
-
-      if (percentageError) {
-        console.error("error fetching project percentage", percentageError);
-        setError(percentageError);
-      }
-      const projectsWithPercentages = {
-        ...data,
-        project_percentage: percentage,
-      };
-
-      setProject(projectsWithPercentages as unknown as ProjectWithAssignments);
-      setLoading(false);
     };
 
-    fetchProject();
+    if (projectId) fetchProject();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   return { project, loading, error };

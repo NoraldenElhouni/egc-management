@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { MapType } from "../types/global.type";
 
-function normalizeError(e: unknown, fallback: string) {
+export function normalizeError(e: unknown, fallback: string) {
   if (e instanceof Error) return e.message || fallback;
   if (typeof e === "string") return e || fallback;
   if (typeof e === "object" && e && "message" in e) {
@@ -86,7 +86,7 @@ export function useMaps() {
       if (error) throw error;
 
       setMaps((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, name: trimmed } : m))
+        prev.map((m) => (m.id === id ? { ...m, name: trimmed } : m)),
       );
     } catch (e: unknown) {
       const msg = normalizeError(e, "فشل في تعديل نوع الخريطة");
@@ -104,6 +104,6 @@ export function useMaps() {
       addNew,
       edit,
     }),
-    [maps, loading, error, refetch, addNew, edit]
+    [maps, loading, error, refetch, addNew, edit],
   );
 }

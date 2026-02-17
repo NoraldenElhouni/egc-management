@@ -18,6 +18,7 @@ import {
   ProjectBalances,
   ProjectPercentage,
   ProjectExpenses,
+  PaymentMethod,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -76,16 +77,15 @@ export type PayrollWithRelations = Payroll & {
   employees: { first_name: string; last_name: string | null } | null;
 };
 export type ProjectWithAssignments = Projects & {
-  project_percentage:
-    | {
-        total_percentage: number;
-        percentage: number;
-        period_percentage: number;
-        type?: string | null;
-        currency?: string | null;
-        period_start: string;
-      }[]
-    | null;
+  project_percentage: Array<{
+    total_percentage: number;
+    percentage: number;
+    period_percentage: number;
+    type: PaymentMethod; // ✅ strongly typed
+    currency: Currency; // ✅ strongly typed
+    period_start: string; // date string
+  }> | null;
+
   project_assignments: Array<{
     user_id: string;
     percentage: number;

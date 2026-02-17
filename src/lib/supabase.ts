@@ -1879,6 +1879,76 @@ export type Database = {
           },
         ]
       }
+      project_maps: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string
+          id: string
+          invoice_number: number | null
+          map_id: string
+          payment_method: Database["public"]["Enums"]["account_type"] | null
+          project_id: string
+          serial_number: number
+          status: Database["public"]["Enums"]["expense_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description: string
+          id?: string
+          invoice_number?: number | null
+          map_id: string
+          payment_method?: Database["public"]["Enums"]["account_type"] | null
+          project_id: string
+          serial_number: number
+          status?: Database["public"]["Enums"]["expense_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string
+          id?: string
+          invoice_number?: number | null
+          map_id?: string
+          payment_method?: Database["public"]["Enums"]["account_type"] | null
+          project_id?: string
+          serial_number?: number
+          status?: Database["public"]["Enums"]["expense_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_maps_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_maps_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "map_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_maps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_percentage: {
         Row: {
           created_at: string
@@ -1930,27 +2000,27 @@ export type Database = {
         Row: {
           amount: number
           created_at: string | null
-          expense_id: string
+          expense_id: string | null
           id: string
-          payment_id: string
+          payment_id: string | null
           percentage: number
           project_id: string
         }
         Insert: {
           amount: number
           created_at?: string | null
-          expense_id: string
+          expense_id?: string | null
           id?: string
-          payment_id: string
+          payment_id?: string | null
           percentage: number
           project_id: string
         }
         Update: {
           amount?: number
           created_at?: string | null
-          expense_id?: string
+          expense_id?: string | null
           id?: string
-          payment_id?: string
+          payment_id?: string | null
           percentage?: number
           project_id?: string
         }

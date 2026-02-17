@@ -1,15 +1,23 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProjectWithDetailsForBook } from "../../types/projects.type";
 import { supabase } from "../../lib/supabaseClient";
 import {
   ProjectExpenseFormValues,
   ProjectExpensePercentageFormValues,
   ProjectIncomeFormValues,
+  ProjectMapsValues,
   ProjectRefundValues,
 } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
 import { PostgrestError } from "@supabase/supabase-js";
-import { Currency, ExpenseType, Phase } from "../../types/global.type";
+import {
+  Currency,
+  ExpenseType,
+  MapType,
+  Phase,
+  ProjectMaps,
+} from "../../types/global.type";
+import { normalizeError } from "../useMaps";
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
@@ -25,7 +33,7 @@ export function useBookProject(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "*, project_incomes(*), project_expenses(*, vendors(vendor_name), contractors(first_name,last_name)), project_balances(*), project_refund(*), accounts(*)",
+          "*, project_incomes(*), project_expenses(*, vendors(vendor_name), contractors(first_name,last_name)), project_balances(*), project_refund(*), accounts(*), project_maps(*)",
         )
         .eq("id", projectId)
         .single();
@@ -1023,4 +1031,154 @@ export function useProjectExpenseActions() {
   };
 
   return { updateExpense, deleteExpense };
+}
+
+export function useMaps(projectId: string) {
+  const [maps, setMaps] = useState<MapType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<{ message: string } | null>(null);
+  const { user } = useAuth();
+
+  const fetchMaps = useCallback(async () => {
+    setLoading(true);
+    try {
+      setError(null);
+      const { data, error } = await supabase
+        .from("map_types")
+        .select("id,name,created_at")
+        .order("name", { ascending: false });
+
+      if (error) throw error;
+      setMaps((data ?? []) as MapType[]);
+    } catch (e: unknown) {
+      const msg = normalizeError(e, "فشل في تحميل أنواع الخرائط");
+      setError({ message: msg });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMaps();
+  }, [fetchMaps]);
+
+  const addMaps = async (form: ProjectMapsValues) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!user?.id) throw new Error("User not authenticated");
+
+      if (!projectId) throw new Error("Project is required");
+      if (!form.map_id) throw new Error("Map is required");
+      if (!form.amount || form.amount <= 0)
+        throw new Error("Total amount must be > 0");
+      if (!form.payment_method) throw new Error("Expense type is required");
+
+      const paidAmount = form.amount ?? 0;
+
+      if (paidAmount > 0 && !form.payment_method) {
+        throw new Error("payment_method is required when paid_amount > 0");
+      }
+
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("map_counter, invoice_counter")
+        .eq("id", projectId)
+        .single();
+
+      if (projectError) throw projectError;
+
+      let status: "unpaid" | "paid" | "partially_paid";
+      if (paidAmount === 0) status = "unpaid";
+      else if (paidAmount === form.amount) status = "paid";
+      else status = "partially_paid";
+
+      // 1) Insert expense invoice
+      const { data: expense, error: expenseErr } = await supabase
+        .from("project_maps")
+        .insert({
+          map_id: form.map_id,
+          project_id: projectId,
+          amount: form.amount,
+          description: form.description,
+          payment_method: form.payment_method,
+          status,
+          created_by: user.id,
+          date: form.date,
+          created_at: new Date().toISOString(),
+          invoice_number: project?.invoice_counter || 0,
+          serial_number: project?.map_counter || 0,
+        } as ProjectMaps)
+        .select()
+        .single();
+
+      if (expenseErr) throw expenseErr;
+
+      // ✅ 2) Update project_balances (invoice-based net)
+
+      const { data: balanceData, error: balanceError } = await supabase
+        .from("project_balances")
+        .select("*")
+        .eq("project_id", projectId)
+        .eq("currency", "LYD")
+        .single();
+
+      if (balanceError) throw balanceError;
+
+      const { error: balanceUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance: (balanceData?.balance || 0) - paidAmount,
+          total_expense: (balanceData?.total_expense || 0) + paidAmount,
+        })
+        .eq("id", balanceData?.id);
+
+      if (balanceUpdateError) throw balanceUpdateError;
+
+      const { data: accountData, error: accountError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("owner_id", projectId)
+        .eq("owner_type", "project")
+        .eq("type", form.payment_method ?? "cash")
+        .eq("currency", "LYD")
+        .single();
+
+      if (accountError || !accountData) {
+        console.error("Error fetching project account", accountError);
+        throw accountError || new Error("Project account not found");
+      }
+
+      const { error: accountUpdateError } = await supabase
+        .from("accounts")
+        .update({
+          balance: accountData.balance - paidAmount,
+          total_expense: accountData.total_expense + paidAmount,
+        })
+        .eq("id", accountData.id);
+
+      if (accountUpdateError) throw accountUpdateError;
+
+      // counters (leave as you had)
+      await supabase
+        .from("projects")
+        .update({
+          maps_counter: (project?.map_counter || 0) + 1,
+          invoice_counter: (project?.invoice_counter || 0) + 1,
+        })
+        .eq("id", projectId);
+
+      return { data: expense, error: null };
+    } catch (err) {
+      console.error("Error in addExpense", err);
+      const error = err as PostgrestError;
+      setError(error);
+      return { data: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { maps, loading, error, addMaps };
 }

@@ -29,12 +29,13 @@ export const PercentageDistributionSchema = z
     employee: z.array(employeeDistribution),
     company: companyDistribution,
     total: z.number(),
+    end_date: z.string(),
   })
   .refine(
     (data) => {
       const employeeTotal = data.employee.reduce(
         (sum, emp) => sum + emp.percentage,
-        0
+        0,
       );
       const grandTotal = employeeTotal + data.company.percentage;
       return grandTotal <= 100;
@@ -42,7 +43,7 @@ export const PercentageDistributionSchema = z
     {
       message: "إجمالي النسب يجب ألا يتجاوز 100%",
       path: ["total"],
-    }
+    },
   );
 
 export type PercentageDistributionFormValues = z.infer<

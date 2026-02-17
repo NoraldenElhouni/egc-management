@@ -51,6 +51,7 @@ export type EmployeeLeaves = Tables<"employee_leaves">;
 export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
 export type expenses = Tables<"expenses">;
+export type ProjectMaps = Tables<"project_maps">;
 
 // Additional
 export type ContractorSpecializations = Tables<"contractor_specializations">;
