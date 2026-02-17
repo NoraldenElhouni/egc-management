@@ -5,6 +5,7 @@ import {
   translatePaymentMethod,
 } from "../../../utils/translations";
 import { formatCurrency } from "../../../utils/helpper";
+import { IncomeActionsDialog } from "../actions/income/IncomeActionsDialog";
 
 export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
   {
@@ -124,21 +125,15 @@ export const ProjectsIncomeColumns: ColumnDef<ProjectIncome>[] = [
     ),
     size: 140,
   },
-  // {
-  //   id: "actions",
-  //   accessorKey: "actions",
-  //   header: "الإجراءات",
-  //   cell: ({ row }) => (
-  //     <Button
-  //       className="centered"
-  //       variant="muted"
-  //       size="xs"
-  //       onClick={() => {
-  //         console.log("Edit", row.original);
-  //       }}
-  //     >
-  //       تعديل
-  //     </Button>
-  //   ),
-  // },
+  {
+    id: "actions",
+    accessorKey: "actions",
+    header: "الإجراءات",
+    cell: ({ row }) => (
+      <IncomeActionsDialog
+        incomeId={row.original.id}
+        projectId={row.original.project_id}
+      />
+    ),
+  },
 ];

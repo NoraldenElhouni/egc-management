@@ -119,6 +119,7 @@ export function useBookProject(projectId: string) {
           contractor_id: expenseData.contractor_id ?? undefined,
           vendor_id: expenseData.vendor_id ?? undefined,
           currency: expenseData.currency,
+          expense_id: expenseData.expense_id,
         })
         .select()
         .single();

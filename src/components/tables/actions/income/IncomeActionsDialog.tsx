@@ -3,10 +3,10 @@ import Button from "../../../ui/Button";
 
 type Props = {
   projectId: string;
-  expenseId: string;
+  incomeId: string;
 };
 
-export function ExpenseActionsDialog({ projectId, expenseId }: Props) {
+export function IncomeActionsDialog({ projectId, incomeId }: Props) {
   const [open, setOpen] = useState(false);
 
   // Close on ESC
@@ -22,13 +22,13 @@ export function ExpenseActionsDialog({ projectId, expenseId }: Props) {
   // edit fucntion onclick
   const handleEdit = () => {
     setOpen(false);
-    console.log("Edit expense", { projectId, expenseId });
+    console.log("Edit income", { projectId, incomeId });
   };
 
   // delete function onclick
   const handleDelete = () => {
     setOpen(false);
-    console.log("Delete expense", { projectId, expenseId });
+    console.log("Delete income", { projectId, incomeId });
   };
 
   return (

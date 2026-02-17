@@ -2,6 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ProjectRefund } from "../../../types/global.type";
 import { translatePaymentMethod } from "../../../utils/translations";
 import { formatCurrency } from "../../../utils/helpper";
+import { RefundActionsDialog } from "../actions/refund/refundActionsDialog";
 
 export const ProjectsRefundColumns: ColumnDef<ProjectRefund>[] = [
   {
@@ -72,6 +73,17 @@ export const ProjectsRefundColumns: ColumnDef<ProjectRefund>[] = [
     header: "التاريخ",
     cell: ({ row }) => (
       <div>{new Date(row.original.income_date).toLocaleDateString()}</div>
+    ),
+    size: 100,
+  },
+  {
+    id: "actions",
+    header: "الإجراءات",
+    cell: ({ row }) => (
+      <RefundActionsDialog
+        projectId={row.original.project_id}
+        refundId={row.original.id}
+      />
     ),
     size: 100,
   },

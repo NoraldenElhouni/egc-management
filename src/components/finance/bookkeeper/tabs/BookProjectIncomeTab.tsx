@@ -76,10 +76,7 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
             secondaryValue: formatCurrency(
               project?.project_incomes?.reduce(
                 (acc, income) =>
-                  income.payment_method === "bank" ||
-                  income.payment_method === "cheque"
-                    ? acc + income.amount
-                    : acc,
+                  income.payment_method === "bank" ? acc + income.amount : acc,
                 0,
               ) ?? 0,
             ),
