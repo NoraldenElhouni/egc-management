@@ -79,7 +79,7 @@ const DeleteExpenseDialog = ({
       const res = await deleteExpense(payload);
       if (!res.success) {
         console.log("❌ Delete expense failed:", res.error);
-        setDeleteError(res.error || "فشل حذف المصروف. حاول مرة أخرى.");
+        setDeleteError("فشل حذف المصروف. حاول مرة أخرى.");
         return;
       }
       // Navigate back to expenses list after deletion

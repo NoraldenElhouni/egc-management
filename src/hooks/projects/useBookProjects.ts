@@ -820,6 +820,8 @@ export function useBookProject(projectId: string) {
 }
 
 export function useProjectExpenseActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
   const { user } = useAuth();
 
   const updateExpense = async (payload: {
@@ -1007,30 +1009,243 @@ export function useProjectExpenseActions() {
 
   const deleteExpense = async (payload: {
     expense_id: string;
-    currency: Currency; // currency_type
+    currency: Currency;
   }) => {
-    if (!user?.id) {
-      console.log("Delete expense failed: User not authenticated");
-      return { success: false, error: "غير مصرح" };
-    }
+    try {
+      setLoading(true);
+      setError(null);
 
-    const { data, error } = await supabase.rpc(
-      "rpc_soft_delete_project_expense",
-      {
-        p_expense_id: payload.expense_id,
-        p_currency: payload.currency,
-        p_deleted_by: user.id,
-      },
-    );
+      if (!user?.id) throw new Error("User not authenticated");
+      if (!payload.expense_id) throw new Error("Expense ID is required");
+      if (!payload.currency) throw new Error("Currency is required");
 
-    if (error) {
-      console.log("RPC error:", error);
-      return { success: false, error: error.message };
+      // 1) fetch expense
+      const { data: expense, error: expenseError } = await supabase
+        .from("project_expenses")
+        .select(
+          "id, project_id, currency, total_amount, amount_paid, deleted_at, expense_date",
+        )
+        .eq("id", payload.expense_id)
+        .single();
+
+      if (expenseError || !expense)
+        throw expenseError || new Error("Expense not found");
+      if (expense.currency !== payload.currency)
+        throw new Error("Currency mismatch");
+      if (expense.deleted_at) throw new Error("Expense already deleted");
+
+      // 2) fetch payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from("expense_payments")
+        .select("id, amount, account_id, payment_method")
+        .eq("expense_id", expense.id);
+
+      if (paymentsError) throw paymentsError;
+
+      // 3) fetch ALL percentage logs
+      const { data: logs, error: logsError } = await supabase
+        .from("project_percentage_logs")
+        .select("id, payment_id, amount, percentage")
+        .eq("expense_id", expense.id);
+
+      if (logsError) throw logsError;
+
+      const invoiceLogs = (logs ?? []).filter((l) => !l.payment_id);
+      const paymentLogs = (logs ?? []).filter((l) => !!l.payment_id);
+
+      // ✅ invoice percentage amount (with fallback)
+      let invoicePercentageAmount = invoiceLogs.reduce(
+        (s, l) => s + Number(l.amount ?? 0),
+        0,
+      );
+
+      // fallback if invoice log missing (old data)
+      if (!invoicePercentageAmount) {
+        // try to get percentage row closest to expense_date (period_start <= expense_date)
+        const expenseDate = expense.expense_date ?? null;
+
+        const { data: ppRow, error: ppError } = await supabase
+          .from("project_percentage")
+          .select("percentage, period_start, type")
+          .eq("project_id", expense.project_id)
+          .eq("currency", expense.currency)
+          // prefer rows that have period_start <= expense_date, if expense_date exists
+          .lte("period_start", expenseDate ?? "9999-12-31")
+          .order("period_start", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (ppError) throw ppError;
+
+        const rate = Number(ppRow?.percentage ?? 0) / 100;
+        invoicePercentageAmount = Number(expense.total_amount) * rate;
+
+        // NOTE: this is best-effort, might differ if percentage changed historically
+        // but it avoids blocking delete and keeps balances consistent enough.
+      }
+
+      // group payment logs by payment_id
+      const logsByPayment = new Map<string, { id: string; amount: number }[]>();
+      for (const l of paymentLogs) {
+        const pid = String(l.payment_id);
+        const arr = logsByPayment.get(pid) ?? [];
+        arr.push({ id: l.id, amount: Number(l.amount ?? 0) });
+        logsByPayment.set(pid, arr);
+      }
+
+      // 4) reverse project_balances (invoice-based net)
+      const netDelta =
+        Number(expense.total_amount) + Number(invoicePercentageAmount);
+
+      const { data: balanceData, error: balanceError } = await supabase
+        .from("project_balances")
+        .select("id, balance, total_expense, total_percentage")
+        .eq("project_id", expense.project_id)
+        .eq("currency", expense.currency)
+        .single();
+
+      if (balanceError || !balanceData)
+        throw balanceError || new Error("Project balance not found");
+
+      const { error: balanceUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance: Number(balanceData.balance ?? 0) + netDelta,
+          total_expense:
+            Number(balanceData.total_expense ?? 0) -
+            Number(expense.total_amount),
+          total_percentage:
+            Number(balanceData.total_percentage ?? 0) -
+            Number(invoicePercentageAmount),
+        })
+        .eq("id", balanceData.id);
+
+      if (balanceUpdateError) throw balanceUpdateError;
+
+      // 5) reverse accounts + project_percentage totals using LOG amounts (not rate)
+      for (const pay of payments ?? []) {
+        const payLogsList = logsByPayment.get(pay.id) ?? [];
+        const paidPercentageAmount = payLogsList.reduce(
+          (s, x) => s + Number(x.amount ?? 0),
+          0,
+        );
+
+        if (!pay.account_id) {
+          throw new Error(
+            "Payment with null account_id, cannot update account balance",
+          );
+        }
+
+        // account
+        const { data: accountData, error: accountError } = await supabase
+          .from("accounts")
+          .select("id, balance, total_expense, total_percentage")
+          .eq("id", pay.account_id)
+          .single();
+
+        if (accountError || !accountData)
+          throw accountError || new Error("Account not found");
+
+        const accountTotal = Number(pay.amount) + paidPercentageAmount;
+
+        const { error: accountUpdateError } = await supabase
+          .from("accounts")
+          .update({
+            balance: Number(accountData.balance ?? 0) + accountTotal,
+            total_expense:
+              Number(accountData.total_expense ?? 0) - Number(pay.amount),
+            total_percentage:
+              Number(accountData.total_percentage ?? 0) -
+              Number(paidPercentageAmount),
+          })
+          .eq("id", accountData.id);
+
+        if (accountUpdateError) throw accountUpdateError;
+
+        // project_percentage totals (cash/bank basis)
+        const paymentType = (pay.payment_method as "cash" | "bank") ?? "cash";
+
+        const { data: ppRow2, error: ppRowError2 } = await supabase
+          .from("project_percentage")
+          .select("id, total_percentage, period_percentage")
+          .eq("project_id", expense.project_id)
+          .eq("currency", expense.currency)
+          .eq("type", paymentType)
+          .maybeSingle();
+
+        if (ppRowError2 || !ppRow2)
+          throw ppRowError2 || new Error("Project percentage row not found");
+
+        const { error: ppUpdateError } = await supabase
+          .from("project_percentage")
+          .update({
+            total_percentage:
+              Number(ppRow2.total_percentage ?? 0) - paidPercentageAmount,
+            period_percentage:
+              Number(ppRow2.period_percentage ?? 0) - paidPercentageAmount,
+          })
+          .eq("id", ppRow2.id);
+
+        if (ppUpdateError) throw ppUpdateError;
+
+        // delete payment logs
+        if (payLogsList.length > 0) {
+          const { error: delPayLogsError } = await supabase
+            .from("project_percentage_logs")
+            .delete()
+            .in(
+              "id",
+              payLogsList.map((x) => x.id),
+            );
+
+          if (delPayLogsError) throw delPayLogsError;
+        }
+
+        // delete payment row
+        const { error: delPaymentError } = await supabase
+          .from("expense_payments")
+          .delete()
+          .eq("id", pay.id);
+
+        if (delPaymentError) throw delPaymentError;
+      }
+
+      // 6) delete invoice log rows (if existed)
+      if (invoiceLogs.length > 0) {
+        const { error: delInvoiceLogsError } = await supabase
+          .from("project_percentage_logs")
+          .delete()
+          .in(
+            "id",
+            invoiceLogs.map((x) => x.id),
+          );
+
+        if (delInvoiceLogsError) throw delInvoiceLogsError;
+      }
+
+      // 7) soft delete expense
+      const { error: softDeleteError } = await supabase
+        .from("project_expenses")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user.id,
+        })
+        .eq("id", expense.id);
+
+      if (softDeleteError) throw softDeleteError;
+
+      return { success: true, error: null };
+    } catch (err) {
+      console.error("Error in deleteExpense", err);
+      const error = err as PostgrestError;
+      setError(error);
+      return { success: false, error: err };
+    } finally {
+      setLoading(false);
     }
-    return { success: true, data };
   };
 
-  return { updateExpense, deleteExpense };
+  return { updateExpense, deleteExpense, loading, error };
 }
 
 export function useMaps(projectId: string) {

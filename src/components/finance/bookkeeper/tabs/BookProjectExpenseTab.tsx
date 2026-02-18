@@ -24,6 +24,10 @@ const BookProjectExpenseTab = ({
   project,
   addExpense,
 }: BookProjectExpenseTabProps) => {
+  //remove the deleted expenses from the list
+  const fillterProject = project?.project_expenses.filter(
+    (expense) => expense.deleted_at === null,
+  );
   return (
     <div className="space-y-4">
       <Button variant="secondary">
@@ -103,7 +107,7 @@ const BookProjectExpenseTab = ({
           enableSorting
           enableRowSelection
           initialSorting={[{ id: "serial_number", desc: true }]}
-          data={project?.project_expenses || []}
+          data={fillterProject || []}
           columns={ProjectsExpensesColumns}
         />
       </div>
