@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../ui/Button";
 import { useProjectsWithAssignments } from "../../../hooks/useProjects";
@@ -19,6 +19,24 @@ import EmptyState from "../../ui/EmptyState";
 
 const PercentagesPayrollList = () => {
   const { projects, loading, error } = useProjectsWithAssignments();
+  const [query, setQuery] = useState("");
+
+  const filteredProjects = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    const baseProjects = normalizedQuery
+      ? projects.filter(
+          (project) =>
+            project.name.toLowerCase().includes(normalizedQuery) ||
+            project.code.toLowerCase().includes(normalizedQuery) ||
+            project.serial_number?.toString().includes(normalizedQuery),
+        )
+      : projects;
+
+    return [...baseProjects].sort(
+      (a, b) => (b.serial_number ?? 0) - (a.serial_number ?? 0),
+    );
+  }, [projects, query]);
 
   if (loading) return <ProjectPercentageFormSkelton />;
   if (error) return <ErrorPage error={error.message} />;
@@ -46,10 +64,20 @@ const PercentagesPayrollList = () => {
         </Button>
       </div>
 
+      <div>
+        <input
+          type="text"
+          placeholder="ابحث عن مشروع..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full  px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        />
+      </div>
+
       {/* Grid Content */}
-      {projects && projects.length > 0 ? (
+      {filteredProjects && filteredProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
@@ -70,7 +98,7 @@ const ProjectCard = ({ project }: { project: ProjectWithAssignments }) => {
     return (
       project.project_percentage?.reduce<number>(
         (sum, pp) => sum + (pp?.total_percentage ?? 0),
-        0
+        0,
       ) ?? 0
     );
   }, [project.project_percentage]);
@@ -80,7 +108,7 @@ const ProjectCard = ({ project }: { project: ProjectWithAssignments }) => {
     .map((pa) =>
       pa?.employees
         ? `${pa.employees.first_name} ${pa.employees.last_name ?? ""}`.trim()
-        : null
+        : null,
     )
     .filter((x): x is string => Boolean(x));
 
