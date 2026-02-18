@@ -1395,5 +1395,100 @@ export function useMaps(projectId: string) {
     }
   };
 
-  return { maps, loading, error, addMaps };
+  const deleteMap = async (payload: { project_map_id: string }) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!user?.id) throw new Error("User not authenticated");
+      if (!projectId) throw new Error("Project is required");
+      if (!payload.project_map_id) throw new Error("Map item ID is required");
+
+      // 1) fetch map expense row
+      const { data: mapRow, error: mapRowError } = await supabase
+        .from("project_maps")
+        .select("id, project_id, amount, payment_method")
+        .eq("id", payload.project_map_id)
+        .single();
+
+      if (mapRowError || !mapRow) {
+        console.error("Error fetching map row for deletion", mapRowError);
+        throw mapRowError || new Error("Map item not found");
+      }
+
+      // safety: ensure same project
+      if (mapRow.project_id !== projectId) {
+        throw new Error("Map item does not belong to this project");
+      }
+
+      const amount = Number(mapRow.amount ?? 0);
+      if (!amount || amount <= 0) throw new Error("Invalid map amount");
+
+      const paymentType = (mapRow.payment_method as "cash" | "bank") ?? "cash";
+
+      // 2) revert project_balances (you used currency = 'LYD' only)
+      const { data: balanceData, error: balanceError } = await supabase
+        .from("project_balances")
+        .select("id, balance, total_expense")
+        .eq("project_id", projectId)
+        .eq("currency", "LYD")
+        .single();
+
+      if (balanceError || !balanceData)
+        throw balanceError || new Error("Project balance not found");
+
+      const { error: balanceUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance: Number(balanceData.balance ?? 0) + amount,
+          total_expense: Number(balanceData.total_expense ?? 0) - amount,
+        })
+        .eq("id", balanceData.id);
+
+      if (balanceUpdateError) throw balanceUpdateError;
+
+      // 3) revert account (cash/bank)
+      const { data: accountData, error: accountError } = await supabase
+        .from("accounts")
+        .select("id, balance, total_expense")
+        .eq("owner_id", projectId)
+        .eq("owner_type", "project")
+        .eq("type", paymentType)
+        .eq("currency", "LYD")
+        .single();
+
+      if (accountError || !accountData)
+        throw accountError || new Error("Project account not found");
+
+      const { error: accountUpdateError } = await supabase
+        .from("accounts")
+        .update({
+          balance: Number(accountData.balance ?? 0) + amount,
+          total_expense: Number(accountData.total_expense ?? 0) - amount,
+        })
+        .eq("id", accountData.id);
+
+      if (accountUpdateError) throw accountUpdateError;
+
+      // 4) delete the project_maps row
+      // Option A: Hard delete (works with your current schema)
+      const { error: deleteError } = await supabase
+        .from("project_maps")
+        .delete()
+        .eq("id", mapRow.id);
+
+      if (deleteError) throw deleteError;
+
+      return { success: true, error: null };
+    } catch (err) {
+      console.error("Error in deleteMap", err);
+      const e = err as PostgrestError;
+      setError(e);
+      return { success: false, error: e };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { maps, loading, error, addMaps, deleteMap };
 }
