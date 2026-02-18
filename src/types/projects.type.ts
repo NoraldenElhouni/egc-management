@@ -21,3 +21,7 @@ export interface ProjectWithDetailsForBook extends Projects {
   project_refund: ProjectRefund[];
   project_maps: ProjectMaps[];
 }
+
+export interface ProjectWithIncome extends Projects {
+  project_incomes: ProjectIncome[];
+}
