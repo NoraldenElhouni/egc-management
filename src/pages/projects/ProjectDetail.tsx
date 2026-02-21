@@ -247,7 +247,8 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             .from("project_expenses")
             .select("amount_paid")
             .eq("project_id", projectId)
-            .eq("is_percentage", true);
+            .eq("is_percentage", true)
+            .neq("deleted_at", null);
 
         if (percentageExpensesError) {
           console.warn(

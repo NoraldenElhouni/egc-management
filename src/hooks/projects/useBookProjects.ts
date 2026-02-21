@@ -1011,30 +1011,102 @@ export function useProjectExpenseActions() {
     expense_id: string;
     currency: Currency;
   }) => {
+    const userId = user?.id;
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
+      if (!userId) throw new Error("Not authenticated");
+      if (!payload.expense_id) throw new Error("expense_id required");
 
-      if (!user?.id) throw new Error("User not authenticated");
-      if (!payload.expense_id) throw new Error("Expense ID is required");
-      if (!payload.currency) throw new Error("Currency is required");
-
-      // 1) fetch expense
+      // 1) Fetch expense
       const { data: expense, error: expenseError } = await supabase
         .from("project_expenses")
         .select(
-          "id, project_id, currency, total_amount, amount_paid, deleted_at, expense_date",
+          "id, project_id, currency, total_amount, expense_date, deleted_at, is_percentage",
         )
         .eq("id", payload.expense_id)
         .single();
 
-      if (expenseError || !expense)
-        throw expenseError || new Error("Expense not found");
+      if (expenseError) throw expenseError;
+      if (!expense) throw new Error("Expense not found");
+      if (expense.deleted_at) throw new Error("Expense already deleted");
       if (expense.currency !== payload.currency)
         throw new Error("Currency mismatch");
-      if (expense.deleted_at) throw new Error("Expense already deleted");
 
-      // 2) fetch payments
+      // 2) Decide invoice percentage rate (for project_balances)
+      let invoiceRate = 0;
+
+      if (!expense.is_percentage) {
+        // default rate from project_percentage (invoice basis)
+        const { data: App, error: ppError } = await supabase
+          .from("project_percentage")
+          .select("percentage")
+          .eq("project_id", expense.project_id)
+          .eq("currency", expense.currency);
+
+        if (ppError) throw ppError;
+
+        const pp = App[0];
+
+        invoiceRate = Number(pp?.percentage ?? 0) / 100;
+      } else {
+        // changed rate from logs (take the latest log percentage for that expense)
+        const { data: lastLog, error: lastLogError } = await supabase
+          .from("project_percentage_logs")
+          .select("percentage")
+          .eq("expense_id", expense.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastLogError) throw lastLogError;
+
+        // if no log exists (should be rare), rate stays 0
+        invoiceRate = Number(lastLog?.percentage ?? 0) / 100;
+      }
+
+      const invoicePercentageAmount =
+        Number(expense.total_amount) * invoiceRate;
+
+      // 3) Reverse project_balances (invoice-based always)
+      const { data: pb, error: pbError } = await supabase
+        .from("project_balances")
+        .select("id, balance, total_expense, total_percentage")
+        .eq("project_id", expense.project_id)
+        .eq("currency", expense.currency)
+        .single();
+
+      if (pbError) throw pbError;
+      if (!pb) throw new Error("project_balances not found");
+
+      const netDelta =
+        Number(expense.total_amount) + Number(invoicePercentageAmount);
+
+      const { error: pbUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance: Number(pb.balance) + netDelta,
+          total_expense:
+            Number(pb.total_expense) - Number(expense.total_amount),
+          total_percentage:
+            Number(pb.total_percentage) - Number(invoicePercentageAmount),
+        })
+        .eq("id", pb.id);
+
+      console.log("Reversed project balance with delta", {
+        netDelta,
+        balanceBefore: pb.balance,
+        balanceAfter: Number(pb.balance) + netDelta,
+        totalExpenseBefore: pb.total_expense,
+        totalExpenseAfter:
+          Number(pb.total_expense) - Number(expense.total_amount),
+        totalPercentageBefore: pb.total_percentage,
+        totalPercentageAfter:
+          Number(pb.total_percentage) - Number(invoicePercentageAmount),
+      });
+      if (pbUpdateError) throw pbUpdateError;
+
+      // 4) Fetch payments
       const { data: payments, error: paymentsError } = await supabase
         .from("expense_payments")
         .select("id, amount, account_id, payment_method")
@@ -1042,204 +1114,114 @@ export function useProjectExpenseActions() {
 
       if (paymentsError) throw paymentsError;
 
-      // 3) fetch ALL percentage logs
-      const { data: logs, error: logsError } = await supabase
-        .from("project_percentage_logs")
-        .select("id, payment_id, amount, percentage")
-        .eq("expense_id", expense.id);
+      // 5) Reverse payment-based stuff (accounts + project_percentage totals) using logs.amount
+      for (const pay of payments ?? []) {
+        if (!pay.account_id) throw new Error("Payment account_id is null");
 
-      if (logsError) throw logsError;
-
-      const invoiceLogs = (logs ?? []).filter((l) => !l.payment_id);
-      const paymentLogs = (logs ?? []).filter((l) => !!l.payment_id);
-
-      // ✅ invoice percentage amount (with fallback)
-      let invoicePercentageAmount = invoiceLogs.reduce(
-        (s, l) => s + Number(l.amount ?? 0),
-        0,
-      );
-
-      // fallback if invoice log missing (old data)
-      if (!invoicePercentageAmount) {
-        // try to get percentage row closest to expense_date (period_start <= expense_date)
-        const expenseDate = expense.expense_date ?? null;
-
-        const { data: ppRow, error: ppError } = await supabase
-          .from("project_percentage")
-          .select("percentage, period_start, type")
-          .eq("project_id", expense.project_id)
-          .eq("currency", expense.currency)
-          // prefer rows that have period_start <= expense_date, if expense_date exists
-          .lte("period_start", expenseDate ?? "9999-12-31")
-          .order("period_start", { ascending: false })
-          .limit(1)
+        // one log per payment (your rule)
+        const { data: log, error: logError } = await supabase
+          .from("project_percentage_logs")
+          .select("id, amount")
+          .eq("payment_id", pay.id)
           .maybeSingle();
 
-        if (ppError) throw ppError;
+        if (logError) throw logError;
 
-        const rate = Number(ppRow?.percentage ?? 0) / 100;
-        invoicePercentageAmount = Number(expense.total_amount) * rate;
+        const paidPercentageAmount = Number(log?.amount ?? 0);
 
-        // NOTE: this is best-effort, might differ if percentage changed historically
-        // but it avoids blocking delete and keeps balances consistent enough.
-      }
-
-      // group payment logs by payment_id
-      const logsByPayment = new Map<string, { id: string; amount: number }[]>();
-      for (const l of paymentLogs) {
-        const pid = String(l.payment_id);
-        const arr = logsByPayment.get(pid) ?? [];
-        arr.push({ id: l.id, amount: Number(l.amount ?? 0) });
-        logsByPayment.set(pid, arr);
-      }
-
-      // 4) reverse project_balances (invoice-based net)
-      const netDelta =
-        Number(expense.total_amount) + Number(invoicePercentageAmount);
-
-      const { data: balanceData, error: balanceError } = await supabase
-        .from("project_balances")
-        .select("id, balance, total_expense, total_percentage")
-        .eq("project_id", expense.project_id)
-        .eq("currency", expense.currency)
-        .single();
-
-      if (balanceError || !balanceData)
-        throw balanceError || new Error("Project balance not found");
-
-      const { error: balanceUpdateError } = await supabase
-        .from("project_balances")
-        .update({
-          balance: Number(balanceData.balance ?? 0) + netDelta,
-          total_expense:
-            Number(balanceData.total_expense ?? 0) -
-            Number(expense.total_amount),
-          total_percentage:
-            Number(balanceData.total_percentage ?? 0) -
-            Number(invoicePercentageAmount),
-        })
-        .eq("id", balanceData.id);
-
-      if (balanceUpdateError) throw balanceUpdateError;
-
-      // 5) reverse accounts + project_percentage totals using LOG amounts (not rate)
-      for (const pay of payments ?? []) {
-        const payLogsList = logsByPayment.get(pay.id) ?? [];
-        const paidPercentageAmount = payLogsList.reduce(
-          (s, x) => s + Number(x.amount ?? 0),
-          0,
-        );
-
-        if (!pay.account_id) {
-          throw new Error(
-            "Payment with null account_id, cannot update account balance",
-          );
-        }
-
-        // account
-        const { data: accountData, error: accountError } = await supabase
+        // account reverse
+        const { data: acc, error: accError } = await supabase
           .from("accounts")
           .select("id, balance, total_expense, total_percentage")
           .eq("id", pay.account_id)
           .single();
 
-        if (accountError || !accountData)
-          throw accountError || new Error("Account not found");
+        if (accError) throw accError;
+        if (!acc) throw new Error("Account not found");
 
-        const accountTotal = Number(pay.amount) + paidPercentageAmount;
+        const accountDelta = Number(pay.amount) + paidPercentageAmount;
 
-        const { error: accountUpdateError } = await supabase
+        const { error: accUpdateError } = await supabase
           .from("accounts")
           .update({
-            balance: Number(accountData.balance ?? 0) + accountTotal,
-            total_expense:
-              Number(accountData.total_expense ?? 0) - Number(pay.amount),
+            balance: Number(acc.balance) + accountDelta,
+            total_expense: Number(acc.total_expense) - Number(pay.amount),
             total_percentage:
-              Number(accountData.total_percentage ?? 0) -
-              Number(paidPercentageAmount),
+              Number(acc.total_percentage) - paidPercentageAmount,
           })
-          .eq("id", accountData.id);
+          .eq("id", acc.id);
 
-        if (accountUpdateError) throw accountUpdateError;
+        if (accUpdateError) throw accUpdateError;
 
-        // project_percentage totals (cash/bank basis)
-        const paymentType = (pay.payment_method as "cash" | "bank") ?? "cash";
+        console.log("Reversed account balance with delta", {
+          accountDelta,
+          balanceBefore: acc.balance,
+          balanceAfter: Number(acc.balance) + accountDelta,
+          totalExpenseBefore: acc.total_expense,
+          totalExpenseAfter: Number(acc.total_expense) - Number(pay.amount),
+          totalPercentageBefore: acc.total_percentage,
+          totalPercentageAfter:
+            Number(acc.total_percentage) - paidPercentageAmount,
+        });
 
-        const { data: ppRow2, error: ppRowError2 } = await supabase
+        // project_percentage totals reverse (cash/bank)
+        const type = (pay.payment_method as "cash" | "bank") ?? "cash";
+
+        const { data: pp2, error: pp2Error } = await supabase
           .from("project_percentage")
           .select("id, total_percentage, period_percentage")
           .eq("project_id", expense.project_id)
           .eq("currency", expense.currency)
-          .eq("type", paymentType)
-          .maybeSingle();
+          .eq("type", type)
+          .single();
 
-        if (ppRowError2 || !ppRow2)
-          throw ppRowError2 || new Error("Project percentage row not found");
+        if (pp2Error) throw pp2Error;
 
-        const { error: ppUpdateError } = await supabase
+        const { error: pp2UpdateError } = await supabase
           .from("project_percentage")
           .update({
             total_percentage:
-              Number(ppRow2.total_percentage ?? 0) - paidPercentageAmount,
+              Number(pp2.total_percentage) - paidPercentageAmount,
             period_percentage:
-              Number(ppRow2.period_percentage ?? 0) - paidPercentageAmount,
+              Number(pp2.period_percentage) - paidPercentageAmount,
           })
-          .eq("id", ppRow2.id);
+          .eq("id", pp2.id);
 
-        if (ppUpdateError) throw ppUpdateError;
+        if (pp2UpdateError) throw pp2UpdateError;
 
-        // delete payment logs
-        if (payLogsList.length > 0) {
-          const { error: delPayLogsError } = await supabase
+        // delete log then payment
+        if (log?.id) {
+          const { error: delLogError } = await supabase
             .from("project_percentage_logs")
             .delete()
-            .in(
-              "id",
-              payLogsList.map((x) => x.id),
-            );
+            .eq("id", log.id);
 
-          if (delPayLogsError) throw delPayLogsError;
+          if (delLogError) throw delLogError;
         }
 
-        // delete payment row
-        const { error: delPaymentError } = await supabase
+        const { error: delPayError } = await supabase
           .from("expense_payments")
           .delete()
           .eq("id", pay.id);
 
-        if (delPaymentError) throw delPaymentError;
+        if (delPayError) throw delPayError;
       }
 
-      // 6) delete invoice log rows (if existed)
-      if (invoiceLogs.length > 0) {
-        const { error: delInvoiceLogsError } = await supabase
-          .from("project_percentage_logs")
-          .delete()
-          .in(
-            "id",
-            invoiceLogs.map((x) => x.id),
-          );
-
-        if (delInvoiceLogsError) throw delInvoiceLogsError;
-      }
-
-      // 7) soft delete expense
+      // 6) Soft delete expense
       const { error: softDeleteError } = await supabase
         .from("project_expenses")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: user.id,
+          deleted_by: userId,
         })
         .eq("id", expense.id);
 
       if (softDeleteError) throw softDeleteError;
 
-      return { success: true, error: null };
+      return { success: true };
     } catch (err) {
-      console.error("Error in deleteExpense", err);
-      const error = err as PostgrestError;
-      setError(error);
-      return { success: false, error: err };
+      console.error("deleteExpense error", err);
+      return { success: false, error: err as PostgrestError | Error };
     } finally {
       setLoading(false);
     }
