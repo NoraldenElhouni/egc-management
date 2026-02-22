@@ -704,14 +704,159 @@ export function useExpensePayments(expenseId: string) {
       if (!user?.id) return { success: false, error: "غير مصرح" };
       if (!paymentId) return { success: false, error: "الدفعة غير متوفرة" };
 
-      const { data, error } = await supabase.rpc("rpc_delete_expense_payment", {
-        p_payment_id: paymentId,
-        p_deleted_by: user.id,
-      });
+      const { data: paymentData, error: paymentError } = await supabase
+        .from("expense_payments")
+        .select("*")
+        .eq("id", paymentId)
+        .single();
 
-      if (error) {
-        console.error("delete payment rpc error", error);
-        return { success: false, error: error.message };
+      if (paymentError || !paymentData) {
+        console.error("Error fetching payment data", paymentError);
+        return { success: false, error: "لا يمكن جلب بيانات الدفعة" };
+      }
+
+      if (!paymentData.account_id) {
+        return {
+          success: false,
+          error: "الحساب غير مرتبط بهذه الدفعة، لا يمكن حذفها",
+        };
+      }
+
+      // fetch the log and see if its distrbuted
+      const { data: logData, error: logError } = await supabase
+        .from("project_percentage_logs")
+        .select("*")
+        .eq("payment_id", paymentId)
+        .maybeSingle();
+
+      if (logError) {
+        console.error("Error fetching percentage log", logError);
+        return { success: false, error: "لا يمكن جلب بيانات النسبة" };
+      }
+
+      if (logData?.distributed) {
+        return {
+          success: false,
+          error: "لا يمكن حذف هذه الدفعة لأنها تم توزيع نسبتها بالفعل",
+        };
+      }
+
+      //fetch the expense to get project_id
+      const { data: expenseData, error: expenseError } = await supabase
+        .from("project_expenses")
+        .select("*")
+        .eq("id", paymentData.expense_id)
+        .single();
+
+      if (expenseError || !expenseData) {
+        console.error("Error fetching expense data", expenseError);
+        return { success: false, error: "لا يمكن جلب بيانات المصروف" };
+      }
+
+      // fetch the account
+      const { data: accountData, error: accountError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("id", paymentData.account_id)
+        .single();
+
+      if (accountError || !accountData) {
+        console.error("Error fetching account data", accountError);
+        return { success: false, error: "لا يمكن جلب بيانات الحساب" };
+      }
+
+      // fetch the project percentage
+      const { data: ppData, error: ppError } = await supabase
+        .from("project_percentage")
+        .select("*")
+        .eq("project_id", accountData.owner_id)
+        .eq("currency", accountData.currency)
+        .eq("type", accountData.type)
+        .maybeSingle();
+
+      if (ppError || !ppData) {
+        console.error("Error fetching project percentage data", ppError);
+        return { success: false, error: "لا يمكن جلب بيانات نسبة المشروع" };
+      }
+
+      //update the expense: subtract the amount of the payment
+      const { error: expenseUpdateError } = await supabase
+        .from("project_expenses")
+        .update({
+          amount_paid:
+            Number(expenseData.amount_paid ?? 0) - Number(paymentData.amount),
+          status:
+            Number(expenseData.amount_paid ?? 0) - Number(paymentData.amount) <=
+            0
+              ? "unpaid"
+              : "partially_paid",
+        })
+        .eq("id", expenseData.id);
+
+      if (expenseUpdateError) {
+        console.error("Error updating expense", expenseUpdateError);
+        throw expenseUpdateError;
+      }
+
+      // update account: add back the amount + percentage
+      const totalToRefund =
+        Number(paymentData.amount) + Number(logData?.amount ?? 0);
+      const percentageToRefund = Number(logData?.amount ?? 0);
+
+      const { error: accountUpdateError } = await supabase
+        .from("accounts")
+        .update({
+          balance: Number(accountData.balance) + totalToRefund,
+          total_expense:
+            Number(accountData.total_expense) - Number(paymentData.amount),
+          total_percentage:
+            Number(accountData.total_percentage) - percentageToRefund,
+        })
+        .eq("id", accountData.id);
+
+      if (accountUpdateError) {
+        console.error("Error updating account", accountUpdateError);
+        throw accountUpdateError;
+      }
+
+      // update project percentage: subtract the percentage amount
+      const { error: ppUpdateError } = await supabase
+        .from("project_percentage")
+        .update({
+          total_percentage:
+            Number(ppData.total_percentage ?? 0) - percentageToRefund,
+          period_percentage:
+            Number(ppData.period_percentage ?? 0) - percentageToRefund,
+        })
+        .eq("id", ppData.id);
+
+      if (ppUpdateError) {
+        console.error("Error updating project percentage", ppUpdateError);
+        throw ppUpdateError;
+      }
+
+      // delete the log
+      if (logData?.id) {
+        const { error: logDeleteError } = await supabase
+          .from("project_percentage_logs")
+          .delete()
+          .eq("id", logData.id);
+
+        if (logDeleteError) {
+          console.error("Error deleting percentage log", logDeleteError);
+          throw logDeleteError;
+        }
+      }
+
+      // delete the payment
+      const { error: deleteError } = await supabase
+        .from("expense_payments")
+        .delete()
+        .eq("id", paymentId);
+
+      if (deleteError) {
+        console.error("Error deleting payment", deleteError);
+        throw deleteError;
       }
 
       // refresh local state بدون reload
@@ -719,11 +864,7 @@ export function useExpensePayments(expenseId: string) {
         prev ? prev.filter((p) => p.id !== paymentId) : prev,
       );
 
-      // expense يرجع من rpc داخل data.expense
-      const rpcResult = data as { expense?: ProjectExpenses } | null;
-      if (rpcResult?.expense) setExpense(rpcResult.expense);
-
-      return { success: true, data };
+      return { success: true, error: null };
     } finally {
       setSubmitting(false);
     }

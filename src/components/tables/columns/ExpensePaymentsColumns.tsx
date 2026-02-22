@@ -6,11 +6,13 @@ import Button from "../../ui/Button";
 type ColumnsProps = {
   onEdit?: (p: projectExpensePayments) => void;
   onDelete?: (p: projectExpensePayments) => void;
+  loading?: boolean;
 };
 
 export const ExpensePaymentsColumns = ({
   onEdit,
   onDelete,
+  loading,
 }: ColumnsProps = {}): ColumnDef<projectExpensePayments>[] => [
   // SELECT CHECKBOX
   {
@@ -66,13 +68,7 @@ export const ExpensePaymentsColumns = ({
     header: "طريقة الدفع",
     cell: ({ row }) => {
       const pm = row.original.payment_method;
-      if (
-        pm === "cash" ||
-        pm === "cheque" ||
-        pm === "transfer" ||
-        pm === "deposit" ||
-        pm === "bank"
-      ) {
+      if (pm === "cash" || pm === "bank") {
         return translatePaymentMethod(pm);
       }
       return "-";
@@ -127,12 +123,13 @@ export const ExpensePaymentsColumns = ({
               type="button"
               variant="error"
               size="sm"
+              disabled={loading}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete?.(row.original);
               }}
             >
-              حذف
+              {loading ? "جاري الحذف..." : "حذف"}
             </Button>
           )}
         </div>

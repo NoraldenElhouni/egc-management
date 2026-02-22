@@ -144,13 +144,8 @@ const ExpensePaymentsPage = () => {
           <ExpensePaymentList
             payment={payment}
             totalPayments={totalPayments}
+            deletePayment={deletePayment}
             onEdit={(p) => setEditingPayment(p)}
-            onDelete={async (p) => {
-              if (!confirm("هل أنت متأكد من حذف هذه الدفعة؟ سيتم عكس الأرصدة."))
-                return;
-              const res = await deletePayment(p.id);
-              if (!res.success) alert(res.error);
-            }}
           />
           {expense.contract_id && (
             <div>
