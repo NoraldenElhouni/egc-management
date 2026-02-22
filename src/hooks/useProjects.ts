@@ -3,7 +3,11 @@ import { supabase } from "../lib/supabaseClient";
 import type { Database } from "../lib/supabase";
 import { Projects } from "../types/global.type";
 import { ProjectFormValues } from "../types/schema/projects.schema";
-import { FullProject, ProjectWithAssignments } from "../types/extended.type";
+import {
+  FullProject,
+  ProjectPercentageLogWithAssignments,
+  ProjectWithAssignments,
+} from "../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 
 export function useProjects() {
@@ -296,7 +300,8 @@ export function useProjectsWithAssignments() {
 }
 
 export function useProjectWithAssignments(projectId: string) {
-  const [project, setProject] = useState<ProjectWithAssignments | null>(null);
+  const [project, setProject] =
+    useState<ProjectPercentageLogWithAssignments | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -321,22 +326,30 @@ export function useProjectWithAssignments(projectId: string) {
 
         const { data: percentage, error: percentageError } = await supabase
           .from("project_percentage")
-          .select(
-            `project_id, total_percentage, percentage, period_percentage, period_start, type, currency`,
-          )
+          .select("*")
           .eq("project_id", data.id)
           .eq("currency", "LYD");
 
         if (percentageError) throw percentageError;
 
+        const { data: log, error: logError } = await supabase
+          .from("project_percentage_logs")
+          .select("*, project_expenses(*), expense_payments(*)")
+          .eq("project_id", data.id)
+          .eq("distributed", false)
+          .order("created_at", { ascending: false });
+
+        if (logError) throw logError;
+
         const projectWithPercentages = {
           ...data,
           project_percentage: percentage ?? [],
+          project_percentage_log: log ?? [],
         };
 
         if (!cancelled)
           setProject(
-            projectWithPercentages as unknown as ProjectWithAssignments,
+            projectWithPercentages as unknown as ProjectPercentageLogWithAssignments,
           );
       } catch (e) {
         if (!cancelled) {

@@ -62,6 +62,7 @@ export type ProjectRoles = Tables<"project_roles">;
 export type ProjectSpecializations = Tables<"project_specializations">;
 export type ProjectBalances = Tables<"project_balances">;
 export type ProjectPercentage = Tables<"project_percentage">;
+export type ProjectPercentageLogs = Tables<"project_percentage_logs">;
 export type RolePermissions = Tables<"role_permissions">;
 export type SpecializationPermissions = Tables<"specialization_permissions">;
 export type UserPermissions = Tables<"user_permissions">;

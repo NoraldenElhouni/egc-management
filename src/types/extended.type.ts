@@ -19,6 +19,7 @@ import {
   ProjectPercentage,
   ProjectExpenses,
   PaymentMethod,
+  ProjectPercentageLogs,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -92,3 +93,18 @@ export type ProjectWithAssignments = Projects & {
     employees: { first_name: string; last_name: string | null } | null;
   }>;
 };
+
+export interface LogsWithExpenses extends ProjectPercentageLogs {
+  project_expenses: ProjectExpenses;
+  expense_payments: ExpensePayments;
+}
+
+export interface ProjectPercentageLogWithAssignments extends Projects {
+  project_assignments: Array<{
+    user_id: string;
+    percentage: number;
+    employees: { first_name: string; last_name: string | null } | null;
+  }>;
+  project_percentage_log: LogsWithExpenses[];
+  project_percentage: ProjectPercentage[];
+}

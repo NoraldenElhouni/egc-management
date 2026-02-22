@@ -4,14 +4,14 @@ import { supabase } from "../lib/supabaseClient";
 import { PayrollWithRelations } from "../types/extended.type";
 import { PercentageDistributionFormValues } from "../types/schema/PercentageDistribution.schema";
 import {
-  BankPeriodData,
-  CashPeriodData,
   Employees,
   ExpensePayments,
   ProjectExpenses,
 } from "../types/global.type";
 import { FixedPayrollFormValues } from "../types/schema/fixedPayroll.schema";
 import { MapsDistributionValues } from "../types/schema/MapsDistribution.schema";
+
+type PeriodData = { id: string; [key: string]: unknown } | null;
 
 export function usePayroll() {
   const [payroll, setPayroll] = useState<PayrollWithRelations[]>([]);
@@ -77,53 +77,96 @@ export function usePayroll() {
   const PercentageDistribution = async (
     form: PercentageDistributionFormValues,
   ) => {
-    // helper: always date-only for Postgres "date" fields
-    const today = () => new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const today = () => new Date().toISOString().split("T")[0];
 
-    // helper: consistent error logging
-    const logErr = (label: string, error: unknown) => {
+    const logErr = (label: string, error: unknown) =>
       console.error(`[PercentageDistribution] ${label}`, error);
-    };
 
-    // 0) Auth
+    // ── 0) Auth ────────────────────────────────────────────────────────────────
     const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      logErr("auth.getUser error", authError);
+    if (authError || !userData?.user) {
+      logErr("auth error", authError);
       return { success: false, message: "خطأ في التحقق من المستخدم" };
-    }
-    if (!userData?.user) {
-      console.error("[PercentageDistribution] user not logged in");
-      return { success: false, message: "المستخدم غير مسجل الدخول" };
     }
     const user = userData.user;
 
-    // Guard: must have employees
-    if (!form.employee?.length) {
-      console.error("[PercentageDistribution] no employees in form");
+    if (!form.employee?.length)
       return { success: false, message: "لا يوجد موظفين للتوزيع" };
-    }
+
+    if (!form.log_ids?.length)
+      return { success: false, message: "يجب اختيار سجل واحد على الأقل" };
 
     try {
-      // 1) Fetch required data
-      // 1.1 Company accounts
+      // ── 1) Fetch the selected logs to derive actual cash/bank totals ─────────
+      // We re-fetch from DB to be safe (user could have tampered with client state)
+      const { data: selectedLogs, error: logsError } = await supabase
+        .from("project_percentage_logs")
+        .select("id, amount, percentage, distributed")
+        .in("id", form.log_ids)
+        .eq("project_id", form.project_id)
+        .eq("distributed", false); // double-check they're still undistributed
+
+      if (logsError) {
+        logErr("fetch selected logs error", logsError);
+        return { success: false, message: "خطأ في جلب السجلات المختارة" };
+      }
+
+      // Guard: ensure all requested log IDs were found and are undistributed
+      if (!selectedLogs?.length) {
+        return {
+          success: false,
+          message: "السجلات المختارة غير موجودة أو تم توزيعها مسبقاً",
+        };
+      }
+
+      if (selectedLogs.length !== form.log_ids.length) {
+        const foundIds = new Set(selectedLogs.map((l) => l.id));
+        const missing = form.log_ids.filter((id) => !foundIds.has(id));
+        logErr("some logs already distributed or not found", missing);
+        return {
+          success: false,
+          message: `بعض السجلات تم توزيعها مسبقاً أو غير موجودة (${missing.length} سجلات)`,
+        };
+      }
+
+      // ── 2) Fetch project_percentage for cash/bank ratio ───────────────────────
+      const { data: projectPercentRows, error: projectError } = await supabase
+        .from("project_percentage")
+        .select("*")
+        .eq("project_id", form.project_id)
+        .eq("currency", "LYD");
+
+      if (projectError || !projectPercentRows?.length) {
+        logErr("fetch project_percentage error", projectError);
+        return { success: false, message: "خطأ في جلب بيانات نسبة المشروع" };
+      }
+
+      const bankRow = projectPercentRows.find((p) => p.type === "bank");
+      const cashRow = projectPercentRows.find((p) => p.type === "cash");
+
+      // Use the pre-computed cash/bank amounts passed directly from the UI.
+      // Previously these were re-derived from project_percentage.period_percentage
+      // which can be 0 or stale — causing false "exceeds available" errors.
+      const selectedTotal = selectedLogs.reduce(
+        (s, l) => s + (l.amount ?? 0),
+        0,
+      );
+      const selectedCash = form.selected_cash;
+      const selectedBank = form.selected_bank;
+
+      // ── 3) Fetch company & employee accounts ─────────────────────────────────
       const { data: companyAccounts, error: companyError } = await supabase
         .from("company_account")
         .select("*")
         .in("type", ["main", "discount", "held"])
         .eq("status", "active");
 
-      if (companyError) {
+      if (companyError || !companyAccounts?.length) {
         logErr("fetch company_account error", companyError);
         return { success: false, message: "خطأ في جلب بيانات حساب الشركة" };
       }
-      if (!companyAccounts?.length) {
-        console.error("[PercentageDistribution] company accounts not found");
-        return { success: false, message: "لا توجد حسابات شركة" };
-      }
 
-      // 1.2 Employee accounts
       const employeeIds = form.employee.map((e) => e.employee_id);
-
       const { data: employeeAccounts, error: employeeAccountsError } =
         await supabase
           .from("employee_account")
@@ -135,66 +178,26 @@ export function usePayroll() {
         return { success: false, message: "خطأ في جلب بيانات حسابات الموظفين" };
       }
 
-      // Ensure all employees have accounts
       const missingAccounts = employeeIds.filter(
         (id) => !employeeAccounts?.some((acc) => acc.id === id),
       );
       if (missingAccounts.length) {
-        console.error(
-          "[PercentageDistribution] missing employee accounts",
-          missingAccounts,
-        );
         return { success: false, message: "يوجد موظفين بدون حساب مالي" };
       }
 
-      // 1.3 Project percentage data
-      const { data: projectPercentRows, error: projectError } = await supabase
-        .from("project_percentage")
-        .select("*")
-        .eq("project_id", form.project_id);
+      // ── 4) Create period(s) using SELECTED amounts (not full period_percentage) ─
+      let bankPeriodData: PeriodData = null;
+      let cashPeriodData: PeriodData = null;
 
-      if (projectError) {
-        logErr("fetch project_percentage error", projectError);
-        return { success: false, message: "خطأ في جلب بيانات نسبة المشروع" };
-      }
-      if (!projectPercentRows?.length) {
-        console.error(
-          "[PercentageDistribution] no project_percentage rows for project",
-          form.project_id,
-        );
-        return { success: false, message: "لا توجد بيانات نسبة للمشروع" };
-      }
-
-      const bankPercentage = projectPercentRows.find((p) => p.type === "bank");
-      const cashPercentage = projectPercentRows.find((p) => p.type === "cash");
-
-      if (!bankPercentage && !cashPercentage) {
-        console.error(
-          "[PercentageDistribution] missing bank/cash percentages for project",
-          form.project_id,
-        );
-        return {
-          success: false,
-          message: "لا توجد بيانات نسبة (بنك/نقدي) للمشروع",
-        };
-      }
-
-      // 2) Create period(s)
-      // IMPORTANT:
-      // Your DB has: project_percentage_periods.type (USER-DEFINED). You are inserting "bank"/"cash".
-      // Make sure enum/type includes those values.
-      let bankPeriodData: BankPeriodData = null;
-      let cashPeriodData: CashPeriodData = null;
-
-      if (bankPercentage) {
+      if (bankRow && selectedBank > 0) {
         const { data: bankPeriod, error: bankPeriodError } = await supabase
           .from("project_percentage_periods")
           .insert({
             project_id: form.project_id,
             created_by: user.id,
-            start_date: bankPercentage.period_start, // date
-            end_date: today(), // date
-            total_amount: bankPercentage.period_percentage, // confirm this is AMOUNT not %
+            start_date: bankRow.period_start,
+            end_date: today(),
+            total_amount: selectedBank, // ✅ only the selected portion
             type: "bank",
           })
           .select()
@@ -207,15 +210,15 @@ export function usePayroll() {
         bankPeriodData = bankPeriod;
       }
 
-      if (cashPercentage) {
+      if (cashRow && selectedCash > 0) {
         const { data: cashPeriod, error: cashPeriodError } = await supabase
           .from("project_percentage_periods")
           .insert({
             project_id: form.project_id,
             created_by: user.id,
-            start_date: cashPercentage.period_start, // date
-            end_date: today(), // date
-            total_amount: cashPercentage.period_percentage, // confirm this is AMOUNT not %
+            start_date: cashRow.period_start,
+            end_date: today(),
+            total_amount: selectedCash, // ✅ only the selected portion
             type: "cash",
           })
           .select()
@@ -228,22 +231,21 @@ export function usePayroll() {
         cashPeriodData = cashPeriod;
       }
 
-      // 3) Decide how to store items
-      // If both bank + cash periods exist, we will create items for EACH period.
-      // - bank period: use bank-related amounts, and set cash fields to 0
-      // - cash period: use cash-related amounts, and set bank fields to 0
-      // If only one exists: store both amounts in that one (keeps behavior simple).
       const periodsToUse = [bankPeriodData, cashPeriodData].filter(Boolean);
+      if (!periodsToUse.length)
+        return { success: false, message: "لا توجد فترات لإنشائها" };
 
-      if (!periodsToUse.length) {
-        console.error("[PercentageDistribution] no period data created");
-        return { success: false, message: "لا توجد بيانات فترة للمشروع" };
+      const primaryPeriodId = bankPeriodData?.id ?? cashPeriodData?.id;
+
+      if (!primaryPeriodId) {
+        logErr("no period created", { bankPeriodData, cashPeriodData });
+        return { success: false, message: "خطأ غير متوقع في إنشاء الفترات" };
       }
 
-      const createCompanyItem = async (
-        periodId: string,
-        mode: "bank" | "cash" | "both",
-      ) => {
+      // ── 5) Insert period items (company + employees) ──────────────────────────
+      type PeriodMode = "bank" | "cash" | "both";
+
+      const createCompanyItem = async (periodId: string, mode: PeriodMode) => {
         const bank_amount = mode === "cash" ? 0 : form.company.BankAmount;
         const cash_amount = mode === "bank" ? 0 : form.company.CashAmount;
 
@@ -259,144 +261,104 @@ export function usePayroll() {
             cash_held: 0,
             percentage: form.company.percentage,
             item_type: "company",
-            note: form.company.note || "",
+            note: form.company.note ?? "",
             user_id: null,
           });
 
         if (error) {
-          logErr(`insert company period item error (${mode})`, error);
-          return { ok: false as const };
+          logErr(`company item (${mode})`, error);
+          return false;
         }
-        return { ok: true as const };
+        return true;
       };
 
       const createEmployeeItems = async (
         periodId: string,
-        mode: "bank" | "cash" | "both",
+        mode: PeriodMode,
       ) => {
-        const rows = form.employee.map((emp) => {
-          const bank_amount = mode === "cash" ? 0 : emp.BankAmount;
-          const cash_amount = mode === "bank" ? 0 : emp.CashAmount;
-
-          const bank_held = mode === "cash" ? 0 : emp.bank_held;
-          const cash_held = mode === "bank" ? 0 : emp.cash_held;
-
-          return {
-            period_id: periodId,
-            bank_amount,
-            cash_amount,
-            discount: emp.discount,
-            total: emp.total,
-            bank_held,
-            cash_held,
-            user_id: emp.employee_id,
-            percentage: emp.percentage,
-            item_type: "employee",
-            note: emp.note || "",
-          };
-        });
+        const rows = form.employee.map((emp) => ({
+          period_id: periodId,
+          bank_amount: mode === "cash" ? 0 : emp.BankAmount,
+          cash_amount: mode === "bank" ? 0 : emp.CashAmount,
+          bank_held: mode === "cash" ? 0 : emp.bank_held,
+          cash_held: mode === "bank" ? 0 : emp.cash_held,
+          discount: emp.discount,
+          total: emp.total,
+          user_id: emp.employee_id,
+          percentage: emp.percentage,
+          item_type: "employee",
+          note: emp.note ?? "",
+        }));
 
         const { error } = await supabase
           .from("project_percentage_period_items")
           .insert(rows);
 
         if (error) {
-          logErr(`insert employee period items error (${mode})`, error);
-          return { ok: false as const };
+          logErr(`employee items (${mode})`, error);
+          return false;
         }
-        return { ok: true as const };
+        return true;
       };
 
-      // if both periods exist -> split by type. if only one -> "both"
       if (bankPeriodData && cashPeriodData) {
-        // bank period
-        {
-          const r1 = await createCompanyItem(bankPeriodData.id, "bank");
-          if (!r1.ok)
-            return {
-              success: false,
-              message: "خطأ في تسجيل بند فترة الشركة (بنك)",
-            };
-
-          const r2 = await createEmployeeItems(bankPeriodData.id, "bank");
-          if (!r2.ok)
-            return {
-              success: false,
-              message: "خطأ في تسجيل بنود فترة الموظفين (بنك)",
-            };
-        }
-
-        // cash period
-        {
-          const r1 = await createCompanyItem(cashPeriodData.id, "cash");
-          if (!r1.ok)
-            return {
-              success: false,
-              message: "خطأ في تسجيل بند فترة الشركة (نقدي)",
-            };
-
-          const r2 = await createEmployeeItems(cashPeriodData.id, "cash");
-          if (!r2.ok)
-            return {
-              success: false,
-              message: "خطأ في تسجيل بنود فترة الموظفين (نقدي)",
-            };
-        }
+        if (!(await createCompanyItem(bankPeriodData.id as string, "bank")))
+          return {
+            success: false,
+            message: "خطأ في تسجيل بند فترة الشركة (بنك)",
+          };
+        if (!(await createEmployeeItems(bankPeriodData.id as string, "bank")))
+          return {
+            success: false,
+            message: "خطأ في تسجيل بنود فترة الموظفين (بنك)",
+          };
+        if (!(await createCompanyItem(cashPeriodData.id as string, "cash")))
+          return {
+            success: false,
+            message: "خطأ في تسجيل بند فترة الشركة (نقدي)",
+          };
+        if (!(await createEmployeeItems(cashPeriodData.id as string, "cash")))
+          return {
+            success: false,
+            message: "خطأ في تسجيل بنود فترة الموظفين (نقدي)",
+          };
       } else {
-        const onlyPeriod = periodsToUse[0];
-        if (!onlyPeriod) {
-          console.error("[PercentageDistribution] onlyPeriod not found");
-          return { success: false, message: "فشل تحديد فترة للمشروع" };
-        }
-
-        const r1 = await createCompanyItem(onlyPeriod.id, "both");
-        if (!r1.ok)
+        const onlyPeriod = periodsToUse[0]!;
+        if (!(await createCompanyItem(onlyPeriod.id as string, "both")))
           return { success: false, message: "خطأ في تسجيل بند فترة الشركة" };
-
-        const r2 = await createEmployeeItems(onlyPeriod.id, "both");
-        if (!r2.ok)
+        if (!(await createEmployeeItems(onlyPeriod.id as string, "both")))
           return { success: false, message: "خطأ في تسجيل بنود فترة الموظفين" };
       }
 
-      // 4) Totals (for company accounts)
-      const totalCashHeld = form.employee.reduce(
-        (sum, emp) => sum + emp.cash_held,
-        0,
-      );
-      const totalBankHeld = form.employee.reduce(
-        (sum, emp) => sum + emp.bank_held,
-        0,
-      );
-      const totalHeld = totalCashHeld + totalBankHeld;
-      const totalEmployeeDiscount = form.employee.reduce(
-        (sum, emp) => sum + emp.discount,
-        0,
-      );
-      const totalDiscount = totalEmployeeDiscount + form.company.discount;
+      // ── 6) Mark selected logs as distributed ─────────────────────────────────
+      // This is the critical new step — links distribution back to the source logs
+      const { error: markLogsError } = await supabase
+        .from("project_percentage_logs")
+        .update({ distributed: true })
+        .in("id", form.log_ids)
+        .eq("project_id", form.project_id);
 
-      // Choose one period id for shared records (discount/held records need a period_id)
-      // If you want separate records per period type, you can duplicate inserts.
-      const primaryPeriodId = bankPeriodData?.id || cashPeriodData?.id;
-
-      if (!primaryPeriodId) {
-        console.error("[PercentageDistribution] primaryPeriodId not found");
-        return { success: false, message: "فشل تحديد فترة أساسية" };
+      if (markLogsError) {
+        logErr("mark logs as distributed error", markLogsError);
+        return {
+          success: false,
+          message: "تم الحفظ لكن فشل تحديث حالة السجلات — تواصل مع الدعم",
+        };
       }
 
-      // 5) Process employees (held + discounts + accounts + payroll)
+      // ── 7) Process each employee: held + discounts + account + payroll ────────
       for (const emp of form.employee) {
-        // 5.1 Held records
+        // 7.1 Held records
         if (emp.bank_held > 0) {
           const { error } = await supabase.from("company_held").insert({
             amount: emp.bank_held,
             employee_id: emp.employee_id,
             period_id: primaryPeriodId,
             type: "bank",
-            note: emp.note || "",
+            note: emp.note ?? "",
           });
-
           if (error) {
-            logErr("insert company_held bank error", error);
+            logErr("insert company_held bank", error);
             return {
               success: false,
               message: "خطأ في تسجيل المبلغ المحتجز (بنك)",
@@ -410,11 +372,10 @@ export function usePayroll() {
             employee_id: emp.employee_id,
             period_id: primaryPeriodId,
             type: "cash",
-            note: emp.note || "",
+            note: emp.note ?? "",
           });
-
           if (error) {
-            logErr("insert company_held cash error", error);
+            logErr("insert company_held cash", error);
             return {
               success: false,
               message: "خطأ في تسجيل المبلغ المحتجز (نقدي)",
@@ -422,62 +383,59 @@ export function usePayroll() {
           }
         }
 
-        // 5.2 Employee discount record
+        // 7.2 Employee discount
         if (emp.discount > 0) {
           const { error } = await supabase.from("employee_discounts").insert({
             amount: emp.discount,
             user_id: emp.employee_id,
             period_id: primaryPeriodId,
-            note: emp.note || "",
+            note: emp.note ?? "",
           });
-
           if (error) {
-            logErr("insert employee_discounts error", error);
+            logErr("insert employee_discounts", error);
             return { success: false, message: "خطأ في تسجيل خصم الموظف" };
           }
         }
 
-        // 5.3 Update employee account + payroll
-        const empAccount = employeeAccounts.find(
-          (acc) => acc.id === emp.employee_id,
+        // 7.3 Update employee account balance
+        const empAccount = employeeAccounts!.find(
+          (a) => a.id === emp.employee_id,
         );
-        if (!empAccount) {
-          console.error(
-            "[PercentageDistribution] employee account not found for employee",
-            emp.employee_id,
-          );
-          return { success: false, message: "حساب موظف غير موجود" };
-        }
+        if (!empAccount)
+          return {
+            success: false,
+            message: `حساب الموظف ${emp.employee_id} غير موجود`,
+          };
 
-        // Safer discount split: proportional to amounts
-        const grossTotal = emp.BankAmount + emp.CashAmount;
+        // Split discount proportionally between bank/cash
+        const gross = emp.BankAmount + emp.CashAmount;
         const bankDiscount =
-          grossTotal > 0 ? emp.discount * (emp.BankAmount / grossTotal) : 0;
+          gross > 0 ? emp.discount * (emp.BankAmount / gross) : 0;
         const cashDiscount = emp.discount - bankDiscount;
 
         const netBank = emp.BankAmount - emp.bank_held - bankDiscount;
         const netCash = emp.CashAmount - emp.cash_held - cashDiscount;
 
-        const { error: updateAccountError } = await supabase
+        const { error: updateAccErr } = await supabase
           .from("employee_account")
           .update({
-            bank_balance: empAccount.bank_balance + netBank, // ✅ correct: held removed
+            bank_balance: empAccount.bank_balance + Math.max(0, netBank),
             bank_held: empAccount.bank_held + emp.bank_held,
-            cash_balance: empAccount.cash_balance + netCash, // ✅ correct: held removed
+            cash_balance: empAccount.cash_balance + Math.max(0, netCash),
             cash_held: empAccount.cash_held + emp.cash_held,
           })
           .eq("id", empAccount.id);
 
-        if (updateAccountError) {
-          logErr("update employee_account error", updateAccountError);
+        if (updateAccErr) {
+          logErr("update employee_account", updateAccErr);
           return { success: false, message: "خطأ في تحديث حساب الموظف" };
         }
 
-        // Payroll entries (only if positive)
+        // 7.4 Payroll entries
         if (netBank > 0) {
           const { error } = await supabase.from("payroll").insert({
             employee_id: emp.employee_id,
-            pay_date: today(), // ✅ date only
+            pay_date: today(),
             project_id: form.project_id,
             total_salary: netBank,
             payment_method: "bank",
@@ -486,18 +444,17 @@ export function usePayroll() {
             percentage_salary: netBank,
             created_by: user.id,
           });
-
           if (error) {
-            logErr("insert payroll bank error", error);
+            logErr("insert payroll bank", error);
             return { success: false, message: "فشل إنشاء قيد الرواتب (بنك)" };
           }
         }
 
         if (netCash > 0) {
           const { error } = await supabase.from("payroll").insert({
-            project_id: form.project_id,
             employee_id: emp.employee_id,
-            pay_date: today(), // ✅ date only
+            pay_date: today(),
+            project_id: form.project_id,
             total_salary: netCash,
             payment_method: "cash",
             status: "pending",
@@ -505,46 +462,34 @@ export function usePayroll() {
             percentage_salary: netCash,
             created_by: user.id,
           });
-
           if (error) {
-            logErr("insert payroll cash error", error);
+            logErr("insert payroll cash", error);
             return { success: false, message: "فشل إنشاء قيد الرواتب (نقدي)" };
           }
         }
       }
 
-      // 6) Update company accounts
-      const companyMainAccount = companyAccounts.find(
-        (acc) => acc.type === "main",
+      // ── 8) Update company accounts ────────────────────────────────────────────
+      const companyMain = companyAccounts.find((a) => a.type === "main");
+      const companyDiscount = companyAccounts.find(
+        (a) => a.type === "discount",
       );
-      const companyDiscountAccount = companyAccounts.find(
-        (acc) => acc.type === "discount",
-      );
-      const companyHeldAccount = companyAccounts.find(
-        (acc) => acc.type === "held",
-      );
+      const companyHeld = companyAccounts.find((a) => a.type === "held");
 
-      if (!companyMainAccount) {
-        console.error(
-          "[PercentageDistribution] company main account not found",
-        );
+      if (!companyMain)
         return { success: false, message: "حساب الشركة الرئيسي غير موجود" };
-      }
 
-      // 6.1 main account gets company amounts
+      // 8.1 Main account — company's own share
       {
         const { error } = await supabase
           .from("company_account")
           .update({
-            bank_balance:
-              companyMainAccount.bank_balance + form.company.BankAmount,
-            cash_balance:
-              companyMainAccount.cash_balance + form.company.CashAmount,
+            bank_balance: companyMain.bank_balance + form.company.BankAmount,
+            cash_balance: companyMain.cash_balance + form.company.CashAmount,
           })
-          .eq("id", companyMainAccount.id);
-
+          .eq("id", companyMain.id);
         if (error) {
-          logErr("update company main account error", error);
+          logErr("update company main account", error);
           return {
             success: false,
             message: "خطأ في تحديث حساب الشركة الرئيسي",
@@ -552,71 +497,69 @@ export function usePayroll() {
         }
       }
 
-      // 6.2 discount account
-      if (totalDiscount > 0) {
-        if (!companyDiscountAccount) {
-          console.error(
-            "[PercentageDistribution] company discount account not found",
-          );
-          return { success: false, message: "حساب خصم الشركة غير موجود" };
-        }
+      // 8.2 Discount account
+      const totalEmployeeDiscount = form.employee.reduce(
+        (s, e) => s + e.discount,
+        0,
+      );
+      const totalDiscount = totalEmployeeDiscount + form.company.discount;
 
-        // Split discount proportionally using total company+employees amounts (optional),
-        // but simplest: split equally bank/cash. Change if you want proportional.
-        const discountPerType = totalDiscount / 2;
+      if (totalDiscount > 0) {
+        if (!companyDiscount)
+          return { success: false, message: "حساب خصم الشركة غير موجود" };
+
+        // Proportional split by selected cash/bank
+        const discountBank =
+          selectedTotal > 0
+            ? totalDiscount * (selectedBank / selectedTotal)
+            : totalDiscount / 2;
+        const discountCash = totalDiscount - discountBank;
 
         const { error } = await supabase
           .from("company_account")
           .update({
-            bank_balance: companyDiscountAccount.bank_balance + discountPerType,
-            cash_balance: companyDiscountAccount.cash_balance + discountPerType,
+            bank_balance: companyDiscount.bank_balance + discountBank,
+            cash_balance: companyDiscount.cash_balance + discountCash,
           })
-          .eq("id", companyDiscountAccount.id);
-
+          .eq("id", companyDiscount.id);
         if (error) {
-          logErr("update company discount account error", error);
+          logErr("update company discount account", error);
           return { success: false, message: "خطأ في تحديث حساب خصم الشركة" };
         }
 
-        // record company discount row (company-only)
         if (form.company.discount > 0) {
-          const { error: insertCompanyDiscountError } = await supabase
+          const { error: insertErr } = await supabase
             .from("company_discounts")
             .insert({
               period_id: primaryPeriodId,
               amount: form.company.discount,
-              note: form.company.note || "",
+              note: form.company.note ?? "",
             });
-
-          if (insertCompanyDiscountError) {
-            logErr(
-              "insert company_discounts error",
-              insertCompanyDiscountError,
-            );
+          if (insertErr) {
+            logErr("insert company_discounts", insertErr);
             return { success: false, message: "خطأ في تسجيل خصم الشركة" };
           }
         }
       }
 
-      // 6.3 held account
+      // 8.3 Held account
+      const totalCashHeld = form.employee.reduce((s, e) => s + e.cash_held, 0);
+      const totalBankHeld = form.employee.reduce((s, e) => s + e.bank_held, 0);
+      const totalHeld = totalCashHeld + totalBankHeld;
+
       if (totalHeld > 0) {
-        if (!companyHeldAccount) {
-          console.error(
-            "[PercentageDistribution] company held account not found",
-          );
+        if (!companyHeld)
           return { success: false, message: "حساب المبالغ المحتجزة غير موجود" };
-        }
 
         const { error } = await supabase
           .from("company_account")
           .update({
-            bank_balance: companyHeldAccount.bank_balance + totalBankHeld,
-            cash_balance: companyHeldAccount.cash_balance + totalCashHeld,
+            bank_balance: companyHeld.bank_balance + totalBankHeld,
+            cash_balance: companyHeld.cash_balance + totalCashHeld,
           })
-          .eq("id", companyHeldAccount.id);
-
+          .eq("id", companyHeld.id);
         if (error) {
-          logErr("update company held account error", error);
+          logErr("update company held account", error);
           return {
             success: false,
             message: "خطأ في تحديث حساب المبالغ المحتجزة",
@@ -624,19 +567,42 @@ export function usePayroll() {
         }
       }
 
-      // 7) Reset project percentage for next period
-      // NOTE: project_percentage.period_start is a DATE, so use today()
-      const { error: updateProjectError } = await supabase
-        .from("project_percentage")
-        .update({
-          period_percentage: 0,
-          period_start: today(),
-        })
-        .eq("project_id", form.project_id);
+      // ── 9) Reduce project_percentage by the distributed amount ───────────────
+      // Instead of resetting to 0 (old behavior), we subtract only what was distributed.
+      // This preserves any logs that were NOT selected for this distribution run.
+      if (cashRow && selectedCash > 0) {
+        const { error } = await supabase
+          .from("project_percentage")
+          .update({
+            period_percentage: Math.max(
+              0,
+              cashRow.period_percentage - selectedCash,
+            ),
+          })
+          .eq("id", cashRow.id);
+        if (error) {
+          logErr("reduce cash period_percentage", error);
+          return {
+            success: false,
+            message: "خطأ في تحديث نسبة النقدي للمشروع",
+          };
+        }
+      }
 
-      if (updateProjectError) {
-        logErr("reset project_percentage error", updateProjectError);
-        return { success: false, message: "خطأ في تحديث نسبة المشروع" };
+      if (bankRow && selectedBank > 0) {
+        const { error } = await supabase
+          .from("project_percentage")
+          .update({
+            period_percentage: Math.max(
+              0,
+              bankRow.period_percentage - selectedBank,
+            ),
+          })
+          .eq("id", bankRow.id);
+        if (error) {
+          logErr("reduce bank period_percentage", error);
+          return { success: false, message: "خطأ في تحديث نسبة البنك للمشروع" };
+        }
       }
 
       return { success: true, message: "تم توزيع النسب بنجاح" };
