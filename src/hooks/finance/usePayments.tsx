@@ -431,9 +431,16 @@ export function useExpensePayments(expenseId: string) {
       // 5) get OLD percentage from log (IMPORTANT) + its old percentage config (fallback)
       const { data: oldLog, error: oldLogError } = await supabase
         .from("project_percentage_logs")
-        .select("id, amount, percentage")
+        .select("id, amount, percentage, distributed")
         .eq("payment_id", paymentId)
         .maybeSingle();
+
+      if (oldLog?.distributed) {
+        return {
+          success: false,
+          error: "لا يمكن تعديل هذه الدفعة لأنها تم توزيع نسبتها بالفعل",
+        };
+      }
 
       if (oldLogError) {
         console.error("Error fetching old percentage log", oldLogError);
