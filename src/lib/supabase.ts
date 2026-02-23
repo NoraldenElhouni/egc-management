@@ -2006,6 +2006,8 @@ export type Database = {
           payment_id: string | null
           percentage: number
           project_id: string
+          refund_id: string | null
+          type: Database["public"]["Enums"]["percentage_log_type"]
         }
         Insert: {
           amount: number
@@ -2016,6 +2018,8 @@ export type Database = {
           payment_id?: string | null
           percentage: number
           project_id: string
+          refund_id?: string | null
+          type?: Database["public"]["Enums"]["percentage_log_type"]
         }
         Update: {
           amount?: number
@@ -2026,6 +2030,8 @@ export type Database = {
           payment_id?: string | null
           percentage?: number
           project_id?: string
+          refund_id?: string | null
+          type?: Database["public"]["Enums"]["percentage_log_type"]
         }
         Relationships: [
           {
@@ -2047,6 +2053,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_percentage_logs_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "project_refund"
             referencedColumns: ["id"]
           },
         ]
@@ -3141,6 +3154,7 @@ export type Database = {
       owner_type: "employee" | "project" | "company" | "contractor"
       payment_method: "cash" | "bank"
       payment_type: "cash" | "cheque" | "transfer" | "deposit" | "bank"
+      percentage_log_type: "expense" | "refund"
       phase_type: "construction" | "finishing" | "initial"
       project_status_enum: "active" | "paused" | "completed" | "cancelled"
       projects_type: "construction" | "consulting"
@@ -3302,6 +3316,7 @@ export const Constants = {
       owner_type: ["employee", "project", "company", "contractor"],
       payment_method: ["cash", "bank"],
       payment_type: ["cash", "cheque", "transfer", "deposit", "bank"],
+      percentage_log_type: ["expense", "refund"],
       phase_type: ["construction", "finishing", "initial"],
       project_status_enum: ["active", "paused", "completed", "cancelled"],
       projects_type: ["construction", "consulting"],

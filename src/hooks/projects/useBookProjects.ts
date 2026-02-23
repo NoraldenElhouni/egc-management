@@ -714,13 +714,13 @@ export function useBookProject(projectId: string) {
       updated_at: new Date().toISOString(),
     };
 
-    const { error: refundError } = await supabase
+    const { data: refundData, error: refundError } = await supabase
       .from("project_refund")
       .insert(refundPayload)
       .select()
       .single();
 
-    if (refundError) {
+    if (refundError || !refundData) {
       console.error("Error inserting project refund", refundError);
       return { success: false, message: "حدث خطأ أثناء إضافة استرداد المشروع" };
     }
@@ -747,6 +747,26 @@ export function useBookProject(projectId: string) {
       );
       return { success: false, message: "حدث خطأ أثناء تحديث نسبة المشروع" };
     }
+
+    // insert percentage log with negative amount to indicate refund
+    const { error: logError } = await supabase
+      .from("project_percentage_logs")
+      .insert({
+        project_id: form.project_id,
+        refund_id: refundData.id,
+        amount: -percentageAmount,
+        percentage: projectPercentage?.percentage ?? 0,
+        type: "refund",
+      });
+
+    if (logError) {
+      console.error("Error inserting project percentage log", logError);
+      return {
+        success: false,
+        message: "حدث خطأ أثناء تسجيل نسبة استرداد المشروع",
+      };
+    }
+
     // 7 update project acccount
     const { error: projectAccountUpdateError } = await supabase
       .from("accounts")

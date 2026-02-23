@@ -69,6 +69,7 @@ const ProjectRefundForm = ({ projectId }: ProjectRefundFormProps) => {
         return;
       }
       setSuccess("تم إضافة الدخل بنجاح!");
+      window.location.reload();
       reset({ project_id: projectId });
     } catch (error) {
       console.error("Submit error:", error);

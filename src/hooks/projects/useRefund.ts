@@ -115,6 +115,23 @@ export function useRefund(projectId: string) {
         return { success: false, message: "حدث خطأ أثناء تحديث نسبة المشروع" };
       }
 
+      // 7.1) delete percentage log for this refund
+      const { error: percentageLogDeleteError } = await supabase
+        .from("project_percentage_logs")
+        .delete()
+        .eq("refund_id", refundId);
+
+      if (percentageLogDeleteError) {
+        console.error(
+          "Error deleting project percentage log after refund delete",
+          percentageLogDeleteError,
+        );
+        return {
+          success: false,
+          message: "حدث خطأ أثناء حذف سجل نسبة المشروع الخاص بالاسترداد",
+        };
+      }
+
       // 7) reverse account updates
       const { error: projectAccountUpdateError } = await supabase
         .from("accounts")
