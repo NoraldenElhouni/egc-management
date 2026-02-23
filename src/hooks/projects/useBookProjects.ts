@@ -1366,6 +1366,56 @@ export function useMaps(projectId: string) {
         })
         .eq("id", projectId);
 
+      // update company account type maps
+      const { data: companyAccount, error: companyAccountError } =
+        await supabase
+          .from("company_account")
+          .select("*")
+          .eq("type", "maps")
+          .single();
+
+      if (companyAccountError || !companyAccount) {
+        console.error(
+          "Error fetching company account for maps",
+          companyAccountError,
+        );
+        throw (
+          companyAccountError || new Error("Company account for maps not found")
+        );
+      }
+
+      if (form.payment_method == "cash") {
+        const { error: companyAccountUpdateError } = await supabase
+          .from("company_account")
+          .update({
+            cash_balance: companyAccount.cash_balance + paidAmount,
+          })
+          .eq("id", companyAccount.id);
+
+        if (companyAccountUpdateError) {
+          console.error(
+            "Error updating company account for maps",
+            companyAccountUpdateError,
+          );
+          throw companyAccountUpdateError;
+        }
+      } else if (form.payment_method == "bank") {
+        const { error: companyAccountUpdateError } = await supabase
+          .from("company_account")
+          .update({
+            bank_balance: companyAccount.bank_balance + paidAmount,
+          })
+          .eq("id", companyAccount.id);
+
+        if (companyAccountUpdateError) {
+          console.error(
+            "Error updating company account for maps",
+            companyAccountUpdateError,
+          );
+          throw companyAccountUpdateError;
+        }
+      }
+
       return { data: expense, error: null };
     } catch (err) {
       console.error("Error in addExpense", err);
@@ -1451,6 +1501,56 @@ export function useMaps(projectId: string) {
         .eq("id", accountData.id);
 
       if (accountUpdateError) throw accountUpdateError;
+
+      //remove it from the company account type maps
+      const { data: companyAccount, error: companyAccountError } =
+        await supabase
+          .from("company_account")
+          .select("*")
+          .eq("type", "maps")
+          .single();
+
+      if (companyAccountError || !companyAccount) {
+        console.error(
+          "Error fetching company account for maps during deletion",
+          companyAccountError,
+        );
+        throw (
+          companyAccountError || new Error("Company account for maps not found")
+        );
+      }
+
+      if (paymentType == "cash") {
+        const { error: companyAccountUpdateError } = await supabase
+          .from("company_account")
+          .update({
+            cash_balance: companyAccount.cash_balance - amount,
+          })
+          .eq("id", companyAccount.id);
+
+        if (companyAccountUpdateError) {
+          console.error(
+            "Error updating company account for maps during deletion",
+            companyAccountUpdateError,
+          );
+          throw companyAccountUpdateError;
+        }
+      } else if (paymentType == "bank") {
+        const { error: companyAccountUpdateError } = await supabase
+          .from("company_account")
+          .update({
+            bank_balance: companyAccount.bank_balance - amount,
+          })
+          .eq("id", companyAccount.id);
+
+        if (companyAccountUpdateError) {
+          console.error(
+            "Error updating company account for maps during deletion",
+            companyAccountUpdateError,
+          );
+          throw companyAccountUpdateError;
+        }
+      }
 
       // 4) delete the project_maps row
       // Option A: Hard delete (works with your current schema)
