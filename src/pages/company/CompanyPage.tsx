@@ -1,19 +1,9 @@
+import React, { ComponentType } from "react";
+import { useAuth } from "../../hooks/useAuth";
+import { Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  Users,
-  MapPin,
-  DollarSign,
-  LinkIcon,
-  ShieldUser,
-  User,
-  Settings,
-  Globe,
-  Building,
-} from "lucide-react";
-import { ComponentType } from "react";
-import { useAuth } from "../hooks/useAuth";
 
-const MainMenu = () => {
+const CompanyPage = () => {
   const { user, loading } = useAuth();
   // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
   const menuItems = [
@@ -23,49 +13,6 @@ const MainMenu = () => {
       path: "/hr",
       role: ["Admin", "Manager", "HR"],
     },
-    {
-      label: "إدارة العملاء",
-      icon: ShieldUser,
-      path: "/crm",
-      role: ["Admin", "Manager", "Sales", "Support"],
-    },
-    {
-      label: "سلسلة التوريد",
-      icon: LinkIcon,
-      path: "/supply-chain",
-      role: ["Admin", "Manager", "Finance"],
-    },
-    {
-      label: "المشاريع",
-      icon: MapPin,
-      path: "/projects",
-      role: ["Admin", "Manager"],
-    },
-    {
-      label: "المالية",
-      icon: DollarSign,
-      path: "/finance",
-      role: ["Admin", "Manager", "Finance", "Bookkeeper", "Accountant"],
-    },
-    { label: "الملف الشخصي", icon: User, path: "/profile" },
-    {
-      label: "الإعدادات",
-      icon: Settings,
-      path: "/settings",
-      role: ["Admin", "Finance"],
-    },
-    {
-      label: "الشركة",
-      icon: Building,
-      path: "/company",
-      role: ["Admin", "Manager"],
-    },
-    {
-      label: "الموقع الإلكتروني",
-      icon: Globe,
-      path: "/website",
-      role: ["Admin", "Manager"],
-    },
   ];
 
   // Filter menu items based on the user's role. If an item has no `role` field it is public.
@@ -74,7 +21,6 @@ const MainMenu = () => {
     if (!user || !user.role) return false;
     return item.role.includes(user.role);
   });
-
   return (
     <div className="h-full w-full p-6 mt-10 bg-background" dir="rtl">
       <h1 className="text-2xl font-bold mb-6 text-center text-foreground">
@@ -106,4 +52,4 @@ const MainMenu = () => {
   );
 };
 
-export default MainMenu;
+export default CompanyPage;

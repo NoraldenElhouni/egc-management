@@ -16,6 +16,7 @@ import SupplyChainRoutes from "./pages/SupplyChainRoutes";
 import ProjectsRoutes from "./pages/ProjectsRoutes";
 import FinanceRoutes from "./pages/FinanceRoutes";
 import SettingsRoutes from "./pages/SettingsRoutes";
+import CompanyRoutes from "./pages/CompanyRoutes";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -29,7 +30,7 @@ const AppRouter = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(!!session);
-      }
+      },
     );
 
     return () => {
@@ -50,7 +51,7 @@ const AppRouter = () => {
           console.error("❌ Failed to refresh user data:", error);
         }
       },
-      60 * 60 * 1000
+      60 * 60 * 1000,
     ); // 1 hour = 60 minutes * 60 seconds * 1000 milliseconds
 
     return () => clearInterval(interval);
@@ -113,6 +114,8 @@ const AppRouter = () => {
 
             {/* Settings */}
             <Route path="/settings/*" element={<SettingsRoutes />} />
+
+            <Route path="/company/*" element={<CompanyRoutes />} />
 
             <Route path="/website" element={<WebsitePage />} />
           </Route>
