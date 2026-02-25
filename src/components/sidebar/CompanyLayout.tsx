@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Users, ChevronRight, ChevronLeft, Percent } from "lucide-react";
+import { ChevronRight, ChevronLeft, Percent } from "lucide-react";
 
 const CompanyLayout = () => {
   const location = useLocation();
