@@ -1,6 +1,6 @@
 import React, { ComponentType } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Users } from "lucide-react";
+import { Percent } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CompanyPage = () => {
@@ -8,10 +8,10 @@ const CompanyPage = () => {
   // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
   const menuItems = [
     {
-      label: "إدارة الموظفين",
-      icon: Users,
-      path: "/hr",
-      role: ["Admin", "Manager", "HR"],
+      label: "توزيع النسب",
+      icon: Percent,
+      path: "/company/distribute",
+      role: ["Admin", "Manager"],
     },
   ];
 

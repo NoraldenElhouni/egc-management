@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Users, ChevronRight, ChevronLeft } from "lucide-react";
+import { Users, ChevronRight, ChevronLeft, Percent } from "lucide-react";
 
 const CompanyLayout = () => {
   const location = useLocation();
@@ -9,10 +9,10 @@ const CompanyLayout = () => {
 
   const menuItems = [
     {
-      title: "العملاء",
-      icon: Users,
-      path: "/company",
-      description: "قائمة جميع العملاء",
+      title: "توزيع النسب",
+      icon: Percent,
+      path: "/company/distribute",
+      description: "توزيع نسب الموظفين على المشاريع المختلفة",
     },
   ];
 
