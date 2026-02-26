@@ -1,9 +1,10 @@
 type StepsHeaderProps = {
+  setStep: React.Dispatch<React.SetStateAction<number>>;
   steps: { title: string }[];
   current: number; // 1-based
 };
 
-const StepsHeader = ({ steps, current }: StepsHeaderProps) => {
+const StepsHeader = ({ setStep, steps, current }: StepsHeaderProps) => {
   return (
     <div className="mt-4 flex justify-center">
       <div className="inline-flex items-center gap-6 rounded-md border bg-white px-4 py-3">
@@ -18,20 +19,22 @@ const StepsHeader = ({ steps, current }: StepsHeaderProps) => {
                 className={[
                   "h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold",
                   isDone
-                    ? "bg-green-500 text-white"
+                    ? "bg-green-500 text-white cursor-pointer"
                     : isActive
                       ? "bg-blue-500 text-white"
                       : "bg-gray-200 text-gray-600",
                 ].join(" ")}
+                onClick={() => setStep(stepNumber)}
               >
                 {isDone ? "✓" : stepNumber}
               </div>
 
               <div
                 className={[
-                  "text-sm font-medium whitespace-nowrap",
-                  isActive ? "text-gray-900" : "text-gray-500",
+                  "text-sm font-medium whitespace-nowrap cursor-pointer",
+                  isActive ? "text-gray-900 " : "text-gray-500",
                 ].join(" ")}
+                onClick={() => setStep(stepNumber)}
               >
                 {s.title}
               </div>
