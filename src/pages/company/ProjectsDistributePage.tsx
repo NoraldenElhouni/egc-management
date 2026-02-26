@@ -67,7 +67,11 @@ const ProjectsDistributePage = () => {
 
       {/* Step Content */}
       {step === 1 && <SetpOneProjectDistibute projects={projects ?? []} />}
-      {step === 2 && <StepTwoProjectDistribute projects={projects ?? []} />}
+      {step === 2 && (
+        <>
+          <StepTwoProjectDistribute projects={projects ?? []} />
+        </>
+      )}
       {step === 3 && <StepThreeProjectDistribute />}
 
       {/* Actions */}

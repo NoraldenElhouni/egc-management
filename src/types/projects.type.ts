@@ -1,5 +1,6 @@
 import {
   Account,
+  Employees,
   ProjectBalances,
   ProjectExpenses,
   ProjectIncome,
