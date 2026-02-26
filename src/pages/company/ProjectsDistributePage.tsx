@@ -1,11 +1,11 @@
+import { useMemo, useState } from "react";
 import { useProjectsDistribute } from "../../hooks/projects/useProjectsDistribute";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
-import { useMemo, useState } from "react";
-import SetpOneProjectDistibute from "../../components/company/SetpOneProjectDistibute";
 import StepsHeader from "../../components/ui/StepsHeader";
 import StepTwoProjectDistribute from "../../components/company/StepTwoProjectDistribute";
 import StepThreeProjectDistribute from "../../components/company/StepThreeProjectDistribute";
+import StepOneProjectDistribute from "../../components/company/SetpOneProjectDistibute";
 
 const ProjectsDistributePage = () => {
   const [step, setStep] = useState(1);
@@ -14,32 +14,29 @@ const ProjectsDistributePage = () => {
   const { projects, loading, error } = useProjectsDistribute();
 
   const steps = useMemo(
-    () => [{ title: "عرض المشاريع" }, { title: "مراجعة" }, { title: "تم" }],
+    () => [
+      { title: "عرض المشاريع" },
+      { title: "مراجعة التوزيع" },
+      { title: "ملخص الشركاء" },
+    ],
     [],
   );
 
   const maxStep = steps.length;
+  const isLastStep = step === maxStep;
 
-  const handleNextStep = () => {
-    setStep((prev) => Math.min(prev + 1, maxStep));
-  };
-
-  const handlePrevStep = () => {
-    setStep((prev) => Math.max(prev - 1, 1));
-  };
+  const handleNextStep = () => setStep((p) => Math.min(p + 1, maxStep));
+  const handlePrevStep = () => setStep((p) => Math.max(p - 1, 1));
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-
-      setTimeout(() => {
-        console.log("Submitted data:", projects);
-      }, 1000);
-
-      setStep(maxStep); // or setStep(3) if last is "تم"
+      // TODO: persist distribution data to database
+      await new Promise((r) => setTimeout(r, 1000));
+      console.log("Submitted distribution for projects:", projects);
+      window.alert("تم الإرسال بنجاح");
     } catch (e) {
       console.error(e);
-      // show toast / setError state
       window.alert("حدث خطأ أثناء إرسال البيانات. الرجاء المحاولة مرة أخرى.");
     } finally {
       setIsSubmitting(false);
@@ -47,34 +44,27 @@ const ProjectsDistributePage = () => {
   };
 
   if (loading) return <LoadingPage label="جاري تحميل معلومات المشاريع" />;
-
-  if (error) {
+  if (error)
     return (
       <ErrorPage
         error={error.message || "حدث خطأ أثناء تحميل معلومات المشاريع"}
         label="صفحة توزيع المشاريع"
       />
     );
-  }
-  const isLastStep = step === maxStep;
+
+  const safeProjects = projects ?? [];
 
   return (
     <div className="p-4">
-      <h1 className="text-center text-2xl font-bold">توزيع المشاريع</h1>
+      <h1 className="text-center text-2xl font-bold mb-2">توزيع المشاريع</h1>
 
-      {/* Steps UI */}
       <StepsHeader steps={steps} current={step} />
 
-      {/* Step Content */}
-      {step === 1 && <SetpOneProjectDistibute projects={projects ?? []} />}
-      {step === 2 && (
-        <>
-          <StepTwoProjectDistribute projects={projects ?? []} />
-        </>
-      )}
-      {step === 3 && <StepThreeProjectDistribute />}
+      {step === 1 && <StepOneProjectDistribute projects={safeProjects} />}
+      {step === 2 && <StepTwoProjectDistribute projects={safeProjects} />}
+      {step === 3 && <StepThreeProjectDistribute projects={safeProjects} />}
 
-      {/* Actions */}
+      {/* Navigation */}
       <div className="max-w-4xl mx-auto flex justify-between gap-2 mt-6">
         <button
           onClick={handlePrevStep}
@@ -93,12 +83,7 @@ const ProjectsDistributePage = () => {
           <button
             onClick={handleNextStep}
             disabled={isSubmitting}
-            className={[
-              "px-4 py-2 rounded-md text-white",
-              isSubmitting
-                ? "bg-blue-200 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600",
-            ].join(" ")}
+            className="px-4 py-2 rounded-md text-white bg-blue-500 hover:bg-blue-600"
           >
             التالي
           </button>
@@ -113,7 +98,7 @@ const ProjectsDistributePage = () => {
                 : "bg-green-600 hover:bg-green-700",
             ].join(" ")}
           >
-            {isSubmitting ? "جاري الإرسال..." : "إرسال"}
+            {isSubmitting ? "جاري الإرسال..." : "تأكيد التوزيع"}
           </button>
         )}
       </div>
