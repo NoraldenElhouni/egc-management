@@ -7,6 +7,7 @@ import {
   calcDistribution,
   calcEmployeeEarnings,
 } from "../../hooks/projects/useProjectsDistribute";
+import ProjectDistributionPercentageDialog from "./distribution/ProjectDistributionPercentageDialog";
 
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
 
@@ -85,8 +86,15 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                     <tr key={`${project.id}-detail`}>
                       <td colSpan={5} className="px-3 py-3 bg-blue-50">
                         <div className="rounded-md border bg-white p-4 space-y-4">
-                          <div className="text-xs font-semibold text-gray-600 mb-1">
-                            توزيع الفترة — بالعملة
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs font-semibold text-gray-600 mb-1">
+                              توزيع الفترة — بالعملة
+                            </div>
+                            <div>
+                              <ProjectDistributionPercentageDialog
+                                project={project}
+                              />
+                            </div>
                           </div>
 
                           {CURRENCIES.map((currency) => {
@@ -129,13 +137,7 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                                         🏦 البنك / الاحتياطي
                                       </td>
                                       <td className="px-2 py-1 tabular-nums">
-                                        {dist.total > 0
-                                          ? (
-                                              (dist.bank / dist.total) *
-                                              100
-                                            ).toFixed(1)
-                                          : "0"}
-                                        %
+                                        {project.default_bank_percentage}%
                                       </td>
                                       <td className="px-2 py-1 tabular-nums">
                                         {formatCurrency(dist.bank, currency)}
@@ -148,13 +150,7 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                                         🏢 الشركة
                                       </td>
                                       <td className="px-2 py-1 tabular-nums">
-                                        {dist.total > 0
-                                          ? (
-                                              (dist.company / dist.total) *
-                                              100
-                                            ).toFixed(1)
-                                          : "0"}
-                                        %
+                                        {project.default_company_percentage}%
                                       </td>
                                       <td className="px-2 py-1 tabular-nums">
                                         {formatCurrency(dist.company, currency)}

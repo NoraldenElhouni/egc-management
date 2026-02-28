@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { PostgrestError } from "@supabase/supabase-js";
+import { Projects } from "../../types/global.type";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 // Hardcoded split of the "remaining" (after employees take their share).
 // Change these two values when the split comes from the database.
-export const BANK_SPLIT = 0.5; // 50% of remainder → bank/reserve
-export const COMPANY_SPLIT = 0.5; // 50% of remainder → company
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type Currency = "LYD" | "USD" | "EUR";
@@ -29,9 +28,7 @@ export interface ProjectAssignment {
   };
 }
 
-export interface DistributionProject {
-  id: string;
-  name: string;
+export interface DistributionProject extends Projects {
   serial_number: number | null;
   project_percentage: ProjectPercentageRow[];
   project_assignments: ProjectAssignment[];
@@ -82,8 +79,8 @@ export function calcDistribution(
   return {
     total,
     employeesTotal,
-    bank: remaining * BANK_SPLIT,
-    company: remaining * COMPANY_SPLIT,
+    bank: remaining * project.default_bank_percentage,
+    company: remaining * project.default_company_percentage,
   };
 }
 

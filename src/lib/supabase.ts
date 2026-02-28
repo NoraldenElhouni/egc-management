@@ -2296,6 +2296,8 @@ export type Database = {
           client_id: string
           code: string
           created_at: string
+          default_bank_percentage: number
+          default_company_percentage: number
           description: string | null
           expense_counter: number
           id: string
@@ -2314,6 +2316,8 @@ export type Database = {
           client_id: string
           code: string
           created_at?: string
+          default_bank_percentage?: number
+          default_company_percentage?: number
           description?: string | null
           expense_counter?: number
           id?: string
@@ -2332,6 +2336,8 @@ export type Database = {
           client_id?: string
           code?: string
           created_at?: string
+          default_bank_percentage?: number
+          default_company_percentage?: number
           description?: string | null
           expense_counter?: number
           id?: string
