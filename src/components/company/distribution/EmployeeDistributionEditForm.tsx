@@ -31,9 +31,7 @@ const rowSchema = z.object({
 });
 
 const formSchema = z
-  .object({
-    rows: z.array(rowSchema),
-  })
+  .object({ rows: z.array(rowSchema) })
   .superRefine((data, ctx) => {
     CURRENCIES.forEach((currency) => {
       const indices = data.rows
@@ -70,7 +68,10 @@ interface Props {
 
 const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
   const [pickerCurrency, setPickerCurrency] = useState<Currency | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRemoving, setIsRemoving] = useState<number | null>(null); // rowIndex being removed
 
+  // ── Build default rows ────────────────────────────────────────────────────
   const defaultRows = useMemo<FormValues["rows"]>(() => {
     const rows: FormValues["rows"] = [];
 
@@ -142,75 +143,134 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
       .filter((row) => row.currency === currency),
   })).filter((group) => group.rows.length > 0);
 
-  // ── Add employee coming from EmployeePicker ───────────────────────────────
+  // ── Add employee ──────────────────────────────────────────────────────────
   const handleAddEmployee = async (
     currency: Currency,
     employeeId: string,
     name: string,
     percentage: number,
   ) => {
-    (async () => {
-      const { error } = await supabase.from("project_assignments").insert({
-        project_id: project.id,
-        user_id: employeeId,
-        percentage,
-        project_role_id: "b872f455-2ceb-432e-a72d-fd35d0582e0c",
-      });
+    const { error } = await supabase.from("project_assignments").insert({
+      project_id: project.id,
+      user_id: employeeId,
+      percentage,
+      project_role_id: "b872f455-2ceb-432e-a72d-fd35d0582e0c",
+    });
 
-      if (error) {
-        console.error("Error adding project assignment:", error);
-        window.alert("حدث خطأ أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.");
-        return;
-      }
-      const total =
-        watchedRows.find((r) => r.currency === currency)?.total || 0;
-      append({
-        id: `${currency}-employee-${employeeId}-${Date.now()}`,
-        label: `👤 ${name}`,
-        type: "employee",
-        employeeId,
-        currency,
-        total,
-        percentage,
-        amount: Number(((percentage / 100) * total).toFixed(2)),
-      });
-    })();
+    if (error) {
+      console.error("Error adding project assignment:", error);
+      window.alert("حدث خطأ أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.");
+      return;
+    }
+
+    const total = watchedRows.find((r) => r.currency === currency)?.total ?? 0;
+    append({
+      id: `${currency}-employee-${employeeId}-${Date.now()}`,
+      label: `👤 ${name}`,
+      type: "employee",
+      employeeId,
+      currency,
+      total,
+      percentage,
+      amount: Number(((percentage / 100) * total).toFixed(2)),
+    });
   };
 
-  const handleRemove = async (index: number) => {
-    const row = watchedRows[index];
+  // ── Remove employee ───────────────────────────────────────────────────────
+  const handleRemove = async (rowIndex: number) => {
+    const row = watchedRows[rowIndex];
     if (row.type !== "employee" || !row.employeeId) return;
+
+    setIsRemoving(rowIndex);
     const { error } = await supabase
       .from("project_assignments")
       .delete()
       .eq("project_id", project.id)
       .eq("user_id", row.employeeId);
+    setIsRemoving(null);
+
     if (error) {
       console.error("Error removing project assignment:", error);
       window.alert("حدث خطأ أثناء حذف الموظف. الرجاء المحاولة مرة أخرى.");
       return;
     }
-    remove(index);
+
+    remove(rowIndex);
   };
 
   // ── Submit ────────────────────────────────────────────────────────────────
-  const onSubmit = (values: FormValues) => {
-    console.log("✅ submitted:", values.rows);
-    onSave?.(values.rows);
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
+
+    try {
+      // 1. Update all employee assignment percentages in parallel
+      if (!project.project_assignments) {
+        window.alert("بيانات المشروع غير كاملة. لا يمكن تحديث التوزيع.");
+        return;
+      }
+     
+      const employeeUpdates = values.rows
+        .filter((r) => r.type === "employee" && r.employeeId)
+        .map((row) =>
+          supabase
+            .from("project_assignments")
+            .update({ percentage: row.percentage })
+            .eq("project_id", project.id)
+            .eq("user_id", row.employeeId as string),
+        );
+
+      const assignmentResults = await Promise.all(employeeUpdates);
+      const assignmentError = assignmentResults.find((r) => r.error)?.error;
+
+      if (assignmentError) {
+        console.error("Error updating assignments:", assignmentError);
+        window.alert(
+          "حدث خطأ أثناء تحديث بيانات الموظفين. الرجاء المحاولة مرة أخرى.",
+        );
+        return;
+      }
+
+      // 2. Update project-level bank / company percentages
+      // These are shared across currencies so we read from the first match
+      const bankPct =
+        values.rows.find((r) => r.type === "bank")?.percentage ?? 0;
+      const companyPct =
+        values.rows.find((r) => r.type === "company")?.percentage ?? 0;
+
+      const { error: projectError } = await supabase
+        .from("projects")
+        .update({
+          default_bank_percentage: bankPct,
+          default_company_percentage: companyPct,
+        })
+        .eq("id", project.id);
+
+      if (projectError) {
+        console.error("Error updating project:", projectError);
+        window.alert(
+          "حدث خطأ أثناء تحديث بيانات المشروع. الرجاء المحاولة مرة أخرى.",
+        );
+        return;
+      }
+
+      onSave?.(values.rows);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const onInvalid = (errs: any) => {
     console.warn("❌ Zod blocked submit — errors:", errs);
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* EmployeePicker is mounted only when a currency is selected */}
       {pickerCurrency && (
         <EmployeePicker
           currency={pickerCurrency}
           total={
-            watchedRows.find((r) => r.currency === pickerCurrency)?.total || 0
+            watchedRows.find((r) => r.currency === pickerCurrency)?.total ?? 0
           }
           existingIds={watchedRows
             .filter(
@@ -232,8 +292,8 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
       >
         {groupedByCurrency.map((group) => {
           const currencyRows =
-            watchedRows?.filter((r) => r.currency === group.currency) || [];
-          const total = currencyRows[0]?.total || 0;
+            watchedRows?.filter((r) => r.currency === group.currency) ?? [];
+          const total = currencyRows[0]?.total ?? 0;
           const currentSum = currencyRows.reduce(
             (sum, row) => sum + (Number(row.amount) || 0),
             0,
@@ -247,16 +307,14 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
 
           return (
             <div key={group.currency} className="rounded-md border p-3">
-              {/* Currency header */}
+              {/* Header */}
               <div className="mb-2 flex items-center justify-between">
                 <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-700">
                   {group.currency}
                 </span>
                 <div className="text-xs font-semibold text-gray-700 space-y-0.5 text-left">
                   <div>الإجمالي: {formatCurrency(total, group.currency)}</div>
-                  <div>
-                    الموزع: {formatCurrency(currentSum, group.currency)}
-                  </div>
+                  <div>الموزع: {formatCurrency(currentSum, group.currency)}</div>
                   <div
                     className={`font-bold ${isValid ? "text-green-600" : "text-red-500"}`}
                   >
@@ -285,23 +343,26 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                     const rowType = rowData?.type;
                     const percentageError =
                       errors.rows?.[rowIndex]?.percentage?.message;
+                    const removing = isRemoving === rowIndex;
 
                     return (
                       <tr
                         key={row.id}
                         className={
-                          rowType === "bank"
-                            ? "bg-yellow-50 text-right"
-                            : rowType === "company"
-                              ? "bg-green-50 text-right"
-                              : "text-right"
+                          removing
+                            ? "opacity-40 pointer-events-none text-right"
+                            : rowType === "bank"
+                              ? "bg-yellow-50 text-right"
+                              : rowType === "company"
+                                ? "bg-green-50 text-right"
+                                : "text-right"
                         }
                       >
                         <td className="px-2 py-2 font-medium">
                           {rowData?.label}
                         </td>
 
-                        {/* Percentage — editable, drives amount instantly */}
+                        {/* Percentage — drives amount on change */}
                         <td className="px-2 py-2">
                           <input
                             type="number"
@@ -312,7 +373,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                               valueAsNumber: true,
                               onChange: (e) => {
                                 const pct = parseFloat(e.target.value) || 0;
-                                const t = watchedRows?.[rowIndex]?.total || 0;
+                                const t = watchedRows?.[rowIndex]?.total ?? 0;
                                 setValue(
                                   `rows.${rowIndex}.amount`,
                                   Number(((pct / 100) * t).toFixed(2)),
@@ -333,7 +394,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                           )}
                         </td>
 
-                        {/* Amount — auto-calculated, read-only */}
+                        {/* Amount — read-only, auto-calculated */}
                         <td className="px-2 py-2">
                           <input
                             type="number"
@@ -351,11 +412,12 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                           {rowType === "employee" && (
                             <button
                               type="button"
+                              disabled={removing}
                               onClick={() => handleRemove(rowIndex)}
-                              className="text-gray-300 hover:text-red-500 transition-colors text-sm leading-none"
+                              className="text-gray-300 hover:text-red-500 disabled:opacity-30 transition-colors text-sm leading-none"
                               title="حذف"
                             >
-                              ✕
+                              {removing ? "…" : "✕"}
                             </button>
                           )}
                         </td>
@@ -377,7 +439,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                 </tfoot>
               </table>
 
-              {/* Opens the picker for this currency group */}
               <button
                 type="button"
                 onClick={() => setPickerCurrency(group.currency as Currency)}
@@ -392,9 +453,10 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            disabled={isSubmitting}
+            className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            حفظ التعديلات
+            {isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}
           </button>
         </div>
       </form>
