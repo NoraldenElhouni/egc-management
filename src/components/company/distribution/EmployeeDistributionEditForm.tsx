@@ -208,7 +208,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
         window.alert("بيانات المشروع غير كاملة. لا يمكن تحديث التوزيع.");
         return;
       }
-     
+
       const employeeUpdates = values.rows
         .filter((r) => r.type === "employee" && r.employeeId)
         .map((row) =>
@@ -314,7 +314,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                 </span>
                 <div className="text-xs font-semibold text-gray-700 space-y-0.5 text-left">
                   <div>الإجمالي: {formatCurrency(total, group.currency)}</div>
-                  <div>الموزع: {formatCurrency(currentSum, group.currency)}</div>
                   <div
                     className={`font-bold ${isValid ? "text-green-600" : "text-red-500"}`}
                   >

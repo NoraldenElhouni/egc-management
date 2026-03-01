@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { formatCurrency } from "../../utils/helpper";
 import {
   Currency,
@@ -18,15 +18,16 @@ interface Props {
 const StepTwoProjectDistribute = ({ projects }: Props) => {
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const totals = useMemo(() => {
-    const base = { LYD: 0, USD: 0, EUR: 0 };
-    projects.forEach((p) => {
-      CURRENCIES.forEach((c) => {
-        base[c] += getPeriodTotal(p.project_percentage, c);
-      });
-    });
-    return base;
-  }, [projects]);
+  const totals = CURRENCIES.reduce(
+    (acc, c) => {
+      acc[c] = projects.reduce(
+        (sum, p) => sum + getPeriodTotal(p.project_percentage, c),
+        0,
+      );
+      return acc;
+    },
+    {} as Record<Currency, number>,
+  );
 
   return (
     <div className="p-3 flex justify-center">
@@ -38,9 +39,11 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
               <th className="px-3 py-2 font-semibold text-gray-700">
                 اسم المشروع
               </th>
-              <th className="px-3 py-2 font-semibold text-gray-700">LYD</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">USD</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">EUR</th>
+              {CURRENCIES.map((c) => (
+                <th key={c} className="px-3 py-2 font-semibold text-gray-700">
+                  {c}
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -87,14 +90,12 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                       <td colSpan={5} className="px-3 py-3 bg-blue-50">
                         <div className="rounded-md border bg-white p-4 space-y-4">
                           <div className="flex items-center justify-between">
-                            <div className="text-xs font-semibold text-gray-600 mb-1">
+                            <p className="text-xs font-semibold text-gray-600">
                               توزيع الفترة — بالعملة
-                            </div>
-                            <div>
-                              <ProjectDistributionPercentageDialog
-                                project={project}
-                              />
-                            </div>
+                            </p>
+                            <ProjectDistributionPercentageDialog
+                              project={project}
+                            />
                           </div>
 
                           {CURRENCIES.map((currency) => {
@@ -105,13 +106,19 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                               project,
                               currency,
                             );
+                            const pctSum =
+                              Number(project.default_bank_percentage) +
+                              Number(project.default_company_percentage) +
+                              employees.reduce(
+                                (s, e) => s + e.assignmentPct,
+                                0,
+                              );
 
                             return (
                               <div
                                 key={currency}
                                 className="rounded-md border p-3"
                               >
-                                {/* Currency header */}
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
                                     {currency}
@@ -131,7 +138,6 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y">
-                                    {/* Bank row */}
                                     <tr className="text-right bg-yellow-50">
                                       <td className="px-2 py-1 font-medium">
                                         🏦 البنك / الاحتياطي
@@ -143,8 +149,6 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                                         {formatCurrency(dist.bank, currency)}
                                       </td>
                                     </tr>
-
-                                    {/* Company row */}
                                     <tr className="text-right bg-green-50">
                                       <td className="px-2 py-1 font-medium">
                                         🏢 الشركة
@@ -156,8 +160,6 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                                         {formatCurrency(dist.company, currency)}
                                       </td>
                                     </tr>
-
-                                    {/* Employee rows */}
                                     {employees.map((emp) => (
                                       <tr
                                         key={emp.employeeId}
@@ -178,12 +180,10 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                                       </tr>
                                     ))}
                                   </tbody>
-
-                                  {/* Sub-total check */}
                                   <tfoot>
                                     <tr className="text-right font-semibold bg-gray-50">
                                       <td className="px-2 py-1" colSpan={2}>
-                                        المجموع
+                                        المجموع ({pctSum.toFixed(1)}%)
                                       </td>
                                       <td className="px-2 py-1 tabular-nums">
                                         {formatCurrency(dist.total, currency)}
@@ -202,7 +202,6 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
               );
             })}
 
-            {/* Grand totals */}
             <tr className="bg-gray-100 font-semibold">
               <td></td>
               <td className="px-3 py-2 text-right">الإجمالي</td>

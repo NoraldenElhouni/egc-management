@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useProjectsDistribute } from "../../hooks/projects/useProjectsDistribute";
+import { supabase } from "../../lib/supabaseClient";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
 import StepsHeader from "../../components/ui/StepsHeader";
@@ -11,7 +12,8 @@ const ProjectsDistributePage = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { projects, loading, error } = useProjectsDistribute();
+  const { projects, loading, error, submitDistribution } =
+    useProjectsDistribute();
 
   const steps = useMemo(
     () => [
@@ -23,18 +25,34 @@ const ProjectsDistributePage = () => {
   );
 
   const maxStep = steps.length;
-  const isLastStep = step === maxStep;
-
-  const handleNextStep = () => setStep((p) => Math.min(p + 1, maxStep));
-  const handlePrevStep = () => setStep((p) => Math.max(p - 1, 1));
 
   const handleSubmit = async () => {
+    if (!projects || projects.length === 0) {
+      window.alert("لا توجد مشاريع للتوزيع");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      // TODO: persist distribution data to database
-      await new Promise((r) => setTimeout(r, 1000));
-      console.log("Submitted distribution for projects:", projects);
-      window.alert("تم الإرسال بنجاح");
+
+      // Get current user id
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        window.alert("لم يتم التعرف على المستخدم. الرجاء تسجيل الدخول.");
+        return;
+      }
+
+      const result = await submitDistribution(projects, user.id);
+
+      if (!result.success) {
+        window.alert(`حدث خطأ: ${result.error}`);
+        return;
+      }
+
+      window.alert("تم تأكيد التوزيع بنجاح وتم إنشاء كشوف الرواتب");
+      setStep(1);
     } catch (e) {
       console.error(e);
       window.alert("حدث خطأ أثناء إرسال البيانات. الرجاء المحاولة مرة أخرى.");
@@ -64,10 +82,9 @@ const ProjectsDistributePage = () => {
       {step === 2 && <StepTwoProjectDistribute projects={safeProjects} />}
       {step === 3 && <StepThreeProjectDistribute projects={safeProjects} />}
 
-      {/* Navigation */}
       <div className="max-w-4xl mx-auto flex justify-between gap-2 mt-6">
         <button
-          onClick={handlePrevStep}
+          onClick={() => setStep((p) => Math.max(p - 1, 1))}
           disabled={step === 1 || isSubmitting}
           className={[
             "px-4 py-2 rounded-md",
@@ -79,9 +96,9 @@ const ProjectsDistributePage = () => {
           السابق
         </button>
 
-        {!isLastStep ? (
+        {step < maxStep ? (
           <button
-            onClick={handleNextStep}
+            onClick={() => setStep((p) => Math.min(p + 1, maxStep))}
             disabled={isSubmitting}
             className="px-4 py-2 rounded-md text-white bg-blue-500 hover:bg-blue-600"
           >
