@@ -259,7 +259,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
     }
   };
 
-  const onInvalid = (errs: any) => {
+  const onInvalid = (errs: unknown) => {
     console.warn("❌ Zod blocked submit — errors:", errs);
   };
 

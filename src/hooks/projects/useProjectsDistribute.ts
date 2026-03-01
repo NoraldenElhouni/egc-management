@@ -493,9 +493,12 @@ export function useProjectsDistribute() {
       }
 
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Distribution error:", err);
-      return { success: false, error: err.message ?? "حدث خطأ غير متوقع" };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "حدث خطأ غير متوقع",
+      };
     }
   };
 

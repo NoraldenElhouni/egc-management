@@ -46,7 +46,11 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
         breakdown: [],
       });
     }
-    return map.get(id)!;
+    const party = map.get(id);
+    if (!party) {
+      throw new Error(`Party with id ${id} not found`);
+    }
+    return party;
   };
 
   const addBreakdown = (
