@@ -3,13 +3,8 @@ import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { PayrollWithRelations } from "../../../types/extended.type";
 import { Link } from "react-router-dom";
 import AcceptPayrollPayments from "../actions/payroll/AcceptPayrollPayments";
-import RejectPayrollPayments from "../actions/payroll/rejectPayrollPayments";
-import {
-  translatePaymentMethod,
-  translateStatus,
-} from "../../../utils/translations";
+import { translateStatus } from "../../../utils/translations";
 import { statusColor } from "../../../utils/colors/status";
-import { paymentMethodColor } from "../../../utils/colors/payment_method";
 
 // Payroll table columns
 export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
@@ -90,18 +85,7 @@ export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
       return v != null && v !== 0 ? formatCurrency(v, "LYD") : "-";
     },
   },
-  {
-    accessorKey: "payment_method",
-    header: "طريقة الدفع",
-    accessorFn: (row) => translatePaymentMethod(row.payment_method),
-    cell: ({ row }) => (
-      <div
-        className={`${paymentMethodColor(row.original.payment_method)} px-2 py-0.5 rounded text-xs font-medium inline-block`}
-      >
-        {translatePaymentMethod(row.original.payment_method)}
-      </div>
-    ),
-  },
+
   {
     accessorKey: "status",
     header: "الحالة",
@@ -120,8 +104,10 @@ export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
     header: "الإجراءات",
     cell: ({ row }) => (
       <div className="flex justify-center gap-2">
-        <AcceptPayrollPayments payrollPaymentId={row.original.id} />
-        <RejectPayrollPayments payrollPaymentId={row.original.id} />
+        <AcceptPayrollPayments
+          payrollPaymentId={row.original.id}
+          totalAmount={row.original.total_salary}
+        />
       </div>
     ),
   },

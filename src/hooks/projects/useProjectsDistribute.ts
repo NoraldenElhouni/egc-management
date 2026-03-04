@@ -151,10 +151,6 @@ export function useProjectsDistribute() {
              employee:employees(id, first_name, last_name)
            )`,
         )
-        .in("id", [
-          "e0a50575-bcc1-474a-98b8-8f57770a14fa",
-          "5451aaae-c632-46f4-9913-8670cffcc8e7",
-        ])
         .eq("status", "active")
         .order("serial_number", { ascending: true });
 
@@ -202,10 +198,10 @@ export function useProjectsDistribute() {
     const today = new Date().toISOString().split("T")[0];
     const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
 
-    // Accumulate employee earnings across all projects/currencies for payroll
+    // Accumulate employee earnings across all projects — one payroll per employee
     const payrollMap = new Map<
       string,
-      { employeeId: string; cashEarning: number; bankEarning: number }
+      { employeeId: string; amount: number }
     >();
 
     // Accumulate deltas per company account type and balance type
@@ -416,11 +412,9 @@ export function useProjectsDistribute() {
               // ── 6. Accumulate for payroll ─────────────────────────────────
               const prev = payrollMap.get(emp.employeeId) ?? {
                 employeeId: emp.employeeId,
-                cashEarning: 0,
-                bankEarning: 0,
+                amount: 0,
               };
-              if (isBank) prev.bankEarning += emp.amount;
-              else prev.cashEarning += emp.amount;
+              prev.amount += emp.amount;
               payrollMap.set(emp.employeeId, prev);
             }
 
@@ -473,20 +467,17 @@ export function useProjectsDistribute() {
         if (bankUpdateError) throw bankUpdateError;
       }
 
-      // ── 10. Insert payroll records ────────────────────────────────────────
+      // ── 10. Insert payroll records (one per employee, payment method decided at pay time) ──
       for (const [, acc] of payrollMap) {
-        const totalSalary = acc.cashEarning + acc.bankEarning;
-        if (totalSalary <= 0) continue;
+        if (acc.amount <= 0) continue;
 
         const { error: payrollError } = await supabase.from("payroll").insert({
           employee_id: acc.employeeId,
           pay_date: today,
-          percentage_salary: totalSalary,
-          total_salary: totalSalary,
+          percentage_salary: acc.amount,
+          total_salary: acc.amount,
           created_by: createdBy,
           status: "pending",
-          // Use bank if bank earnings dominate, otherwise cash
-          payment_method: acc.bankEarning >= acc.cashEarning ? "bank" : "cash",
         });
 
         if (payrollError) throw payrollError;
@@ -495,10 +486,13 @@ export function useProjectsDistribute() {
       return { success: true };
     } catch (err: unknown) {
       console.error("Distribution error:", err);
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : "حدث خطأ غير متوقع",
-      };
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+          ? err
+          : "حدث خطأ غير متوقع";
+      return { success: false, error: errorMessage };
     }
   };
 

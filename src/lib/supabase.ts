@@ -1498,13 +1498,14 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          bank_amount: number
           basic_salary: number | null
+          cash_amount: number
           created_at: string
           created_by: string | null
           employee_id: string
           id: string
           pay_date: string
-          payment_method: Database["public"]["Enums"]["payment_method"]
           percentage_salary: number | null
           project_id: string | null
           status: string
@@ -1514,13 +1515,14 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          bank_amount?: number
           basic_salary?: number | null
+          cash_amount?: number
           created_at?: string
           created_by?: string | null
           employee_id: string
           id?: string
           pay_date: string
-          payment_method: Database["public"]["Enums"]["payment_method"]
           percentage_salary?: number | null
           project_id?: string | null
           status?: string
@@ -1530,13 +1532,14 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          bank_amount?: number
           basic_salary?: number | null
+          cash_amount?: number
           created_at?: string
           created_by?: string | null
           employee_id?: string
           id?: string
           pay_date?: string
-          payment_method?: Database["public"]["Enums"]["payment_method"]
           percentage_salary?: number | null
           project_id?: string | null
           status?: string
@@ -2129,31 +2132,43 @@ export type Database = {
       }
       project_percentage_periods: {
         Row: {
+          bank_percentage: number
+          company_percentage: number
           created_at: string
           created_by: string
+          currency: Database["public"]["Enums"]["currency_type"] | null
           end_date: string
           id: string
           project_id: string
+          source_percentage_id: string | null
           start_date: string
           total_amount: number
           type: Database["public"]["Enums"]["payment_type"]
         }
         Insert: {
+          bank_percentage?: number
+          company_percentage?: number
           created_at?: string
           created_by: string
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           end_date: string
           id?: string
           project_id: string
+          source_percentage_id?: string | null
           start_date: string
           total_amount: number
           type: Database["public"]["Enums"]["payment_type"]
         }
         Update: {
+          bank_percentage?: number
+          company_percentage?: number
           created_at?: string
           created_by?: string
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           end_date?: string
           id?: string
           project_id?: string
+          source_percentage_id?: string | null
           start_date?: string
           total_amount?: number
           type?: Database["public"]["Enums"]["payment_type"]
@@ -2171,6 +2186,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_percentage_periods_source_percentage_id_fkey"
+            columns: ["source_percentage_id"]
+            isOneToOne: false
+            referencedRelation: "project_percentage"
             referencedColumns: ["id"]
           },
         ]
