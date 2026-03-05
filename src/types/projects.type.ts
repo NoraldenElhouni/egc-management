@@ -1,5 +1,6 @@
 import {
   Account,
+  Clients,
   Employees,
   ProjectBalances,
   ProjectExpenses,
@@ -16,6 +17,7 @@ export interface Expense extends ProjectExpenses {
 }
 
 export interface ProjectWithDetailsForBook extends Projects {
+  client: Clients;
   accounts: Account[];
   project_incomes: ProjectIncome[];
   project_expenses: Expense[];

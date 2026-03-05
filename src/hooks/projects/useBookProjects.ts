@@ -33,7 +33,7 @@ export function useBookProject(projectId: string) {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "*, project_incomes(*), project_expenses(*, vendors(vendor_name), contractors(first_name,last_name)), project_balances(*), project_refund(*), accounts(*), project_maps(*)",
+          "*,clients(*), project_incomes(*), project_expenses(*, vendors(vendor_name), contractors(first_name,last_name)), project_balances(*), project_refund(*), accounts(*), project_maps(*)",
         )
         .eq("id", projectId)
         .single();
@@ -44,6 +44,7 @@ export function useBookProject(projectId: string) {
       } else {
         const projectWithNames: ProjectWithDetailsForBook = {
           ...data,
+          client: data.clients, // Add this line to fix the missing property
           project_expenses: (data.project_expenses ?? []).map((expense) => {
             const contractorName = [
               expense.contractors?.first_name,

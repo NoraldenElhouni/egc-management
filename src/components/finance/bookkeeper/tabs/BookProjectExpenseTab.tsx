@@ -11,6 +11,7 @@ import { Hash } from "lucide-react";
 import Button from "../../../ui/Button";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../../../../utils/helpper";
+import InvoiceButton from "../../../InvoiceButton";
 
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -30,9 +31,12 @@ const BookProjectExpenseTab = ({
   );
   return (
     <div className="space-y-4">
-      <Button variant="secondary">
-        <Link to={`./bulk-expenses`}>إضافة مصروفات بالجملة</Link>
-      </Button>
+      <div className="flex gap-4">
+        <Button variant="secondary">
+          <Link to={`./bulk-expenses`}>إضافة مصروفات بالجملة</Link>
+        </Button>
+        <InvoiceButton project={project} />
+      </div>
       <div>
         <OverviewStatus
           stats={[
