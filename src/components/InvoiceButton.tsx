@@ -129,11 +129,14 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/egc/invoice/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formatPayload(project)),
-      });
+      const res = await fetch(
+        "http://node10588-env-5868938.tip2.libyanspider.cloud:11044/api/v1/egc/invoice/pdf",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formatPayload(project)),
+        },
+      );
 
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 
