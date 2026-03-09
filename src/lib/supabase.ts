@@ -2140,8 +2140,12 @@ export type Database = {
           end_date: string
           id: string
           project_id: string
+          reversal_note: string | null
+          reversed_at: string | null
+          reversed_by: string | null
           source_percentage_id: string | null
           start_date: string
+          status: string
           total_amount: number
           type: Database["public"]["Enums"]["payment_type"]
         }
@@ -2154,8 +2158,12 @@ export type Database = {
           end_date: string
           id?: string
           project_id: string
+          reversal_note?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
           source_percentage_id?: string | null
           start_date: string
+          status?: string
           total_amount: number
           type: Database["public"]["Enums"]["payment_type"]
         }
@@ -2168,8 +2176,12 @@ export type Database = {
           end_date?: string
           id?: string
           project_id?: string
+          reversal_note?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
           source_percentage_id?: string | null
           start_date?: string
+          status?: string
           total_amount?: number
           type?: Database["public"]["Enums"]["payment_type"]
         }
@@ -2186,6 +2198,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_percentage_periods_reversed_by_fkey"
+            columns: ["reversed_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {

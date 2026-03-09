@@ -13,6 +13,12 @@ const CompanyPage = () => {
       path: "/company/distribute",
       role: ["Admin", "Manager"],
     },
+    {
+      label: "توزيع النسب",
+      icon: Percent,
+      path: "/company/distribute/history",
+      role: ["Admin", "Manager"],
+    },
   ];
 
   // Filter menu items based on the user's role. If an item has no `role` field it is public.

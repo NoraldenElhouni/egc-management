@@ -33,14 +33,14 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
     <div className="p-3 flex justify-center">
       <div className="overflow-x-auto rounded-md border bg-white">
         <table className="w-fit table-auto text-sm m-4">
-          <thead className="bg-gray-50">
+          <thead className="bg-blue-50">
             <tr className="text-right">
-              <th className="px-3 py-2 font-semibold text-gray-700">#</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">
+              <th className="px-3 py-2 font-semibold text-blue-800">#</th>
+              <th className="px-3 py-2 font-semibold text-blue-800">
                 اسم المشروع
               </th>
               {CURRENCIES.map((c) => (
-                <th key={c} className="px-3 py-2 font-semibold text-gray-700">
+                <th key={c} className="px-3 py-2 font-semibold text-blue-800">
                   {c}
                 </th>
               ))}
@@ -58,7 +58,7 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                     onClick={() =>
                       setOpenId((p) => (p === project.id ? null : project.id))
                     }
-                    className={`cursor-pointer hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                    className={`cursor-pointer hover:bg-blue-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                   >
                     <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
                       {project.serial_number}
@@ -69,9 +69,9 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                           {project.name}
                         </span>
                         <span
-                          className={`text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                          className={`text-blue-400 transition-transform duration-200 text-base ${isOpen ? "rotate-180" : ""}`}
                         >
-                          ▼
+                          🔍
                         </span>
                       </div>
                     </td>

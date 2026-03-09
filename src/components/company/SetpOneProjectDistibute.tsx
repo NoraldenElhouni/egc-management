@@ -31,7 +31,7 @@ const StepOneProjectDistribute = ({ projects }: Props) => {
     <div className="p-3 flex justify-center">
       <div className="overflow-x-auto rounded-md border bg-white">
         <table className="w-fit table-auto text-sm m-4">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-100">
             <tr className="text-right">
               <th className="px-3 py-2 font-semibold text-gray-700">#</th>
               <th className="px-3 py-2 font-semibold text-gray-700">
@@ -83,7 +83,7 @@ const StepOneProjectDistribute = ({ projects }: Props) => {
 
                   {isOpen && (
                     <tr key={`${project.id}-detail`}>
-                      <td colSpan={5} className="px-3 py-3 bg-blue-50">
+                      <td colSpan={5} className="px-3 py-3 bg-gray-50">
                         <div className="rounded-md border bg-white p-3">
                           <p className="text-xs font-semibold text-gray-600 mb-2">
                             تفاصيل النِسب حسب العملة والنوع
