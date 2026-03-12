@@ -151,6 +151,7 @@ export function useProjectsDistribute() {
              employee:employees(id, first_name, last_name)
            )`,
         )
+        .eq("id", "5451aaae-c632-46f4-9913-8670cffcc8e7")
         .eq("status", "active")
         .order("serial_number", { ascending: true });
 
@@ -490,8 +491,8 @@ export function useProjectsDistribute() {
         err instanceof Error
           ? err.message
           : typeof err === "string"
-          ? err
-          : "حدث خطأ غير متوقع";
+            ? err
+            : "حدث خطأ غير متوقع";
       return { success: false, error: errorMessage };
     }
   };

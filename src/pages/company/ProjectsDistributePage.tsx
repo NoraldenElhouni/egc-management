@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { useProjectsDistribute } from "../../hooks/projects/useProjectsDistribute";
+import {
+  useProjectsDistribute,
+  DistributionProject,
+} from "../../hooks/projects/useProjectsDistribute";
 import { supabase } from "../../lib/supabaseClient";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
@@ -7,10 +10,15 @@ import StepsHeader from "../../components/ui/StepsHeader";
 import StepTwoProjectDistribute from "../../components/company/StepTwoProjectDistribute";
 import StepThreeProjectDistribute from "../../components/company/StepThreeProjectDistribute";
 import StepOneProjectDistribute from "../../components/company/SetpOneProjectDistibute";
+import SharesPdfButton from "../../components/pdf-buttons/SharesPdfButton";
 
 const ProjectsDistributePage = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Holds the snapshot of projects that were just distributed — used for PDF
+  const [distributedProjects, setDistributedProjects] = useState<
+    DistributionProject[] | null
+  >(null);
 
   const { projects, loading, error, submitDistribution } =
     useProjectsDistribute();
@@ -35,7 +43,6 @@ const ProjectsDistributePage = () => {
     try {
       setIsSubmitting(true);
 
-      // Get current user id
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -51,14 +58,19 @@ const ProjectsDistributePage = () => {
         return;
       }
 
-      window.alert("تم تأكيد التوزيع بنجاح وتم إنشاء كشوف الرواتب");
-      setStep(1);
+      // Save snapshot for PDF, then show success screen
+      setDistributedProjects([...projects]);
     } catch (e) {
       console.error(e);
       window.alert("حدث خطأ أثناء إرسال البيانات. الرجاء المحاولة مرة أخرى.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleReset = () => {
+    setDistributedProjects(null);
+    setStep(1);
   };
 
   if (loading) return <LoadingPage label="جاري تحميل معلومات المشاريع" />;
@@ -72,6 +84,60 @@ const ProjectsDistributePage = () => {
 
   const safeProjects = projects ?? [];
 
+  // ── Success screen ────────────────────────────────────────────────────────
+  if (distributedProjects) {
+    return (
+      <div className="p-4 flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        {/* Success card */}
+        <div className="bg-white rounded-xl border shadow-sm p-8 max-w-md w-full text-center space-y-4">
+          <div className="text-5xl">✅</div>
+          <h2 className="text-xl font-bold text-gray-800">
+            تم تأكيد التوزيع بنجاح
+          </h2>
+          <p className="text-sm text-gray-500">
+            تم إنشاء كشوف الرواتب وتحديث أرصدة الموظفين والحسابات.
+          </p>
+
+          {/* Employee summary */}
+          <div className="rounded-lg border bg-gray-50 p-3 text-sm text-right space-y-1">
+            <p className="font-semibold text-gray-700 mb-2 text-center">
+              ملخص الحصص
+            </p>
+            {distributedProjects.flatMap((project) =>
+              (project.project_assignments ?? []).map((a) => {
+                const name =
+                  `${a.employee.first_name} ${a.employee.last_name ?? ""}`.trim();
+                return (
+                  <div
+                    key={`${project.id}-${a.employee.id}`}
+                    className="flex justify-between text-gray-600"
+                  >
+                    <span>👤 {name}</span>
+                    <span className="text-xs text-gray-400">
+                      {a.percentage}% — {project.name}
+                    </span>
+                  </div>
+                );
+              }),
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2 pt-2">
+            <SharesPdfButton projects={distributedProjects} />
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 rounded-md text-sm bg-gray-100 hover:bg-gray-200 text-gray-600"
+            >
+              توزيع جديد
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Normal wizard ─────────────────────────────────────────────────────────
   return (
     <div className="p-4">
       <h1 className="text-center text-2xl font-bold mb-2">توزيع المشاريع</h1>
