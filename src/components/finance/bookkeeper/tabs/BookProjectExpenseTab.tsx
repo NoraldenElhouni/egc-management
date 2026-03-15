@@ -12,7 +12,6 @@ import Button from "../../../ui/Button";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../../../../utils/helpper";
 import InvoiceButton from "../../../InvoiceButton";
-import SharesPdfButton from "../../../pdf-buttons/SharesPdfButton";
 
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -37,7 +36,6 @@ const BookProjectExpenseTab = ({
           <Link to={`./bulk-expenses`}>إضافة مصروفات بالجملة</Link>
         </Button>
         <InvoiceButton project={project} />
-        <SharesPdfButton />
       </div>
       <div>
         <OverviewStatus

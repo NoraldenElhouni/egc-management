@@ -11,6 +11,8 @@ import PaymentsPage from "../../pages/finance/PaymentsPage";
 import BookkeepingRoutes from "./BookkeepingRoutes";
 import BookkeepingPage from "../../pages/finance/bookkeeper/BookkeepingPage";
 import NewProjectFinance from "../../pages/finance/NewProjectFinance";
+import CompanyPage from "../../pages/finance/company/CompanyPage";
+import ExpenseInvoice from "../../pages/finance/company/ExpenseInvoice";
 
 const FinanceRoutes = () => {
   return (
@@ -35,6 +37,9 @@ const FinanceRoutes = () => {
           path="invoices/:projectId"
           element={<ProjectInvoicesDetailsPage />}
         />
+
+        <Route path="company" element={<CompanyPage />} />
+        <Route path="company/:invoiceId" element={<ExpenseInvoice />} />
 
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="bookkeeping" element={<BookkeepingPage />} />
