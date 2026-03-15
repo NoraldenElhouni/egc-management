@@ -7,7 +7,6 @@ import {
   ShieldUser,
   User,
   Settings,
-  Globe,
   Building,
 } from "lucide-react";
 import { ComponentType } from "react";
@@ -47,13 +46,6 @@ const MainMenu = () => {
       path: "/finance",
       role: ["Admin", "Manager", "Finance", "Bookkeeper", "Accountant"],
     },
-    { label: "الملف الشخصي", icon: User, path: "/profile" },
-    {
-      label: "الإعدادات",
-      icon: Settings,
-      path: "/settings",
-      role: ["Admin", "Finance"],
-    },
     {
       label: "الشركة",
       icon: Building,
@@ -61,11 +53,18 @@ const MainMenu = () => {
       role: ["Admin", "Manager"],
     },
     {
-      label: "الموقع الإلكتروني",
-      icon: Globe,
-      path: "/website",
-      role: ["Admin", "Manager"],
+      label: "الإعدادات",
+      icon: Settings,
+      path: "/settings",
+      role: ["Admin", "Finance"],
     },
+    { label: "الملف الشخصي", icon: User, path: "/profile" },
+    // {
+    //   label: "الموقع الإلكتروني",
+    //   icon: Globe,
+    //   path: "/website",
+    //   role: ["Admin", "Manager"],
+    // },
   ];
 
   // Filter menu items based on the user's role. If an item has no `role` field it is public.

@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
-import { z } from "zod";
 
 // UI Components
 import { NumberField } from "../../ui/inputs/NumberField";
@@ -9,26 +8,25 @@ import Button from "../../ui/Button";
 import { SelectField } from "../../ui/inputs/SelectField";
 import { DateField } from "../../ui/inputs/DateField";
 import { TextField } from "../../ui/inputs/TextField"; // Assuming you have a standard text input
+import {
+  CompanyExpenseFormValues,
+  CompanyExpenseSchema,
+} from "../../../types/schema/companyFinance.schema";
+import { PostgrestError } from "@supabase/supabase-js";
 
-/** * 1. Define the Schema locally or import from your schema file
- * matches the CompanyExpense type
- */
-const CompanyExpenseSchema = z.object({
-  company_id: z.string().min(1, "Company ID is required"),
-  amount: z.number().min(0.01, "المبلغ يجب ان يكون اكبر من 0"),
-  type: z.string().min(1, "اختار نوع المصروف"),
-  description: z.string().nullable().optional(),
-  expense_date: z.string(),
-  reference_id: z.string().nullable().optional(),
-});
+type AddExpenseResult =
+  | { success: true }
+  | { success: false; error?: PostgrestError | string; message?: string };
 
-type CompanyExpenseFormValues = z.infer<typeof CompanyExpenseSchema>;
+type AddExpenseFunction = (
+  form: CompanyExpenseFormValues,
+) => Promise<AddExpenseResult>;
 
 interface CompanyFinanceFormProps {
-  companyId: string;
+  onAddExpense: AddExpenseFunction;
 }
 
-const CompanyFinanceForm = ({ companyId }: CompanyFinanceFormProps) => {
+const CompanyFinanceForm = ({ onAddExpense }: CompanyFinanceFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -40,7 +38,6 @@ const CompanyFinanceForm = ({ companyId }: CompanyFinanceFormProps) => {
   } = useForm<CompanyExpenseFormValues>({
     resolver: zodResolver(CompanyExpenseSchema),
     defaultValues: {
-      company_id: companyId,
       expense_date: new Date().toISOString().split("T")[0],
       amount: 0,
       type: "general",
@@ -61,16 +58,16 @@ const CompanyFinanceForm = ({ companyId }: CompanyFinanceFormProps) => {
   const onSubmit = async (data: CompanyExpenseFormValues) => {
     try {
       setSubmitError(null);
-      console.log("data", data);
-
-      setSuccess("تم إضافة مصروف الشركة بنجاح!");
+      const result = await onAddExpense(data);
+      if (result.success) {
+        setSuccess("تم إضافة مصروف الشركة بنجاح!");
+      } else {
+        console.error(result.message);
+        setSubmitError(result.message ?? "حدث خطأ ما");
+      }
       reset({
-        company_id: companyId,
         expense_date: new Date().toISOString().split("T")[0],
       });
-
-      // Optional: Refresh data or redirect
-      // window.location.reload();
     } catch (error) {
       console.error("Submit error:", error);
       setSubmitError("حدث خطأ غير متوقع");

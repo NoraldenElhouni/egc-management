@@ -6,12 +6,14 @@ import Tabs from "../../../components/ui/Tabs";
 import { useComapnyFinance } from "../../../hooks/finance/useComapanyFinance";
 
 const CompanyPage = () => {
-  const { error, expenses, loading } = useComapnyFinance();
+  const { error, expenses, loading, addExpense } = useComapnyFinance();
   const tabs = [
     {
       id: "expenses",
       label: "المصاريف",
-      content: <ExpenseTab expenses={expenses ?? []} />,
+      content: (
+        <ExpenseTab expenses={expenses ?? []} onAddExpense={addExpense} />
+      ),
     },
     {
       id: "income",

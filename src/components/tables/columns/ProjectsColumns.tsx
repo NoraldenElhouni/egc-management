@@ -46,6 +46,7 @@ export const createProjectsColumns = (
     {
       accessorKey: "name",
       header: "الاسم",
+      accessorFn: (row) => row.name,
       cell: ({ row }) => (
         <Link
           to={getLinkPath(row.original.id)}
@@ -64,6 +65,14 @@ export const createProjectsColumns = (
     {
       accessorKey: "percentage",
       header: "احمالي النسية",
+      accessorFn: (row) => {
+        const accounts = row.accounts;
+        return (
+          accounts
+            ?.filter((acc) => acc.currency === "LYD")
+            .reduce((sum, item) => sum + (item.total_percentage ?? 0), 0) || 0
+        );
+      },
       cell: ({ row }) => {
         const data = row.original.project_percentage;
         const accounts = row.original.accounts;
@@ -90,6 +99,13 @@ export const createProjectsColumns = (
     {
       accessorKey: "expenses",
       header: "اجمالي المصاريف",
+      accessorFn: (row) => {
+        return (
+          row.accounts
+            ?.filter((acc) => acc.currency === "LYD")
+            .reduce((sum, item) => sum + (item.total_expense ?? 0), 0) || 0
+        );
+      },
       cell: ({ row }) => {
         const accounts = row.original.accounts;
         const lydItems = accounts?.filter(
@@ -115,6 +131,13 @@ export const createProjectsColumns = (
     {
       accessorKey: "income",
       header: "اجمالي الايرادات",
+      accessorFn: (row) => {
+        return (
+          row.accounts
+            ?.filter((acc) => acc.currency === "LYD")
+            .reduce((sum, item) => sum + (item.total_transactions ?? 0), 0) || 0
+        );
+      },
       cell: ({ row }) => {
         const accounts = row.original.accounts;
         const lydItems = accounts?.filter(
@@ -142,6 +165,13 @@ export const createProjectsColumns = (
     {
       accessorKey: "balance",
       header: "الرصيد الحالي",
+      accessorFn: (row) => {
+        return (
+          row.accounts
+            ?.filter((acc) => acc.currency === "LYD")
+            .reduce((sum, item) => sum + (item.balance ?? 0), 0) || 0
+        );
+      },
       cell: ({ row }) => {
         const accounts = row.original.accounts;
         const lydItems = accounts?.filter(
@@ -167,6 +197,7 @@ export const createProjectsColumns = (
     {
       accessorKey: "status",
       header: "الحالة",
+      accessorFn: (row) => row.status,
       cell: ({ row }) => {
         const statusMap: Record<Projects["status"], string> = {
           active: "نشط",
@@ -188,6 +219,7 @@ export const createProjectsColumns = (
     {
       accessorKey: "address",
       header: "العنوان",
+      accessorFn: (row) => row.address,
       cell: ({ row }) => row.original.address ?? "—",
     },
 

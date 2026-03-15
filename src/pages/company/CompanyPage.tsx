@@ -1,6 +1,6 @@
 import React, { ComponentType } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Percent } from "lucide-react";
+import { Book, LayoutDashboard, Percent } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CompanyPage = () => {
@@ -14,9 +14,15 @@ const CompanyPage = () => {
       role: ["Admin", "Manager"],
     },
     {
-      label: "توزيع النسب",
-      icon: Percent,
+      label: "مراجعة النسب",
+      icon: Book,
       path: "/company/distribute/history",
+      role: ["Admin", "Manager"],
+    },
+    {
+      label: "تفاصيل الشركة",
+      icon: LayoutDashboard,
+      path: "/company/dashboard",
       role: ["Admin", "Manager"],
     },
   ];
