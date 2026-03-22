@@ -2452,6 +2452,7 @@ export type Database = {
       }
       requests: {
         Row: {
+          accepted_at: string | null
           assigned_to: string | null
           category: string | null
           created_at: string
@@ -2461,12 +2462,16 @@ export type Database = {
           mode: Database["public"]["Enums"]["contractor_mode"] | null
           payment_schedule: string | null
           project_id: string
+          rejected_at: string | null
+          rejected_by: string | null
           specialization_id: string | null
           start_date: string | null
           status: string | null
           updated_at: string
+          vendor_id: string | null
         }
         Insert: {
+          accepted_at?: string | null
           assigned_to?: string | null
           category?: string | null
           created_at?: string
@@ -2476,12 +2481,16 @@ export type Database = {
           mode?: Database["public"]["Enums"]["contractor_mode"] | null
           payment_schedule?: string | null
           project_id: string
+          rejected_at?: string | null
+          rejected_by?: string | null
           specialization_id?: string | null
           start_date?: string | null
           status?: string | null
           updated_at?: string
+          vendor_id?: string | null
         }
         Update: {
+          accepted_at?: string | null
           assigned_to?: string | null
           category?: string | null
           created_at?: string
@@ -2491,10 +2500,13 @@ export type Database = {
           mode?: Database["public"]["Enums"]["contractor_mode"] | null
           payment_schedule?: string | null
           project_id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
           specialization_id?: string | null
           start_date?: string | null
           status?: string | null
           updated_at?: string
+          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -2512,10 +2524,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "requests_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "requests_specialization_id_fkey"
             columns: ["specialization_id"]
             isOneToOne: false
             referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -2681,6 +2707,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_push_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          push_token: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          push_token?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          push_token?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

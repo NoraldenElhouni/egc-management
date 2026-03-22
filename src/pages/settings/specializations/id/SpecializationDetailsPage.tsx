@@ -9,6 +9,9 @@ import {
 import { supabase } from "../../../../lib/supabaseClient";
 import LoadingPage from "../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../components/ui/errorPage";
+import { Services } from "../../../../types/global.type";
+import ServicesList from "../../../../components/specializations/ServicesList";
+import AddServiceForm from "../../../../components/specializations/AddServiceForm";
 
 type PermissionRow = {
   permission_id: string;
@@ -76,6 +79,8 @@ const SpecializationsDetailsPage = () => {
   const [error, setError] = useState<{ message: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [services, setServices] = useState<Services[] | null>([]);
+  const [addService, setAddService] = useState(false);
 
   if (!id) return <div className="p-6">Specialization not found</div>;
 
@@ -106,14 +111,22 @@ const SpecializationsDetailsPage = () => {
             permission_id,
             permissions:permission_id ( id, name )
           )
-        `
+        `,
         )
         .eq("id", id)
         .single();
 
       if (error) throw error;
 
+      const { data: serv, error: servError } = await supabase
+        .from("services")
+        .select("*")
+        .eq("specialization_id", id);
+
+      if (servError) throw servError;
+
       setSpec(data as SpecializationRow);
+      setServices(serv);
       reset({ id, name: (data as SpecializationRow).name || "" });
     } catch (e: unknown) {
       let msg = "خطأ في تحميل التخصص";
@@ -311,6 +324,40 @@ const SpecializationsDetailsPage = () => {
             )}
           </div>
         </div>
+
+        {spec.roles?.name === "Vendor" ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-900">الخدمات</h2>
+
+              {!addService && (
+                <button
+                  onClick={() => setAddService(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                >
+                  + إضافة خدمة
+                </button>
+              )}
+            </div>
+
+            {/* ✅ Add Form */}
+            {addService && (
+              <AddServiceForm
+                specializationId={id}
+                onSuccess={() => {
+                  setAddService(false);
+                  load();
+                }}
+                onCancel={() => setAddService(false)}
+              />
+            )}
+
+            {/* ✅ List */}
+            <div className="mt-4">
+              <ServicesList services={services || []} onRefresh={load} />
+            </div>
+          </div>
+        ) : null}
 
         {editing ? (
           <div className="text-xs text-gray-500 px-1">
