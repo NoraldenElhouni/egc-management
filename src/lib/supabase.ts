@@ -311,35 +311,41 @@ export type Database = {
       company_expense: {
         Row: {
           amount: number
+          amount_paid: number
           company_id: string
           created_at: string
           created_by: string | null
           description: string | null
           expense_date: string
           id: string
-          reference_id: string | null
+          serial_number: string | null
+          status: Database["public"]["Enums"]["expense_status"] | null
           type: string
         }
         Insert: {
           amount: number
+          amount_paid?: number
           company_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           expense_date?: string
           id?: string
-          reference_id?: string | null
+          serial_number?: string | null
+          status?: Database["public"]["Enums"]["expense_status"] | null
           type: string
         }
         Update: {
           amount?: number
+          amount_paid?: number
           company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           expense_date?: string
           id?: string
-          reference_id?: string | null
+          serial_number?: string | null
+          status?: Database["public"]["Enums"]["expense_status"] | null
           type?: string
         }
         Relationships: [
@@ -348,6 +354,54 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_expense_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          date: string | null
+          expense_id: string
+          id: string
+          payment_method: Database["public"]["Enums"]["account_type"]
+          serial_number: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          expense_id: string
+          id?: string
+          payment_method: Database["public"]["Enums"]["account_type"]
+          serial_number: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          expense_id?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["account_type"]
+          serial_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_expense_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_payments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "company_expense"
             referencedColumns: ["id"]
           },
         ]
@@ -393,54 +447,6 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "project_percentage_periods"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      company_payment: {
-        Row: {
-          account_id: string
-          amount: number
-          created_at: string
-          created_by: string | null
-          expense_id: string
-          id: string
-          payment_method: string | null
-          serial_number: number | null
-        }
-        Insert: {
-          account_id: string
-          amount: number
-          created_at?: string
-          created_by?: string | null
-          expense_id: string
-          id?: string
-          payment_method?: string | null
-          serial_number?: number | null
-        }
-        Update: {
-          account_id?: string
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          expense_id?: string
-          id?: string
-          payment_method?: string | null
-          serial_number?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_payment_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_payment_expense_id_fkey"
-            columns: ["expense_id"]
-            isOneToOne: false
-            referencedRelation: "company_expense"
             referencedColumns: ["id"]
           },
         ]
@@ -854,48 +860,6 @@ export type Database = {
           },
         ]
       }
-      employee_discounts: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          note: string
-          period_id: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          note: string
-          period_id: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          note?: string
-          period_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_discounts_period_id_fkey"
-            columns: ["period_id"]
-            isOneToOne: false
-            referencedRelation: "project_percentage_periods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_discounts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       employee_documents: {
         Row: {
           created_at: string
@@ -924,76 +888,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "employee_documents_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employee_history: {
-        Row: {
-          created_at: string
-          employee_id: string
-          end_date: string | null
-          id: string
-          start_date: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          employee_id: string
-          end_date?: string | null
-          id?: string
-          start_date: string
-          status: string
-        }
-        Update: {
-          created_at?: string
-          employee_id?: string
-          end_date?: string | null
-          id?: string
-          start_date?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_history_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employee_leaves: {
-        Row: {
-          created_at: string
-          employee_id: string | null
-          end_date: string | null
-          id: string
-          leave_reason: string | null
-          start_date: string | null
-        }
-        Insert: {
-          created_at?: string
-          employee_id?: string | null
-          end_date?: string | null
-          id?: string
-          leave_reason?: string | null
-          start_date?: string | null
-        }
-        Update: {
-          created_at?: string
-          employee_id?: string | null
-          end_date?: string | null
-          id?: string
-          leave_reason?: string | null
-          start_date?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_leaves_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
@@ -1490,6 +1384,138 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_id: string
+          quantity: number
+          service_id: string | null
+          total_price: number
+          unit: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_id: string
+          quantity: number
+          service_id?: string | null
+          total_price?: number
+          unit?: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_id?: string
+          quantity?: number
+          service_id?: string | null
+          total_price?: number
+          unit?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          specialization_id: string | null
+          status: string
+          total_price: number | null
+          type: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          specialization_id?: string | null
+          status?: string
+          total_price?: number | null
+          type?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          specialization_id?: string | null
+          status?: string
+          total_price?: number | null
+          type?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -2602,18 +2628,21 @@ export type Database = {
           id: string
           name: string
           specialization_id: string | null
+          type: string | null
           unit: string | null
         }
         Insert: {
           id?: string
           name: string
           specialization_id?: string | null
+          type?: string | null
           unit?: string | null
         }
         Update: {
           id?: string
           name?: string
           specialization_id?: string | null
+          type?: string | null
           unit?: string | null
         }
         Relationships: [
@@ -2661,16 +2690,19 @@ export type Database = {
           id: string
           name: string
           role_id: string
+          type: string | null
         }
         Insert: {
           id?: string
           name: string
           role_id: string
+          type?: string | null
         }
         Update: {
           id?: string
           name?: string
           role_id?: string
+          type?: string | null
         }
         Relationships: [
           {

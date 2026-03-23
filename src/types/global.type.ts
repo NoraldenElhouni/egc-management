@@ -47,7 +47,6 @@ export type OfferItems = Tables<"offer_items">;
 export type BidItems = Tables<"bid_items">;
 export type Company = Tables<"company">;
 export type AuditLog = Tables<"audit_log">;
-export type EmployeeLeaves = Tables<"employee_leaves">;
 export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
 export type expenses = Tables<"expenses">;
@@ -55,12 +54,11 @@ export type ProjectMaps = Tables<"project_maps">;
 
 // company
 export type CompanyExpense = Tables<"company_expense">;
-export type CompanyPayment = Tables<"company_payment">;
+export type CompanyExpensePayments = Tables<"company_expense_payments">;
 export type CompanyAccount = Tables<"company_account">;
 
 // Additional
 export type ContractorSpecializations = Tables<"contractor_specializations">;
-export type EmployeeHistory = Tables<"employee_history">;
 export type ExpensePayments = Tables<"expense_payments">;
 export type ProjectAssignments = Tables<"project_assignments">;
 export type ProjectRoles = Tables<"project_roles">;

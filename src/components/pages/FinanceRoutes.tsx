@@ -12,7 +12,7 @@ import BookkeepingRoutes from "./BookkeepingRoutes";
 import BookkeepingPage from "../../pages/finance/bookkeeper/BookkeepingPage";
 import NewProjectFinance from "../../pages/finance/NewProjectFinance";
 import CompanyPage from "../../pages/finance/company/CompanyPage";
-import ExpenseInvoice from "../../pages/finance/company/ExpenseInvoice";
+import ComapnyExpensePayments from "../../pages/finance/company/payments/ComapnyExpensePayments";
 
 const FinanceRoutes = () => {
   return (
@@ -39,7 +39,10 @@ const FinanceRoutes = () => {
         />
 
         <Route path="company" element={<CompanyPage />} />
-        <Route path="company/:invoiceId" element={<ExpenseInvoice />} />
+        <Route
+          path="company/expense/:expenseId"
+          element={<ComapnyExpensePayments />}
+        />
 
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="bookkeeping" element={<BookkeepingPage />} />

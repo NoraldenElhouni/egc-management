@@ -101,7 +101,7 @@ const CompanyFinanceForm = ({ onAddExpense }: CompanyFinanceFormProps) => {
           />
           <TextField
             id="reference_id"
-            label="رقم المرجع (إن وجد)"
+            label="رقم التسلسلي"
             register={register("reference_id")}
             error={errors.reference_id}
             placeholder="مثال: رقم الفاتورة"
@@ -113,6 +113,13 @@ const CompanyFinanceForm = ({ onAddExpense }: CompanyFinanceFormProps) => {
             step={0.25}
             register={register("amount", { valueAsNumber: true })}
             error={errors.amount}
+          />
+
+          <NumberField
+            id="paid_amount"
+            label="القيمة مرادة الدفع"
+            register={register("amount_paid", { valueAsNumber: true })}
+            error={errors.amount_paid}
           />
 
           {/* Expense Type */}
@@ -137,6 +144,18 @@ const CompanyFinanceForm = ({ onAddExpense }: CompanyFinanceFormProps) => {
             label="تاريخ المصروف"
             register={register("expense_date")}
             error={errors.expense_date}
+          />
+
+          <SelectField
+            id="payment_method"
+            label="طريقة الدفع"
+            register={register("payment_method")}
+            error={errors.payment_method}
+            options={[
+              { value: "cash", label: "نقداً" },
+              { value: "bank", label: "عن طريق البنك" },
+            ]}
+            placeholder="اختار طريقة الدفع"
           />
 
           {/* Reference ID (Optional) */}

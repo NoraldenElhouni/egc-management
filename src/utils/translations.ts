@@ -91,3 +91,15 @@ export const translateStatus = (status: string): string => {
   };
   return statusTranslations[status] || status;
 };
+
+export const translateCompanyExpenseType = (type: string): string => {
+  const translations: Record<string, string> = {
+    rent: "إيجار",
+    salaries: "رواتب",
+    utilities: "فواتير (كهرباء/ماء)",
+    marketing: "تسويق",
+    general: "عام",
+  };
+
+  return translations[type] || type;
+};

@@ -9,7 +9,6 @@ import {
   Projects,
   ProjectRoles,
   Payroll,
-  EmployeeLeaves,
   ExpensePayments,
   Users,
   Currency,
@@ -20,6 +19,7 @@ import {
   ProjectExpenses,
   PaymentMethod,
   ProjectPercentageLogs,
+  CompanyExpensePayments,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -57,7 +57,6 @@ export type FullEmployee = Employees & {
     | null;
   projects: EmployeeProjects;
   payroll: Payroll[];
-  employee_leaves: EmployeeLeaves[];
 };
 
 export type projectExpensePayments = ExpensePayments & {
@@ -107,4 +106,8 @@ export interface ProjectPercentageLogWithAssignments extends Projects {
   }>;
   project_percentage_log: LogsWithExpenses[];
   project_percentage: ProjectPercentage[];
+}
+
+export interface CompanyPaymentsWithUser extends CompanyExpensePayments {
+  users: Users | null;
 }
