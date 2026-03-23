@@ -33,25 +33,45 @@ const ProjectsList = ({
     projects?.reduce(
       (acc, project) =>
         acc +
-        (project.project_balances?.reduce(
+        (project.accounts?.reduce(
           (bAcc, balance) => bAcc + (balance.balance || 0),
           0,
         ) || 0),
       0,
     ) || 0;
 
-  const totalHeld =
+  const totalIncome =
     projects?.reduce(
       (acc, project) =>
         acc +
-        (project.project_balances?.reduce(
-          (hAcc, held) => hAcc + (held.held || 0),
+        (project.accounts?.reduce(
+          (bAcc, balance) => bAcc + (balance.total_transactions || 0),
           0,
         ) || 0),
       0,
     ) || 0;
 
-  const toalAvailable = totalBalance - totalHeld;
+  const totalExpense =
+    projects?.reduce(
+      (acc, project) =>
+        acc +
+        (project.accounts?.reduce(
+          (bAcc, balance) => bAcc + (balance.total_expense || 0),
+          0,
+        ) || 0),
+      0,
+    ) || 0;
+
+  const totalPercentages =
+    projects?.reduce(
+      (acc, project) =>
+        acc +
+        (project.accounts?.reduce(
+          (bAcc, balance) => bAcc + (balance.total_percentage || 0),
+          0,
+        ) || 0),
+      0,
+    ) || 0;
 
   return (
     <div>
@@ -68,25 +88,28 @@ const ProjectsList = ({
                   iconColor: "text-blue-600",
                 },
                 {
-                  label: "الرصيد الحالي",
-                  value: formatCurrency(totalBalance),
+                  label: "اجمالي المصاريف",
+                  value: formatCurrency(totalExpense),
+                  icon: DollarSign,
+                  iconBgColor: "bg-green-100",
+                  iconColor: "text-green-600",
+                  secondaryLabel: "النسبة",
+                  secondaryValue: formatCurrency(totalPercentages),
+                },
+
+                {
+                  label: "اجمالي الايرادات",
+                  value: formatCurrency(totalIncome),
                   icon: DollarSign,
                   iconBgColor: "bg-green-100",
                   iconColor: "text-green-600",
                 },
                 {
                   label: "الرصيد المتاح",
-                  value: formatCurrency(toalAvailable),
+                  value: formatCurrency(totalBalance),
                   icon: Workflow,
                   iconBgColor: "bg-orange-100",
                   iconColor: "text-orange-600",
-                },
-                {
-                  label: "الرصيد المحتجز",
-                  value: formatCurrency(totalHeld),
-                  icon: DollarSign,
-                  iconBgColor: "bg-green-100",
-                  iconColor: "text-green-600",
                 },
               ]}
             />

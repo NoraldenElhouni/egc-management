@@ -3,6 +3,7 @@ import CompanyLayout from "../sidebar/CompanyLayout";
 import CompanyPage from "../../pages/company/CompanyPage";
 import ProjectsDistributePage from "../../pages/company/ProjectsDistributePage";
 import DistributionHistoryPage from "../../pages/company/DistributionHistoryPage";
+import CompanyOverview from "../../pages/company/CompanyOverview";
 
 const CompanyRoutes = () => {
   return (
@@ -14,6 +15,7 @@ const CompanyRoutes = () => {
           path="/distribute/history"
           element={<DistributionHistoryPage />}
         />
+        <Route path="/dashboard" element={<CompanyOverview />} />
       </Route>
     </Routes>
   );

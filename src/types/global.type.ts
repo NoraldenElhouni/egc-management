@@ -56,6 +56,7 @@ export type ProjectMaps = Tables<"project_maps">;
 // company
 export type CompanyExpense = Tables<"company_expense">;
 export type CompanyPayment = Tables<"company_payment">;
+export type CompanyAccount = Tables<"company_account">;
 
 // Additional
 export type ContractorSpecializations = Tables<"contractor_specializations">;

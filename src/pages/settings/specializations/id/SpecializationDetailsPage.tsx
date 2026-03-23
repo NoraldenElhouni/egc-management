@@ -118,15 +118,17 @@ const SpecializationsDetailsPage = () => {
 
       if (error) throw error;
 
-      const { data: serv, error: servError } = await supabase
-        .from("services")
-        .select("*")
-        .eq("specialization_id", id);
+      if (data.roles.name === "Vendor") {
+        const { data: serv, error: servError } = await supabase
+          .from("services")
+          .select("*")
+          .eq("specialization_id", id);
 
-      if (servError) throw servError;
+        if (servError) throw servError;
+        setServices(serv);
+      }
 
       setSpec(data as SpecializationRow);
-      setServices(serv);
       reset({ id, name: (data as SpecializationRow).name || "" });
     } catch (e: unknown) {
       let msg = "خطأ في تحميل التخصص";
