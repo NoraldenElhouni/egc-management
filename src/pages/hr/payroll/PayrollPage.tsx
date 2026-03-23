@@ -1,4 +1,4 @@
-import { Banknote, Map, Percent } from "lucide-react";
+import { Banknote } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import MenuGrid, { MenuItem } from "../../../components/ui/MenuGrid";
 
@@ -13,20 +13,20 @@ const PayrollPage = () => {
       description: "ادارة الرواتب الشهرية",
       role: ["Admin", "hr", "Finance"],
     },
-    {
-      label: "النسب",
-      icon: Percent,
-      path: "/hr/payroll/percentages",
-      description: "ادارة النسب",
-      role: ["Admin", "Finance", "hr"],
-    },
-    {
-      label: "الخرائط",
-      icon: Map,
-      path: "/hr/payroll/maps",
-      description: "ادارة الخرائط",
-      role: ["Admin", "Finance", "hr"],
-    },
+    // {
+    //   label: "النسب",
+    //   icon: Percent,
+    //   path: "/hr/payroll/percentages",
+    //   description: "ادارة النسب",
+    //   role: ["Admin", "Finance", "hr"],
+    // },
+    // {
+    //   label: "الخرائط",
+    //   icon: Map,
+    //   path: "/hr/payroll/maps",
+    //   description: "ادارة الخرائط",
+    //   role: ["Admin", "Finance", "hr"],
+    // },
   ];
   return (
     <MenuGrid

@@ -944,7 +944,6 @@ export function usePayroll() {
       const { error: payrollError } = await supabase.from("payroll").insert([
         {
           employee_id: emp.id,
-          project_id: form.project_id,
           pay_date: new Date().toISOString(),
           total_salary: emp.amount,
           basic_salary: emp.amount,

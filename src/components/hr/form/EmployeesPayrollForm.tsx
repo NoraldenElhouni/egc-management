@@ -9,11 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "../../ui/Button";
 import { Search, Wallet, AlertCircle } from "lucide-react";
 
-interface EmployeesPayrollFormProps {
-  projectId: string;
-}
-
-const EmployeesPayrollForm = ({ projectId }: EmployeesPayrollFormProps) => {
+const EmployeesPayrollForm = () => {
   const { fixedEmployees } = usePayroll();
 
   const [loading, setLoading] = useState(false);
@@ -30,7 +26,6 @@ const EmployeesPayrollForm = ({ projectId }: EmployeesPayrollFormProps) => {
   } = useForm<FixedPayrollFormValues>({
     resolver: zodResolver(FixedEmployeesPayrollSchema),
     defaultValues: {
-      project_id: projectId,
       employees: [],
     },
   });
@@ -86,7 +81,7 @@ const EmployeesPayrollForm = ({ projectId }: EmployeesPayrollFormProps) => {
         body: "تم تحديث رواتب الموظفين الأساسيين.",
       });
 
-      reset({ project_id: projectId, employees: data.employees });
+      reset({ employees: data.employees });
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "حدث خطأ أثناء الحفظ",
@@ -272,17 +267,6 @@ const EmployeesPayrollForm = ({ projectId }: EmployeesPayrollFormProps) => {
             </div>
           </div>
         </form>
-
-        {/* Info card */}
-        {fixedEmployees && fixedEmployees.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-            <p className="font-medium">💡 معلومة</p>
-            <p className="mt-1 text-blue-700">
-              يتم استخدام useFieldArray للحفاظ على التزامن الصحيح بين الفلترة
-              والنموذج. جميع التغييرات يتم تتبعها تلقائياً.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
