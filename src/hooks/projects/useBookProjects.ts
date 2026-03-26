@@ -96,7 +96,7 @@ export function useBookProject(projectId: string) {
         .select("percentage, total_percentage, period_percentage")
         .eq("project_id", expenseData.project_id)
         .eq("currency", expenseData.currency)
-        .eq("type", expenseData.payment_method ?? "cash") // if payment_method is null/undefined, default to "cash" percentage
+        .eq("type", expenseData.payment_method ?? "cash")
         .maybeSingle();
 
       if (ppError || !pp) {
@@ -277,6 +277,7 @@ export function useBookProject(projectId: string) {
       setLoading(false);
     }
   };
+
   const addExpensePercentage = async (
     expenseData: ProjectExpensePercentageFormValues,
   ) => {

@@ -272,7 +272,7 @@ export function useExpensePayments(expenseId: string) {
           status: newAmountPaid >= totalAmount ? "paid" : "partially_paid",
         })
         .eq("id", expense.id)
-        .eq("payment_counter", paymentNo); // ✅ optimistic lock: only update if counter hasn't changed
+        .eq("payment_counter", paymentNo);
 
       if (bumpCounterError) throw bumpCounterError;
 

@@ -9,7 +9,7 @@ const PaymentsList = () => {
 
   const contractPaymentsColumns = useMemo(
     () => createContractPaymentsColumns({ onRefetch: refetch }),
-    [refetch]
+    [refetch],
   );
 
   if (loading) return <div>جاري التحميل...</div>;

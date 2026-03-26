@@ -2,19 +2,23 @@ import { useState } from "react";
 import Button from "../../../ui/Button";
 import { useAuth } from "../../../../hooks/useAuth";
 import { acceptContractPayment } from "../../../../services/payments/setPayments";
+import { useExpensePayments } from "../../../../hooks/finance/usePayments";
 
 interface AcceptContractPaymentsProps {
   contractPaymentId: string;
+  expenseId: string;
   onSuccess?: () => void;
 }
 
 const AcceptContractPayments = ({
   contractPaymentId,
+  expenseId,
   onSuccess,
 }: AcceptContractPaymentsProps) => {
   const [choosing, setChoosing] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { addPayment } = useExpensePayments(expenseId);
 
   const handleChoose = async (method: "bank" | "cash") => {
     setChoosing(false);
@@ -26,12 +30,16 @@ const AcceptContractPayments = ({
         return;
       }
 
-      const payment = await acceptContractPayment({
-        approved_by: user.id,
-        payment_id: contractPaymentId,
-        payment_method: method,
-        currency: "LYD",
-      });
+      const payment = await acceptContractPayment(
+        {
+          approved_by: user.id,
+          payment_id: contractPaymentId,
+          payment_method: method,
+          currency: "LYD",
+          expenseId: expenseId,
+        },
+        addPayment,
+      );
 
       if (payment.error) {
         console.error("Error accepting payment:", payment.error);

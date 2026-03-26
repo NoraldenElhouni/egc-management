@@ -20,27 +20,27 @@ const toNum = (v: unknown): number =>
   typeof v === "number" ? v : Number(v || 0);
 
 const getContractorName = (
-  contractors: ContractPaymentWithRelations["contractors"]
+  contractors: ContractPaymentWithRelations["contractors"],
 ): string => {
   if (!contractors) return "N/A";
   return `${contractors.first_name} ${contractors.last_name || ""}`.trim();
 };
 
 const getEmployeeName = (
-  employee: ContractPaymentWithRelations["employee"]
+  employee: ContractPaymentWithRelations["employee"],
 ): string => {
   if (!employee) return "N/A";
   return `${employee.first_name} ${employee.last_name || ""}`.trim();
 };
 
 const getProjectName = (
-  contracts: ContractPaymentWithRelations["contracts"]
+  contracts: ContractPaymentWithRelations["contracts"],
 ): string => {
   return contracts?.projects?.name || "N/A";
 };
 
 export const createContractPaymentsColumns = (
-  config?: ContractPaymentsColumnsConfig
+  config?: ContractPaymentsColumnsConfig,
 ): ColumnDef<ContractPaymentWithRelations>[] => [
   {
     id: "select",
@@ -175,6 +175,7 @@ export const createContractPaymentsColumns = (
     cell: ({ row }) => (
       <div className="flex justify-center gap-2">
         <AcceptContractPayments
+          expenseId={row.original.expense_id ?? ""}
           contractPaymentId={row.original.id}
           onSuccess={config?.onRefetch}
         />

@@ -69,7 +69,6 @@ export async function AddContractors(form: ContractorFormValues) {
     };
   }
 
-  // 3) Assign role only if auth user exists
   if (authUserId) {
     const { error: userRoleError } = await supabaseAdmin
       .from("user_roles")
@@ -86,14 +85,7 @@ export async function AddContractors(form: ContractorFormValues) {
         message: "فشل في تعيين دور المستخدم",
       };
     }
-  }
 
-  // 4) specialization table: IMPORTANT
-  // If user_specializations.user_id references auth.users/users => use authUserId (and only when exists)
-  // If it references contractors.id => use contractor.id (always)
-  //
-  // I'll assume it references auth users (common case):
-  if (authUserId) {
     const { error: userSpecError } = await supabaseAdmin
       .from("user_specializations")
       .insert({
@@ -106,6 +98,25 @@ export async function AddContractors(form: ContractorFormValues) {
       return {
         success: false,
         error: userSpecError,
+        message: "فشل في تعيين تخصص المستخدم",
+      };
+    }
+
+    const { error: contractorSpecError } = await supabaseAdmin
+      .from("contractor_specializations")
+      .insert({
+        specialization_id: form.specializationId,
+        user_id: authUserId,
+      });
+
+    if (contractorSpecError) {
+      console.error(
+        "Error inserting user specialization:",
+        contractorSpecError,
+      );
+      return {
+        success: false,
+        error: contractorSpecError,
         message: "فشل في تعيين تخصص المستخدم",
       };
     }
