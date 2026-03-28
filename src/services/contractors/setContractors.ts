@@ -101,25 +101,6 @@ export async function AddContractors(form: ContractorFormValues) {
         message: "فشل في تعيين تخصص المستخدم",
       };
     }
-
-    const { error: contractorSpecError } = await supabaseAdmin
-      .from("contractor_specializations")
-      .insert({
-        specialization_id: form.specializationId,
-        user_id: authUserId,
-      });
-
-    if (contractorSpecError) {
-      console.error(
-        "Error inserting user specialization:",
-        contractorSpecError,
-      );
-      return {
-        success: false,
-        error: contractorSpecError,
-        message: "فشل في تعيين تخصص المستخدم",
-      };
-    }
   }
 
   return {

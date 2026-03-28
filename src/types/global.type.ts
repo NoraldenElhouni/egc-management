@@ -22,6 +22,7 @@ export type ExpenseStatus = Database["public"]["Enums"]["expense_status"];
 // ------------------------------------------------------------
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
+export type SpecializationCategories = Tables<"specialization_categories">;
 export type Contractors = Tables<"contractors">;
 export type Contracts = Tables<"contracts">;
 export type ContractItems = Tables<"contract_items">;
@@ -58,11 +59,9 @@ export type CompanyExpensePayments = Tables<"company_expense_payments">;
 export type CompanyAccount = Tables<"company_account">;
 
 // Additional
-export type ContractorSpecializations = Tables<"contractor_specializations">;
 export type ExpensePayments = Tables<"expense_payments">;
 export type ProjectAssignments = Tables<"project_assignments">;
 export type ProjectRoles = Tables<"project_roles">;
-export type ProjectSpecializations = Tables<"project_specializations">;
 export type ProjectBalances = Tables<"project_balances">;
 export type ProjectPercentage = Tables<"project_percentage">;
 export type ProjectPercentageLogs = Tables<"project_percentage_logs">;

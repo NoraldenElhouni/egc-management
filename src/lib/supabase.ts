@@ -182,7 +182,7 @@ export type Database = {
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "bids_request_id_fkey"
@@ -645,36 +645,6 @@ export type Database = {
           },
         ]
       }
-      contractor_specializations: {
-        Row: {
-          specialization_id: string
-          user_id: string
-        }
-        Insert: {
-          specialization_id: string
-          user_id: string
-        }
-        Update: {
-          specialization_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contractor_specializations_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_specializations_user_id_fkey1"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contractors: {
         Row: {
           created_at: string
@@ -710,7 +680,7 @@ export type Database = {
           {
             foreignKeyName: "contractors_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -765,7 +735,7 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "contractors"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "contracts_created_by_fkey"
@@ -1116,24 +1086,6 @@ export type Database = {
           id?: string
           name?: string
           usage_count?: number
-        }
-        Relationships: []
-      }
-      leave_types: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
         }
         Relationships: []
       }
@@ -2327,36 +2279,6 @@ export type Database = {
         }
         Relationships: []
       }
-      project_specializations: {
-        Row: {
-          project_id: string
-          specialization_id: string
-        }
-        Insert: {
-          project_id: string
-          specialization_id: string
-        }
-        Update: {
-          project_id?: string
-          specialization_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_specializations_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_specializations_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       projects: {
         Row: {
           address: string | null
@@ -2494,7 +2416,6 @@ export type Database = {
           start_date: string | null
           status: string | null
           updated_at: string
-          vendor_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -2513,7 +2434,6 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           updated_at?: string
-          vendor_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -2532,7 +2452,6 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           updated_at?: string
-          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -2561,13 +2480,6 @@ export type Database = {
             columns: ["specialization_id"]
             isOneToOne: false
             referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -2625,29 +2537,65 @@ export type Database = {
       }
       services: {
         Row: {
+          category_id: string | null
           id: string
           name: string
           specialization_id: string | null
-          type: string | null
           unit: string | null
         }
         Insert: {
+          category_id?: string | null
           id?: string
           name: string
           specialization_id?: string | null
-          type?: string | null
           unit?: string | null
         }
         Update: {
+          category_id?: string | null
           id?: string
           name?: string
           specialization_id?: string | null
-          type?: string | null
           unit?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "specialization_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "services_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specialization_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          specialization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          specialization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          specialization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_specialization_id_fkey"
             columns: ["specialization_id"]
             isOneToOne: false
             referencedRelation: "specializations"
@@ -2690,19 +2638,16 @@ export type Database = {
           id: string
           name: string
           role_id: string
-          type: string | null
         }
         Insert: {
           id?: string
           name: string
           role_id: string
-          type?: string | null
         }
         Update: {
           id?: string
           name?: string
           role_id?: string
-          type?: string | null
         }
         Relationships: [
           {
@@ -2969,6 +2914,27 @@ export type Database = {
           message: string
           payment_id: string
           success: boolean
+        }[]
+      }
+      get_contractors_expenses: {
+        Args: { p_project_id: string }
+        Returns: {
+          contractor_id: string
+          first_name: string
+          last_name: string
+          latest_expense_date: string
+          total_amount: number
+        }[]
+      }
+      get_my_contractor_project_expenses: {
+        Args: { p_contractor_id: string }
+        Returns: {
+          amount_paid: number
+          not_paid: number
+          project_code: string
+          project_id: string
+          project_name: string
+          total_amount: number
         }[]
       }
       get_role_by_email: { Args: { p_email: string }; Returns: string }
