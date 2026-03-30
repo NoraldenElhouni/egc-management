@@ -39,7 +39,7 @@ export const ExpensesColumns: ColumnDef<expenses>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/settings/Expensess/${row.original.id}`}
+          to={`/settings/expenses/${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}

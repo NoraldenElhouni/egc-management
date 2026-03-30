@@ -3,7 +3,6 @@ import { Contractors } from "../../../types/global.type";
 import { Link } from "react-router-dom";
 
 export const ContractorsColumns: ColumnDef<Contractors>[] = [
-  // Selection column (first column)
   {
     id: "select",
     header: ({ table }) => (
@@ -29,13 +28,13 @@ export const ContractorsColumns: ColumnDef<Contractors>[] = [
         />
       </div>
     ),
-    // keep this column narrow
     size: 32,
   },
 
   {
     accessorKey: "name",
     header: "الاسم",
+    accessorFn: (row) => `${row.first_name} ${row.last_name}`,
     cell: ({ row }) => (
       <div>
         <Link

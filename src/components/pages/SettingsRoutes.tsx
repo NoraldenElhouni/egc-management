@@ -8,6 +8,7 @@ import SettingsExpensesPage from "../../pages/settings/expenses/SettingsExpenses
 import SettingsSpecializationsPage from "../../pages/settings/specializations/SettingsSpecializationsPage";
 import SpecializationsDetailsPage from "../../pages/settings/specializations/id/SpecializationDetailsPage";
 import MapsPage from "../../pages/settings/maps/MapsPage";
+import ExpenseDetailsPage from "../../pages/settings/expenses/ExpenseDetailsPage";
 
 export default function SettingsRoutes() {
   return (
@@ -20,6 +21,7 @@ export default function SettingsRoutes() {
         <Route path="roles/:id" element={<RolesDetailsPage />} />
 
         <Route path="expenses" element={<SettingsExpensesPage />} />
+        <Route path="expenses/:id" element={<ExpenseDetailsPage />} />
 
         <Route
           path="specializations"
