@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Services, SpecializationCategories } from "../../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabaseClient";
@@ -37,65 +37,70 @@ export function useSpecializations(specializationsId: string) {
   const [specialization, setSpecialization] =
     useState<SpecializationRow | null>(null);
 
-  useEffect(() => {
-    async function fetchRoles() {
-      setLoading(true);
-      try {
-        const { data: spec, error: specializationError } = await supabase
-          .from("specializations")
-          .select(
-            `
-                  id,
-                  name,
-                  role_id,
-                  roles:role_id ( id, name, code, number ),
-                  specialization_permissions (
-                    permission_id,
-                    permissions:permission_id ( id, name )
-                  )
-                `,
+  // ✅ Extracted into a useCallback so it can be called by the parent as refresh()
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: spec, error: specializationError } = await supabase
+        .from("specializations")
+        .select(
+          `
+          id,
+          name,
+          role_id,
+          roles:role_id ( id, name, code, number ),
+          specialization_permissions (
+            permission_id,
+            permissions:permission_id ( id, name )
           )
-          .eq("id", specializationsId)
-          .single();
+        `,
+        )
+        .eq("id", specializationsId)
+        .single();
 
-        if (specializationError) {
-          console.error("error fetching specializations", specializationError);
-          setError(specializationError);
-        } else {
-          setSpecialization(spec);
-        }
-
-        const { data: category, error: categoryError } = await supabase
-          .from("specialization_categories")
-          .select("*, services(*)")
-          .eq("specialization_id", specializationsId);
-
-        if (categoryError) {
-          console.error("error fetching specializations", categoryError);
-          setError(categoryError);
-        } else {
-          setCategories(category ?? []);
-        }
-
-        const { data: services, error: servError } = await supabase
-          .from("services")
-          .select("*")
-          .eq("specialization_id", specializationsId);
-
-        if (servError) {
-          console.error("error fetching specializations", error);
-          setError(servError);
-        } else {
-          setServices(services ?? []);
-        }
-      } catch (err) {
-        console.error("unexpected error fetching specializations", err);
-        setError(err as PostgrestError);
+      if (specializationError) {
+        console.error("error fetching specializations", specializationError);
+        setError(specializationError);
+      } else {
+        setSpecialization(spec);
       }
-      setLoading(false);
+
+      // ✅ Fetch categories with their nested services
+      const { data: category, error: categoryError } = await supabase
+        .from("specialization_categories")
+        .select("*, services(*)")
+        .eq("specialization_id", specializationsId);
+
+      if (categoryError) {
+        console.error("error fetching categories", categoryError);
+        setError(categoryError);
+      } else {
+        setCategories(category ?? []);
+      }
+
+      // ✅ Fetch ALL services for this specialization (including categorized ones)
+      // The detail page will filter to only show uncategorized ones in the standalone list
+      const { data: servicesData, error: servError } = await supabase
+        .from("services")
+        .select("*")
+        .eq("specialization_id", specializationsId);
+
+      if (servError) {
+        console.error("error fetching services", servError);
+        setError(servError);
+      } else {
+        setServices(servicesData ?? []);
+      }
+    } catch (err) {
+      console.error("unexpected error fetching specializations", err);
+      setError(err as PostgrestError);
     }
-    fetchRoles();
-  }, []);
+    setLoading(false);
+  }, [specializationsId]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const updateSpecialization = async (data: SpecializationUpdateValues) => {
     setLoading(true);
@@ -117,16 +122,6 @@ export function useSpecializations(specializationsId: string) {
     }
   };
 
-  const addService = async (
-    specializationId: string,
-    name: string,
-    unit: string,
-  ) => {
-    console.log("Adding service:", { specializationId, name, unit });
-    setLoading(true);
-    setSubmitError(null);
-  };
-
   return {
     specialization,
     categories,
@@ -135,6 +130,6 @@ export function useSpecializations(specializationsId: string) {
     loading,
     updateSpecialization,
     submitError,
-    addService,
+    refresh: fetchAll, // ✅ exposed so the page can trigger a real re-fetch
   };
 }

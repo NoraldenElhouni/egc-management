@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +11,11 @@ import ErrorPage from "../../../../components/ui/errorPage";
 import ServicesList from "../../../../components/specializations/ServicesList";
 import AddServiceForm from "../../../../components/specializations/AddServiceForm";
 import { useSpecializations } from "../../../../hooks/settings/useSpecializations";
+import AddCategoryForm from "../../../../components/specializations/AddCategoryForm";
+import CategoriesList from "../../../../components/specializations/CategoriesList";
+import { supabase } from "../../../../lib/supabaseClient";
 
+// ─── shared ui ─────────────────────────────────────────────────────────────
 const Field = ({
   label,
   value,
@@ -45,17 +49,94 @@ const Input = ({
         error ? "border-red-300 focus:ring-red-100" : "",
       ].join(" ")}
     />
-    {error ? <p className="text-xs text-red-600">{error}</p> : null}
+    {error && <p className="text-xs text-red-600">{error}</p>}
   </div>
 );
 
+// ─── types ─────────────────────────────────────────────────────────────────
+type Mode = "direct" | "categorized" | null;
+
+// ─── mode picker ───────────────────────────────────────────────────────────
+const ModePicker = ({
+  current,
+  onSelect,
+  switching,
+}: {
+  current: Mode;
+  onSelect: (m: Mode) => void;
+  switching: boolean; // true = switching from existing data (show warning style)
+}) => (
+  <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+    <h2 className="text-sm font-semibold text-gray-900 mb-1">
+      {switching ? "تبديل طريقة تنظيم الخدمات" : "اختر طريقة تنظيم الخدمات"}
+    </h2>
+    <p className="text-xs text-gray-500 mb-5">
+      {switching
+        ? "⚠️ سيتم حذف جميع البيانات الحالية عند التبديل. هذا الإجراء لا يمكن التراجع عنه."
+        : "يمكنك التبديل لاحقاً لكن سيتم حذف البيانات الموجودة."}
+    </p>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <button
+        onClick={() => onSelect("direct")}
+        disabled={current === "direct"}
+        className={[
+          "group flex flex-col gap-2 rounded-xl border-2 p-4 text-right transition",
+          current === "direct"
+            ? "border-gray-900 bg-gray-50 cursor-default"
+            : "border-gray-200 hover:border-gray-900 hover:bg-gray-50",
+        ].join(" ")}
+      >
+        <div className="text-2xl">📋</div>
+        <div className="text-sm font-semibold text-gray-800">خدمات مباشرة</div>
+        <div className="text-xs text-gray-500">
+          أضف الخدمات مباشرة بدون تصنيفات. مناسب للتخصصات البسيطة.
+        </div>
+        {current === "direct" && (
+          <span className="text-xs text-gray-400 font-medium">
+            ✓ الوضع الحالي
+          </span>
+        )}
+      </button>
+
+      <button
+        onClick={() => onSelect("categorized")}
+        disabled={current === "categorized"}
+        className={[
+          "group flex flex-col gap-2 rounded-xl border-2 p-4 text-right transition",
+          current === "categorized"
+            ? "border-gray-900 bg-gray-50 cursor-default"
+            : "border-gray-200 hover:border-gray-900 hover:bg-gray-50",
+        ].join(" ")}
+      >
+        <div className="text-2xl">🗂️</div>
+        <div className="text-sm font-semibold text-gray-800">
+          تصنيفات وخدمات
+        </div>
+        <div className="text-xs text-gray-500">
+          قسّم الخدمات داخل تصنيفات. مناسب للتخصصات المعقدة.
+        </div>
+        {current === "categorized" && (
+          <span className="text-xs text-gray-400 font-medium">
+            ✓ الوضع الحالي
+          </span>
+        )}
+      </button>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
 const SpecializationsDetailsPage = () => {
   const params = useParams<{ id?: string }>();
   const id = params.id;
 
   const [editing, setEditing] = useState(false);
-
   const [addService, setAddService] = useState(false);
+  const [addCategory, setAddCategory] = useState(false);
+  const [mode, setMode] = useState<Mode>(null);
+  const [showModePicker, setShowModePicker] = useState(false); // for the switch flow
+  const [switching, setSwitching] = useState(false); // deleting in progress
 
   if (!id) return <div className="p-6">Specialization not found</div>;
 
@@ -66,7 +147,91 @@ const SpecializationsDetailsPage = () => {
     loading,
     submitError,
     updateSpecialization,
+    refresh,
   } = useSpecializations(id);
+
+  const handleRefresh = useCallback(() => refresh(), [refresh]);
+
+  const hasData =
+    (categories && categories.length > 0) || (services && services.length > 0);
+
+  // Derive mode from existing data on load
+  useEffect(() => {
+    if (mode !== null) return;
+    if (categories && categories.length > 0) {
+      setMode("categorized");
+    } else if (services && services.length > 0) {
+      setMode("direct");
+    }
+  }, [categories, services]);
+
+  // ── Switch mode: delete old data, then set new mode ────────────────────
+  const handleSwitchMode = useCallback(
+    async (newMode: Mode) => {
+      if (newMode === mode) return;
+
+      // If no data yet, just switch freely
+      if (!hasData) {
+        setMode(newMode);
+        setShowModePicker(false);
+        return;
+      }
+
+      const label =
+        mode === "direct"
+          ? "جميع الخدمات المضافة"
+          : "جميع التصنيفات والخدمات بداخلها";
+
+      const confirmed = window.confirm(
+        `سيتم حذف ${label} نهائياً عند التبديل. هل أنت متأكد؟`,
+      );
+      if (!confirmed) return;
+
+      setSwitching(true);
+      try {
+        if (mode === "direct") {
+          // Delete all services for this specialization
+          const { error } = await supabase
+            .from("services")
+            .delete()
+            .eq("specialization_id", id);
+          if (error) throw error;
+        } else {
+          // Delete categories — services linked via category_id will lose their
+          // category reference (set category_id = null by DB cascade or we do it manually)
+          // First nullify category_id on services, then delete categories
+          const categoryIds = (categories ?? []).map((c) => c.id);
+
+          if (categoryIds.length > 0) {
+            // Remove category link from services
+            await supabase
+              .from("services")
+              .update({ category_id: null })
+              .in("category_id", categoryIds);
+
+            // Delete the categories themselves
+            const { error } = await supabase
+              .from("specialization_categories")
+              .delete()
+              .in("id", categoryIds);
+            if (error) throw error;
+          }
+        }
+
+        setMode(newMode);
+        setShowModePicker(false);
+        setAddService(false);
+        setAddCategory(false);
+        await refresh();
+      } catch (e) {
+        console.error("Error switching mode:", e);
+        alert("حدث خطأ أثناء التبديل. الرجاء المحاولة مرة أخرى.");
+      } finally {
+        setSwitching(false);
+      }
+    },
+    [mode, hasData, id, categories, refresh],
+  );
 
   const {
     register,
@@ -87,15 +252,13 @@ const SpecializationsDetailsPage = () => {
       spec?.specialization_permissions
         ?.map((sp) => sp.permissions?.name)
         .filter(Boolean) ?? [];
-
     if (list.length) return list as string[];
-
     return (spec?.specialization_permissions
       ?.map((sp) => sp.permission_id)
       .filter(Boolean) ?? []) as string[];
   }, [spec]);
 
-  if (loading) return <LoadingPage label="جاري تحميل التخصص" />;
+  if (loading && !spec) return <LoadingPage label="جاري تحميل التخصص" />;
   if (submitError)
     return <ErrorPage error={submitError} label="خطأ في تحميل التخصص" />;
   if (!spec) return <div className="p-6">Specialization not found</div>;
@@ -118,7 +281,7 @@ const SpecializationsDetailsPage = () => {
             <div className="flex items-center gap-2">
               {!editing ? (
                 <button
-                  className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 active:bg-gray-950 transition"
+                  className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
                   onClick={() => setEditing(true)}
                 >
                   تعديل
@@ -135,13 +298,11 @@ const SpecializationsDetailsPage = () => {
                   >
                     إلغاء
                   </button>
-
                   <button
-                    className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 active:bg-emerald-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
                     type="button"
                     onClick={handleSubmit(updateSpecialization)}
                     disabled={loading || !isDirty}
-                    title={!isDirty ? "لا توجد تغييرات للحفظ" : ""}
                   >
                     {loading ? "جارٍ الحفظ..." : "حفظ"}
                   </button>
@@ -151,9 +312,8 @@ const SpecializationsDetailsPage = () => {
           </div>
         </div>
 
-        {/* Content */}
+        {/* Info + Permissions */}
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Info Card */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">
@@ -176,7 +336,6 @@ const SpecializationsDetailsPage = () => {
                 onSubmit={handleSubmit(updateSpecialization)}
               >
                 <input type="hidden" {...register("id")} />
-
                 <Input
                   label="الاسم"
                   placeholder="مثال: كهرباء / مدني / سباكة"
@@ -186,13 +345,11 @@ const SpecializationsDetailsPage = () => {
                     errors.name?.message ? String(errors.name.message) : ""
                   }
                 />
-
                 <button type="submit" className="hidden" />
               </form>
             )}
           </div>
 
-          {/* Permissions Card */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">
@@ -220,62 +377,143 @@ const SpecializationsDetailsPage = () => {
           </div>
         </div>
 
-        {spec.roles?.name === "Vendor" ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">الخدمات</h2>
+        {/* ── Mode section ── */}
 
-              {!addService && (
+        {/* No mode chosen yet */}
+        {mode === null && (
+          <ModePicker
+            current={null}
+            onSelect={handleSwitchMode}
+            switching={false}
+          />
+        )}
+
+        {mode !== null && (
+          <>
+            {/* Mode bar — always visible, with a "تبديل" button */}
+            {!showModePicker && (
+              <div className="flex items-center justify-between rounded-lg bg-gray-100 border border-gray-200 px-3 py-2">
+                <span className="text-xs text-gray-600">
+                  الوضع الحالي:{" "}
+                  <span className="font-semibold text-gray-800">
+                    {mode === "direct" ? "خدمات مباشرة" : "تصنيفات وخدمات"}
+                  </span>
+                </span>
                 <button
-                  onClick={() => setAddService(true)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                  onClick={() => setShowModePicker(true)}
+                  disabled={switching}
+                  className="text-xs px-2.5 py-1 rounded border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition disabled:opacity-50"
                 >
-                  + إضافة خدمة
+                  تبديل
                 </button>
-              )}
-            </div>
-
-            {/* ✅ Add Form */}
-            {addService && (
-              <AddServiceForm
-                specializationId={id}
-                onSuccess={() => {
-                  setAddService(false);
-                  // reload services
-                  (async () => {
-                    console.log("Reloading services...");
-                  })();
-                }}
-                onCancel={() => setAddService(false)}
-              />
+              </div>
             )}
 
-            {/* ✅ List */}
-            <div className="mt-4">
-              <ServicesList
-                services={services || []}
-                onRefresh={() => {
-                  console.log("Refreshing services...");
-                }}
-              />
-            </div>
-          </div>
-        ) : null}
+            {/* Mode picker (shown when switching) */}
+            {showModePicker && (
+              <div className="space-y-2">
+                <ModePicker
+                  current={mode}
+                  onSelect={handleSwitchMode}
+                  switching={!!hasData}
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowModePicker(false)}
+                    className="text-xs text-gray-400 hover:text-gray-700 underline transition"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            )}
 
-        {categories?.length ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">
-              التصنيفات
-            </h2>
-          </div>
-        ) : null}
+            {switching && (
+              <div className="text-xs text-gray-500 px-1 animate-pulse">
+                جاري حذف البيانات القديمة...
+              </div>
+            )}
 
-        {editing ? (
-          <div className="text-xs text-gray-500 px-1">
-            ملاحظة: زر <span className="font-semibold">حفظ</span> يتفعّل فقط
-            عندما تغيّر القيم.
-          </div>
-        ) : null}
+            {/* DIRECT MODE */}
+            {mode === "direct" && !showModePicker && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    الخدمات
+                  </h2>
+                  {!addService && (
+                    <button
+                      onClick={() => setAddService(true)}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                    >
+                      + إضافة خدمة
+                    </button>
+                  )}
+                </div>
+
+                {addService && (
+                  <AddServiceForm
+                    specializationId={id}
+                    onCancel={() => setAddService(false)}
+                    onSuccess={() => {
+                      handleRefresh();
+                      setAddService(false);
+                    }}
+                  />
+                )}
+
+                <div className="mt-4">
+                  <ServicesList
+                    services={services || []}
+                    onRefresh={handleRefresh}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* CATEGORIZED MODE */}
+            {mode === "categorized" && !showModePicker && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-900">
+                      التصنيفات والخدمات
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      أضف تصنيفاً أولاً، ثم أضف الخدمات داخله.
+                    </p>
+                  </div>
+                  {!addCategory && (
+                    <button
+                      onClick={() => setAddCategory(true)}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                    >
+                      + إضافة تصنيف
+                    </button>
+                  )}
+                </div>
+
+                {addCategory && (
+                  <AddCategoryForm
+                    specializationId={id}
+                    onCancel={() => setAddCategory(false)}
+                    onSuccess={() => {
+                      handleRefresh();
+                      setAddCategory(false);
+                    }}
+                  />
+                )}
+
+                <div className="mt-4">
+                  <CategoriesList
+                    categories={categories || []}
+                    onRefresh={handleRefresh}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

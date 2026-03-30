@@ -1,20 +1,24 @@
 import React, { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { SpecializationCategories } from "../../types/global.type";
 
 type Props = {
   specializationId: string;
-  onSuccess: () => void; // refresh list
   onCancel: () => void;
+  onSuccess?: () => void; // ✅ notify parent to re-fetch
+  categories?: SpecializationCategories[]; // ✅ optional: lets user pick a category
 };
 
 const AddServiceForm: React.FC<Props> = ({
   specializationId,
-  onSuccess,
   onCancel,
+  onSuccess,
+  categories = [],
 }) => {
   const [form, setForm] = useState({
     name: "",
     unit: "",
+    category_id: "", // ✅ optional — service can belong to a category or be standalone
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,22 +37,18 @@ const AddServiceForm: React.FC<Props> = ({
         name: form.name.trim(),
         unit: form.unit.trim() || null,
         specialization_id: specializationId,
+        category_id: form.category_id || null, // ✅ null = standalone service
       });
 
       if (error) throw error;
 
-      // reset
-      setForm({ name: "", unit: "" });
-
-      onSuccess(); // reload parent
+      onSuccess?.(); // ✅ tell parent to refresh
+      onCancel(); // ✅ close the form
     } catch (e: unknown) {
       let msg = "فشل إضافة الخدمة";
-
       if (e instanceof Error) msg = e.message;
-      else if (typeof e === "object" && e !== null && "message" in e) {
+      else if (typeof e === "object" && e !== null && "message" in e)
         msg = String((e as { message: unknown }).message);
-      }
-
       setError(msg);
     } finally {
       setLoading(false);
@@ -57,31 +57,49 @@ const AddServiceForm: React.FC<Props> = ({
 
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-3">
-      {/* Error */}
       {error && (
         <div className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded">
           {error}
         </div>
       )}
 
-      {/* Inputs */}
       <div className="flex gap-2">
         <input
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           placeholder="اسم الخدمة"
-          className="w-full border px-3 py-2 text-sm rounded"
+          className="flex-1 border px-3 py-2 text-sm rounded focus:outline-none focus:border-gray-400"
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
         />
-
         <input
           value={form.unit}
           onChange={(e) => setForm({ ...form, unit: e.target.value })}
-          placeholder="الوحدة"
-          className="w-full border px-3 py-2 text-sm rounded"
+          placeholder="الوحدة (اختياري)"
+          className="w-32 border px-3 py-2 text-sm rounded focus:outline-none focus:border-gray-400"
         />
       </div>
 
-      {/* Actions */}
+      {/* ✅ Category picker — only shown if categories exist */}
+      {categories.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-500">
+            التصنيف <span className="text-gray-400">(اختياري)</span>
+          </label>
+          <select
+            value={form.category_id}
+            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+            className="w-full border px-3 py-2 text-sm rounded focus:outline-none focus:border-gray-400 bg-white"
+          >
+            <option value="">— بدون تصنيف —</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <button
           onClick={onCancel}
@@ -89,7 +107,6 @@ const AddServiceForm: React.FC<Props> = ({
         >
           إلغاء
         </button>
-
         <button
           onClick={handleSubmit}
           disabled={loading}
