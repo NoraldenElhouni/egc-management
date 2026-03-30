@@ -43,12 +43,6 @@ interface ProjectAssignment {
 interface Contractor {
   first_name: string;
   last_name: string | null;
-  contractor_specializations: {
-    specializations: {
-      id: string;
-      name: string;
-    } | null;
-  }[];
 }
 
 interface Contract {
@@ -193,13 +187,7 @@ const useProject = (projectId: string | null): UseProjectReturn => {
             contractors!assigned_to(
               id,
               first_name,
-              last_name,
-              contractor_specializations(
-                specializations(
-                  id,
-                  name
-                )
-              )
+              last_name
             )
           `,
           )
@@ -772,11 +760,6 @@ const ProjectDetailsPage = () => {
                         <p className="font-medium text-gray-900">
                           {contract.contractors?.first_name}{" "}
                           {contract.contractors?.last_name}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {contract.contractors?.contractor_specializations
-                            ?.map((spec) => spec.specializations?.name || "")
-                            .join(", ")}
                         </p>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
