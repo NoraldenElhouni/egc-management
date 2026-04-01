@@ -50,6 +50,10 @@ export const ContractorsColumns: ColumnDef<Contractors>[] = [
     accessorKey: "email",
     header: "البريد الإلكتروني",
   },
+  {
+    accessorKey: "phone_number",
+    header: "رقم الهاتف",
+  },
 
   {
     accessorKey: "created_at",

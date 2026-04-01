@@ -9,6 +9,7 @@ const ContractorsList = () => {
       <GenericTable
         data={contractors}
         columns={ContractorsColumns}
+        pageSize={10}
         enableSorting
         enablePagination
         enableFiltering

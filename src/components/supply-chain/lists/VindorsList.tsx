@@ -20,6 +20,7 @@ const VendorsList = () => {
       <GenericTable
         data={vendors}
         columns={VendorsColumns}
+        pageSize={10}
         enableSorting
         enablePagination
         enableFiltering
