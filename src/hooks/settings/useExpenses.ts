@@ -30,3 +30,31 @@ export function useExpenses() {
   // 👇 expose setter
   return { expenses, setExpenses, loading, error };
 }
+
+export function useExpense(expenseId: string) {
+  const [expenses, setExpenses] = useState<Expense | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    async function fetchExpense() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("id", expenseId)
+        .single();
+
+      if (error) {
+        console.error("error fetching expense", error);
+        setError(error);
+      } else {
+        setExpenses(data ?? null);
+      }
+      setLoading(false);
+    }
+    fetchExpense();
+  }, [expenseId]);
+
+  return { expenses, setExpenses, loading, error };
+}
