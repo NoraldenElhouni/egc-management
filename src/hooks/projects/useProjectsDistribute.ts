@@ -151,7 +151,8 @@ export function useProjectsDistribute() {
              employee:employees(id, first_name, last_name)
            )`,
         )
-        .eq("id", "5451aaae-c632-46f4-9913-8670cffcc8e7")
+        .neq("id", "5451aaae-c632-46f4-9913-8670cffcc8e7")
+        .neq("id", "e0a50575-bcc1-474a-98b8-8f57770a14fa")
         .eq("status", "active")
         .order("serial_number", { ascending: true });
 
