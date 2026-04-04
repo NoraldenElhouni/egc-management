@@ -53,7 +53,7 @@ const RolesDetailsPage = () => {
 
   if (!id) return <div className="p-6">Role not found</div>;
 
-  const { role, loading, error, updateRole } = useRole(id);
+  const { role, users, loading, error, updateRole } = useRole(id);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -224,6 +224,28 @@ const RolesDetailsPage = () => {
             ) : (
               <div className="text-sm text-gray-400">لا توجد صلاحيات</div>
             )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                المستخدمين
+              </h1>
+            </div>
+          </div>
+          <div>
+            {users.map((user) => (
+              <div key={user.id}>
+                {user.first_name} {user.last_name} -{" "}
+                <span
+                  className={`px-2.5 py-0.5 rounded-full ${user.status === "active" ? "bg-green-300" : "bg-red-300"} text-xs font-semibold ${user.status === "active" ? "text-green-950" : "bg-red-950"}`}
+                >
+                  {user.status === "active" ? "نشط" : "غير نشط"}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

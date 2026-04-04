@@ -61,39 +61,6 @@ export type Database = {
           },
         ]
       }
-      audit_log: {
-        Row: {
-          changed_at: string
-          changed_by: string
-          id: number
-          new_data: Json | null
-          operation: string
-          original_data: Json | null
-          record_id: string
-          table_name: string
-        }
-        Insert: {
-          changed_at?: string
-          changed_by: string
-          id?: number
-          new_data?: Json | null
-          operation: string
-          original_data?: Json | null
-          record_id: string
-          table_name: string
-        }
-        Update: {
-          changed_at?: string
-          changed_by?: string
-          id?: number
-          new_data?: Json | null
-          operation?: string
-          original_data?: Json | null
-          record_id?: string
-          table_name?: string
-        }
-        Relationships: []
-      }
       bid_items: {
         Row: {
           bid_id: string
@@ -891,7 +858,6 @@ export type Database = {
           id_proof_url: string | null
           last_name: string | null
           manager_id: string | null
-          marital_status: string | null
           nationality: string | null
           personal_email: string | null
           personal_photo_url: string | null
@@ -929,7 +895,6 @@ export type Database = {
           id_proof_url?: string | null
           last_name?: string | null
           manager_id?: string | null
-          marital_status?: string | null
           nationality?: string | null
           personal_email?: string | null
           personal_photo_url?: string | null
@@ -967,7 +932,6 @@ export type Database = {
           id_proof_url?: string | null
           last_name?: string | null
           manager_id?: string | null
-          marital_status?: string | null
           nationality?: string | null
           personal_email?: string | null
           personal_photo_url?: string | null

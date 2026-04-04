@@ -89,7 +89,6 @@ export const createEmployee = async (data: UserFormValues) => {
     specializations_id: data.specializationsId ?? null,
     dob: normalizeEmptyToNull(data.dob),
     place_of_birth: data.placeOfBirth ?? null,
-    marital_status: data.maritalStatus ?? null,
     blood_type: data.bloodType ?? null,
     nationality: data.nationality ?? null,
     gender: data.gender ?? null,

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabaseClient";
 import { RoleFormValues } from "../../types/schema/Role.schema";
-import { Roles } from "../../types/global.type";
+import { Roles, Users } from "../../types/global.type";
 
 type Roleswithpermissions = {
   code: string;
@@ -58,6 +58,7 @@ export function useRoles() {
 
 export function useRole(id: string) {
   const [role, setRole] = useState<Roleswithpermissions | null>(null);
+  const [users, setUsers] = useState<Users[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -74,7 +75,7 @@ export function useRole(id: string) {
                 permission_id,
                 permissions ( * )
               )
-            `
+            `,
           )
           .eq("id", id)
           .single();
@@ -84,6 +85,15 @@ export function useRole(id: string) {
         } else {
           setRole(data);
         }
+
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("role_id", id);
+        if (usersError) {
+          console.error("error fetching users for role", usersError);
+        }
+        setUsers(usersData ?? []);
       } catch (err) {
         console.error("unexpected error fetching role", err);
         setError(err as PostgrestError);
@@ -103,10 +113,10 @@ export function useRole(id: string) {
       return { success: false, error: "خطأ في تحديث الدور" };
     }
     setRole((prev) =>
-      prev ? { ...prev, name: form.name, code: form.code } : prev
+      prev ? { ...prev, name: form.name, code: form.code } : prev,
     );
     return { success: true };
   };
 
-  return { role, loading, error, updateRole };
+  return { role, users, loading, error, updateRole };
 }
