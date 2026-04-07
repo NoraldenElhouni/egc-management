@@ -19,6 +19,7 @@ export type Database = {
           balance: number
           currency: Database["public"]["Enums"]["currency_type"]
           id: string
+          maps: number
           owner_id: string
           owner_type: Database["public"]["Enums"]["owner_type"]
           refund: number
@@ -31,6 +32,7 @@ export type Database = {
           balance?: number
           currency: Database["public"]["Enums"]["currency_type"]
           id?: string
+          maps?: number
           owner_id: string
           owner_type: Database["public"]["Enums"]["owner_type"]
           refund?: number
@@ -43,6 +45,7 @@ export type Database = {
           balance?: number
           currency?: Database["public"]["Enums"]["currency_type"]
           id?: string
+          maps?: number
           owner_id?: string
           owner_type?: Database["public"]["Enums"]["owner_type"]
           refund?: number
@@ -1589,6 +1592,7 @@ export type Database = {
           currency: Database["public"]["Enums"]["currency_type"]
           held: number
           id: string
+          maps: number
           project_id: string
           refund: number
           total_expense: number
@@ -1600,6 +1604,7 @@ export type Database = {
           currency: Database["public"]["Enums"]["currency_type"]
           held?: number
           id?: string
+          maps?: number
           project_id: string
           refund?: number
           total_expense?: number
@@ -1611,6 +1616,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_type"]
           held?: number
           id?: string
+          maps?: number
           project_id?: string
           refund?: number
           total_expense?: number
@@ -2243,6 +2249,62 @@ export type Database = {
         }
         Relationships: []
       }
+      project_user_permissions: {
+        Row: {
+          allowed: boolean
+          granted_at: string
+          granted_by: string | null
+          permission_id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          permission_id: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          permission_id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pup_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pup_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pup_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pup_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
@@ -2623,6 +2685,27 @@ export type Database = {
           },
         ]
       }
+      update: {
+        Row: {
+          created_at: string
+          id: string
+          is_must: boolean
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_must?: boolean
+          version: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_must?: boolean
+          version?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           allowed: boolean
@@ -2902,8 +2985,22 @@ export type Database = {
         }[]
       }
       get_role_by_email: { Args: { p_email: string }; Returns: string }
+      get_vendor_expenses: {
+        Args: { p_project_id: string }
+        Returns: {
+          contact_name: string
+          latest_expense_date: string
+          total_amount: number
+          vendor_id: string
+          vendor_name: string
+        }[]
+      }
       has_permission: {
         Args: { p_perm_name: string; p_user: string }
+        Returns: boolean
+      }
+      has_project_permission: {
+        Args: { p_perm: string; p_project: string; p_user: string }
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }

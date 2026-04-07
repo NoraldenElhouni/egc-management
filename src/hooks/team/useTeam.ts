@@ -26,9 +26,10 @@ export function useTeam(projectId: string) {
           id,
           user_id,
           percentage,
+          project_id,
           project_roles(id, name),
           employees(*)
-        `
+        `,
         )
         .eq("project_id", projectId);
 
@@ -43,6 +44,7 @@ export function useTeam(projectId: string) {
         const emp = assignment.employees || {};
         return {
           ...emp,
+          project_id: assignment.project_id,
           percentage: assignment.percentage ?? null,
           role: assignment.project_roles?.name ?? null,
           assignment_id: assignment.id ?? null,

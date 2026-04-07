@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { TeamEmployee } from "../../../types/team.type";
+import { Link } from "react-router-dom";
 
 export const TeamEmployeesColumns: ColumnDef<TeamEmployee>[] = [
   {
@@ -57,5 +58,17 @@ export const TeamEmployeesColumns: ColumnDef<TeamEmployee>[] = [
     header: "البريد الإلكتروني",
     accessorKey: "email",
     cell: (info) => info.getValue() ?? "-",
+  },
+  {
+    id: "action",
+    header: "إجراء",
+    cell: ({ row }) => (
+      <Link
+        to={`/projects/team/${row.original.project_id}/${row.original.id}/permissions`}
+        className="hover:underline"
+      >
+        التصاريح
+      </Link>
+    ),
   },
 ];
