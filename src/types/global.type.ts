@@ -47,7 +47,6 @@ export type Offers = Tables<"offers">;
 export type OfferItems = Tables<"offer_items">;
 export type BidItems = Tables<"bid_items">;
 export type Company = Tables<"company">;
-export type AuditLog = Tables<"audit_log">;
 export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
 export type expenses = Tables<"expenses">;

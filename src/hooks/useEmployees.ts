@@ -50,7 +50,7 @@ export function useEmployee(id: string) {
           *,
           employee_certifications(*),
           employee_documents(*)
-        `
+        `,
         )
         .eq("id", id)
         .single();
@@ -81,17 +81,12 @@ export function useEmployee(id: string) {
         .eq("employee_id", id);
 
       // 5) leaves
-      const { data: leaveData } = await supabase
-        .from("employee_leaves")
-        .select("*")
-        .eq("employee_id", id);
 
       const fullEmployeeData: FullEmployee = {
         ...employeeData,
         user_role: roleData ?? null,
         projects: projectData ?? [],
         payroll: payrollData ?? [],
-        employee_leaves: leaveData ?? [],
       };
 
       setEmployee(fullEmployeeData);
