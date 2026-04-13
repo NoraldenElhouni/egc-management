@@ -70,11 +70,14 @@ const SharesPdfButton = ({ projects }: Props) => {
     try {
       const payload = buildPayload(projects);
 
-      const res = await fetch("http://localhost:8000/api/v1/egc/shares/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        "http://102.203.200.52/api/v1/egc/management/shares/pdf",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
 
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 
