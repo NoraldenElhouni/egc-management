@@ -51,6 +51,8 @@ export function useClients() {
         return { data: null, error: userError };
       }
 
+      console.log(userData);
+
       // Insert and return the inserted row
       const { data, error } = await supabase
         .from("clients")
@@ -70,6 +72,7 @@ export function useClients() {
         setLoading(false);
         return { error, data: null };
       }
+      console.log(data);
 
       setLoading(false);
       return { data: data as Clients, error: null };
