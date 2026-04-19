@@ -54,11 +54,7 @@ export const ClientsColumns: ColumnDef<Clients>[] = [
   },
 
   {
-    accessorKey: "created_at",
-    header: "تاريخ الإنشاء",
-    cell: ({ row }) => {
-      const date = new Date(row.original.created_at);
-      return date.toLocaleDateString("ar-LY");
-    },
+    accessorKey: "phone_number",
+    header: "رقم العاتف",
   },
 ];

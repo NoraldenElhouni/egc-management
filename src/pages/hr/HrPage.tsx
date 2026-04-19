@@ -1,12 +1,4 @@
-import {
-  ClipboardList,
-  Clock,
-  DollarSign,
-  FileText,
-  TrendingUp,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import { DollarSign, UserPlus, Users } from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -19,43 +11,46 @@ const HrPage = () => {
       icon: Users,
       path: "/hr/employees",
       description: "إدارة سجلات الموظفين",
+      role: ["Admin", "HR", "Manager"],
     },
     {
       label: "إضافة موظف جديد",
       icon: UserPlus,
       path: "/hr/employees/new",
       description: "تسجيل موظف جديد",
+      role: ["Admin", "HR", "Manager"],
     },
     {
       label: "الرواتب",
       icon: DollarSign,
       path: "/hr/payroll",
       description: "الرواتب والتعويضات",
+      role: ["Admin", "Manager"],
     },
-    {
-      label: "القروض والسلف",
-      icon: TrendingUp,
-      path: "/hr/loans-advances",
-      description: "إدارة القروض والسلف",
-    },
-    {
-      label: "الحضور والإجازات",
-      icon: Clock,
-      path: "/hr/attendance",
-      description: "متابعة الحضور والإجازات",
-    },
-    {
-      label: "الإعلانات",
-      icon: FileText,
-      path: "/hr/announcements",
-      description: "إعلانات الموارد البشرية",
-    },
-    {
-      label: "إعادة تعيين كلمة المرور",
-      icon: ClipboardList,
-      path: "/hr/rest-password",
-      description: "إدارة كلمات المرور",
-    },
+    // {
+    //   label: "القروض والسلف",
+    //   icon: TrendingUp,
+    //   path: "/hr/loans-advances",
+    //   description: "إدارة القروض والسلف",
+    // },
+    // {
+    //   label: "الحضور والإجازات",
+    //   icon: Clock,
+    //   path: "/hr/attendance",
+    //   description: "متابعة الحضور والإجازات",
+    // },
+    // {
+    //   label: "الإعلانات",
+    //   icon: FileText,
+    //   path: "/hr/announcements",
+    //   description: "إعلانات الموارد البشرية",
+    // },
+    // {
+    //   label: "إعادة تعيين كلمة المرور",
+    //   icon: ClipboardList,
+    //   path: "/hr/rest-password",
+    //   description: "إدارة كلمات المرور",
+    // },
   ];
 
   return (

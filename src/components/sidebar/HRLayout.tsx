@@ -4,10 +4,6 @@ import { useAuth } from "../../hooks/useAuth";
 import {
   Users,
   DollarSign,
-  ClipboardList,
-  FileText,
-  TrendingUp,
-  Clock,
   UserPlus,
   ChevronRight,
   ChevronLeft,
@@ -23,43 +19,46 @@ const HRLayout = () => {
       icon: Users,
       path: "/hr/employees",
       description: "إدارة سجلات الموظفين",
+      role: ["Admin", "HR", "Manager"],
     },
     {
       title: "إضافة موظف جديد",
       icon: UserPlus,
       path: "/hr/employees/new",
       description: "تسجيل موظف جديد",
+      role: ["Admin", "HR", "Manager"],
     },
     {
       title: "الرواتب",
       icon: DollarSign,
       path: "/hr/payroll",
       description: "الرواتب والتعويضات",
+      role: ["Admin", "Manager"],
     },
-    {
-      title: "القروض والسلف",
-      icon: TrendingUp,
-      path: "/hr/loans-advances",
-      description: "إدارة القروض والسلف",
-    },
-    {
-      title: "الحضور والإجازات",
-      icon: Clock,
-      path: "/hr/attendance",
-      description: "متابعة الحضور والإجازات",
-    },
-    {
-      title: "الإعلانات",
-      icon: FileText,
-      path: "/hr/announcements",
-      description: "إعلانات الموارد البشرية",
-    },
-    {
-      title: "إعادة تعيين كلمة المرور",
-      icon: ClipboardList,
-      path: "/hr/rest-password",
-      description: "إدارة كلمات المرور",
-    },
+    // {
+    //   title: "القروض والسلف",
+    //   icon: TrendingUp,
+    //   path: "/hr/loans-advances",
+    //   description: "إدارة القروض والسلف",
+    // },
+    // {
+    //   title: "الحضور والإجازات",
+    //   icon: Clock,
+    //   path: "/hr/attendance",
+    //   description: "متابعة الحضور والإجازات",
+    // },
+    // {
+    //   title: "الإعلانات",
+    //   icon: FileText,
+    //   path: "/hr/announcements",
+    //   description: "إعلانات الموارد البشرية",
+    // },
+    // {
+    //   title: "إعادة تعيين كلمة المرور",
+    //   icon: ClipboardList,
+    //   path: "/hr/rest-password",
+    //   description: "إدارة كلمات المرور",
+    // },
   ];
 
   const { user, loading } = useAuth();

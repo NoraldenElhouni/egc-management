@@ -13,9 +13,10 @@ const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
 
 interface Props {
   projects: DistributionProject[];
+  onRefetch: () => void;
 }
 
-const StepTwoProjectDistribute = ({ projects }: Props) => {
+const StepTwoProjectDistribute = ({ projects, onRefetch }: Props) => {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const totals = CURRENCIES.reduce(
@@ -95,6 +96,7 @@ const StepTwoProjectDistribute = ({ projects }: Props) => {
                             </p>
                             <ProjectDistributionPercentageDialog
                               project={project}
+                              onSave={onRefetch} // ← add this
                             />
                           </div>
 

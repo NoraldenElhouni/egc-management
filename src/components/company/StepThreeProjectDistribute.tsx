@@ -6,11 +6,13 @@ import {
   calcEmployeeEarnings,
   calcDistribution,
 } from "../../hooks/projects/useProjectsDistribute";
+import ProjectDistributionPercentageDialog from "./distribution/ProjectDistributionPercentageDialog";
 
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
 
 interface Props {
   projects: DistributionProject[];
+  onRefetch: () => void;
 }
 
 type PartyType = "employee" | "bank" | "company";
@@ -47,9 +49,7 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
       });
     }
     const party = map.get(id);
-    if (!party) {
-      throw new Error(`Party with id ${id} not found`);
-    }
+    if (!party) throw new Error(`Party with id ${id} not found`);
     return party;
   };
 
@@ -80,7 +80,6 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
       const dist = calcDistribution(project, currency);
       if (dist.total === 0) return;
 
-      // Bank reserve
       addBreakdown(
         ensureParty("__bank__", "🏦 البنك / الاحتياطي", "bank"),
         project,
@@ -89,7 +88,6 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
         dist.bank,
       );
 
-      // Company
       addBreakdown(
         ensureParty("__company__", "🏢 الشركة", "company"),
         project,
@@ -98,7 +96,6 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
         dist.company,
       );
 
-      // Employees
       calcEmployeeEarnings(project, currency).forEach(
         ({ employeeId, name, assignmentPct, earning }) => {
           addBreakdown(
@@ -113,7 +110,6 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
     });
   });
 
-  // Order: bank first, company second, then employees alphabetically
   const bank = map.get("__bank__");
   const company = map.get("__company__");
   const employees = Array.from(map.values())
@@ -123,7 +119,6 @@ function buildSummaries(projects: DistributionProject[]): PartySummary[] {
   return [...(bank ? [bank] : []), ...(company ? [company] : []), ...employees];
 }
 
-// Row background by type
 const rowBg: Record<PartyType, string> = {
   bank: "bg-yellow-50",
   company: "bg-green-50",
@@ -135,8 +130,10 @@ const altRowBg: Record<PartyType, string> = {
   employee: "bg-gray-50",
 };
 
-const StepThreeProjectDistribute = ({ projects }: Props) => {
+const StepThreeProjectDistribute = ({ projects, onRefetch }: Props) => {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [dialogProject, setDialogProject] =
+    useState<DistributionProject | null>(null);
 
   const parties = useMemo(() => buildSummaries(projects), [projects]);
 
@@ -148,8 +145,30 @@ const StepThreeProjectDistribute = ({ projects }: Props) => {
     {} as Record<Currency, number>,
   );
 
+  const handleProjectClick = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent row toggle
+    const found = projects.find((p) => p.id === projectId);
+    if (found) setDialogProject(found);
+  };
+
   return (
     <div className="p-3 flex justify-center">
+      {/* Controlled dialog — rendered once at top level */}
+      {dialogProject && (
+        <ProjectDistributionPercentageDialog
+          project={dialogProject}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDialogProject(null);
+          }}
+          onSave={() => {
+            // ← add this
+            setDialogProject(null);
+            onRefetch();
+          }}
+        />
+      )}
+
       <div className="overflow-x-auto rounded-md border bg-white">
         <table className="w-fit table-auto text-sm m-4">
           <thead className="bg-gray-50">
@@ -223,12 +242,24 @@ const StepThreeProjectDistribute = ({ projects }: Props) => {
                             </thead>
                             <tbody className="divide-y">
                               {party.breakdown.map((b) => (
-                                <tr key={b.projectId} className="text-right">
+                                <tr
+                                  key={b.projectId}
+                                  className="text-right hover:bg-blue-50 cursor-pointer group"
+                                  onClick={(e) =>
+                                    handleProjectClick(b.projectId, e)
+                                  }
+                                  title="انقر لعرض تفاصيل التوزيع"
+                                >
                                   <td className="px-2 py-1 text-gray-400">
                                     {b.serialNumber}
                                   </td>
                                   <td className="px-2 py-1 font-medium">
-                                    {b.projectName}
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span>{b.projectName}</span>
+                                      <span className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                                        🔍
+                                      </span>
+                                    </div>
                                   </td>
                                   <td className="px-2 py-1 tabular-nums">
                                     {b.assignmentPct}%

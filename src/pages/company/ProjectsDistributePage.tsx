@@ -20,7 +20,7 @@ const ProjectsDistributePage = () => {
     DistributionProject[] | null
   >(null);
 
-  const { projects, loading, error, submitDistribution } =
+  const { projects, loading, error, submitDistribution, refetch } =
     useProjectsDistribute();
 
   const steps = useMemo(
@@ -145,8 +145,15 @@ const ProjectsDistributePage = () => {
       <StepsHeader setStep={setStep} steps={steps} current={step} />
 
       {step === 1 && <StepOneProjectDistribute projects={safeProjects} />}
-      {step === 2 && <StepTwoProjectDistribute projects={safeProjects} />}
-      {step === 3 && <StepThreeProjectDistribute projects={safeProjects} />}
+      {step === 2 && (
+        <StepTwoProjectDistribute projects={safeProjects} onRefetch={refetch} />
+      )}
+      {step === 3 && (
+        <StepThreeProjectDistribute
+          projects={safeProjects}
+          onRefetch={refetch}
+        />
+      )}
 
       <div className="max-w-4xl mx-auto flex justify-between gap-2 mt-6">
         <button

@@ -5,7 +5,6 @@ import {
   DollarSign,
   LinkIcon,
   ShieldUser,
-  User,
   Settings,
   Building,
 } from "lucide-react";
@@ -20,7 +19,7 @@ const MainMenu = () => {
       label: "إدارة الموظفين",
       icon: Users,
       path: "/hr",
-      role: ["Admin", "Manager", "HR"],
+      role: ["Admin", "HR", "Manager"],
     },
     {
       label: "إدارة العملاء",
@@ -32,7 +31,7 @@ const MainMenu = () => {
       label: "سلسلة التوريد",
       icon: LinkIcon,
       path: "/supply-chain",
-      role: ["Admin", "Manager", "Finance"],
+      role: ["Admin", "Finance"],
     },
     {
       label: "المشاريع",
@@ -44,13 +43,13 @@ const MainMenu = () => {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      role: ["Admin", "Manager", "Finance", "Bookkeeper", "Accountant"],
+      role: ["Admin", "Finance", "Bookkeeper", "Accountant"],
     },
     {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      role: ["Admin", "Manager"],
+      role: ["Manager"],
     },
     {
       label: "الإعدادات",
@@ -58,7 +57,7 @@ const MainMenu = () => {
       path: "/settings",
       role: ["Admin", "Finance"],
     },
-    { label: "الملف الشخصي", icon: User, path: "/profile" },
+    // { label: "الملف الشخصي", icon: User, path: "/profile" },
     // {
     //   label: "الموقع الإلكتروني",
     //   icon: Globe,
