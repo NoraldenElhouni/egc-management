@@ -29,16 +29,14 @@ const TeamPermissions = () => {
     );
   }
 
-  const { permission, loading, error, refetch } = getUserProjectPermissions(
-    projectId,
-    empId,
-  );
+  const { permissions, user, project, loading, error, refetch } =
+    getUserProjectPermissions(projectId, empId);
 
   const { revokePermission } = useProjectUserPermissions();
 
   if (loading) return <LoadingPage label="تحميل الفريق..." />;
 
-  if (error || !permission) {
+  if (error || !permissions || !project) {
     return (
       <ErrorPage
         error={error ? error.message : "خطأ في تحميل الفريق"}
@@ -47,7 +45,7 @@ const TeamPermissions = () => {
     );
   }
 
-  const existingPermissionIds = permission.map((p) => p.permissions.id);
+  const existingPermissionIds = permissions.map((p) => p.permissions.id);
 
   const handleDelete = async (permissionId: string) => {
     setDeletingId(permissionId);
@@ -84,9 +82,9 @@ const TeamPermissions = () => {
         {/* Add Permissions Form */}
         <AddingNewPermissionsToTeam
           projectId={projectId}
-          projectName={permission[0].projects.name}
+          projectName={project.name}
           userId={empId}
-          userName={permission[0].users.first_name}
+          userName={`${user?.first_name} ${user?.last_name}`}
           existingPermissionIds={existingPermissionIds}
           onSuccess={refetch}
         />
@@ -98,17 +96,17 @@ const TeamPermissions = () => {
               الصلاحيات الحالية
             </h2>
             <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
-              {permission.length} صلاحية
+              {permissions.length} صلاحية
             </span>
           </div>
 
-          {permission.length === 0 ? (
+          {permissions.length === 0 ? (
             <div className="px-6 py-12 text-center text-gray-400 text-sm">
               لا توجد صلاحيات مضافة
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {permission.map((perm) => {
+              {permissions.map((perm) => {
                 const isConfirming = confirmId === perm.permissions.id;
                 const isDeleting = deletingId === perm.permissions.id;
 
@@ -121,11 +119,11 @@ const TeamPermissions = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
                         <span className="text-indigo-700 text-sm font-semibold">
-                          {perm.users.first_name?.[0]}
+                          {`${user?.first_name} ${user?.last_name}`}
                         </span>
                       </div>
                       <span className="text-gray-800 font-medium">
-                        {perm.users.first_name}
+                        {`${user?.first_name} ${user?.last_name}`}
                       </span>
                     </div>
 

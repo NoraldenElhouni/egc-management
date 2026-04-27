@@ -4,73 +4,104 @@ import { supabase } from "../../lib/supabaseClient";
 import { Permissions } from "../../types/global.type";
 
 interface Permission {
+  permission_id: string;
   allowed: boolean;
   granted_at: string;
   granted_by: string | null;
-  permission_id: string;
-  project_id: string;
-  user_id: string;
-  users: {
-    first_name: string;
-    last_name: string | null;
-  };
-  projects: {
-    name: string;
-  };
   permissions: {
     id: string;
     name: string;
   };
 }
+interface users {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+}
+interface Project {
+  id: string;
+  name: string;
+}
 
-export function getUserProjectPermissions(projectId: string, empId: string) {
-  const [permission, setPermission] = useState<Permission[] | null>();
+export function getUserProjectPermissions(projectId: string, userId: string) {
+  const [permissions, setPermissions] = useState<Permission[] | null>(null);
+  const [user, setUser] = useState<users | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  const fetchTeam = useCallback(async () => {
+  const fetchPermissions = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch permission for the given user in project
-      const { data: permission, error: permissionError } = await supabase
+      const { data, error: fetchError } = await supabase
         .from("project_user_permissions")
         .select(
-          "*, users!user_id(first_name, last_name), projects(name), permissions(*)",
+          `
+          permission_id,
+          allowed,
+          granted_at,
+          granted_by,
+          permissions(id, name)
+        `,
         )
         .eq("project_id", projectId)
-        .eq("user_id", empId);
+        .eq("user_id", userId);
 
-      if (permissionError) {
-        console.error("Error fetching permission:", permissionError);
-        setError(permissionError);
+      if (fetchError) {
+        setError(fetchError);
         return;
       }
 
-      // Map permission to a combined TeamPermission object
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("id, first_name, last_name")
+        .eq("id", userId)
+        .single();
 
-      setPermission(permission);
+      if (userError) {
+        setError(userError);
+        setPermissions(data);
+        return;
+      }
+
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("id, name")
+        .eq("id", projectId)
+        .single();
+
+      if (projectError) {
+        setError(projectError);
+        setPermissions(data);
+        setUser(user);
+        return;
+      }
+
+      setPermissions(data);
+      setUser(user);
+      setProject(project);
     } catch (err) {
-      console.error("Unexpected error fetching team:", err);
       setError(err as PostgrestError);
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, userId]);
 
   useEffect(() => {
-    fetchTeam();
-  }, [fetchTeam]);
+    fetchPermissions();
+  }, [fetchPermissions]);
 
   return {
-    permission,
+    permissions,
+    user,
+    project,
     loading,
     error,
-    refetch: fetchTeam,
+    refetch: fetchPermissions,
   };
 }
-
 export function usePermissions() {
   const [permissions, setPermissions] = useState<Permissions[]>([]);
   const [loading, setLoading] = useState(true);

@@ -55,6 +55,11 @@ export const RoleColumns: ColumnDef<Roles>[] = [
   {
     accessorKey: "number",
     header: "العدد الموظفين",
+    cell: ({ row }) => (
+      <div className="text-sm text-gray-500">
+        {row.original.number - 1} موظف
+      </div>
+    ),
   },
 
   //actions

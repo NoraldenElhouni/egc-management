@@ -70,6 +70,7 @@ interface ProjectBalance {
   id: string;
   project_id: string;
   refund: number;
+  maps: number;
   total_expense: number;
   total_percentage: number;
   total_transactions: number;
@@ -358,8 +359,10 @@ const ProjectDetailsPage = () => {
   const totalExpense = lydBalance?.total_expense || 0;
   const totalPercentage = lydBalance?.total_percentage || 0;
   const currentBalance = lydBalance?.balance || 0;
+  const maps = lydBalance?.maps || 0;
+  const refund = lydBalance?.refund || 0;
 
-  const balance = deposits - totalExpense - totalPercentage;
+  const balance = deposits - totalExpense - totalPercentage + refund - maps;
 
   // calculate accoount deposits
   const accountDeposits = lydAccounts.reduce(
@@ -384,7 +387,6 @@ const ProjectDetailsPage = () => {
   );
 
   // refund
-  const refund = lydBalance?.refund || 0;
   const netRefund = refund / rate;
   const percentageRefund = refund - netRefund;
 
@@ -589,11 +591,12 @@ const ProjectDetailsPage = () => {
                     </>
                   )}
                 </div>
-                {balance !== currentBalance && (
+                {balance.toFixed(2) !== currentBalance.toFixed(2) && (
                   <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
                     <p className="text-sm">
-                      هناك اختلاف في الرصيد: الرصيد المحسوب هو {balance} بينما
-                      الرصيد الحالي هو {currentBalance}.
+                      هناك اختلاف في الرصيد: الرصيد المحسوب هو{" "}
+                      {balance.toFixed(2)} بينما الرصيد الحالي هو{" "}
+                      {currentBalance.toFixed(2)}.
                     </p>
                   </div>
                 )}
