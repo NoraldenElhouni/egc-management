@@ -7,6 +7,7 @@ import {
   ShieldUser,
   Settings,
   Building,
+  PackageOpen,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -56,6 +57,11 @@ const MainMenu = () => {
       icon: Settings,
       path: "/settings",
       role: ["Admin", "Finance"],
+    },
+    {
+      label: "التشغيل",
+      icon: PackageOpen,
+      path: "/operations",
     },
     // { label: "الملف الشخصي", icon: User, path: "/profile" },
     // {

@@ -17,6 +17,7 @@ import ProjectsRoutes from "./pages/ProjectsRoutes";
 import FinanceRoutes from "./pages/FinanceRoutes";
 import SettingsRoutes from "./pages/SettingsRoutes";
 import CompanyRoutes from "./pages/CompanyRoutes";
+import OperationsRoutes from "./pages/OperationsRoutes";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -114,6 +115,9 @@ const AppRouter = () => {
 
             {/* Settings */}
             <Route path="/settings/*" element={<SettingsRoutes />} />
+
+            {/* operations */}
+            <Route path="/operations/*" element={<OperationsRoutes />} />
 
             <Route path="/company/*" element={<CompanyRoutes />} />
 

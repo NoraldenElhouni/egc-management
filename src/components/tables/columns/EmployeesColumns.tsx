@@ -36,6 +36,7 @@ export const EmployeesColumns: ColumnDef<Employees>[] = [
   {
     accessorKey: "name",
     header: "الاسم",
+    accessorFn: (row) => `${row.first_name} ${row.last_name}`,
     cell: ({ row }) => (
       <div>
         <Link
