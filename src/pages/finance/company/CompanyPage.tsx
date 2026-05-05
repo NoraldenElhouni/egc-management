@@ -1,5 +1,5 @@
 import ExpenseTab from "../../../components/finance/company/ExpenseTab";
-import IncomeTab from "../../../components/finance/company/IncomeTab";
+// import IncomeTab from "../../../components/finance/company/IncomeTab";
 import ErrorPage from "../../../components/ui/errorPage";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import Tabs from "../../../components/ui/Tabs";
@@ -15,11 +15,11 @@ const CompanyPage = () => {
         <ExpenseTab expenses={expenses ?? []} onAddExpense={addExpense} />
       ),
     },
-    {
-      id: "income",
-      label: "الدخل",
-      content: <IncomeTab />,
-    },
+    // {
+    //   id: "income",
+    //   label: "الدخل",
+    //   content: <IncomeTab />,
+    // },
   ];
 
   if (loading) {

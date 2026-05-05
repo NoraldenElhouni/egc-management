@@ -452,7 +452,20 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              !groupedByCurrency.every((group) => {
+                const currencyRows =
+                  watchedRows?.filter((r) => r.currency === group.currency) ??
+                  [];
+                const percentageSum = currencyRows.reduce(
+                  (sum, row) => sum + (Number(row.percentage) || 0),
+                  0,
+                );
+                const roundedPctSum = Math.round(percentageSum * 100) / 100;
+                return roundedPctSum === 100;
+              })
+            }
             className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}

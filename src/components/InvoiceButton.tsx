@@ -13,8 +13,6 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
 
   if (!project || project === null) return <ErrorPage />;
 
-  // ─── Helper ────────────────────────────────────────────────────────────────
-  // Round a number to 2 decimal places and return as a number (not string)
   const r = (n: number) => Math.round(n * 100) / 100;
 
   const formatPayload = (project: ProjectWithDetailsForBook) => {
@@ -63,9 +61,8 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       lydAccounts.reduce((acc, a) => acc + (a.balance ?? 0), 0),
     );
 
-    const totalAmount = r(
-      lydAccounts.reduce((acc, a) => acc + (a.balance ?? 0), 0),
-    );
+    // ✅ FIX 2: totalAmount = materials + labor (not same as remaingAmount)
+    const totalAmount = r(totalMetrials + totalLabors);
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -90,6 +87,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
 
       metrials: lydExpenses
         .filter((e) => e.expense_type === "material")
+        .sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0)) // ✅ add this
         .map((e) => ({
           name: e.description,
           serial_number: e.serial_number,
@@ -98,6 +96,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
 
       labors: lydExpenses
         .filter((e) => e.expense_type === "labor")
+        .sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0)) // ✅ add this
         .map((e) => ({
           name: e.description,
           contractor_name: e.contract_name ?? "غير معروف",
@@ -107,18 +106,20 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
 
       refund: project.project_refund
         .filter((rf) => rf.currency === "LYD")
+        .sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0)) // ✅ add this
         .map((rf) => ({
           name: rf.description,
           serial_number: rf.serial_number,
-          amount: r(rf.amount ?? 0), // ✅ fixed: was total_price
+          amount: r(rf.amount ?? 0),
         })),
 
       deposit: project.project_incomes
         .filter((i) => i.currency === "LYD")
+        .sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0)) // ✅ add this
         .map((i) => ({
           name: i.client_name,
           serial_number: i.serial_number,
-          amount: r(i.amount ?? 0), // ✅ fixed: was total_price
+          amount: r(i.amount ?? 0),
         })),
     };
   };
@@ -138,7 +139,6 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       );
 
       if (!response.ok) {
-        console.error(`${response.status} ${response.statusText}`);
         throw new Error(`${response.status} ${response.statusText}`);
       }
       const blob = await response.blob();
@@ -149,7 +149,6 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Error generating invoice:", err);
       setError(
         "فشل إنشاء الفاتورة: " +
           (err instanceof Error ? err.message : "خطأ غير معروف"),

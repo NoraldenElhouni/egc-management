@@ -154,10 +154,13 @@ export function useProjectsDistribute() {
         .in("id", [
           "5451aaae-c632-46f4-9913-8670cffcc8e7",
           "e0a50575-bcc1-474a-98b8-8f57770a14fa",
+          "eed51009-4cfa-497c-87a1-cbf5a756f3da",
         ])
-        // .neq("id", "e0a50575-bcc1-474a-98b8-8f57770a14fa")
         .eq("status", "active")
         .order("serial_number", { ascending: true });
+      //.eq("id", "5451aaae-c632-46f4-9913-8670cffcc8e7")
+      // .eq("id", "e0a50575-bcc1-474a-98b8-8f57770a14fa")
+      // .eq("id", "eed51009-4cfa-497c-87a1-cbf5a756f3da")
 
       if (error) throw error;
 

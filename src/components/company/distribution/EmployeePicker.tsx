@@ -21,6 +21,7 @@ const EmployeePicker = ({
   const { employees, loading } = useEmployees();
   const [selectedId, setSelectedId] = useState("");
   const [percentage, setPercentage] = useState<number | "">("");
+  const [query, setQuery] = useState("");
 
   const available = employees.filter((e) => !existingIds.includes(e.id));
 
@@ -31,6 +32,11 @@ const EmployeePicker = ({
     onAdd(selectedId, emp.first_name, Number(percentage));
     onClose();
   };
+
+  const filtered = available.filter((emp) => {
+    const fullName = `${emp.first_name} ${emp.last_name}`;
+    return fullName.toLowerCase().includes(query.toLowerCase());
+  });
 
   return (
     <div
@@ -55,6 +61,16 @@ const EmployeePicker = ({
           </button>
         </div>
 
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="بحث عن موظف..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded border border-gray-300 px-2 py-1.5 text-right text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
         {/* Body */}
         {loading ? (
           <p className="text-xs text-gray-500 text-center py-4">
@@ -68,7 +84,7 @@ const EmployeePicker = ({
           <>
             {/* Employee list */}
             <div className="max-h-48 overflow-y-auto rounded border divide-y">
-              {available.map((emp) => (
+              {filtered.map((emp) => (
                 <button
                   key={emp.id}
                   type="button"
@@ -79,7 +95,7 @@ const EmployeePicker = ({
                       : "hover:bg-gray-50 text-gray-700"
                   }`}
                 >
-                  👤 {emp.first_name}
+                  👤 {emp.first_name} {emp.last_name}
                 </button>
               ))}
             </div>
