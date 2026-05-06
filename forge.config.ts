@@ -7,6 +7,7 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { PublisherGithub } from "@electron-forge/publisher-github";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
+import { MakerDMG } from "@electron-forge/maker-dmg";
 import path from "node:path";
 
 const config: ForgeConfig = {
@@ -20,6 +21,9 @@ const config: ForgeConfig = {
       setupIcon: path.resolve(__dirname, "assets", "icons", "icon.ico"),
     }),
     new MakerZIP({}, ["darwin"]),
+    new MakerDMG({
+      format: "ULFO",
+    }),
     new MakerRpm({}),
     new MakerDeb({}),
   ],
