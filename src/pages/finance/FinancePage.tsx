@@ -1,11 +1,4 @@
-import {
-  BookOpen,
-  Building2,
-  Calculator,
-  CreditCard,
-  Users,
-  Vault,
-} from "lucide-react";
+import { BookOpen, Building2, Users, Vault } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -13,13 +6,13 @@ const FinancePage = () => {
   const { user, loading } = useAuth();
 
   const menuItems: MenuItem[] = [
-    {
-      label: "المحاسبة",
-      icon: Calculator,
-      path: "/finance/accounting",
-      description: "إدارة الحسابات",
-      role: ["Admin", "Finance"],
-    },
+    // {
+    //   label: "المحاسبة",
+    //   icon: Calculator,
+    //   path: "/finance/accounting",
+    //   description: "إدارة الحسابات",
+    //   role: ["Admin", "Finance"],
+    // },
     {
       label: "مسك الدفاتر",
       icon: BookOpen,
@@ -34,20 +27,20 @@ const FinancePage = () => {
       description: "إدارة الخزينة",
       role: ["Admin", "Finance", "Treasurer"],
     },
-    {
-      label: "المدفوعات",
-      icon: CreditCard,
-      path: "/finance/payments",
-      description: "متابعة المدفوعات",
-      role: ["Admin", "Finance", "Bookkeeper"],
-    },
-    {
-      label: "الفواتير",
-      icon: Building2,
-      path: "/finance/invoices",
-      description: "بيانات الفواتير المالية",
-      role: ["Admin", "Finance", "Bookkeeper"],
-    },
+    // {
+    //   label: "المدفوعات",
+    //   icon: CreditCard,
+    //   path: "/finance/payments",
+    //   description: "متابعة المدفوعات",
+    //   role: ["Admin", "Finance", "Bookkeeper"],
+    // },
+    // {
+    //   label: "الفواتير",
+    //   icon: Building2,
+    //   path: "/finance/invoices",
+    //   description: "بيانات الفواتير المالية",
+    //   role: ["Admin", "Finance", "Bookkeeper"],
+    // },
     {
       label: "الشركة",
       icon: Building2,

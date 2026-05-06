@@ -1,30 +1,53 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Users, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  PackageOpen,
+  Paperclip,
+} from "lucide-react";
+import { useSidebar } from "../../contexts/SidebarContext";
 
 const OperationsLayout = () => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggle } = useSidebar();
 
   const menuItems = [
     {
-      title: "اداره الادوار",
-      icon: Users,
-      path: "/settings/roles",
-      description: "إدارة  الأدوار والصلاحيات",
+      title: "الخرائط",
+      icon: PackageOpen,
+      path: "/operations/maps",
+      description: "عرض وإدارة الخرائط",
+      role: [], // public
+    },
+    {
+      title: "العقود",
+      icon: Paperclip,
+      path: "/operations/contracts",
+      description: "إدارة العقود والملفات",
+      role: ["Admin"],
     },
   ];
 
   const { user, loading } = useAuth();
 
   const visibleItems = menuItems.filter((item) => {
-    const roles = (item as { role?: string[] }).role;
-    if (!roles || loading) return true;
-    if (!user || !user.role) return false;
+    const roles = item.role;
+
+    // Public item: no roles OR empty roles array
+    if (!roles || roles.length === 0) {
+      return true;
+    }
+
+    // While loading, you can either show everything or hide protected items
+    if (loading) {
+      return true; // or `false` if you prefer stricter UI during auth loading
+    }
+
+    if (!user?.role) return false;
+
     return roles.includes(user.role);
   });
-
   const isActivePath = (path: string) => {
     if (location.pathname === path) return true;
     return location.pathname.startsWith(path + "/");
@@ -50,7 +73,7 @@ const OperationsLayout = () => {
           )}
 
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={toggle}
             className={`absolute top-6 hover:bg-gray-100 rounded-full p-2 transition-all ${
               isCollapsed ? "left-1/2 -translate-x-1/2" : "left-4"
             }`}

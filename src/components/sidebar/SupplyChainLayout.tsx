@@ -1,5 +1,4 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import {
   Users,
@@ -9,10 +8,11 @@ import {
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
+import { useSidebar } from "../../contexts/SidebarContext";
 
 const SupplyChainLayout = () => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggle } = useSidebar();
 
   const menuItems = [
     {
@@ -96,7 +96,7 @@ const SupplyChainLayout = () => {
 
           {/* Collapse Toggle Button */}
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={toggle}
             className={`absolute top-6 hover:bg-gray-100 rounded-full p-2 transition-all ${
               isCollapsed ? "left-1/2 -translate-x-1/2" : "left-4"
             }`}

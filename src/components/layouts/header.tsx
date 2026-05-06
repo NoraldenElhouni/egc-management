@@ -8,7 +8,7 @@ const Header = () => {
   // Derive a simple page title from the current pathname (you can replace with real routing metadata)
   const titleFromPath = (path: string) => {
     if (path === "/") return "اللوحة الرئيسية";
-    if (path.startsWith("/dashboard")) return "لوحة القيادة";
+    if (path.startsWith("/dashboard")) return "لوحة التحكم";
     if (path.startsWith("/hr/employees/new")) return "إضافة موظف جديد";
     if (path.startsWith("/hr")) return "إدارة الموارد البشرية";
     if (path.startsWith("/crm")) return "إدارة علاقات العملاء";
@@ -31,7 +31,7 @@ const Header = () => {
   // Simple human-friendly labels for common route segments
   const segmentNames: Record<string, string> = {
     "": "اللوحة الرئيسية",
-    dashboard: "لوحة القيادة",
+    dashboard: "لوحة التحكم",
     hr: "الموارد البشرية",
     employees: "الموظفين",
     employee: "الموظف",
@@ -67,6 +67,10 @@ const Header = () => {
     roles: "الأدوار",
     specializations: "التخصصات",
     invoices: "الفواتير",
+    operations: "العمليات",
+    contracts: "العقود",
+    distribute: "توزيع نسبة",
+    history: "سجل",
   };
 
   return (

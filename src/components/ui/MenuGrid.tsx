@@ -45,8 +45,14 @@ const MenuGrid = ({
   const visibleItems = items.filter((item) => {
     if (loading) return false;
     if (item.disabled && !showDisabledItems) return false;
-    if (!item.role) return true;
+
+    // ✅ PUBLIC ITEM (no role OR empty role array)
+    if (!item.role || item.role.length === 0) return true;
+
+    // ❌ no user → hide restricted
     if (!userRole) return false;
+
+    // ✅ role match
     return item.role.includes(userRole);
   });
 

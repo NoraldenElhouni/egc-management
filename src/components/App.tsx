@@ -18,6 +18,7 @@ import FinanceRoutes from "./pages/FinanceRoutes";
 import SettingsRoutes from "./pages/SettingsRoutes";
 import CompanyRoutes from "./pages/CompanyRoutes";
 import OperationsRoutes from "./pages/OperationsRoutes";
+import { SidebarProvider } from "../contexts/SidebarContext";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -135,7 +136,9 @@ const AppRouter = () => {
 const App = () => (
   <Router>
     <AuthProvider>
-      <AppRouter />
+      <SidebarProvider>
+        <AppRouter />
+      </SidebarProvider>
     </AuthProvider>
   </Router>
 );

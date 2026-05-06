@@ -10,11 +10,12 @@ import {
   ChevronRight,
   Star,
 } from "lucide-react";
+import { useSidebar } from "../../contexts/SidebarContext";
 
 const BookkeeperLayout: React.FC = () => {
   const { projects, loading, error, refresh } = useProjects();
   const [query, setQuery] = useState("");
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggle } = useSidebar();
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const location = useLocation();
   const searchRef = useRef<number | null>(null);
@@ -60,6 +61,10 @@ const BookkeeperLayout: React.FC = () => {
     searchRef.current = window.setTimeout(() => setQuery((v) => v), 200);
   };
 
+  if (!projects) {
+    return <div>no project found</div>;
+  }
+
   const filtered = projects
     .filter((p) => {
       if (!query.trim()) return true;
@@ -93,7 +98,7 @@ const BookkeeperLayout: React.FC = () => {
     ];
 
     return expectedPaths.some(
-      (p) => location.pathname === p || location.pathname.startsWith(p + "/")
+      (p) => location.pathname === p || location.pathname.startsWith(p + "/"),
     );
   };
 
@@ -117,7 +122,7 @@ const BookkeeperLayout: React.FC = () => {
           )}
 
           <button
-            onClick={() => setIsCollapsed((s) => !s)}
+            onClick={toggle}
             className="absolute top-3 left-3 hover:bg-gray-100 rounded-full p-1"
             title={isCollapsed ? "توسيع" : "طي"}
           >
@@ -170,7 +175,7 @@ const BookkeeperLayout: React.FC = () => {
         <div className="flex-1 overflow-auto p-2 scrollbar-hide">
           {loading ? (
             <div className="space-y-2 animate-pulse p-2">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 20 }).map((_, i) => (
                 <div key={i} className="h-8 rounded-md bg-slate-100" />
               ))}
             </div>

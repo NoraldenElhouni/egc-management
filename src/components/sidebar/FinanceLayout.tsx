@@ -1,29 +1,27 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
 import {
-  Calculator,
   BookOpen,
   Vault,
-  CreditCard,
   Building2,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { useSidebar } from "../../contexts/SidebarContext";
 
 const FinanceLayout = () => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggle } = useSidebar();
   const { user, loading } = useAuth();
 
   const menuItems = [
-    {
-      title: "المحاسبة",
-      icon: Calculator,
-      path: "/finance/accounting",
-      description: "إدارة الحسابات",
-      role: ["Admin", "Finance"],
-    },
+    // {
+    //   title: "المحاسبة",
+    //   icon: Calculator,
+    //   path: "/finance/accounting",
+    //   description: "إدارة الحسابات",
+    //   role: ["Admin", "Finance"],
+    // },
     {
       title: "مسك الدفاتر",
       icon: BookOpen,
@@ -38,13 +36,13 @@ const FinanceLayout = () => {
       description: "إدارة الخزينة",
       role: ["Admin", "Finance", "Treasurer"],
     },
-    {
-      title: "المدفوعات",
-      icon: CreditCard,
-      path: "/finance/payments",
-      description: "متابعة المدفوعات",
-      role: ["Admin", "Finance", "Bookkeeper"],
-    },
+    // {
+    //   title: "المدفوعات",
+    //   icon: CreditCard,
+    //   path: "/finance/payments",
+    //   description: "متابعة المدفوعات",
+    //   role: ["Admin", "Finance", "Bookkeeper"],
+    // },
     {
       title: "الشركة",
       icon: Building2,
@@ -100,7 +98,7 @@ const FinanceLayout = () => {
 
           {/* Collapse Toggle Button */}
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={toggle}
             className={`absolute top-6 hover:bg-gray-100 rounded-full p-2 transition-all ${
               isCollapsed ? "left-1/2 -translate-x-1/2" : "left-4"
             }`}
