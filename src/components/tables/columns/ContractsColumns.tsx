@@ -65,7 +65,9 @@ export const ContractsColumns: ColumnDef<Contracts>[] = [
     header: "رقم العقد #",
     cell: ({ row }) => (
       <div className="font-bold">
-        <Link to={`/operations/contracts/${row.original.id}`}>
+        <Link
+          to={`/operations/contracts/${row.original.project_id}/${row.original.id}`}
+        >
           {row.original.id.slice(0, 8).toUpperCase()}
         </Link>
       </div>
