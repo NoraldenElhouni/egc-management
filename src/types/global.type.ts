@@ -25,16 +25,10 @@ export type Specializations = Tables<"specializations">;
 export type SpecializationCategories = Tables<"specialization_categories">;
 export type Contractors = Tables<"contractors">;
 export type Contracts = Tables<"contracts">;
-export type ContractItems = Tables<"contract_items">;
-export type ContractPayments = Tables<"contract_payments">;
 export type Projects = Tables<"projects">;
 export type Employees = Tables<"employees">;
 export type EmployeeCertifications = Tables<"employee_certifications">;
 export type EmployeesDocuments = Tables<"employee_documents">;
-export type Request = Tables<"requests">;
-export type Bid = Tables<"bids">;
-export type RequestItem = Tables<"request_items">;
-export type ContractReport = Tables<"contract_reports">;
 export type ProjectIncome = Tables<"project_incomes">;
 export type ProjectRefund = Tables<"project_refund">;
 export type Services = Tables<"services">;
@@ -43,9 +37,6 @@ export type Account = Tables<"accounts">;
 export type Users = Tables<"users">;
 export type Roles = Tables<"roles">;
 export type Permissions = Tables<"permissions">;
-export type Offers = Tables<"offers">;
-export type OfferItems = Tables<"offer_items">;
-export type BidItems = Tables<"bid_items">;
 export type Company = Tables<"company">;
 export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
@@ -72,6 +63,8 @@ export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
 
 export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
+
+//contracts
 
 // ------------------------------------------------------------
 // ✅ NEW: Types for PercentageDistribution periods

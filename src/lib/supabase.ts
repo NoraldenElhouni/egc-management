@@ -64,105 +64,6 @@ export type Database = {
           },
         ]
       }
-      bid_items: {
-        Row: {
-          bid_id: string
-          created_at: string
-          id: string
-          notes: string | null
-          price: number
-          quantity: number
-          request_item_id: string
-          total_price: number
-        }
-        Insert: {
-          bid_id: string
-          created_at?: string
-          id?: string
-          notes?: string | null
-          price: number
-          quantity: number
-          request_item_id: string
-          total_price: number
-        }
-        Update: {
-          bid_id?: string
-          created_at?: string
-          id?: string
-          notes?: string | null
-          price?: number
-          quantity?: number
-          request_item_id?: string
-          total_price?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bid_items_bid_id_fkey"
-            columns: ["bid_id"]
-            isOneToOne: false
-            referencedRelation: "bids"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bid_items_request_item_id_fkey"
-            columns: ["request_item_id"]
-            isOneToOne: false
-            referencedRelation: "request_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      bids: {
-        Row: {
-          contractor_id: string
-          created_at: string
-          days_needed: number | null
-          id: string
-          notes: string | null
-          request_id: string
-          status: string
-          total_price: number
-          updated_at: string
-        }
-        Insert: {
-          contractor_id: string
-          created_at?: string
-          days_needed?: number | null
-          id?: string
-          notes?: string | null
-          request_id: string
-          status: string
-          total_price: number
-          updated_at: string
-        }
-        Update: {
-          contractor_id?: string
-          created_at?: string
-          days_needed?: number | null
-          id?: string
-          notes?: string | null
-          request_id?: string
-          status?: string
-          total_price?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bids_contractor_id_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "bids_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clients: {
         Row: {
           created_at: string
@@ -421,196 +322,168 @@ export type Database = {
           },
         ]
       }
-      contract_items: {
+      contract_milestones: {
         Row: {
+          amount: number
+          completed_at: string | null
+          completed_by: string | null
           contract_id: string
           created_at: string
-          created_by: string
+          description: string | null
+          due_date: string | null
           id: string
-          price: number
-          quantity: number
-          service_id: string
-          total_price: number
-          unit: string
+          order_index: number
+          status: Database["public"]["Enums"]["milestone_status"]
+          title: string
         }
         Insert: {
+          amount: number
+          completed_at?: string | null
+          completed_by?: string | null
           contract_id: string
           created_at?: string
-          created_by: string
+          description?: string | null
+          due_date?: string | null
           id?: string
-          price: number
-          quantity?: number
-          service_id: string
-          total_price: number
-          unit: string
+          order_index?: number
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title: string
         }
         Update: {
+          amount?: number
+          completed_at?: string | null
+          completed_by?: string | null
           contract_id?: string
           created_at?: string
-          created_by?: string
+          description?: string | null
+          due_date?: string | null
           id?: string
-          price?: number
-          quantity?: number
-          service_id?: string
-          total_price?: number
-          unit?: string
+          order_index?: number
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title?: string
         }
         Relationships: [
           {
-            foreignKeyName: "contract_items_contract_id_fkey"
-            columns: ["contract_id"]
+            foreignKeyName: "contract_milestones_completed_by_fkey"
+            columns: ["completed_by"]
             isOneToOne: false
-            referencedRelation: "contracts"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contract_items_service_id_fkey"
-            columns: ["service_id"]
+            foreignKeyName: "contract_milestones_contract_fkey"
+            columns: ["contract_id"]
             isOneToOne: false
-            referencedRelation: "services"
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
         ]
       }
-      contract_payments: {
+      contractor_bid_items: {
         Row: {
-          amount: number
-          approved_by: string | null
-          contract_id: string
-          contractor_id: string | null
-          created_at: string
-          created_by: string
-          description: string | null
-          expense_id: string | null
+          bid_id: string
           id: string
-          project_id: string
-          status: string
-          updated_at: string | null
+          notes: string | null
+          quantity: number
+          request_item_id: string
+          total_price: number
+          unit: string
+          unit_price: number
         }
         Insert: {
-          amount?: number
-          approved_by?: string | null
-          contract_id: string
-          contractor_id?: string | null
-          created_at?: string
-          created_by: string
-          description?: string | null
-          expense_id?: string | null
+          bid_id: string
           id?: string
-          project_id: string
-          status?: string
-          updated_at?: string | null
+          notes?: string | null
+          quantity: number
+          request_item_id: string
+          total_price: number
+          unit?: string
+          unit_price: number
         }
         Update: {
-          amount?: number
-          approved_by?: string | null
-          contract_id?: string
-          contractor_id?: string | null
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          expense_id?: string | null
+          bid_id?: string
           id?: string
-          project_id?: string
-          status?: string
-          updated_at?: string | null
+          notes?: string | null
+          quantity?: number
+          request_item_id?: string
+          total_price?: number
+          unit?: string
+          unit_price?: number
         }
         Relationships: [
           {
-            foreignKeyName: "contract_payments_approved_by_fkey"
-            columns: ["approved_by"]
+            foreignKeyName: "contractor_bid_items_bid_fkey"
+            columns: ["bid_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "contractor_bids"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contract_payments_contract_id_fkey"
-            columns: ["contract_id"]
+            foreignKeyName: "contractor_bid_items_request_item_fkey"
+            columns: ["request_item_id"]
             isOneToOne: false
-            referencedRelation: "contracts"
+            referencedRelation: "work_request_items"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      contractor_bids: {
+        Row: {
+          contractor_id: string
+          days_needed: number
+          id: string
+          notes: string | null
+          request_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["bid_status"]
+          submitted_at: string
+          total_price: number
+        }
+        Insert: {
+          contractor_id: string
+          days_needed: number
+          id?: string
+          notes?: string | null
+          request_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["bid_status"]
+          submitted_at?: string
+          total_price: number
+        }
+        Update: {
+          contractor_id?: string
+          days_needed?: number
+          id?: string
+          notes?: string | null
+          request_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["bid_status"]
+          submitted_at?: string
+          total_price?: number
+        }
+        Relationships: [
           {
-            foreignKeyName: "contract_payments_contractor_id_fkey"
+            foreignKeyName: "contractor_bids_contractor_fkey"
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contract_payments_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "contractor_bids_request_fkey"
+            columns: ["request_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "work_requests"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contract_payments_expense_id_fkey"
-            columns: ["expense_id"]
-            isOneToOne: false
-            referencedRelation: "project_expenses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_payments_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contract_reports: {
-        Row: {
-          amount: number | null
-          contract_id: string
-          created_at: string
-          created_by: string
-          description: string | null
-          id: string
-          img_url: string | null
-          project_id: string
-        }
-        Insert: {
-          amount?: number | null
-          contract_id: string
-          created_at?: string
-          created_by: string
-          description?: string | null
-          id?: string
-          img_url?: string | null
-          project_id: string
-        }
-        Update: {
-          amount?: number | null
-          contract_id?: string
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          id?: string
-          img_url?: string | null
-          project_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contract_reports_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_reports_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "contractor_bids_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_reports_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -658,74 +531,87 @@ export type Database = {
       }
       contracts: {
         Row: {
-          amount: number
-          assigned_to: string | null
+          contractor_id: string
           created_at: string
           created_by: string
+          days_allocated: number
           end_date: string | null
           id: string
-          payment_schedule: string | null
+          notes: string | null
           project_id: string
-          specialization_id: string | null
+          request_id: string
           start_date: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["contract_status"]
+          total_amount: number
           updated_at: string
+          winning_bid_id: string
         }
         Insert: {
-          amount?: number
-          assigned_to?: string | null
+          contractor_id: string
           created_at?: string
           created_by: string
+          days_allocated: number
           end_date?: string | null
           id?: string
-          payment_schedule?: string | null
+          notes?: string | null
           project_id: string
-          specialization_id?: string | null
+          request_id: string
           start_date?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          total_amount: number
           updated_at?: string
+          winning_bid_id: string
         }
         Update: {
-          amount?: number
-          assigned_to?: string | null
+          contractor_id?: string
           created_at?: string
           created_by?: string
+          days_allocated?: number
           end_date?: string | null
           id?: string
-          payment_schedule?: string | null
+          notes?: string | null
           project_id?: string
-          specialization_id?: string | null
+          request_id?: string
           start_date?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          total_amount?: number
           updated_at?: string
+          winning_bid_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "contracts_assigned_to_fkey"
-            columns: ["assigned_to"]
+            foreignKeyName: "contracts_bid_fkey"
+            columns: ["winning_bid_id"]
+            isOneToOne: true
+            referencedRelation: "contractor_bids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_contractor_fkey"
+            columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "contracts_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contracts_project_id_fkey"
+            foreignKeyName: "contracts_project_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contracts_specialization_id_fkey"
-            columns: ["specialization_id"]
+            foreignKeyName: "contracts_request_fkey"
+            columns: ["request_id"]
             isOneToOne: false
-            referencedRelation: "specializations"
+            referencedRelation: "work_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1074,367 +960,167 @@ export type Database = {
         }
         Relationships: []
       }
-      maps_distribution_details: {
+      milestone_reports: {
         Row: {
-          amount: number
+          amount_done: number | null
+          contract_id: string
           created_at: string
-          distribution_type: string
-          employee_id: string | null
+          description: string | null
           id: string
-          map_item_id: string
-          percentage: number
+          img_path: string | null
+          milestone_id: string
+          submitted_by: string
         }
         Insert: {
-          amount: number
+          amount_done?: number | null
+          contract_id: string
           created_at?: string
-          distribution_type: string
-          employee_id?: string | null
+          description?: string | null
           id?: string
-          map_item_id: string
-          percentage: number
+          img_path?: string | null
+          milestone_id: string
+          submitted_by: string
         }
         Update: {
-          amount?: number
+          amount_done?: number | null
+          contract_id?: string
           created_at?: string
-          distribution_type?: string
-          employee_id?: string | null
+          description?: string | null
           id?: string
-          map_item_id?: string
-          percentage?: number
+          img_path?: string | null
+          milestone_id?: string
+          submitted_by?: string
         }
         Relationships: [
           {
-            foreignKeyName: "maps_distribution_details_employee_id_fkey"
-            columns: ["employee_id"]
+            foreignKeyName: "milestone_reports_contract_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestone_reports_milestone_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "contract_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestone_reports_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_requests: {
+        Row: {
+          amount: number
+          contract_id: string
+          contractor_id: string
+          created_at: string
+          decline_at: string | null
+          decline_reason: string | null
+          description: string | null
+          expense_id: string | null
+          id: string
+          milestone_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          project_id: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["payment_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          contract_id: string
+          contractor_id: string
+          created_at?: string
+          decline_at?: string | null
+          decline_reason?: string | null
+          description?: string | null
+          expense_id?: string | null
+          id?: string
+          milestone_id: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          project_id: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          contract_id?: string
+          contractor_id?: string
+          created_at?: string
+          decline_at?: string | null
+          decline_reason?: string | null
+          description?: string | null
+          expense_id?: string | null
+          id?: string
+          milestone_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          project_id?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_contract_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_contractor_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_expense_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "project_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_milestone_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "contract_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_project_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "maps_distribution_details_map_item_id_fkey"
-            columns: ["map_item_id"]
-            isOneToOne: false
-            referencedRelation: "maps_distribution_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maps_distribution_items: {
-        Row: {
-          created_at: string
-          distribution_id: string
-          id: string
-          price: number
-          quantity: number
-          total: number
-          type_id: string
-        }
-        Insert: {
-          created_at?: string
-          distribution_id: string
-          id?: string
-          price: number
-          quantity: number
-          total: number
-          type_id: string
-        }
-        Update: {
-          created_at?: string
-          distribution_id?: string
-          id?: string
-          price?: number
-          quantity?: number
-          total?: number
-          type_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maps_distribution_items_distribution_id_fkey"
-            columns: ["distribution_id"]
-            isOneToOne: false
-            referencedRelation: "maps_distributions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maps_distribution_items_type_id_fkey"
-            columns: ["type_id"]
-            isOneToOne: false
-            referencedRelation: "map_types"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maps_distributions: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string
-          id: string
-          project_id: string
-          total_amount: number
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description: string
-          id?: string
-          project_id: string
-          total_amount?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string
-          id?: string
-          project_id?: string
-          total_amount?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maps_distributions_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "payment_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maps_distributions_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      offer_items: {
-        Row: {
-          created_at: string
-          id: string
-          offer_id: string
-          price: number
-          quantity: number
-          service_id: string
-          total_price: number
-          unit: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          offer_id: string
-          price?: number
-          quantity?: number
-          service_id: string
-          total_price?: number
-          unit?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          offer_id?: string
-          price?: number
-          quantity?: number
-          service_id?: string
-          total_price?: number
-          unit?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "offer_items_offer_id_fkey"
-            columns: ["offer_id"]
-            isOneToOne: false
-            referencedRelation: "offers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "offer_items_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      offers: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          offer_type: string
-          pdf_url: string | null
-          percentage: number | null
-          project_id: string
-          status: string
-          total_price: number
-          type: string | null
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          offer_type?: string
-          pdf_url?: string | null
-          percentage?: number | null
-          project_id: string
-          status?: string
-          total_price?: number
-          type?: string | null
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          offer_type?: string
-          pdf_url?: string | null
-          percentage?: number | null
-          project_id?: string
-          status?: string
-          total_price?: number
-          type?: string | null
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "offers_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      order_items: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          order_id: string
-          quantity: number
-          service_id: string | null
-          total_price: number
-          unit: string
-          unit_price: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          order_id: string
-          quantity: number
-          service_id?: string | null
-          total_price?: number
-          unit?: string
-          unit_price?: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          order_id?: string
-          quantity?: number
-          service_id?: string | null
-          total_price?: number
-          unit?: string
-          unit_price?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_items_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_items_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      orders: {
-        Row: {
-          accepted_at: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          project_id: string | null
-          rejected_at: string | null
-          rejected_by: string | null
-          specialization_id: string | null
-          status: string
-          total_price: number | null
-          type: string | null
-          vendor_id: string | null
-        }
-        Insert: {
-          accepted_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          project_id?: string | null
-          rejected_at?: string | null
-          rejected_by?: string | null
-          specialization_id?: string | null
-          status?: string
-          total_price?: number | null
-          type?: string | null
-          vendor_id?: string | null
-        }
-        Update: {
-          accepted_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          project_id?: string | null
-          rejected_at?: string | null
-          rejected_by?: string | null
-          specialization_id?: string | null
-          status?: string
-          total_price?: number | null
-          type?: string | null
-          vendor_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_rejected_by_fkey"
-            columns: ["rejected_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -1590,7 +1276,6 @@ export type Database = {
         Row: {
           balance: number
           currency: Database["public"]["Enums"]["currency_type"]
-          held: number
           id: string
           maps: number
           project_id: string
@@ -1602,7 +1287,6 @@ export type Database = {
         Insert: {
           balance?: number
           currency: Database["public"]["Enums"]["currency_type"]
-          held?: number
           id?: string
           maps?: number
           project_id: string
@@ -1614,7 +1298,6 @@ export type Database = {
         Update: {
           balance?: number
           currency?: Database["public"]["Enums"]["currency_type"]
-          held?: number
           id?: string
           maps?: number
           project_id?: string
@@ -1636,7 +1319,6 @@ export type Database = {
       project_expenses: {
         Row: {
           amount_paid: number
-          contract_id: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -1662,7 +1344,6 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number
-          contract_id?: string | null
           contractor_id?: string | null
           created_at?: string
           created_by: string
@@ -1688,7 +1369,6 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
-          contract_id?: string | null
           contractor_id?: string | null
           created_at?: string
           created_by?: string
@@ -1713,13 +1393,6 @@ export type Database = {
           vendor_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "project_expenses_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "project_expenses_contractor_id_fkey"
             columns: ["contractor_id"]
@@ -2376,140 +2049,6 @@ export type Database = {
           },
         ]
       }
-      request_items: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          quantity: number
-          request_id: string
-          service_id: string
-          unit: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          quantity: number
-          request_id: string
-          service_id: string
-          unit: string
-          updated_at: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          quantity?: number
-          request_id?: string
-          service_id?: string
-          unit?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "request_items_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "requests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "request_items_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      requests: {
-        Row: {
-          accepted_at: string | null
-          assigned_to: string | null
-          category: string | null
-          created_at: string
-          created_by: string
-          end_date: string | null
-          id: string
-          mode: Database["public"]["Enums"]["contractor_mode"] | null
-          payment_schedule: string | null
-          project_id: string
-          rejected_at: string | null
-          rejected_by: string | null
-          specialization_id: string | null
-          start_date: string | null
-          status: string | null
-          updated_at: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          assigned_to?: string | null
-          category?: string | null
-          created_at?: string
-          created_by: string
-          end_date?: string | null
-          id?: string
-          mode?: Database["public"]["Enums"]["contractor_mode"] | null
-          payment_schedule?: string | null
-          project_id: string
-          rejected_at?: string | null
-          rejected_by?: string | null
-          specialization_id?: string | null
-          start_date?: string | null
-          status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          accepted_at?: string | null
-          assigned_to?: string | null
-          category?: string | null
-          created_at?: string
-          created_by?: string
-          end_date?: string | null
-          id?: string
-          mode?: Database["public"]["Enums"]["contractor_mode"] | null
-          payment_schedule?: string | null
-          project_id?: string
-          rejected_at?: string | null
-          rejected_by?: string | null
-          specialization_id?: string | null
-          start_date?: string | null
-          status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "requests_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_rejected_by_fkey"
-            columns: ["rejected_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       role_permissions: {
         Row: {
           permission_id: string
@@ -2600,6 +2139,548 @@ export type Database = {
           },
         ]
       }
+      shop_cart_items: {
+        Row: {
+          cart_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          product_size_id: string
+          quantity: number
+        }
+        Insert: {
+          cart_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_size_id: string
+          quantity?: number
+        }
+        Update: {
+          cart_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_size_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "shop_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_cart_items_product_size_id_fkey"
+            columns: ["product_size_id"]
+            isOneToOne: false
+            referencedRelation: "shop_product_sizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_carts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_carts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_carts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          division_id: string
+          icon_path: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          division_id: string
+          icon_path?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          division_id?: string
+          icon_path?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_categories_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "shop_divisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_divisions: {
+        Row: {
+          created_at: string
+          icon_path: string | null
+          id: string
+          name: string
+          specialization_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          icon_path?: string | null
+          id?: string
+          name: string
+          specialization_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          icon_path?: string | null
+          id?: string
+          name?: string
+          specialization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_divisions_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          notes: string | null
+          order_id: string
+          product_size_id: string | null
+          quantity: number
+          quoted_total: number | null
+          quoted_unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          order_id: string
+          product_size_id?: string | null
+          quantity: number
+          quoted_total?: number | null
+          quoted_unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          order_id?: string
+          product_size_id?: string | null
+          quantity?: number
+          quoted_total?: number | null
+          quoted_unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_size_id_fkey"
+            columns: ["product_size_id"]
+            isOneToOne: false
+            referencedRelation: "shop_product_sizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_order_vendor_quote_items: {
+        Row: {
+          id: string
+          notes: string | null
+          order_item_id: string
+          quantity: number
+          quote_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          order_item_id: string
+          quantity: number
+          quote_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          order_item_id?: string
+          quantity?: number
+          quote_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_vendor_quote_items_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "shop_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_vendor_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "shop_order_vendor_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_order_vendor_quotes: {
+        Row: {
+          attachment_url: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          ref_number: string | null
+          responded_at: string | null
+          status: string
+          total_price: number
+          vendor_id: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          ref_number?: string | null
+          responded_at?: string | null
+          status?: string
+          total_price?: number
+          vendor_id: string
+        }
+        Update: {
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          ref_number?: string | null
+          responded_at?: string | null
+          status?: string
+          total_price?: number
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_vendor_quotes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_vendor_quotes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          arrived_at: string | null
+          arrived_marked_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string
+          expense_id: string | null
+          id: string
+          note: string | null
+          project_id: string
+          quoted_at: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          specialization_id: string
+          status: string
+          total_price: number | null
+          vendor_id: string | null
+          vendor_ref: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          arrived_at?: string | null
+          arrived_marked_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by: string
+          expense_id?: string | null
+          id?: string
+          note?: string | null
+          project_id: string
+          quoted_at?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          specialization_id: string
+          status?: string
+          total_price?: number | null
+          vendor_id?: string | null
+          vendor_ref?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          arrived_at?: string | null
+          arrived_marked_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string
+          expense_id?: string | null
+          id?: string
+          note?: string | null
+          project_id?: string
+          quoted_at?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          specialization_id?: string
+          status?: string
+          total_price?: number | null
+          vendor_id?: string | null
+          vendor_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_orders_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_arrived_marked_by_fkey"
+            columns: ["arrived_marked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "project_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_sizes: {
+        Row: {
+          created_at: string
+          id: string
+          image_path: string | null
+          is_active: boolean
+          name: string
+          price: number
+          product_id: string
+          sku: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_path?: string | null
+          is_active?: boolean
+          name: string
+          price?: number
+          product_id: string
+          sku: string
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_path?: string | null
+          is_active?: boolean
+          name?: string
+          price?: number
+          product_id?: string
+          sku?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_product_sizes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          is_active: boolean
+          name: string
+          subcategory_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          is_active?: boolean
+          name: string
+          subcategory_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          is_active?: boolean
+          name?: string
+          subcategory_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "shop_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "shop_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       specialization_categories: {
         Row: {
           created_at: string
@@ -2621,7 +2702,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "categories_specialization_id_fkey"
+            foreignKeyName: "specialization_categories_specialization_id_fkey"
             columns: ["specialization_id"]
             isOneToOne: false
             referencedRelation: "specializations"
@@ -2928,6 +3009,128 @@ export type Database = {
           },
         ]
       }
+      work_request_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          quantity: number
+          request_id: string
+          service_id: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          quantity: number
+          request_id: string
+          service_id: string
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          quantity?: number
+          request_id?: string
+          service_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_request_items_request_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "work_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_request_items_service_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_requests: {
+        Row: {
+          bid_deadline: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          direct_contractor_id: string | null
+          id: string
+          mode: Database["public"]["Enums"]["work_request_mode"]
+          project_id: string
+          specialization_id: string
+          status: Database["public"]["Enums"]["work_request_status"]
+          title: string
+          updated_at: string
+          work_start_at: string | null
+        }
+        Insert: {
+          bid_deadline?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          direct_contractor_id?: string | null
+          id?: string
+          mode?: Database["public"]["Enums"]["work_request_mode"]
+          project_id: string
+          specialization_id: string
+          status?: Database["public"]["Enums"]["work_request_status"]
+          title: string
+          updated_at?: string
+          work_start_at?: string | null
+        }
+        Update: {
+          bid_deadline?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          direct_contractor_id?: string | null
+          id?: string
+          mode?: Database["public"]["Enums"]["work_request_mode"]
+          project_id?: string
+          specialization_id?: string
+          status?: Database["public"]["Enums"]["work_request_status"]
+          title?: string
+          updated_at?: string
+          work_start_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_requests_direct_contractor_fkey"
+            columns: ["direct_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_requests_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -3045,7 +3248,6 @@ export type Database = {
         }
         Returns: {
           amount_paid: number
-          contract_id: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -3095,7 +3297,6 @@ export type Database = {
         }
         Returns: {
           amount_paid: number
-          contract_id: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -3141,7 +3342,6 @@ export type Database = {
         }
         Returns: {
           amount_paid: number
-          contract_id: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -3184,7 +3384,6 @@ export type Database = {
         }
         Returns: {
           amount_paid: number
-          contract_id: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -3247,7 +3446,6 @@ export type Database = {
         }
         Returns: {
           amount_paid: number
-          contract_id: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -3281,8 +3479,8 @@ export type Database = {
     }
     Enums: {
       account_type: "cash" | "bank"
-      approval_type: "technical" | "finance"
-      contractor_mode: "open" | "direct"
+      bid_status: "pending" | "accepted" | "rejected" | "withdrawn"
+      contract_status: "active" | "completed" | "terminated" | "on_hold"
       currency_type: "LYD" | "USD" | "EUR"
       employee_type: "intern" | "contractor" | "part-time" | "full-time"
       expense_status:
@@ -3295,17 +3493,10 @@ export type Database = {
         | "deleted"
       expense_type: "material" | "labor" | "maps"
       fund_type: "client" | "internal" | "sale" | "refund" | "other"
-      offer_approvals_type: "pending" | "approved" | "rejected"
-      offer_status:
-        | "draft"
-        | "sent"
-        | "responded"
-        | "technically_approved"
-        | "finance_approved"
-        | "rejected"
-      offer_type: "request" | "proposal"
+      milestone_status: "pending" | "in_progress" | "completed" | "approved"
       owner_type: "employee" | "project" | "company" | "contractor"
       payment_method: "cash" | "bank"
+      payment_request_status: "pending" | "approved" | "declined" | "paid"
       payment_type: "cash" | "cheque" | "transfer" | "deposit" | "bank"
       percentage_log_type: "expense" | "refund"
       phase_type: "construction" | "finishing" | "initial"
@@ -3313,6 +3504,13 @@ export type Database = {
       projects_type: "construction" | "consulting"
       transaction_type: "debit" | "credit"
       user_status_enum: "active" | "inactive" | "on leave" | "on holiday"
+      work_request_mode: "open" | "direct"
+      work_request_status:
+        | "draft"
+        | "open"
+        | "bidding"
+        | "awarded"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3441,8 +3639,8 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["cash", "bank"],
-      approval_type: ["technical", "finance"],
-      contractor_mode: ["open", "direct"],
+      bid_status: ["pending", "accepted", "rejected", "withdrawn"],
+      contract_status: ["active", "completed", "terminated", "on_hold"],
       currency_type: ["LYD", "USD", "EUR"],
       employee_type: ["intern", "contractor", "part-time", "full-time"],
       expense_status: [
@@ -3456,18 +3654,10 @@ export const Constants = {
       ],
       expense_type: ["material", "labor", "maps"],
       fund_type: ["client", "internal", "sale", "refund", "other"],
-      offer_approvals_type: ["pending", "approved", "rejected"],
-      offer_status: [
-        "draft",
-        "sent",
-        "responded",
-        "technically_approved",
-        "finance_approved",
-        "rejected",
-      ],
-      offer_type: ["request", "proposal"],
+      milestone_status: ["pending", "in_progress", "completed", "approved"],
       owner_type: ["employee", "project", "company", "contractor"],
       payment_method: ["cash", "bank"],
+      payment_request_status: ["pending", "approved", "declined", "paid"],
       payment_type: ["cash", "cheque", "transfer", "deposit", "bank"],
       percentage_log_type: ["expense", "refund"],
       phase_type: ["construction", "finishing", "initial"],
@@ -3475,6 +3665,8 @@ export const Constants = {
       projects_type: ["construction", "consulting"],
       transaction_type: ["debit", "credit"],
       user_status_enum: ["active", "inactive", "on leave", "on holiday"],
+      work_request_mode: ["open", "direct"],
+      work_request_status: ["draft", "open", "bidding", "awarded", "cancelled"],
     },
   },
 } as const
