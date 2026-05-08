@@ -4,10 +4,9 @@ import {
   Contractors,
   Contracts,
   Specializations,
-  WorkRequests,
-} from "../../types/global.type";
-import { supabase } from "../../lib/supabaseClient";
-import { RequestForm } from "../../types/schema/contracts.schema";
+} from "../../../types/global.type";
+import { supabase } from "../../../lib/supabaseClient";
+import { RequestForm } from "../../../types/schema/contracts.schema";
 
 export type Service = {
   id: string;
@@ -51,38 +50,6 @@ export function useContracts(projectId: string) {
   }, []);
 
   return { contracts, loading, error };
-}
-
-export function useWorkRequests(projectId: string) {
-  const [workRequests, setWorkRequests] = useState<WorkRequests[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PostgrestError | null>(null);
-
-  useEffect(() => {
-    async function fetchWorkRequests() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("work_requests")
-          .select("*")
-          .eq("project_id", projectId);
-
-        if (error) {
-          console.error("error fetching work requests", error);
-          setError(error);
-        } else {
-          setWorkRequests(data ?? []);
-        }
-      } catch (err) {
-        console.error("unexpected error fetching work requests", err);
-        setError(err as PostgrestError);
-      }
-      setLoading(false);
-    }
-    fetchWorkRequests();
-  }, [projectId]); // ✅ re-runs when projectId changes
-
-  return { workRequests, loading, error };
 }
 
 export function useSpecializations() {

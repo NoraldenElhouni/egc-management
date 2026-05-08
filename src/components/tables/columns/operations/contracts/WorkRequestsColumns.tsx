@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { Database } from "../../../lib/supabase";
-import { WorkRequests } from "../../../types/global.type";
+import { Database } from "../../../../../lib/supabase";
+import { WorkRequests } from "../../../../../types/global.type";
 
 type WorkRequestStatus = Database["public"]["Enums"]["work_request_status"];
 type WorkRequestMode = Database["public"]["Enums"]["work_request_mode"];

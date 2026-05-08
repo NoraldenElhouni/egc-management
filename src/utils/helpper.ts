@@ -34,15 +34,22 @@ export function formatCurrency(amount: number, currency = "LYD"): string {
   }).format(amount);
 }
 
-export function formatDate(dateString: string | undefined): string {
-  const date = new Date(dateString || "");
+export function formatDate(dateString: string | undefined | null): string {
+  if (!dateString) return "-";
+
+  const date = new Date(dateString);
+
+  // check invalid date
+  if (isNaN(date.getTime())) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("ar-LY", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date);
 }
-
 export const normalizeUuid = (v?: string | null) =>
   v && v.trim() ? v : undefined;
 export const normalizeText = (v?: string | null) =>

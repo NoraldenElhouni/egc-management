@@ -1,6 +1,5 @@
 import {
   Employees,
-  ContractPayments,
   EmployeeCertifications,
   EmployeesDocuments,
   UserRoles,
@@ -20,8 +19,6 @@ import {
   PaymentMethod,
   ProjectPercentageLogs,
   CompanyExpensePayments,
-  Contracts,
-  ContractReport,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -32,12 +29,6 @@ export type FullProject = Projects & {
 
 export type ProjectExpenseWithName = ProjectExpenses & {
   projects: { name: string };
-};
-
-export type ContractPaymentWithRelations = ContractPayments & {
-  employee: Employees | null;
-  contractors: { first_name: string; last_name: string } | null;
-  contracts: { projects: { name: string } } | null;
 };
 
 // Project related types (export these for use elsewhere)
@@ -68,7 +59,7 @@ export type projectExpensePayments = ExpensePayments & {
 
 export type FullProjectFinance = Projects & {
   project_expenses: (projectExpensePayments & {
-    contract_payments: ContractPaymentWithRelations[];
+    contract_payments: string[];
   })[];
   project_incomes: projectExpensePayments[];
   accounts: Account[] | null;
@@ -112,10 +103,4 @@ export interface ProjectPercentageLogWithAssignments extends Projects {
 
 export interface CompanyPaymentsWithUser extends CompanyExpensePayments {
   users: Users | null;
-}
-
-export interface FullContractReport extends ContractReport {
-  contracts: Contracts;
-  projects: { name: string };
-  employees: { first_name: string; last_name: string };
 }

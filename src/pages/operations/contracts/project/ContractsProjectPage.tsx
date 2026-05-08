@@ -1,15 +1,13 @@
 import React from "react";
-import {
-  useContracts,
-  useWorkRequests,
-} from "../../../../hooks/operations/useContracts";
+import { useContracts } from "../../../../hooks/operations/contracts/useContracts";
 import { useParams } from "react-router-dom";
 import LoadingPage from "../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../components/ui/errorPage";
 import GenericTable from "../../../../components/tables/table";
-import { ContractsColumns } from "../../../../components/tables/columns/ContractsColumns";
+import { ContractsColumns } from "../../../../components/tables/columns/operations/contracts/ContractsColumns";
 import Separator from "../../../../components/ui/separator";
-import { WorkRequestsColumns } from "../../../../components/tables/columns/WorkRequestsColumns";
+import { WorkRequestsColumns } from "../../../../components/tables/columns/operations/contracts/WorkRequestsColumns";
+import { useWorkRequests } from "../../../../hooks/operations/contracts/requests/useRequests";
 
 const ContractsProjectPage = () => {
   const { projectId } = useParams<{ projectId: string }>();

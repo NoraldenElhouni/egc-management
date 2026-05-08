@@ -1,8 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { formatCurrency } from "../../../utils/helpper";
-import { Database } from "../../../lib/supabase";
-import { Contracts } from "../../../types/global.type";
+import { formatCurrency } from "../../../../../utils/helpper";
+import { Database } from "../../../../../lib/supabase";
+import { Contracts } from "../../../../../types/global.type";
 
 type ContractStatus = Database["public"]["Enums"]["contract_status"];
 

@@ -3,7 +3,7 @@ import { Contractors, Specializations } from "../../../types/global.type";
 import {
   Service,
   useCreateRequest,
-} from "../../../hooks/operations/useContracts";
+} from "../../../hooks/operations/contracts/useContracts";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -193,7 +193,7 @@ const NewContractForm = ({
 }: NewContractFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
-  const { createRequest, error, loading } = useCreateRequest();
+  const { createRequest, loading } = useCreateRequest();
   const navigate = useNavigate();
 
   const {

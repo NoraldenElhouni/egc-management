@@ -26,6 +26,9 @@ export type SpecializationCategories = Tables<"specialization_categories">;
 export type Contractors = Tables<"contractors">;
 export type Contracts = Tables<"contracts">;
 export type WorkRequests = Tables<"work_requests">;
+export type ContractorBids = Tables<"contractor_bids">;
+
+export type WorkRequestsItems = Tables<"work_request_items">;
 export type Projects = Tables<"projects">;
 export type Employees = Tables<"employees">;
 export type EmployeeCertifications = Tables<"employee_certifications">;

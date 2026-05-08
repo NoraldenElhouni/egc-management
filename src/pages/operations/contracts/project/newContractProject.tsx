@@ -4,7 +4,7 @@ import {
   useContractors,
   useServicesBySpecialization,
   useSpecializations,
-} from "../../../../hooks/operations/useContracts";
+} from "../../../../hooks/operations/contracts/useContracts";
 import { useParams } from "react-router-dom";
 
 const newContractProject = () => {
