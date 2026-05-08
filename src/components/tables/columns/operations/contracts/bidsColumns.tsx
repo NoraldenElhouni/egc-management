@@ -1,6 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { RequestBids } from "../../../../../types/contracts.type";
+import { formatCurrency, formatDate } from "../../../../../utils/helpper";
 
 const statusStyles: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
@@ -64,9 +65,7 @@ export const BidsColumns: ColumnDef<RequestBids>[] = [
     accessorKey: "total_price",
     header: "السعر الإجمالي",
     cell: ({ getValue }) => (
-      <span className="font-medium">
-        {getValue<number>().toLocaleString("ar-SA")} ر.س
-      </span>
+      <span className="font-medium">{formatCurrency(getValue<number>())}</span>
     ),
   },
 
@@ -81,11 +80,7 @@ export const BidsColumns: ColumnDef<RequestBids>[] = [
     header: "تاريخ التقديم",
     cell: ({ getValue }) => (
       <span className="text-sm text-gray-600">
-        {new Date(getValue<string>()).toLocaleDateString("ar-SA", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })}
+        {formatDate(getValue<string>())}
       </span>
     ),
   },

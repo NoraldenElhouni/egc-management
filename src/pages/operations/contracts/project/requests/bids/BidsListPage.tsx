@@ -1,5 +1,5 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useWorkRequest } from "../../../../../../hooks/operations/contracts/requests/useRequests";
+import { Link, useParams } from "react-router-dom";
+import { useBidsByRequest } from "../../../../../../hooks/operations/contracts/requests/useRequests";
 import LoadingPage from "../../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../../components/ui/errorPage";
 import Button from "../../../../../../components/ui/Button";
@@ -11,15 +11,10 @@ import GenericTable from "../../../../../../components/tables/table";
 import { BidsColumns } from "../../../../../../components/tables/columns/operations/contracts/bidsColumns";
 
 const BidsListPage = () => {
-  const navigate = useNavigate();
-  const { projectId, requestId } = useParams<{
-    projectId: string;
-    requestId: string;
-  }>();
+  const { requestId } = useParams<{ requestId: string }>();
 
-  // ✅ Hook must be called unconditionally — moved before the early return
   const { error, loading, workRequest, bids, lowestBid, highestBid } =
-    useWorkRequest(requestId ?? "");
+    useBidsByRequest(requestId ?? "");
 
   if (!requestId) {
     return (
@@ -29,114 +24,106 @@ const BidsListPage = () => {
     );
   }
 
-  if (loading) {
-    return <LoadingPage label="Loading project details..." />;
-  }
-
-  if (error) {
+  if (loading) return <LoadingPage label="جاري تحميل العروض..." />;
+  if (error)
     return (
-      <ErrorPage
-        label="حدث خطأ أثناء تحميل بيانات المشروع"
-        error={error.message}
-      />
+      <ErrorPage label="حدث خطأ أثناء تحميل البيانات" error={error.message} />
     );
-  }
 
+  const canClose =
+    workRequest?.status === "open" || workRequest?.status === "bidding";
   return (
-    <div className="p-6">
-      <div className="flex justify-between">
+    <div className="p-6 space-y-4">
+      {/* header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold mb-6">العروض المستلمة</h1>
-          <h4 className="text-sm font-semibold mb-6 text-gray-500">
-            طلب: {workRequest?.title} - {workRequest?.projects.name} -{" "}
-            <span>{workRequest?.status}</span>
-          </h4>
-        </div>
-        <div>
-          <Button variant="primary-outline">إغلاق الطلب</Button>
-        </div>
-      </div>
-
-      <div>
-        <OverviewStatus
-          stats={[
-            {
-              label: "العروض المستلمة",
-              value: String(workRequest?.bids_count ?? 0),
-              icon: Hash,
-              iconBgColor: "bg-blue-100",
-              iconColor: "text-blue-600",
-            },
-            {
-              label: "أقل عرض",
-              value: lowestBid !== null ? formatCurrency(lowestBid) : "—",
-              icon: TrendingDown,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
-            },
-            {
-              label: "أعلى عرض",
-              value: highestBid !== null ? formatCurrency(highestBid) : "—",
-              icon: TrendingUp,
-              iconBgColor: "bg-red-100",
-              iconColor: "text-red-600",
-            },
-            {
-              label: "آخر موعد للعروض",
-              value: formatDate(workRequest?.bid_deadline),
-              icon: Calendar,
-              iconBgColor: "bg-orange-100",
-              iconColor: "text-orange-600",
-            },
-          ]}
-        />
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm p-6 flex justify-between items-center">
-        <div>
-          <p>
-            {workRequest?.title} - {workRequest?.projects.name}
-          </p>
-          <div className="flex items-center flex-wrap gap-2 mt-1 text-sm text-gray-500">
-            {workRequest?.mode === "open" ? (
-              <StatusBadge.Open label="مفتوح — جميع المقاولين" />
-            ) : (
-              <StatusBadge.Direct label="خاص — لمقاول واحد" />
-            )}
-
-            <span>·</span>
-
-            <Badge
-              label={workRequest?.specializations.name ?? "-"}
-              variant="outline"
-            />
-
-            <span>·</span>
-
-            <Badge
-              label={`${workRequest?.work_request_items.length ?? 0} بنود`}
-              variant="default"
-            />
-
-            <span>·</span>
-
-            <Badge label={workRequest?.projects.name ?? "-"} variant="info" />
+          <h1 className="text-2xl font-semibold">العروض المستلمة</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-sm text-gray-500">
+              {workRequest?.title} · {workRequest?.projects.name}
+            </span>
+            {workRequest?.status === "open" && <StatusBadge.Bidding />}
+            {workRequest?.status === "awarded" && <StatusBadge.Awarded />}
+            {workRequest?.status === "cancelled" && <StatusBadge.Cancelled />}
+            {workRequest?.status === "draft" && <StatusBadge.Pending />}
+            {workRequest?.status === "bidding" && <StatusBadge.Bidding />}
           </div>
         </div>
-        <div>
-          <Button onClick={() => navigate(-1)}>تفاصيل الطلب</Button>
+        <div className="flex items-center gap-3">
+          <Link to=".." relative="path">
+            <Button variant="primary-outline">تفاصيل الطلب</Button>
+          </Link>
+          {canClose && <Button variant="error">إغلاق الطلب</Button>}
         </div>
       </div>
 
-      <div>
-        <GenericTable
-          data={bids ?? []}
-          columns={BidsColumns}
-          enableSorting
-          enableFiltering
-          showGlobalFilter
-        />
+      {/* stats */}
+      <OverviewStatus
+        stats={[
+          {
+            label: "العروض المستلمة",
+            value: workRequest?.bids_count ?? 0,
+            icon: Hash,
+            iconBgColor: "bg-blue-100",
+            iconColor: "text-blue-600",
+          },
+          {
+            label: "أقل عرض",
+            value: lowestBid !== null ? formatCurrency(lowestBid) : "—",
+            icon: TrendingDown,
+            iconBgColor: "bg-green-100",
+            iconColor: "text-green-600",
+          },
+          {
+            label: "أعلى عرض",
+            value: highestBid !== null ? formatCurrency(highestBid) : "—",
+            icon: TrendingUp,
+            iconBgColor: "bg-red-100",
+            iconColor: "text-red-600",
+          },
+          {
+            label: "آخر موعد للعروض",
+            value: formatDate(workRequest?.bid_deadline),
+            icon: Calendar,
+            iconBgColor: "bg-orange-100",
+            iconColor: "text-orange-600",
+          },
+        ]}
+      />
+
+      {/* request info card */}
+      <div className="bg-white rounded-lg shadow-sm p-5">
+        <p className="text-xs text-gray-400 mb-2 font-medium">معلومات الطلب</p>
+        <p className="font-semibold text-gray-900 mb-2">
+          {workRequest?.title} — {workRequest?.projects.name}
+        </p>
+        <div className="flex items-center flex-wrap gap-2">
+          {workRequest?.mode === "open" ? (
+            <StatusBadge.Open label="مفتوح — جميع المقاولين" />
+          ) : (
+            <StatusBadge.Direct label="خاص — لمقاول واحد" />
+          )}
+          <Badge
+            label={workRequest?.specializations.name ?? "—"}
+            variant="purple"
+          />
+
+          <Badge
+            label={`${workRequest?.work_request_items.length ?? 0} بنود`}
+          />
+
+          <Badge label={workRequest?.projects.name ?? "—"} />
+        </div>
       </div>
+
+      {/* bids table */}
+      <GenericTable
+        data={bids ?? []}
+        columns={BidsColumns}
+        enableSorting
+        enableFiltering
+        showGlobalFilter
+      />
     </div>
   );
 };

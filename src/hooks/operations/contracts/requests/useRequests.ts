@@ -36,7 +36,7 @@ export function useWorkRequests(projectId: string) {
   return { workRequests, loading, error };
 }
 
-export function useWorkRequest(requestId: string) {
+export function useBidsByRequest(requestId: string) {
   const [workRequest, setWorkRequest] = useState<RequestPage | null>(null);
   const [bids, setBids] = useState<RequestBids[] | null>([]);
   const [loading, setLoading] = useState(false);
@@ -103,4 +103,103 @@ export function useWorkRequest(requestId: string) {
   }, [requestId]);
 
   return { workRequest, bids, lowestBid, highestBid, loading, error };
+}
+
+export interface WorkRequestItem {
+  id: string;
+  request_id: string;
+  quantity: number;
+  unit: string;
+  description: string | null;
+  created_at: string;
+  services: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface WorkRequestDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  mode: "open" | "direct";
+  status: string;
+  bid_deadline: string | null;
+  work_start_at: string | null;
+  created_at: string;
+  bids_count: number;
+  projects: { name: string };
+  specializations: { name: string };
+  work_request_items: WorkRequestItem[];
+  employees: {
+    first_name: string;
+    last_name: string | null;
+  };
+  contractors: {
+    id: string;
+    first_name: string;
+    last_name: string | null;
+    phone_number: string | null;
+  } | null; // null when mode is "open"
+}
+
+export function useWorkRequest(requestId: string) {
+  const [workRequest, setWorkRequest] = useState<WorkRequestDetail | null>(
+    null,
+  );
+  const [bids, setBids] = useState<RequestBids[] | null>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    if (!requestId) return;
+
+    async function fetch() {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("work_requests")
+          .select(
+            `*,
+            projects(name),
+            specializations(name),
+            contractor_bids(count),
+            work_request_items(*, services(id, name)),
+            employees!work_requests_created_by_fkey(first_name, last_name),
+            contractors!work_requests_direct_contractor_fkey(id, first_name, last_name, phone_number)`,
+          )
+          .eq("id", requestId)
+          .single();
+
+        if (error) {
+          setError(error);
+        } else {
+          setWorkRequest({
+            ...data,
+            bids_count:
+              (data.contractor_bids as { count: number }[])[0]?.count ?? 0,
+          });
+        }
+
+        const { data: bidsData, error: bidError } = await supabase
+          .from("contractor_bids")
+          .select("*, contractors(first_name, last_name)")
+          .eq("request_id", requestId);
+
+        if (bidError) {
+          console.error("error fetching bids", bidError);
+          setError(bidError);
+        } else {
+          setBids(bidsData);
+        }
+      } catch (err) {
+        setError(err as PostgrestError);
+      }
+      setLoading(false);
+    }
+
+    fetch();
+  }, [requestId]);
+
+  return { workRequest, loading, error, bids };
 }
