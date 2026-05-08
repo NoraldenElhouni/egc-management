@@ -8,7 +8,7 @@ const InfoRow = ({ label, value, bordered = true }: InfoRowProps) => {
   return (
     <div
       className={`
-        flex items-center justify-between py-5
+        flex items-center justify-between py-2
         ${bordered ? "border-b border-gray-200" : ""}
       `}
     >

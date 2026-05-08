@@ -51,10 +51,7 @@ export const BidsColumns: ColumnDef<RequestBids>[] = [
     accessorFn: (row) =>
       `${row.contractors.first_name} ${row.contractors.last_name ?? ""}`,
     cell: ({ row }) => (
-      <Link
-        to={`/contractors/${row.original.contractor_id}`}
-        className="font-medium hover:underline"
-      >
+      <Link to={`./${row.original.id}`} className="font-medium hover:underline">
         {row.original.contractors.first_name}{" "}
         {row.original.contractors.last_name ?? ""}
       </Link>
