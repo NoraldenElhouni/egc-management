@@ -19,6 +19,7 @@ const ProjectsDistributePage = () => {
   const [distributedProjects, setDistributedProjects] = useState<
     DistributionProject[] | null
   >(null);
+  const [invalidProjectIds, setInvalidProjectIds] = useState<string[]>([]);
 
   const { projects, loading, error, submitDistribution, refetch } =
     useProjectsDistribute();
@@ -146,7 +147,11 @@ const ProjectsDistributePage = () => {
 
       {step === 1 && <StepOneProjectDistribute projects={safeProjects} />}
       {step === 2 && (
-        <StepTwoProjectDistribute projects={safeProjects} onRefetch={refetch} />
+        <StepTwoProjectDistribute
+          projects={safeProjects}
+          onRefetch={refetch}
+          onValidationChange={setInvalidProjectIds} // ← NEW
+        />
       )}
       {step === 3 && (
         <StepThreeProjectDistribute
@@ -171,9 +176,24 @@ const ProjectsDistributePage = () => {
 
         {step < maxStep ? (
           <button
-            onClick={() => setStep((p) => Math.min(p + 1, maxStep))}
-            disabled={isSubmitting}
-            className="px-4 py-2 rounded-md text-white bg-blue-500 hover:bg-blue-600"
+            onClick={() => {
+              if (step === 2 && invalidProjectIds.length > 0) return; // guard
+              setStep((p) => Math.min(p + 1, maxStep));
+            }}
+            disabled={
+              isSubmitting || (step === 2 && invalidProjectIds.length > 0)
+            }
+            className={[
+              "px-4 py-2 rounded-md text-white",
+              step === 2 && invalidProjectIds.length > 0
+                ? "bg-blue-200 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600",
+            ].join(" ")}
+            title={
+              step === 2 && invalidProjectIds.length > 0
+                ? "يرجى تصحيح نسب التوزيع أولاً"
+                : undefined
+            }
           >
             التالي
           </button>

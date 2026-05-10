@@ -10,23 +10,38 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { MakerDMG } from "@electron-forge/maker-dmg";
 import path from "node:path";
 
+const isMac = process.platform === "darwin";
+const isWindows = process.platform === "win32";
+const isLinux = process.platform === "linux";
+
+const makers = [
+  ...(isWindows
+    ? [
+        new MakerSquirrel({
+          setupIcon: path.resolve(__dirname, "assets", "icons", "icon.ico"),
+        }),
+      ]
+    : []),
+
+  ...(isMac
+    ? [
+        new MakerDMG({
+          format: "ULFO",
+        }),
+        new MakerZIP({}, ["darwin"]),
+      ]
+    : []),
+
+  ...(isLinux ? [new MakerDeb({}), new MakerRpm({})] : []),
+];
+
 const config: ForgeConfig = {
   packagerConfig: {
-    icon: path.resolve(__dirname, "assets", "icons", "icon"), // بدون امتداد
+    icon: path.resolve(__dirname, "assets", "icons", "icon"),
     asar: true,
   },
   rebuildConfig: {},
-  makers: [
-    new MakerSquirrel({
-      setupIcon: path.resolve(__dirname, "assets", "icons", "icon.ico"),
-    }),
-    new MakerZIP({}, ["darwin"]),
-    new MakerDMG({
-      format: "ULFO",
-    }),
-    new MakerRpm({}),
-    new MakerDeb({}),
-  ],
+  makers,
 
   publishers: [
     new PublisherGithub({
@@ -41,11 +56,8 @@ const config: ForgeConfig = {
 
   plugins: [
     new VitePlugin({
-      // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
-      // If you are familiar with Vite configuration, it will look really familiar.
       build: [
         {
-          // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
           entry: "src/main.ts",
           config: "vite.main.config.ts",
           target: "main",
@@ -63,8 +75,6 @@ const config: ForgeConfig = {
         },
       ],
     }),
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,

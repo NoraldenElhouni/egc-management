@@ -44,13 +44,13 @@ const MainMenu = () => {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      role: ["Admin", "Finance", "Bookkeeper", "Accountant"],
+      role: ["Admin", "Finance", "Bookkeeper", "Accountant", "Manager"],
     },
     {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      role: ["Manager", "Admin"],
+      role: ["Manager"],
     },
     {
       label: "الإعدادات",
@@ -63,13 +63,6 @@ const MainMenu = () => {
       icon: PackageOpen,
       path: "/operations",
     },
-    // { label: "الملف الشخصي", icon: User, path: "/profile" },
-    // {
-    //   label: "الموقع الإلكتروني",
-    //   icon: Globe,
-    //   path: "/website",
-    //   role: ["Admin", "Manager"],
-    // },
   ];
 
   // Filter menu items based on the user's role. If an item has no `role` field it is public.
