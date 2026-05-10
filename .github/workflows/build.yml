@@ -1,15 +1,16 @@
-name: Build Electron (Windows + macOS)
+# .github/workflows/publish.yml
+name: Publish
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - "v*"
 
 jobs:
-  make:
+  publish:
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -25,15 +26,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build distributables
-        run: npm run make
+      - name: Publish
+        run: npm run publish
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_SERVICE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_KEY }}
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: out-make-${{ matrix.os }}
-          path: out/make/**
