@@ -1,5 +1,5 @@
 import { PostgrestError } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Contractors,
   Contracts,
@@ -19,6 +19,57 @@ export type Service = {
     name: string;
   } | null;
 };
+
+export interface ContractMilestone {
+  id: string;
+  contract_id: string;
+  title: string;
+  description: string | null;
+  amount: number;
+  due_date: string | null;
+  status: "pending" | "in_progress" | "completed" | "approved";
+  order_index: number;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface PaymentRequest {
+  id: string;
+  amount: number;
+  description: string | null;
+  status: "pending" | "approved" | "declined" | "paid";
+  payment_method: string | null;
+  created_at: string;
+  contract_milestones: { title: string };
+  employees: { first_name: string; last_name: string | null };
+}
+
+export interface ContractDetail {
+  id: string;
+  total_amount: number;
+  days_allocated: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: "active" | "completed" | "on_hold" | "terminated";
+  notes: string | null;
+  created_at: string;
+  projects: { name: string; code: string };
+  work_requests: {
+    id: string;
+    title: string;
+    specializations: { name: string };
+  };
+  contractors: {
+    id: string;
+    first_name: string;
+    last_name: string | null;
+    phone_number: string | null;
+    email: string | null;
+  };
+  employees: { first_name: string; last_name: string | null };
+  contract_milestones: ContractMilestone[];
+  payment_requests: PaymentRequest[];
+}
 
 export function useContracts(projectId: string) {
   const [contracts, setContracts] = useState<Contracts[]>([]);
@@ -207,4 +258,82 @@ export function useCreateRequest() {
   }
 
   return { createRequest, loading, error };
+}
+
+export function useContractDetails(contractId: string) {
+  const [contract, setContract] = useState<ContractDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    if (!contractId) return;
+    async function fetch() {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("contracts")
+          .select(
+            `*,
+            projects(name, code),
+            work_requests(id, title, specializations(name)),
+            contractors(id, first_name, last_name, phone_number, email),
+            employees!contracts_created_by_fkey(first_name, last_name),
+            contract_milestones(*),
+            payment_requests(
+              *,
+              contract_milestones(title),
+              employees!payment_requests_requested_by_fkey(first_name, last_name)
+            )`,
+          )
+          .eq("id", contractId)
+          .single();
+
+        if (error) setError(error);
+        else setContract(data);
+      } catch (err) {
+        setError(err as PostgrestError);
+      }
+      setLoading(false);
+    }
+    fetch();
+  }, [contractId]);
+
+  const totalPaid = useMemo(
+    () =>
+      contract?.payment_requests
+        .filter((p) => p.status === "approved" || p.status === "paid")
+        .reduce((sum, p) => sum + p.amount, 0) ?? 0,
+    [contract],
+  );
+
+  const totalRemaining = useMemo(
+    () => (contract ? contract.total_amount - totalPaid : 0),
+    [contract, totalPaid],
+  );
+
+  const completedMilestones = useMemo(
+    () =>
+      contract?.contract_milestones.filter((m) => m.status === "completed")
+        .length ?? 0,
+    [contract],
+  );
+
+  const daysRemaining = useMemo(() => {
+    if (!contract?.end_date) return null;
+    const diff = Math.ceil(
+      (new Date(contract.end_date).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24),
+    );
+    return diff > 0 ? diff : 0;
+  }, [contract]);
+
+  return {
+    contract,
+    loading,
+    error,
+    totalPaid,
+    totalRemaining,
+    completedMilestones,
+    daysRemaining,
+  };
 }

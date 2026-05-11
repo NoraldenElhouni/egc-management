@@ -26,11 +26,11 @@ export default function EmployeeDetailsPage() {
       label: "تفاصيل الموظف",
       content: <EmployeeDetails employee={employee} onUpdated={refetch} />,
     },
-    {
-      id: "salary-details",
-      label: "تفاصيل الرواتب",
-      content: <SalaryDetails payroll={employee.payroll} />,
-    },
+    // {
+    //   id: "salary-details",
+    //   label: "تفاصيل الرواتب",
+    //   content: <SalaryDetails payroll={employee.payroll} />,
+    // },
     {
       id: "documents",
       label: "الوثائق",

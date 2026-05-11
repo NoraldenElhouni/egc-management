@@ -53,7 +53,7 @@ const FinancePage = () => {
       icon: Users,
       path: "/finance/payroll",
       description: "إدارة الرواتب",
-      role: ["Admin", "Finance"],
+      role: ["Manager"],
     },
     {
       label: "اضافة مشاريع",

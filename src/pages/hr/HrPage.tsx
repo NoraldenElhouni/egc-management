@@ -25,7 +25,7 @@ const HrPage = () => {
       icon: DollarSign,
       path: "/hr/payroll",
       description: "الرواتب والتعويضات",
-      role: ["Admin", "Manager"],
+      role: ["Manager"],
     },
     // {
     //   label: "القروض والسلف",

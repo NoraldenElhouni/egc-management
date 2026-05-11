@@ -28,18 +28,18 @@ const ProjectsLayout = () => {
       path: "/projects/new",
       description: "إضافة مشروع جديد",
     },
-    {
-      title: "التقارير",
-      icon: BarChart3,
-      path: "/projects/reports",
-      description: "تقارير المشاريع",
-    },
-    {
-      title: "المستندات",
-      icon: FileText,
-      path: "/projects/documents",
-      description: "مستندات المشاريع",
-    },
+    // {
+    //   title: "التقارير",
+    //   icon: BarChart3,
+    //   path: "/projects/reports",
+    //   description: "تقارير المشاريع",
+    // },
+    // {
+    //   title: "المستندات",
+    //   icon: FileText,
+    //   path: "/projects/documents",
+    //   description: "مستندات المشاريع",
+    // },
     {
       title: "الفريق",
       icon: Users,

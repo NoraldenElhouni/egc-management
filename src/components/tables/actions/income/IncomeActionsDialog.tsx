@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Button from "../../../ui/Button";
 import { useIncome } from "../../../../hooks/projects/useIncome";
+import { ProjectIncome } from "../../../../types/global.type";
+import PrintDepositButton from "../../../PrintDepositButton";
 
 type Props = {
   projectId: string;
@@ -178,6 +180,8 @@ export function IncomeActionsDialog({ projectId, incomeId }: Props) {
             ) : (
               <>
                 <div className="mt-4 grid gap-2">
+                  <PrintDepositButton incomeId={incomeId} />
+
                   {/* <Button onClick={handleEdit} variant="secondary">تعديل</Button> */}
                   <Button onClick={openConfirm} variant="error">
                     حذف
