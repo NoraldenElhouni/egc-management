@@ -69,7 +69,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
     return {
       serial_number: project.serial_number,
       invoice_date: today,
-      client_name: `${project.client.first_name} ${project.client.last_name}`,
+      client_name: project.name,
       project_location: project.address,
       start_date: today,
       end_date: today,
