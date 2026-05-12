@@ -16,7 +16,7 @@ const CompanyPage = () => {
     {
       label: "مراجعة النسب",
       icon: Book,
-      path: "/company/distribute/history",
+      path: "/company/distribute/batches",
       role: ["Admin", "Manager"],
     },
     {

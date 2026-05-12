@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   useProjectsDistribute,
   DistributionProject,
+  DistributionProgress,
 } from "../../hooks/projects/useProjectsDistribute";
 import { supabase } from "../../lib/supabaseClient";
 import LoadingPage from "../../components/ui/LoadingPage";
@@ -12,10 +13,113 @@ import StepThreeProjectDistribute from "../../components/company/StepThreeProjec
 import StepOneProjectDistribute from "../../components/company/SetpOneProjectDistibute";
 import SharesPdfButton from "../../components/pdf-buttons/SharesPdfButton";
 
+// ─── Progress Checklist Overlay ───────────────────────────────────────────────
+
+function DistributionProgressOverlay({
+  items,
+}: {
+  items: DistributionProgress[];
+}) {
+  const done = items.filter((i) => i.status === "done").length;
+  const total = items.length;
+  const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  return (
+    <div className="p-4 flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="bg-white rounded-xl border shadow-sm p-8 max-w-md w-full space-y-5">
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <div className="text-3xl animate-pulse">⚙️</div>
+          <h2 className="text-lg font-bold text-gray-800">جاري التوزيع...</h2>
+          <p className="text-xs text-gray-400">
+            يرجى الانتظار وعدم إغلاق الصفحة
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+          <div
+            className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <p className="text-xs text-center text-gray-500">
+          {done} / {total} مكتمل
+        </p>
+
+        {/* Checklist */}
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          {items.map((item) => (
+            <div
+              key={item.projectId}
+              className={[
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                item.status === "processing"
+                  ? "bg-blue-50 border border-blue-200"
+                  : item.status === "done"
+                    ? "bg-gray-50"
+                    : item.status === "error"
+                      ? "bg-red-50 border border-red-200"
+                      : "bg-white",
+              ].join(" ")}
+            >
+              {/* Icon */}
+              <span className="w-5 text-center shrink-0">
+                {item.status === "done" && (
+                  <span className="text-green-500">✓</span>
+                )}
+                {item.status === "processing" && (
+                  <span className="inline-block animate-spin text-blue-500">
+                    ◌
+                  </span>
+                )}
+                {item.status === "pending" && (
+                  <span className="text-gray-300">○</span>
+                )}
+                {item.status === "error" && (
+                  <span className="text-red-500">✕</span>
+                )}
+              </span>
+
+              {/* Name */}
+              <span
+                className={[
+                  "flex-1 truncate",
+                  item.status === "done"
+                    ? "text-gray-400 line-through"
+                    : item.status === "processing"
+                      ? "text-blue-700 font-semibold"
+                      : item.status === "error"
+                        ? "text-red-600"
+                        : "text-gray-500",
+                ].join(" ")}
+              >
+                {item.projectName}
+              </span>
+
+              {/* Badge */}
+              {item.status === "processing" && (
+                <span className="text-xs text-blue-400 shrink-0">
+                  معالجة...
+                </span>
+              )}
+              {item.status === "error" && (
+                <span className="text-xs text-red-400 shrink-0">خطأ</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 const ProjectsDistributePage = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Holds the snapshot of projects that were just distributed — used for PDF
+  const [progress, setProgress] = useState<DistributionProgress[]>([]);
   const [distributedProjects, setDistributedProjects] = useState<
     DistributionProject[] | null
   >(null);
@@ -43,6 +147,7 @@ const ProjectsDistributePage = () => {
 
     try {
       setIsSubmitting(true);
+      setProgress([]); // reset from any previous run
 
       const {
         data: { user },
@@ -52,14 +157,17 @@ const ProjectsDistributePage = () => {
         return;
       }
 
-      const result = await submitDistribution(projects, user.id);
+      const result = await submitDistribution(
+        projects,
+        user.id,
+        setProgress, // ← pass the progress callback
+      );
 
       if (!result.success) {
         window.alert(`حدث خطأ: ${result.error}`);
         return;
       }
 
-      // Save snapshot for PDF, then show success screen
       setDistributedProjects([...projects]);
     } catch (e) {
       console.error(e);
@@ -71,6 +179,7 @@ const ProjectsDistributePage = () => {
 
   const handleReset = () => {
     setDistributedProjects(null);
+    setProgress([]);
     setStep(1);
   };
 
@@ -85,11 +194,15 @@ const ProjectsDistributePage = () => {
 
   const safeProjects = projects ?? [];
 
+  // ── Progress overlay (while submitting) ───────────────────────────────────
+  if (isSubmitting && progress.length > 0) {
+    return <DistributionProgressOverlay items={progress} />;
+  }
+
   // ── Success screen ────────────────────────────────────────────────────────
   if (distributedProjects) {
     return (
       <div className="p-4 flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        {/* Success card */}
         <div className="bg-white rounded-xl border shadow-sm p-8 max-w-md w-full text-center space-y-4">
           <div className="text-5xl">✅</div>
           <h2 className="text-xl font-bold text-gray-800">
@@ -150,7 +263,7 @@ const ProjectsDistributePage = () => {
         <StepTwoProjectDistribute
           projects={safeProjects}
           onRefetch={refetch}
-          onValidationChange={setInvalidProjectIds} // ← NEW
+          onValidationChange={setInvalidProjectIds}
         />
       )}
       {step === 3 && (
@@ -177,7 +290,7 @@ const ProjectsDistributePage = () => {
         {step < maxStep ? (
           <button
             onClick={() => {
-              if (step === 2 && invalidProjectIds.length > 0) return; // guard
+              if (step === 2 && invalidProjectIds.length > 0) return;
               setStep((p) => Math.min(p + 1, maxStep));
             }}
             disabled={
