@@ -85,23 +85,24 @@ const ContractDetailsPage = () => {
           </h4>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            to={`../../requests/${contract.work_requests.id}`}
-            relative="path"
-          >
+          <Link to={`../requests/${contract.work_requests.id}`} relative="path">
             <Button size="sm" variant="primary-outline">
               <FileText className="w-4 h-4 ml-2" />
               تفاصيل الطلب
             </Button>
           </Link>
-          <Button size="sm">
-            <Plus className="w-4 h-4 ml-2" />
-            إضافة مرحلة
-          </Button>
-          <Button size="sm">
-            <Wallet className="w-4 h-4 ml-2" />
-            طلب دفعة
-          </Button>
+          <Link to={"./milestones/new"}>
+            <Button size="sm">
+              <Plus className="w-4 h-4 ml-2" />
+              إضافة مرحلة
+            </Button>
+          </Link>
+          <Link to={"./payments/new"}>
+            <Button size="sm">
+              <Wallet className="w-4 h-4 ml-2" />
+              طلب دفعة
+            </Button>
+          </Link>
         </div>
       </div>
 

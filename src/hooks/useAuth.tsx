@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 import { authService } from "../services/authService";
 import { UserData } from "../lib/userStorage";
@@ -39,18 +40,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(localUser);
         setLoading(false);
 
-        // Optional: Verify session in background
+        // Verify session in background — but don't wipe user on network errors
         authService
           .refreshUserData()
           .then((refreshedUser) => {
             if (refreshedUser) {
+              // Got fresh data — update the user
               setUser(refreshedUser);
+            } else {
+              // refreshUserData returned null — session is truly gone, safe to logout
+              setUser(null);
+              authService.logout();
             }
           })
-          .catch(() => {
-            // Session invalid, clear everything
-            setUser(null);
-            authService.logout();
+          .catch((err) => {
+            // Network error, timeout, or Supabase hiccup — keep the local session
+            // Do NOT clear the user here; they are still logged in locally
+            console.warn(
+              "Background refresh failed, keeping local session:",
+              err,
+            );
           });
       } else {
         setLoading(false);
@@ -61,20 +70,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
-    const userData = await authService.login(email, password);
-    setUser(userData);
-  };
-
-  const logout = async () => {
-    await authService.logout();
-    setUser(null);
-  };
-
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     const userData = await authService.refreshUserData();
     setUser(userData);
-  };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await authService.logout();
+    setUser(null);
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const userData = await authService.login(email, password);
+    setUser(userData);
+  }, []);
 
   return (
     <AuthContext.Provider

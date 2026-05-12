@@ -1,6 +1,5 @@
 import { Routes, Route } from "react-router-dom";
 
-// Existing pages
 import OperationsPage from "../../pages/operations/OperationsPage";
 import OperationsMapsPage from "../../pages/operations/mpas/OperationsMapsPage";
 import OperationsMapsProjectPage from "../../pages/operations/mpas/project/OperationsMapsProjectPage";
@@ -12,20 +11,15 @@ import ContractDetailsPage from "../../pages/operations/contracts/project/contra
 import OperationsLayout from "../sidebar/OperationsLayout";
 import BidDetailPage from "../../pages/operations/contracts/project/requests/bids/BidDetailPage";
 import BidsListPage from "../../pages/operations/contracts/project/requests/bids/BidsListPage";
+import NewMilestonePage from "../../pages/operations/contracts/project/contract/milestones/NewMilestonePage";
+import EditMilestonePage from "../../pages/operations/contracts/project/contract/milestones/EditMilestonePage";
+import MilestoneReportsPage from "../../pages/operations/contracts/project/contract/milestones/MilestoneReportsPage";
+import ContractPaymentLogPage from "../../pages/operations/contracts/project/contract/payments/ContractPaymentLogPage";
+import NewPaymentRequestPage from "../../pages/operations/contracts/project/contract/payments/NewPaymentRequestPage";
 
 // // ── Requests ──────────────────────────────────────────────────────────────────
 // // TODO: create these pages
-// import EditRequestPage from "../../pages/operations/contracts/project/requests/EditRequestPage";
-// import BidsListPage from "../../pages/operations/contracts/project/requests/bids/BidsListPage";
-// import BidDetailPage from "../../pages/operations/contracts/project/requests/bids/BidDetailPage";
-
-// // ── Contract ──────────────────────────────────────────────────────────────────
-// // TODO: create these pages
-// import NewMilestonePage from "../../pages/operations/contracts/project/contract/milestones/NewMilestonePage";
-// import EditMilestonePage from "../../pages/operations/contracts/project/contract/milestones/EditMilestonePage";
-// import MilestoneReportsPage from "../../pages/operations/contracts/project/contract/milestones/MilestoneReportsPage";
-// import ContractPaymentLogPage from "../../pages/operations/contracts/project/contract/payments/ContractPaymentLogPage";
-// import NewPaymentRequestPage from "../../pages/operations/contracts/project/contract/payments/NewPaymentRequestPage";
+// import EditRequestPage from "../../pages/operations/contracts/project/requests/EditRequestPage"
 
 export default function OperationsRoutes() {
   return (
@@ -81,7 +75,7 @@ export default function OperationsRoutes() {
         />
 
         {/* ── Milestones ──────────────────────────────────────────────────── */}
-        {/* <Route
+        <Route
           path="contracts/project/:projectId/:contractId/milestones/new"
           element={<NewMilestonePage />}
         />
@@ -92,17 +86,17 @@ export default function OperationsRoutes() {
         <Route
           path="contracts/project/:projectId/:contractId/milestones/:milestoneId/reports"
           element={<MilestoneReportsPage />}
-        /> */}
+        />
 
         {/* ── Payments (per contract) ──────────────────────────────────────── */}
-        {/* <Route
+        <Route
           path="contracts/project/:projectId/:contractId/payments"
           element={<ContractPaymentLogPage />}
         />
         <Route
           path="contracts/project/:projectId/:contractId/payments/new"
           element={<NewPaymentRequestPage />}
-        /> */}
+        />
       </Route>
     </Routes>
   );

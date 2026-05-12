@@ -41,24 +41,24 @@ export const authService = {
 
     let userRole = null;
     if (roleData?.role_id) {
-      const { data, error: userRoleError } = await supabase
+      const { data: roleNameData, error: userRoleError } = await supabase
         .from("roles")
         .select("name")
         .eq("id", roleData.role_id)
         .single();
-      userRole = data;
+      userRole = roleNameData;
       if (userRoleError) {
         console.error("User role fetch error:", userRoleError);
       }
     }
 
-    // 3. Prepare user data
+    // 3. Prepare user data — fix: avoid "undefined undefined" name
     const userData: UserData = {
       id: data.user.id,
       name:
-        `${profile?.first_name} ${profile?.last_name}` ||
-        data.user.email?.split("@")[0] ||
-        "User",
+        profile?.first_name || profile?.last_name
+          ? `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim()
+          : (data.user.email?.split("@")[0] ?? "User"),
       role: userRole?.name || "user",
       email: data.user.email,
       first_login: profile?.first_login || false,
@@ -119,12 +119,13 @@ export const authService = {
       console.error("User role fetch error:", userRoleError);
     }
 
+    // fix: avoid "undefined undefined" name
     const userData: UserData = {
       id: user.id,
       name:
-        `${profile?.first_name} ${profile?.last_name}` ||
-        user.email?.split("@")[0] ||
-        "User",
+        profile?.first_name || profile?.last_name
+          ? `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim()
+          : (user.email?.split("@")[0] ?? "User"),
       role: userRole?.name || "user",
       email: user.email,
       first_login: profile?.first_login || false,

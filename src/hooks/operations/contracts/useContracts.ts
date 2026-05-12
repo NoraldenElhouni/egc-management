@@ -114,7 +114,8 @@ export function useSpecializations() {
       try {
         const { data, error } = await supabase
           .from("specializations")
-          .select("*");
+          .select("*")
+          .eq("role_id", "20606a44-1f4b-4e0a-af58-abc553b70bc0");
 
         if (error) {
           console.error("error fetching specializations", error);
@@ -221,6 +222,7 @@ export function useCreateRequest() {
         mode: values.bid_mode,
         created_by: user?.id ?? "",
         work_start_at: values.work_start_at,
+        status: "open",
         direct_contractor_id:
           values.bid_mode === "direct"
             ? values.direct_contractor_id // 👈 only sent if direct

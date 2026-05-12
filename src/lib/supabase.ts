@@ -64,6 +64,53 @@ export type Database = {
           },
         ]
       }
+      attachments: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          file_name: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          file_name?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          file_name?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -1229,7 +1276,7 @@ export type Database = {
           id: string
           percentage: number
           project_id: string
-          project_role_id: string
+          project_role_id: string | null
           user_id: string
         }
         Insert: {
@@ -1237,7 +1284,7 @@ export type Database = {
           id?: string
           percentage?: number
           project_id: string
-          project_role_id: string
+          project_role_id?: string | null
           user_id: string
         }
         Update: {
@@ -1245,7 +1292,7 @@ export type Database = {
           id?: string
           percentage?: number
           project_id?: string
-          project_role_id?: string
+          project_role_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1254,13 +1301,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_assignments_project_role_id_fkey"
-            columns: ["project_role_id"]
-            isOneToOne: false
-            referencedRelation: "project_roles"
             referencedColumns: ["id"]
           },
           {
