@@ -243,10 +243,13 @@ const ContractDetailsPage = () => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-semibold text-gray-900">المراحل</h2>
-          <Button size="sm">
-            <Plus className="w-4 h-4 ml-2" />
-            إضافة مرحلة
-          </Button>
+
+          <Link to={"./milestones/new"}>
+            <Button size="sm">
+              <Plus className="w-4 h-4 ml-2" />
+              إضافة مرحلة
+            </Button>
+          </Link>
         </div>
         <Separator />
         <GenericTable
@@ -260,10 +263,12 @@ const ContractDetailsPage = () => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-semibold text-gray-900">سجل طلبات الدفع</h2>
-          <Button size="sm">
-            <Wallet className="w-4 h-4 ml-2" />
-            طلب دفعة
-          </Button>
+          <Link to={"./payments/new"}>
+            <Button size="sm">
+              <Wallet className="w-4 h-4 ml-2" />
+              طلب دفعة
+            </Button>
+          </Link>
         </div>
         <Separator />
         <GenericTable
