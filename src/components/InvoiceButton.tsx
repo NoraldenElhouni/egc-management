@@ -124,6 +124,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           serial_number: i.serial_number,
           amount: r(i.amount ?? 0),
           method: i.payment_method === "bank" ? "بنك" : "كاش",
+          description: i.description,
           date: i.income_date,
         })),
     };

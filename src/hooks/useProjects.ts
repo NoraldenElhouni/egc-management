@@ -80,7 +80,6 @@ export function useProjects() {
       (["USD", "EUR", "LYD"] as const).map((currency) => ({
         project_id: data.id,
         balance: 0,
-        held: 0,
         currency,
       }));
 
