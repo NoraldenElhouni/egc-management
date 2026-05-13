@@ -69,7 +69,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
     return {
       serial_number: project.serial_number,
       invoice_date: today,
-      client_name: project.name,
+      project_name: project.name,
       project_location: project.address,
       start_date: today,
       end_date: today,
@@ -92,6 +92,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           name: e.description,
           serial_number: e.serial_number,
           total_price: r(e.total_amount ?? 0),
+          date: e.expense_date,
         })),
 
       labors: lydExpenses
@@ -102,6 +103,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           contractor_name: e.contract_name ?? "غير معروف",
           serial_number: e.serial_number,
           total_price: r(e.total_amount ?? 0),
+          date: e.expense_date,
         })),
 
       refund: project.project_refund
@@ -111,6 +113,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           name: rf.description,
           serial_number: rf.serial_number,
           amount: r(rf.amount ?? 0),
+          date: rf.income_date,
         })),
 
       deposit: project.project_incomes
@@ -120,6 +123,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           name: i.client_name,
           serial_number: i.serial_number,
           amount: r(i.amount ?? 0),
+          date: i.income_date,
         })),
     };
   };

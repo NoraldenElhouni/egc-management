@@ -19,6 +19,7 @@ import SettingsRoutes from "./pages/SettingsRoutes";
 import CompanyRoutes from "./pages/CompanyRoutes";
 import OperationsRoutes from "./pages/OperationsRoutes";
 import { SidebarProvider } from "../contexts/SidebarContext";
+import { UpdateProvider } from "../contexts/Updateprovider";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -136,9 +137,11 @@ const AppRouter = () => {
 const App = () => (
   <Router>
     <AuthProvider>
-      <SidebarProvider>
-        <AppRouter />
-      </SidebarProvider>
+      <UpdateProvider>
+        <SidebarProvider>
+          <AppRouter />
+        </SidebarProvider>
+      </UpdateProvider>
     </AuthProvider>
   </Router>
 );
