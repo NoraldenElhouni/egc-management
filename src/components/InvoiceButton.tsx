@@ -123,6 +123,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           name: i.client_name,
           serial_number: i.serial_number,
           amount: r(i.amount ?? 0),
+          method: i.payment_method === "bank" ? "بنك" : "كاش",
           date: i.income_date,
         })),
     };
