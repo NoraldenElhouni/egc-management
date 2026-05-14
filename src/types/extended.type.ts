@@ -19,6 +19,7 @@ import {
   PaymentMethod,
   ProjectPercentageLogs,
   CompanyExpensePayments,
+  Contractors,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -103,4 +104,14 @@ export interface ProjectPercentageLogWithAssignments extends Projects {
 
 export interface CompanyPaymentsWithUser extends CompanyExpensePayments {
   users: Users | null;
+}
+
+export interface contractorWithSpecializations extends Contractors {
+  users: {
+    id: string;
+    user_specializations: {
+      specialization_id: string;
+      user_id: string;
+    }[];
+  } | null;
 }

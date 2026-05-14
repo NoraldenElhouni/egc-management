@@ -54,8 +54,8 @@ const AppRouter = () => {
           console.error("❌ Failed to refresh user data:", error);
         }
       },
-      60 * 60 * 1000,
-    ); // 1 hour = 60 minutes * 60 seconds * 1000 milliseconds
+      5 * 60 * 1000,
+    ); // 5 minutes = 10 minutes * 60 seconds * 1000 milliseconds
 
     return () => clearInterval(interval);
   }, [session, refreshUser]);
@@ -69,7 +69,7 @@ const AppRouter = () => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
         const timeSinceLastRefresh = Date.now() - lastRefresh;
-        const fifteenMinutes = 15 * 60 * 1000;
+        const fifteenMinutes = 5 * 60 * 1000;
 
         // Only refresh if it's been more than 15 minutes
         if (timeSinceLastRefresh > fifteenMinutes) {

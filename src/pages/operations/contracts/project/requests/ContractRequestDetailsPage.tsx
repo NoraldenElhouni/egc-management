@@ -22,6 +22,7 @@ import { WorkRequestItemsColumns } from "../../../../../components/tables/column
 import { useWorkRequest } from "../../../../../hooks/operations/contracts/requests/useRequests";
 import LoadingPage from "../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../components/ui/errorPage";
+import AttachmentsPreview from "../../../../../components/ui/AttachmentsPreview";
 
 const timelineSteps = (
   workRequest: NonNullable<ReturnType<typeof useWorkRequest>["workRequest"]>,
@@ -316,6 +317,13 @@ const ContractRequestDetailsPage = () => {
             columns={WorkRequestItemsColumns}
             enableSorting
           />
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">المرفقات</h2>
+
+          <Separator />
+
+          <AttachmentsPreview attachments={workRequest.attachments ?? []} />
         </div>
       </div>
     </div>

@@ -65,6 +65,7 @@ export type UserPermissions = Tables<"user_permissions">;
 export type UserRoles = Tables<"user_roles">;
 export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
+export type Attachments = Tables<"attachments">;
 
 export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
 

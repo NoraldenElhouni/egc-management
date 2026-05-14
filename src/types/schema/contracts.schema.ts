@@ -16,6 +16,11 @@ export const requestSchemaValues = z
     work_start_at: z.string(),
     bid_mode: z.enum(["open", "direct"]),
     direct_contractor_id: z.string().uuid().nullable().optional(), // 👈 add this
+    contact_name: z.string().trim().min(1, "اسم جهة التواصل مطلوب"),
+    contact_phone: z.string().trim().min(1, "رقم التواصل مطلوب"),
+    delay_penalty_terms: z.string().trim().min(1, "شرط غرامة التأخير مطلوب"),
+    retention_terms: z.string().trim().min(1, "شرط الاستقطاع / الضمان مطلوب"),
+    contractor_provides_materials: z.boolean(),
     items: z.array(requestItemsSchema).min(1, "يجب إضافة بند واحد على الأقل"),
   })
   .superRefine((data, ctx) => {

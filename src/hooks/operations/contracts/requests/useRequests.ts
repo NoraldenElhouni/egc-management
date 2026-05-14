@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { WorkRequests } from "../../../../types/global.type";
+import { Attachments, WorkRequests } from "../../../../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../../lib/supabaseClient";
 import { RequestBids, RequestPage } from "../../../../types/contracts.type";
@@ -141,6 +141,7 @@ export interface WorkRequestDetail {
     last_name: string | null;
     phone_number: string | null;
   } | null; // null when mode is "open"
+  attachments: Attachments[];
 }
 
 export function useWorkRequest(requestId: string) {
@@ -174,8 +175,15 @@ export function useWorkRequest(requestId: string) {
         if (error) {
           setError(error);
         } else {
+          const { data: attachmentsData } = await supabase
+            .from("attachments")
+            .select("*")
+            .eq("entity_type", "work_request")
+            .eq("entity_id", requestId);
+
           setWorkRequest({
             ...data,
+            attachments: attachmentsData ?? [],
             bids_count:
               (data.contractor_bids as { count: number }[])[0]?.count ?? 0,
           });

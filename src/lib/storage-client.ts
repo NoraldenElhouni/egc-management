@@ -16,7 +16,6 @@ interface UploadFileOptions {
   entityId: string;
 
   title?: string;
-  uploadedBy: string;
 
   isPublic?: boolean;
 }
@@ -26,7 +25,6 @@ export async function uploadFile({
   entityType,
   entityId,
   title,
-  uploadedBy,
   bucket = "attachments",
   isPublic = false,
 }: UploadFileOptions) {
@@ -59,8 +57,16 @@ export async function uploadFile({
     url = data.publicUrl;
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("no user");
+  }
+
   // save attachment record
-  const { data: attachment, error: dbError } = await await supabase
+  const { data: attachment, error: dbError } = await supabase
     .from("attachments")
     .insert([
       {
@@ -71,7 +77,7 @@ export async function uploadFile({
         file_path: path,
         mime_type: file.type,
         file_size: file.size,
-        uploaded_by: uploadedBy,
+        uploaded_by: user?.id,
       },
     ])
     .select("*")

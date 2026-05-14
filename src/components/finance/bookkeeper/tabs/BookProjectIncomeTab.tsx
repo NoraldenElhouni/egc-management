@@ -30,13 +30,7 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
       0,
     ) || 0;
 
-  const totalHeld =
-    project?.project_balances?.reduce(
-      (acc, balance) => acc + (balance.held || 0),
-      0,
-    ) || 0;
-
-  const totalAvailable = totalBalance - totalHeld;
+  const totalAvailable = totalBalance;
   return (
     <div className="space-y-4">
       <div>
@@ -81,13 +75,7 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
               ) ?? 0,
             ),
           },
-          {
-            label: "الرصيد المحتجز",
-            value: formatCurrency(totalHeld),
-            icon: Activity,
-            iconBgColor: "bg-orange-100",
-            iconColor: "text-orange-600",
-          },
+
           {
             label: "الرصيد المتاح",
             value: formatCurrency(totalAvailable),

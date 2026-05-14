@@ -1,12 +1,9 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Contractors,
-  Contracts,
-  Specializations,
-} from "../../../types/global.type";
+import { Contracts, Specializations } from "../../../types/global.type";
 import { supabase } from "../../../lib/supabaseClient";
 import { RequestForm } from "../../../types/schema/contracts.schema";
+import { contractorWithSpecializations } from "../../../types/extended.type";
 
 export type Service = {
   id: string;
@@ -66,7 +63,7 @@ export interface ContractDetail {
     phone_number: string | null;
     email: string | null;
   };
-  employees: { first_name: string; last_name: string | null };
+  employees: { id: string; first_name: string; last_name: string | null };
   contract_milestones: ContractMilestone[];
   payment_requests: PaymentRequest[];
 }
@@ -174,7 +171,9 @@ export function useServicesBySpecialization(specId: string) {
 }
 
 export function useContractors(enabled: boolean) {
-  const [contractors, setContractors] = useState<Contractors[]>([]);
+  const [contractors, setContractors] = useState<
+    contractorWithSpecializations[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -184,8 +183,9 @@ export function useContractors(enabled: boolean) {
     async function fetchContractors() {
       setLoading(true);
 
-      const { data, error } = await supabase.from("contractors").select("*");
-
+      const { data, error } = await supabase
+        .from("contractors")
+        .select(`*,users (id, user_specializations(*))`);
       if (error) setError(error);
       else setContractors(data ?? []);
 
@@ -202,6 +202,17 @@ export function useCreateRequest() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
+  async function sendPushNotifications(
+    tokens: string[],
+    title: string,
+    body: string,
+    data?: Record<string, string>,
+  ) {
+    await supabase.functions.invoke("send-push", {
+      body: { tokens, title, body, data: data ?? { type: "work_request" } },
+    });
+  }
+
   async function createRequest(values: RequestForm, projectId: string) {
     setLoading(true);
     setError(null);
@@ -210,7 +221,7 @@ export function useCreateRequest() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Step 1: insert the work_request
+    // الخطوة 1: إنشاء طلب العمل
     const { data: request, error: requestError } = await supabase
       .from("work_requests")
       .insert({
@@ -224,9 +235,7 @@ export function useCreateRequest() {
         work_start_at: values.work_start_at,
         status: "open",
         direct_contractor_id:
-          values.bid_mode === "direct"
-            ? values.direct_contractor_id // 👈 only sent if direct
-            : null,
+          values.bid_mode === "direct" ? values.direct_contractor_id : null,
       })
       .select("id")
       .single();
@@ -237,7 +246,7 @@ export function useCreateRequest() {
       return { error: requestError };
     }
 
-    // Step 2: insert all items using the returned request id
+    // الخطوة 2: إضافة عناصر الطلب
     const { error: itemsError } = await supabase
       .from("work_request_items")
       .insert(
@@ -255,8 +264,84 @@ export function useCreateRequest() {
       return { error: itemsError };
     }
 
+    // الخطوة 3: إرسال الإشعارات
+    try {
+      let pushTokens: string[] = [];
+
+      if (values.bid_mode === "direct" && values.direct_contractor_id) {
+        // المقاول المحدد فقط
+        const { data: contractor } = await supabase
+          .from("contractors")
+          .select("user_id")
+          .eq("id", values.direct_contractor_id)
+          .single();
+
+        if (contractor?.user_id) {
+          const { data: tokenData } = await supabase
+            .from("user_push_tokens")
+            .select("push_token")
+            .eq("user_id", contractor.user_id)
+            .single();
+
+          if (tokenData?.push_token) pushTokens = [tokenData.push_token];
+        }
+      } else {
+        // جميع المقاولين بنفس التخصص
+        const { data: contractors } = await supabase
+          .from("contractors")
+          .select(
+            `
+            user_id,
+            users!contractors_user_id_fkey (
+              user_specializations!user_specializations_user_id_fkey (
+                specialization_id
+              )
+            )
+          `,
+          )
+          .not("user_id", "is", null);
+
+        if (contractors) {
+          const matchingUserIds = contractors
+            .filter((contractor) => {
+              const specializations = contractor.users?.user_specializations as
+                | { specialization_id: string }[]
+                | undefined;
+              return specializations?.some(
+                (s) => s.specialization_id === values.specialization_id,
+              );
+            })
+            .map((c) => c.user_id)
+            .filter(Boolean) as string[];
+
+          if (matchingUserIds.length > 0) {
+            const { data: tokens } = await supabase
+              .from("user_push_tokens")
+              .select("push_token")
+              .in("user_id", matchingUserIds);
+
+            pushTokens =
+              (tokens?.map((t) => t.push_token).filter(Boolean) as string[]) ??
+              [];
+          }
+        }
+      }
+
+      if (pushTokens.length > 0) {
+        await sendPushNotifications(
+          pushTokens,
+          "طلب عمل جديد",
+          values.bid_mode === "direct"
+            ? `تم تكليفك مباشرةً بطلب عمل جديد: ${values.title}`
+            : `يوجد طلب عمل جديد في تخصصك: ${values.title}`,
+        );
+      }
+    } catch (notifError) {
+      console.error("❌ خطأ في إرسال الإشعار:", notifError);
+    }
+
     setLoading(false);
-    return { error: null };
+    return { error: null, requestId: request.id };
   }
 
   return { createRequest, loading, error };
@@ -279,7 +364,7 @@ export function useContractDetails(contractId: string) {
             projects(name, code),
             work_requests(id, title, specializations(name)),
             contractors(id, first_name, last_name, phone_number, email),
-            employees!contracts_created_by_fkey(first_name, last_name),
+            employees!contracts_created_by_fkey(id, first_name, last_name),
             contract_milestones(*),
             payment_requests(
               *,

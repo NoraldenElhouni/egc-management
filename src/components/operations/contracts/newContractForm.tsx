@@ -1,10 +1,10 @@
 import { PostgrestError } from "@supabase/supabase-js";
-import { Contractors, Specializations } from "../../../types/global.type";
+import { Specializations } from "../../../types/global.type";
 import {
   Service,
   useCreateRequest,
 } from "../../../hooks/operations/contracts/useContracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   RequestForm,
@@ -18,6 +18,8 @@ import { TextAreaField } from "../../ui/inputs/TextAreaField";
 import { DateField } from "../../ui/inputs/DateField";
 import Separator from "../../ui/separator";
 import { Trash2, Plus, X } from "lucide-react";
+import { uploadFile } from "../../../lib/storage-client";
+import { contractorWithSpecializations } from "../../../types/extended.type";
 
 interface NewContractFormProps {
   specializations: Specializations[];
@@ -29,10 +31,16 @@ interface NewContractFormProps {
   selectSpec: string;
   onSpecChange: (id: string) => void;
   projectId: string;
-  contractors: Contractors[];
+  contractors: contractorWithSpecializations[];
   contractorsLoading: boolean;
   onBidModeChange: (mode: "open" | "direct") => void;
 }
+
+type AttachmentDraft = {
+  file: File;
+  title: string;
+  preview?: string;
+};
 
 // ── Service Picker Dialog ─────────────────────────────────────────────────────
 const ServicePickerDialog = ({
@@ -196,6 +204,7 @@ const NewContractForm = ({
   const { createRequest, loading } = useCreateRequest();
   const navigate = useNavigate();
 
+  const [files, setFiles] = useState<AttachmentDraft[]>([]);
   const {
     register,
     control,
@@ -206,7 +215,15 @@ const NewContractForm = ({
     setValue,
   } = useForm<RequestForm>({
     resolver: zodResolver(requestSchemaValues),
-    defaultValues: { bid_mode: "open", items: [] },
+    defaultValues: {
+      bid_mode: "open",
+      contractor_provides_materials: false,
+      contact_name: "",
+      contact_phone: "",
+      delay_penalty_terms: "",
+      retention_terms: "",
+      items: [],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -216,12 +233,18 @@ const NewContractForm = ({
 
   const bidMode = watch("bid_mode");
   const currentItems = watch("items");
+  const selectedSpecializationId = watch("specialization_id");
 
+  const filteredContractors = contractors.filter((contractor) =>
+    contractor.users?.user_specializations?.some(
+      (spec) => spec.specialization_id === selectedSpecializationId,
+    ),
+  );
   const specOptions = specializations.map((s) => ({
     value: s.id,
     label: s.name,
   }));
-  const contractorOptions = contractors.map((c) => ({
+  const contractorOptions = filteredContractors.map((c) => ({
     value: c.id,
     label: `${c.first_name} ${c.last_name ?? ""}`.trim(),
   }));
@@ -234,16 +257,45 @@ const NewContractForm = ({
   };
 
   const onSubmit = async (data: RequestForm) => {
-    const { error } = await createRequest(data, projectId);
+    const { error, requestId } = await createRequest(data, projectId);
     if (error) {
       alert("خطأ في إنشاء طلب العقد: " + error.message);
       return;
     }
+    for (const item of files) {
+      await uploadFile({
+        file: item.file,
+        entityType: "work_request",
+        entityId: requestId,
+        title: item.title,
+      });
+    }
+
     setSuccess("تم اضافة طلب العقد بنجاح");
     reset();
     navigate(-1);
   };
 
+  const handleAddFile = (file: File) => {
+    setFiles((prev) => [
+      ...prev,
+      {
+        file,
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        preview: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : undefined,
+      },
+    ]);
+  };
+
+  useEffect(() => {
+    return () => {
+      files.forEach((f) => {
+        if (f.preview) URL.revokeObjectURL(f.preview);
+      });
+    };
+  }, [files]);
   return (
     <>
       {/* Service Picker Dialog */}
@@ -321,52 +373,129 @@ const NewContractForm = ({
               error={errors.work_start_at}
             />
           </div>
+          <Separator />
 
+          {/* Contact Info */}
+          <div className="col-span-2">
+            <p className="text-sm font-semibold text-gray-500 mb-3 mt-2">
+              معلومات التواصل والشروط
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TextField
+              id="contact_name"
+              label="اسم جهة التواصل"
+              register={register("contact_name")}
+              error={errors.contact_name}
+            />
+
+            <TextField
+              id="contact_phone"
+              label="رقم التواصل"
+              register={register("contact_phone")}
+              error={errors.contact_phone}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <TextAreaField
+              id="delay_penalty_terms"
+              label="شروط غرامة التأخير"
+              register={register("delay_penalty_terms")}
+              error={errors.delay_penalty_terms}
+              rows={4}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <TextAreaField
+              id="retention_terms"
+              label="شروط الاستقطاع / الضمان"
+              register={register("retention_terms")}
+              error={errors.retention_terms}
+              rows={4}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="checkbox"
+                {...register("contractor_provides_materials")}
+                className="w-4 h-4"
+              />
+
+              <div>
+                <p className="text-sm font-medium text-gray-800">
+                  المقاول يوفر المواد
+                </p>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  في حال التفعيل، يكون المقاول مسؤول عن توفير جميع المواد
+                  المطلوبة للتنفيذ
+                </p>
+              </div>
+            </label>
+          </div>
           <Separator />
 
           {/* ── Section 2: Mode Tabs ──────────────────────────────────────── */}
-          <p className="text-sm font-semibold text-gray-500 mb-3">نوع العقد</p>
-          <div className="flex gap-2 mb-4">
-            {(["open", "direct"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => {
-                  setValue("bid_mode", mode);
-                  onBidModeChange(mode);
-                }}
-                className={`px-5 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  bidMode === mode
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {mode === "open" ? "مفتوح" : "مباشر"}
-              </button>
-            ))}
-          </div>
+          <div className="flex items-end gap-4 mb-4">
+            {/* Contract Mode */}
+            <div>
+              <p className="text-sm font-semibold text-gray-500 mb-3">
+                نوع العقد
+              </p>
 
-          {/* Direct contractor select */}
-          {bidMode === "direct" && (
-            <div className="mb-4 max-w-sm">
-              <Controller
-                name="direct_contractor_id"
-                control={control}
-                render={({ field }) => (
-                  <SearchableSelectField
-                    id="direct_contractor_id"
-                    label="اختر المقاول"
-                    options={contractorOptions}
-                    loading={contractorsLoading}
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    error={errors.direct_contractor_id}
-                    placeholder="-- اختر المقاول --"
-                  />
-                )}
-              />
+              <div className="flex gap-2">
+                {(["open", "direct"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setValue("bid_mode", mode);
+                      onBidModeChange(mode);
+                    }}
+                    className={`px-5 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      bidMode === mode
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {mode === "open" ? "مفتوح" : "مباشر"}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
+
+            {/* Direct Contractor */}
+            {bidMode === "direct" && (
+              <div className="w-72">
+                <Controller
+                  name="direct_contractor_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelectField
+                      id="direct_contractor_id"
+                      label="اختر المقاول"
+                      options={contractorOptions}
+                      loading={contractorsLoading}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      error={errors.direct_contractor_id}
+                      placeholder={
+                        selectedSpecializationId
+                          ? "-- اختر المقاول --"
+                          : "-- اختر التخصص أولاً --"
+                      }
+                      disabled={!selectedSpecializationId}
+                    />
+                  )}
+                />
+              </div>
+            )}
+          </div>
 
           <Separator />
 
@@ -457,6 +586,95 @@ const NewContractForm = ({
           )}
 
           <Separator />
+
+          {/* ── Attachments ───────────────────────────────────────── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-500">المرفقات</p>
+
+              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors">
+                <Plus className="w-4 h-4" />
+                إضافة ملفات
+                <input
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.files || []);
+                    selected.forEach(handleAddFile);
+                  }}
+                />
+              </label>
+            </div>
+
+            {files.length === 0 ? (
+              <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-400 text-sm">
+                لا توجد مرفقات
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {files.map((item, index) => {
+                  const isImage = item.file.type.startsWith("image/");
+
+                  return (
+                    <div
+                      key={index}
+                      className="border rounded-xl p-3 flex gap-4 items-start"
+                    >
+                      {/* Preview */}
+                      <div className="w-20 h-20 rounded-lg overflow-hidden border bg-gray-50 flex items-center justify-center shrink-0">
+                        {isImage && item.preview ? (
+                          <img
+                            src={item.preview}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="text-xs text-gray-400 text-center px-2">
+                            {item.file.type.includes("pdf")
+                              ? "PDF"
+                              : item.file.name.split(".").pop()?.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <input
+                          type="text"
+                          value={item.title}
+                          onChange={(e) => {
+                            const newFiles = [...files];
+                            newFiles[index].title = e.target.value;
+                            setFiles(newFiles);
+                          }}
+                          placeholder="عنوان الملف"
+                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <p className="truncate">{item.file.name}</p>
+
+                          <p>{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                      </div>
+
+                      {/* Remove */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFiles((prev) => prev.filter((_, i) => i !== index))
+                        }
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* ── Footer: Submit / Cancel ───────────────────────────────────── */}
           <div className="flex justify-end gap-3 mt-2">

@@ -4,6 +4,7 @@ import { StatusBadge } from "../../../../ui/Badge";
 import Button from "../../../../ui/Button";
 import { FileText, Newspaper, Pencil, Trash } from "lucide-react";
 import { ContractMilestone } from "../../../../../hooks/operations/contracts/useContracts";
+import { Link } from "react-router-dom";
 
 const milestoneStatusBadge = (status: ContractMilestone["status"]) => {
   switch (status) {
@@ -32,7 +33,12 @@ export const MilestonesColumns: ColumnDef<ContractMilestone>[] = [
     header: "المرحلة",
     cell: ({ getValue, row }) => (
       <div>
-        <p className="font-semibold text-gray-900">{getValue<string>()}</p>
+        <Link
+          to={`milestones/${row.original.id}`}
+          className="font-semibold text-gray-900 hover:underline hover:text-blue-600"
+        >
+          {getValue<string>()}
+        </Link>
         {row.original.description && (
           <p className="text-xs text-gray-400 mt-0.5">
             {row.original.description}
@@ -69,25 +75,13 @@ export const MilestonesColumns: ColumnDef<ContractMilestone>[] = [
     cell: ({ row }) => {
       const isPending = row.original.status === "pending";
       return (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="primary-outline">
-            <FileText className="w-3.5 h-3.5 ml-1" />
-            فاتورة
-          </Button>
-          <Button size="sm" variant="primary-outline">
-            <Newspaper className="w-3.5 h-3.5 ml-1" />
-            تقارير
-          </Button>
-          {isPending && (
-            <>
-              <Button size="sm" variant="primary-outline">
-                <Pencil className="w-3.5 h-3.5" />
-              </Button>
-              <Button size="sm" variant="error">
-                <Trash className="w-3.5 h-3.5" />
-              </Button>
-            </>
-          )}
+        <div className="flex items-center justify-center">
+          <Link to={`milestones/${row.original.id}/reports`}>
+            <Button size="sm" variant="primary-outline">
+              <Newspaper className="w-3 h-3 ml-1" />
+              تقارير
+            </Button>
+          </Link>
         </div>
       );
     },

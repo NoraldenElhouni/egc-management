@@ -16,6 +16,7 @@ import EditMilestonePage from "../../pages/operations/contracts/project/contract
 import MilestoneReportsPage from "../../pages/operations/contracts/project/contract/milestones/MilestoneReportsPage";
 import ContractPaymentLogPage from "../../pages/operations/contracts/project/contract/payments/ContractPaymentLogPage";
 import NewPaymentRequestPage from "../../pages/operations/contracts/project/contract/payments/NewPaymentRequestPage";
+import MilestonePage from "../../pages/operations/contracts/project/contract/milestones/MilestonePage";
 
 // // ── Requests ──────────────────────────────────────────────────────────────────
 // // TODO: create these pages
@@ -82,6 +83,10 @@ export default function OperationsRoutes() {
         <Route
           path="contracts/project/:projectId/:contractId/milestones/:milestoneId/edit"
           element={<EditMilestonePage />}
+        />
+        <Route
+          path="contracts/project/:projectId/:contractId/milestones/:milestoneId"
+          element={<MilestonePage />}
         />
         <Route
           path="contracts/project/:projectId/:contractId/milestones/:milestoneId/reports"

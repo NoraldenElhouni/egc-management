@@ -94,8 +94,7 @@ export const ProjectIncomeSchema = z.object({
     message: "التاريخ غير صالح",
   }),
   currency: z.enum(["LYD", "USD", "EUR"]),
-  client_name: z.string(),
-  // related_expense: z.string().nullable(),
+  client_name: z.string().min(4, "اسم العميل مطلوب"),
 });
 
 export const ExpensePaymentSchema = (
