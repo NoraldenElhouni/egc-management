@@ -233,6 +233,11 @@ export function useCreateRequest() {
         mode: values.bid_mode,
         created_by: user?.id ?? "",
         work_start_at: values.work_start_at,
+        contact_name: values.contact_name,
+        contact_phone: values.contact_phone,
+        contractor_provides_materials: values.contractor_provides_materials,
+        delay_penalty_terms: values.delay_penalty_terms,
+        retention_terms: values.retention_terms,
         status: "open",
         direct_contractor_id:
           values.bid_mode === "direct" ? values.direct_contractor_id : null,

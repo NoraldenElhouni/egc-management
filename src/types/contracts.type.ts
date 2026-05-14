@@ -11,6 +11,7 @@ export type RequestPage = WorkRequests & {
 
 export interface RequestBids extends ContractorBids {
   contractors: {
+    id: string;
     first_name: string;
     last_name: string | null;
   };

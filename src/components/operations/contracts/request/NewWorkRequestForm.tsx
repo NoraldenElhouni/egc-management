@@ -1,27 +1,27 @@
 import { PostgrestError } from "@supabase/supabase-js";
-import { Specializations } from "../../../types/global.type";
+import { Specializations } from "../../../../types/global.type";
 import {
   Service,
   useCreateRequest,
-} from "../../../hooks/operations/contracts/useContracts";
+} from "../../../../hooks/operations/contracts/useContracts";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   RequestForm,
   requestSchemaValues,
-} from "../../../types/schema/contracts.schema";
+} from "../../../../types/schema/contracts.schema";
 import { Controller, useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
-import { TextField } from "../../ui/inputs/TextField";
-import { TextAreaField } from "../../ui/inputs/TextAreaField";
-import { DateField } from "../../ui/inputs/DateField";
-import Separator from "../../ui/separator";
+import { SearchableSelectField } from "../../../ui/inputs/SearchableSelectField";
+import { TextField } from "../../../ui/inputs/TextField";
+import { TextAreaField } from "../../../ui/inputs/TextAreaField";
+import { DateField } from "../../../ui/inputs/DateField";
+import Separator from "../../../ui/separator";
 import { Trash2, Plus, X } from "lucide-react";
-import { uploadFile } from "../../../lib/storage-client";
-import { contractorWithSpecializations } from "../../../types/extended.type";
+import { uploadFile } from "../../../../lib/storage-client";
+import { contractorWithSpecializations } from "../../../../types/extended.type";
 
-interface NewContractFormProps {
+interface NewWorkRequestFormProps {
   specializations: Specializations[];
   specLoading: boolean;
   specError: PostgrestError | null;
@@ -188,7 +188,7 @@ const ServicePickerDialog = ({
 };
 
 // ── Main Form ─────────────────────────────────────────────────────────────────
-const NewContractForm = ({
+const NewWorkRequestForm = ({
   specializations,
   specLoading,
   services,
@@ -198,7 +198,7 @@ const NewContractForm = ({
   contractors,
   contractorsLoading,
   onBidModeChange,
-}: NewContractFormProps) => {
+}: NewWorkRequestFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const { createRequest, loading } = useCreateRequest();
@@ -699,4 +699,4 @@ const NewContractForm = ({
   );
 };
 
-export default NewContractForm;
+export default NewWorkRequestForm;

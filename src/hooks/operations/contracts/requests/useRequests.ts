@@ -3,6 +3,150 @@ import { Attachments, WorkRequests } from "../../../../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../../lib/supabaseClient";
 import { RequestBids, RequestPage } from "../../../../types/contracts.type";
+import { RequestForm } from "../../../../types/schema/contracts.schema";
+
+// ── Shape of an existing request fetched from DB ──────────────────────────────
+export type ExistingRequest = {
+  id: string;
+  specialization_id: string;
+  title: string;
+  description: string;
+  bid_deadline: string;
+  work_start_at: string;
+  mode: "open" | "direct";
+  direct_contractor_id: string | null;
+  contact_name: string;
+  contact_phone: string;
+  delay_penalty_terms: string;
+  retention_terms: string;
+  contractor_provides_materials: boolean;
+  work_request_items: {
+    service_id: string;
+    quantity: number;
+    unit: string;
+    services: { id: string; name: string; unit: string | null } | null;
+  }[];
+};
+
+// ── Fetch a single request with its items ─────────────────────────────────────
+export function useRequest(requestId: string) {
+  const [request, setRequest] = useState<ExistingRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  const fetch = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("work_requests")
+      .select(
+        `
+        id,
+        specialization_id,
+        title,
+        description,
+        bid_deadline,
+        work_start_at,
+        mode,
+        direct_contractor_id,
+        contact_name,
+        contact_phone,
+        delay_penalty_terms,
+        retention_terms,
+        contractor_provides_materials,
+        work_request_items (
+          service_id,
+          quantity,
+          unit,
+          services ( id, name, unit )
+        )
+      `,
+      )
+      .eq("id", requestId)
+      .single();
+
+    if (error) setError(error);
+    else setRequest(data as ExistingRequest);
+    setLoading(false);
+  };
+
+  // Trigger on mount
+  useState(() => {
+    if (requestId) fetch();
+  });
+
+  return { request, loading, error, refetch: fetch };
+}
+
+// ── Update hook ───────────────────────────────────────────────────────────────
+export function useEditRequest() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  async function editRequest(values: RequestForm, requestId: string) {
+    setLoading(true);
+    setError(null);
+
+    // Step 1: update the request header
+    const { error: updateError } = await supabase
+      .from("work_requests")
+      .update({
+        specialization_id: values.specialization_id,
+        title: values.title,
+        description: values.description,
+        bid_deadline: values.bid_deadline,
+        work_start_at: values.work_start_at,
+        mode: values.bid_mode,
+        contact_name: values.contact_name,
+        contact_phone: values.contact_phone,
+        delay_penalty_terms: values.delay_penalty_terms,
+        retention_terms: values.retention_terms,
+        contractor_provides_materials: values.contractor_provides_materials,
+        direct_contractor_id:
+          values.bid_mode === "direct" ? values.direct_contractor_id : null,
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      setError(updateError);
+      setLoading(false);
+      return { error: updateError };
+    }
+
+    // Step 2: replace items (delete old → insert new)
+    const { error: deleteError } = await supabase
+      .from("work_request_items")
+      .delete()
+      .eq("request_id", requestId);
+
+    if (deleteError) {
+      setError(deleteError);
+      setLoading(false);
+      return { error: deleteError };
+    }
+
+    const { error: itemsError } = await supabase
+      .from("work_request_items")
+      .insert(
+        values.items.map((item) => ({
+          request_id: requestId,
+          service_id: item.id,
+          quantity: item.quantity,
+          unit: item.unit,
+        })),
+      );
+
+    if (itemsError) {
+      setError(itemsError);
+      setLoading(false);
+      return { error: itemsError };
+    }
+
+    setLoading(false);
+    return { error: null };
+  }
+
+  return { editRequest, loading, error };
+}
 
 export function useWorkRequests(projectId: string) {
   const [workRequests, setWorkRequests] = useState<WorkRequests[]>([]);
@@ -83,7 +227,7 @@ export function useBidsByRequest(requestId: string) {
 
         const { data: bidsData, error: bidError } = await supabase
           .from("contractor_bids")
-          .select("*, contractors(first_name, last_name)")
+          .select("*, contractors(id, first_name, last_name)")
           .eq("request_id", requestId);
 
         if (bidError) {
@@ -127,11 +271,17 @@ export interface WorkRequestDetail {
   bid_deadline: string | null;
   work_start_at: string | null;
   created_at: string;
+  delay_penalty_terms: string | null;
+  contractor_provides_materials: boolean;
+  retention_terms: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
   bids_count: number;
   projects: { name: string };
   specializations: { name: string };
   work_request_items: WorkRequestItem[];
   employees: {
+    id: string;
     first_name: string;
     last_name: string | null;
   };
@@ -166,7 +316,7 @@ export function useWorkRequest(requestId: string) {
             specializations(name),
             contractor_bids(count),
             work_request_items(*, services(id, name)),
-            employees!work_requests_created_by_fkey(first_name, last_name),
+            employees!work_requests_created_by_fkey(id, first_name, last_name),
             contractors!work_requests_direct_contractor_fkey(id, first_name, last_name, phone_number)`,
           )
           .eq("id", requestId)
@@ -191,7 +341,7 @@ export function useWorkRequest(requestId: string) {
 
         const { data: bidsData, error: bidError } = await supabase
           .from("contractor_bids")
-          .select("*, contractors(first_name, last_name)")
+          .select("*, contractors(id, first_name, last_name)")
           .eq("request_id", requestId);
 
         if (bidError) {

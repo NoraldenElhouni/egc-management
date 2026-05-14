@@ -1304,6 +1304,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_assignments_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_assignments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -2811,18 +2818,21 @@ export type Database = {
           created_at: string
           id: string
           is_must: boolean
+          type: string
           version: string
         }
         Insert: {
           created_at?: string
           id?: string
           is_must?: boolean
+          type: string
           version: string
         }
         Update: {
           created_at?: string
           id?: string
           is_must?: boolean
+          type?: string
           version?: string
         }
         Relationships: []
@@ -3097,13 +3107,18 @@ export type Database = {
       work_requests: {
         Row: {
           bid_deadline: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contractor_provides_materials: boolean
           created_at: string
           created_by: string
+          delay_penalty_terms: string | null
           description: string | null
           direct_contractor_id: string | null
           id: string
           mode: Database["public"]["Enums"]["work_request_mode"]
           project_id: string
+          retention_terms: string | null
           specialization_id: string
           status: Database["public"]["Enums"]["work_request_status"]
           title: string
@@ -3112,13 +3127,18 @@ export type Database = {
         }
         Insert: {
           bid_deadline?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contractor_provides_materials?: boolean
           created_at?: string
           created_by: string
+          delay_penalty_terms?: string | null
           description?: string | null
           direct_contractor_id?: string | null
           id?: string
           mode?: Database["public"]["Enums"]["work_request_mode"]
           project_id: string
+          retention_terms?: string | null
           specialization_id: string
           status?: Database["public"]["Enums"]["work_request_status"]
           title: string
@@ -3127,13 +3147,18 @@ export type Database = {
         }
         Update: {
           bid_deadline?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contractor_provides_materials?: boolean
           created_at?: string
           created_by?: string
+          delay_penalty_terms?: string | null
           description?: string | null
           direct_contractor_id?: string | null
           id?: string
           mode?: Database["public"]["Enums"]["work_request_mode"]
           project_id?: string
+          retention_terms?: string | null
           specialization_id?: string
           status?: Database["public"]["Enums"]["work_request_status"]
           title?: string

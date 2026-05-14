@@ -5,7 +5,6 @@ import OperationsMapsPage from "../../pages/operations/mpas/OperationsMapsPage";
 import OperationsMapsProjectPage from "../../pages/operations/mpas/project/OperationsMapsProjectPage";
 import ContractsPage from "../../pages/operations/contracts/ContractsPage";
 import ContractsProjectPage from "../../pages/operations/contracts/project/ContractsProjectPage";
-import NewContractProject from "../../pages/operations/contracts/project/newContractProject";
 import ContractRequestDetailsPage from "../../pages/operations/contracts/project/requests/ContractRequestDetailsPage";
 import ContractDetailsPage from "../../pages/operations/contracts/project/contract/ContractDetailsPage";
 import OperationsLayout from "../sidebar/OperationsLayout";
@@ -17,6 +16,8 @@ import MilestoneReportsPage from "../../pages/operations/contracts/project/contr
 import ContractPaymentLogPage from "../../pages/operations/contracts/project/contract/payments/ContractPaymentLogPage";
 import NewPaymentRequestPage from "../../pages/operations/contracts/project/contract/payments/NewPaymentRequestPage";
 import MilestonePage from "../../pages/operations/contracts/project/contract/milestones/MilestonePage";
+import NewRequestPage from "../../pages/operations/contracts/project/requests/NewRequestPage";
+import EditRequestPage from "../../pages/operations/contracts/project/requests/EditRequestPage";
 
 // // ── Requests ──────────────────────────────────────────────────────────────────
 // // TODO: create these pages
@@ -47,14 +48,18 @@ export default function OperationsRoutes() {
 
         {/* ── New request ─────────────────────────────────────────────────── */}
         <Route
-          path="contracts/project/:projectId/new"
-          element={<NewContractProject />}
+          path="contracts/project/:projectId/requests/new"
+          element={<NewRequestPage />}
         />
 
         {/* ── Request details  ──────────────────────────────────────── */}
         <Route
           path="contracts/project/:projectId/requests/:requestId"
           element={<ContractRequestDetailsPage />}
+        />
+        <Route
+          path="contracts/project/:projectId/requests/:requestId/edit"
+          element={<EditRequestPage />}
         />
 
         {/* ── Bids ────────────────────────────────────────────────────────── */}

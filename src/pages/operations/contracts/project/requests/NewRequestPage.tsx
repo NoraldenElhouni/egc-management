@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import NewContractForm from "../../../../components/operations/contracts/newContractForm";
+import { useState } from "react";
+
+import { useParams } from "react-router-dom";
 import {
   useContractors,
   useServicesBySpecialization,
   useSpecializations,
-} from "../../../../hooks/operations/contracts/useContracts";
-import { useParams } from "react-router-dom";
+} from "../../../../../hooks/operations/contracts/useContracts";
+import NewWorkRequestForm from "../../../../../components/operations/contracts/request/NewWorkRequestForm";
 
-const newContractProject = () => {
+const NewRequestPage = () => {
   const {
     error: specError,
     loading: specLoading,
@@ -31,7 +32,7 @@ const newContractProject = () => {
 
   return (
     <div className="p-4">
-      <NewContractForm
+      <NewWorkRequestForm
         specializations={specializations}
         specLoading={specLoading}
         specError={specError}
@@ -49,4 +50,4 @@ const newContractProject = () => {
   );
 };
 
-export default newContractProject;
+export default NewRequestPage;

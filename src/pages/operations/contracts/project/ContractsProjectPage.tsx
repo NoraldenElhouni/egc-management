@@ -44,7 +44,7 @@ const ContractsProjectPage = () => {
       <GenericTable
         header="جميع العقود"
         linkLabel="+ عقد جديد"
-        link={`new`}
+        link={`./requests/new`}
         data={contracts ?? []}
         columns={ContractsColumns}
         enableSorting

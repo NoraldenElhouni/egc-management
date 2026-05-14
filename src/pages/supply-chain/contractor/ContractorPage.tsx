@@ -1,4 +1,4 @@
-import ContractorsList from "../../components/supply-chain/lists/ContractorsList";
+import ContractorsList from "../../../components/supply-chain/lists/ContractorsList";
 
 const ContractorPage = () => {
   return (

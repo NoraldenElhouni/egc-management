@@ -100,6 +100,7 @@ const ContractRequestDetailsPage = () => {
   const highestPrice = bids?.length
     ? Math.max(...bids.map((b) => Number(b.total_price)))
     : null;
+
   return (
     <div className="p-6">
       {/* header */}
@@ -112,10 +113,12 @@ const ContractRequestDetailsPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button size="sm" variant="primary-outline">
-            <Pencil className="w-4 h-4 ml-2" />
-            تعديل الطلب
-          </Button>
+          <Link to={"./edit"}>
+            <Button size="sm" variant="primary-outline">
+              <Pencil className="w-4 h-4 ml-2" />
+              تعديل الطلب
+            </Button>
+          </Link>
 
           <Link to={"./bids"}>
             <Button size="sm" variant="info">
@@ -149,6 +152,16 @@ const ContractRequestDetailsPage = () => {
             <Badge
               label={workRequest.mode === "open" ? "مفتوح" : "خاص"}
               variant={workRequest.mode === "open" ? "success" : "default"}
+            />
+            <Badge
+              label={
+                workRequest.contractor_provides_materials
+                  ? "المقاول يوفر المواد"
+                  : "المواد على العميل"
+              }
+              variant={
+                workRequest.contractor_provides_materials ? "info" : "default"
+              }
             />
           </div>
           <Button size="sm" variant="error">
@@ -202,10 +215,18 @@ const ContractRequestDetailsPage = () => {
               }
             />
             {workRequest.mode === "direct" && workRequest.contractors && (
-              <InfoRow
-                label="المقاول المباشر"
-                value={`${workRequest.contractors.first_name} ${workRequest.contractors.last_name ?? ""}`}
-              />
+              <>
+                <InfoRow
+                  label="المقاول المباشر"
+                  value={`${workRequest.contractors.first_name} ${workRequest.contractors.last_name ?? ""}`}
+                />
+                {workRequest.contractors.phone_number && (
+                  <InfoRow
+                    label="هاتف المقاول"
+                    value={workRequest.contractors.phone_number}
+                  />
+                )}
+              </>
             )}
             <InfoRow
               label="تاريخ الإنشاء"
@@ -227,10 +248,14 @@ const ContractRequestDetailsPage = () => {
                   : "—"
               }
             />
+            <InfoRow label="التخصص" value={workRequest.specializations.name} />
             <InfoRow
-              label="التخصص"
-              value={workRequest.specializations.name}
-              bordered={false}
+              label="المواد"
+              value={
+                workRequest.contractor_provides_materials
+                  ? "يوفرها المقاول"
+                  : "على عاتق صاحب العمل"
+              }
             />
             <InfoRow
               label="أُنشئ بواسطة"
@@ -241,15 +266,16 @@ const ContractRequestDetailsPage = () => {
 
           {/* notes + bids — 2/5 */}
           <div className="col-span-2 bg-white rounded-lg shadow-sm p-6 flex flex-col gap-4">
-            <h2 className="font-semibold text-gray-900">الوصف والملاحظات</h2>
+            <h2 className="font-semibold text-gray-900">الوصف والشروط</h2>
             <Separator />
 
+            {/* description */}
             {workRequest.description ? (
               <div className="p-4 rounded-xl border border-amber-200 bg-amber-50">
                 <div className="flex items-center gap-2 mb-3">
                   <StickyNote className="w-4 h-4 text-amber-600" />
                   <h3 className="text-sm font-semibold text-amber-800">
-                    ملاحظات
+                    وصف الطلب
                   </h3>
                 </div>
                 <p className="text-sm leading-7 text-gray-700">
@@ -257,9 +283,81 @@ const ContractRequestDetailsPage = () => {
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 italic">لا توجد ملاحظات</p>
+              <p className="text-sm text-gray-400 italic">لا يوجد وصف</p>
             )}
 
+            {/* delay penalty */}
+            {workRequest.delay_penalty_terms ? (
+              <div className="p-4 rounded-xl border border-red-200 bg-red-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <StickyNote className="w-4 h-4 text-red-600" />
+                  <h3 className="text-sm font-semibold text-red-800">
+                    شروط غرامة التأخير
+                  </h3>
+                </div>
+                <p className="text-sm leading-7 text-gray-700">
+                  {workRequest.delay_penalty_terms}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 italic">
+                لا توجد شروط غرامة تأخير
+              </p>
+            )}
+
+            {/* retention terms */}
+            {workRequest.retention_terms ? (
+              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <StickyNote className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-blue-800">
+                    شروط الاستقطاع
+                  </h3>
+                </div>
+                <p className="text-sm leading-7 text-gray-700">
+                  {workRequest.retention_terms}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 italic">
+                لا توجد شروط استقطاع
+              </p>
+            )}
+
+            <Separator />
+
+            {/* contact info */}
+            <div>
+              <h2 className="font-semibold text-sm text-gray-900 mb-3">
+                معلومات التواصل
+              </h2>
+              {workRequest.contact_name || workRequest.contact_phone ? (
+                <div className="p-4 rounded-xl border bg-gray-50 space-y-2">
+                  {workRequest.contact_name && (
+                    <InfoRow
+                      label="اسم جهة التواصل"
+                      value={workRequest.contact_name}
+                      bordered={false}
+                    />
+                  )}
+                  {workRequest.contact_phone && (
+                    <InfoRow
+                      label="رقم التواصل"
+                      value={workRequest.contact_phone}
+                      bordered={false}
+                    />
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 italic">
+                  لا توجد معلومات تواصل
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* bids summary */}
             <div className="p-4 rounded-xl border bg-white">
               <h2 className="font-semibold text-sm text-gray-900 mb-3">
                 العروض المقدمة ({workRequest.bids_count})
@@ -274,20 +372,16 @@ const ContractRequestDetailsPage = () => {
                     تم استلام {workRequest.bids_count} عرض — اضغط على "العروض
                     المستلمة" لعرض التفاصيل
                   </p>
-
                   <Separator />
-
                   <div className="flex flex-wrap gap-2 mt-3">
                     {bids?.map((bid) => {
                       const price = Number(bid.total_price);
-
                       const variant =
                         price === lowestPrice
                           ? "success"
                           : price === highestPrice
                             ? "danger"
                             : "default";
-
                       return (
                         <Badge
                           key={bid.id}
@@ -318,11 +412,11 @@ const ContractRequestDetailsPage = () => {
             enableSorting
           />
         </div>
+
+        {/* attachments */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="font-semibold text-gray-900 mb-4">المرفقات</h2>
-
           <Separator />
-
           <AttachmentsPreview attachments={workRequest.attachments ?? []} />
         </div>
       </div>
