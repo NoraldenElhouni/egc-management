@@ -19,17 +19,23 @@ const SupplyChainRoutes = () => {
         <Route path="contractors" element={<ContractorPage />} />
         <Route path="contractors/new" element={<NewContractorPage />} />
         {/* profile */}
-        <Route path="contractors/:id" element={<ContractorDetailPage />} />
-        {/* their bids */}
-        <Route path="contractors/:id/bids" element={<ContractorBidsPage />} />
+        <Route
+          path="contractors/:contractorId"
+          element={<ContractorDetailPage />}
+        />
+        {/* their bcontractorIds */}
+        <Route
+          path="contractors/:contractorId/buids"
+          element={<ContractorBidsPage />}
+        />
         {/* their contracts */}
         <Route
-          path="contractors/:id/contracts"
+          path="contractors/:contractorId/contracts"
           element={<ContractorContractsPage />}
         />
         {/* payment history  */}
         <Route
-          path="contractors/:id/payments"
+          path="contractors/:contractorId/payments"
           element={<ContractorPaymentsPage />}
         />
         <Route path="vendors" element={<VendorsPage />} />

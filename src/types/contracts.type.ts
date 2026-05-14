@@ -16,3 +16,14 @@ export interface RequestBids extends ContractorBids {
     last_name: string | null;
   };
 }
+
+export interface ContractorBid extends ContractorBids {
+  work_requests: {
+    id: string;
+    title: string;
+    projects: {
+      id: string;
+      name: string;
+    };
+  };
+}

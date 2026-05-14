@@ -28,6 +28,48 @@ export type ExistingRequest = {
   }[];
 };
 
+export interface BidItem {
+  id: string;
+  bid_id: string;
+  unit_price: number;
+  quantity: number;
+  unit: string;
+  total_price: number;
+  notes: string | null;
+  work_request_items: {
+    description: string | null;
+    services: {
+      name: string;
+    };
+  };
+}
+
+export interface BidDetail {
+  id: string;
+  request_id: string;
+  contractor_id: string;
+  total_price: number;
+  days_needed: number;
+  notes: string | null;
+  status: "pending" | "accepted" | "rejected" | "withdrawn";
+  submitted_at: string;
+  reviewed_at: string | null;
+  contractors: {
+    id: string;
+    first_name: string;
+    last_name: string | null;
+    phone_number: string | null;
+    email: string | null;
+  };
+  work_requests: {
+    title: string;
+    projects: {
+      name: string;
+    };
+  };
+  contractor_bid_items: BidItem[];
+}
+
 // ── Fetch a single request with its items ─────────────────────────────────────
 export function useRequest(requestId: string) {
   const [request, setRequest] = useState<ExistingRequest | null>(null);
@@ -360,48 +402,6 @@ export function useWorkRequest(requestId: string) {
   }, [requestId]);
 
   return { workRequest, loading, error, bids };
-}
-
-export interface BidItem {
-  id: string;
-  bid_id: string;
-  unit_price: number;
-  quantity: number;
-  unit: string;
-  total_price: number;
-  notes: string | null;
-  work_request_items: {
-    description: string | null;
-    services: {
-      name: string;
-    };
-  };
-}
-
-export interface BidDetail {
-  id: string;
-  request_id: string;
-  contractor_id: string;
-  total_price: number;
-  days_needed: number;
-  notes: string | null;
-  status: "pending" | "accepted" | "rejected" | "withdrawn";
-  submitted_at: string;
-  reviewed_at: string | null;
-  contractors: {
-    id: string;
-    first_name: string;
-    last_name: string | null;
-    phone_number: string | null;
-    email: string | null;
-  };
-  work_requests: {
-    title: string;
-    projects: {
-      name: string;
-    };
-  };
-  contractor_bid_items: BidItem[];
 }
 
 export function useBidDetail(bidId: string) {
