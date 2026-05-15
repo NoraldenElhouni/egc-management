@@ -102,21 +102,29 @@ export const BidsColumns: ColumnDef<RequestBids>[] = [
   {
     id: "actions",
     header: "الإجراءات",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => console.log("accept", row.original.id)}
-          className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
-        >
-          قبول
-        </button>
-        <button
-          onClick={() => console.log("reject", row.original.id)}
-          className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
-        >
-          رفض
-        </button>
-      </div>
-    ),
+    cell: ({ row }) =>
+      row.original.status === "pending" ? (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => console.log("accept", row.original.id)}
+            className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            قبول
+          </button>
+
+          <button
+            onClick={() => console.log("reject", row.original.id)}
+            className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-100 transition-colors"
+          >
+            counter offer
+          </button>
+          <button
+            onClick={() => console.log("reject", row.original.id)}
+            className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+          >
+            رفض
+          </button>
+        </div>
+      ) : null,
   },
 ];

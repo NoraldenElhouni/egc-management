@@ -25,7 +25,7 @@ const SupplyChainRoutes = () => {
         />
         {/* their bcontractorIds */}
         <Route
-          path="contractors/:contractorId/buids"
+          path="contractors/:contractorId/bids"
           element={<ContractorBidsPage />}
         />
         {/* their contracts */}
