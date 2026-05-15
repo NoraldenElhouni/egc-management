@@ -51,7 +51,7 @@ const AppRouter = () => {
           await refreshUser();
           console.log("✅ User data refreshed successfully");
         } catch (error) {
-          console.error("❌ Failed to refresh user data:", error);
+          console.error("Final refresh failure:", error);
         }
       },
       5 * 60 * 1000,
@@ -71,7 +71,7 @@ const AppRouter = () => {
         const timeSinceLastRefresh = Date.now() - lastRefresh;
         const fifteenMinutes = 5 * 60 * 1000;
 
-        // Only refresh if it's been more than 15 minutes
+        // Only refresh if it's been more than 5 minutes
         if (timeSinceLastRefresh > fifteenMinutes) {
           console.log("👀 User returned, refreshing data...");
           await refreshUser();

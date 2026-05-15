@@ -112,12 +112,14 @@ export const BidsColumns: ColumnDef<RequestBids>[] = [
             قبول
           </button>
 
-          <button
-            onClick={() => console.log("reject", row.original.id)}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-100 transition-colors"
-          >
-            counter offer
-          </button>
+          <Link to={`./${row.original.id}/counter/new`}>
+            <button
+              onClick={() => console.log("reject", row.original.id)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-100 transition-colors"
+            >
+              عرض مضاد
+            </button>
+          </Link>
           <button
             onClick={() => console.log("reject", row.original.id)}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"

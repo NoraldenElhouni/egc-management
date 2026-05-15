@@ -71,6 +71,9 @@ const Header = () => {
     contracts: "العقود",
     distribute: "توزيع نسبة",
     history: "سجل",
+    requests: "طلبات العمل",
+    bids: "العروض",
+    counter: "العرض المضاد",
   };
 
   return (

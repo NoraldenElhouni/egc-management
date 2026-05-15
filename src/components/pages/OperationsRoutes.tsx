@@ -18,6 +18,8 @@ import NewPaymentRequestPage from "../../pages/operations/contracts/project/cont
 import MilestonePage from "../../pages/operations/contracts/project/contract/milestones/MilestonePage";
 import NewRequestPage from "../../pages/operations/contracts/project/requests/NewRequestPage";
 import EditRequestPage from "../../pages/operations/contracts/project/requests/EditRequestPage";
+import NewCounterOfferPage from "../../pages/operations/contracts/project/requests/bids/counter/NewCounterOfferPage";
+import CounterOfferDetailsPage from "../../pages/operations/contracts/project/requests/bids/counter/CounterOfferDetailsPage";
 
 // // ── Requests ──────────────────────────────────────────────────────────────────
 // // TODO: create these pages
@@ -70,6 +72,14 @@ export default function OperationsRoutes() {
         <Route
           path="contracts/project/:projectId/requests/:requestId/bids/:bidId"
           element={<BidDetailPage />}
+        />
+        <Route
+          path="contracts/project/:projectId/requests/:requestId/bids/:bidId/counter/new"
+          element={<NewCounterOfferPage />}
+        />
+        <Route
+          path="contracts/project/:projectId/requests/:requestId/bids/:bidId/counter/:negotiationId"
+          element={<CounterOfferDetailsPage />}
         />
 
         {/* ── Contract details ─────────────────────────────────────────────

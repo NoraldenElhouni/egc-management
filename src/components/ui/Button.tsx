@@ -60,7 +60,7 @@ const Button: React.FC<ButtonProps> = ({
 
     // warning uses nested warning colors and warning.foreground
     warning:
-      "bg-warning hover:bg-warning-dark text-warning-foreground focus:ring-warning-light",
+      "bg-warning hover:bg-warning-dark text-yellow-50 focus:ring-warning-light",
 
     // error uses nested error colors and error.foreground
     error:

@@ -94,8 +94,7 @@ export const authService = {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      console.error("No authenticated user found during refresh");
-      await clearUserData();
+      console.warn("No authenticated user found during refresh");
       return null;
     }
 

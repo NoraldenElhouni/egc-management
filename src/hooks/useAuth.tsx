@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Load user on app start - RUNS ONCE
   useEffect(() => {
@@ -47,11 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (refreshedUser) {
               // Got fresh data — update the user
               setUser(refreshedUser);
-            } else {
-              // refreshUserData returned null — session is truly gone, safe to logout
-              setUser(null);
-              authService.logout();
             }
+            // else {
+            //   // refreshUserData returned null — session is truly gone, safe to logout
+            //   setUser(null);
+            //   authService.logout();
+            // }
           })
           .catch((err) => {
             // Network error, timeout, or Supabase hiccup — keep the local session
@@ -71,9 +73,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = useCallback(async () => {
-    const userData = await authService.refreshUserData();
-    setUser(userData);
-  }, []);
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+
+    try {
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 20000;
+
+      let lastError;
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          console.log(`🔄 Refresh attempt ${attempt}/${MAX_RETRIES}`);
+
+          const userData = await authService.refreshUserData();
+
+          if (userData) {
+            setUser(userData);
+
+            console.log("✅ User refreshed successfully");
+            return;
+          }
+
+          throw new Error("No user data returned");
+        } catch (error) {
+          lastError = error;
+
+          console.error(
+            `❌ Refresh failed (attempt ${attempt}/${MAX_RETRIES})`,
+            error,
+          );
+
+          if (attempt < MAX_RETRIES) {
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+          }
+        }
+      }
+
+      console.error("❌ All refresh attempts failed:", lastError);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing]);
 
   const logout = useCallback(async () => {
     await authService.logout();

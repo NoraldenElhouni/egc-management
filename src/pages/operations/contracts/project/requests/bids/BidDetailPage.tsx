@@ -1,7 +1,7 @@
 import React from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Button from "../../../../../../components/ui/Button";
-import { Ban, Check, StickyNote } from "lucide-react";
+import { Ban, Check, Info, StickyNote } from "lucide-react";
 import Separator from "../../../../../../components/ui/separator";
 import InfoRow from "../../../../../../components/ui/InfoRow";
 import { formatCurrency, formatDate } from "../../../../../../utils/helpper";
@@ -51,6 +51,12 @@ const BidDetailPage = () => {
               <Ban className="w-4 h-4 ml-2" />
               رفض العرض
             </Button>
+            <Link to={`./counter/new`}>
+              <Button size="sm" variant="warning">
+                <Info className="w-4 h-4 ml-2" />
+                عرض مضاد
+              </Button>
+            </Link>
             <Button size="sm" variant="success">
               <Check className="w-4 h-4 ml-2" />
               قبول العرض وإنشاء العقد
