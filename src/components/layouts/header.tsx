@@ -74,6 +74,8 @@ const Header = () => {
     requests: "طلبات العمل",
     bids: "العروض",
     counter: "العرض المضاد",
+    milestones: "مرحلة",
+    reports: "تقارير",
   };
 
   return (

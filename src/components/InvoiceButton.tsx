@@ -45,10 +45,12 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
         .reduce((acc, rf) => acc + (rf.amount ?? 0), 0),
     );
 
-    const lydAccounts = project.accounts.filter((a) => a.currency === "LYD");
+    const lydBalances = project.project_balances.filter(
+      (a) => a.currency === "LYD",
+    );
 
     const totalCompanyPercentage = r(
-      lydAccounts.reduce((acc, a) => acc + (a.total_percentage ?? 0), 0),
+      lydBalances.reduce((acc, a) => acc + (a.total_percentage ?? 0), 0),
     );
 
     const totalDeposit = r(
@@ -58,9 +60,8 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
     );
 
     const remaingAmount = r(
-      lydAccounts.reduce((acc, a) => acc + (a.balance ?? 0), 0),
+      lydBalances.reduce((acc, a) => acc + (a.balance ?? 0), 0),
     );
-
     // ✅ FIX 2: totalAmount = materials + labor (not same as remaingAmount)
     const totalAmount = r(totalMetrials + totalLabors);
 

@@ -1,4 +1,3 @@
-// BookProjectExpenseTab.tsx
 import { ProjectWithDetailsForBook } from "../../../../types/projects.type";
 import { ProjectsExpensesColumns } from "../../../tables/columns/ProjectExpenseColumns";
 import GenericTable from "../../../tables/table";
@@ -25,10 +24,28 @@ const BookProjectExpenseTab = ({
   project,
   addExpense,
 }: BookProjectExpenseTabProps) => {
-  //remove the deleted expenses from the list
-  const fillterProject = project?.project_expenses.filter(
+  const filteredProject = project?.project_expenses.filter(
     (expense) => expense.deleted_at === null,
   );
+
+  const lydBalances =
+    project?.project_balances.filter((b) => b.currency === "LYD") ?? [];
+
+  const lydExpenses =
+    project?.project_expenses.filter(
+      (e) => e.currency === "LYD" && e.deleted_at === null,
+    ) ?? [];
+
+  const totalPaid = lydExpenses.reduce(
+    (acc, e) => acc + (e.amount_paid ?? 0),
+    0,
+  );
+
+  const totalNotPaid = lydExpenses.reduce(
+    (acc, e) => acc + ((e.total_amount ?? 0) - (e.amount_paid ?? 0)),
+    0,
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -37,18 +54,17 @@ const BookProjectExpenseTab = ({
         </Button>
         <InvoiceButton project={project} />
       </div>
+
       <div>
         <OverviewStatus
           stats={[
             {
-              label: "اجمالي النسبة",
+              label: "اجمالي الدخل",
               value: formatCurrency(
-                project?.accounts
-                  .filter((account) => account.currency === "LYD")
-                  .reduce(
-                    (acc, account) => acc + (account.total_percentage || 0),
-                    0,
-                  ) || 0,
+                lydBalances.reduce(
+                  (acc, b) => acc + (b.total_transactions || 0),
+                  0,
+                ),
               ),
               icon: Hash,
               iconBgColor: "bg-green-100",
@@ -57,46 +73,40 @@ const BookProjectExpenseTab = ({
             {
               label: "اجمالي المصروفات",
               value: formatCurrency(
-                project?.accounts
-                  .filter((account) => account.currency === "LYD")
-                  .reduce(
-                    (acc, account) => acc + (account.total_expense || 0),
-                    0,
-                  ) || 0,
+                lydBalances.reduce((acc, b) => acc + (b.total_expense || 0), 0),
               ),
               icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
-            },
-            {
-              label: "اجمالي الدخل",
-              value: formatCurrency(
-                project?.accounts
-                  .filter((account) => account.currency === "LYD")
-                  .reduce(
-                    (acc, account) => acc + (account.total_transactions || 0),
-                    0,
-                  ) || 0,
-              ),
-              icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
+              iconBgColor: "bg-red-100",
+              iconColor: "text-red-600",
+              secondaryLabel: "مدفوع",
+              secondaryValue: formatCurrency(totalPaid),
             },
             {
               label: "الرصيد الحالي",
               value: formatCurrency(
-                project?.accounts
-                  .filter((account) => account.currency === "LYD")
-                  .reduce((acc, account) => acc + (account.balance || 0), 0) ||
-                  0,
+                lydBalances.reduce((acc, b) => acc + (b.balance || 0), 0),
               ),
               icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
+              iconBgColor: "bg-blue-100",
+              iconColor: "text-blue-600",
+            },
+            {
+              label: "غير مدفوع",
+              value: formatCurrency(totalNotPaid),
+              icon: Hash,
+              iconBgColor: "bg-orange-100",
+              iconColor: "text-orange-600",
+              secondaryLabel: "رصيد الحساب",
+              secondaryValue: formatCurrency(
+                project?.accounts
+                  .filter((a) => a.currency === "LYD")
+                  .reduce((acc, a) => acc + (a.balance || 0), 0) || 0,
+              ),
             },
           ]}
         />
       </div>
+
       <div>
         <ProjectExpenseForm
           projectId={project?.id || ""}
@@ -111,7 +121,7 @@ const BookProjectExpenseTab = ({
           enableSorting
           enableRowSelection
           initialSorting={[{ id: "serial_number", desc: true }]}
-          data={fillterProject || []}
+          data={filteredProject || []}
           columns={ProjectsExpensesColumns}
         />
       </div>
