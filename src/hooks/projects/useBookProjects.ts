@@ -506,7 +506,7 @@ export function useBookProject(projectId: string) {
       // get the project for income counter for the serial number
       const { data: projectRow, error: projectError } = await supabase
         .from("projects")
-        .select("income_counter")
+        .select("income_counter, invoice_counter")
         .eq("id", incomeData.project_id)
         .single();
 
@@ -558,7 +558,7 @@ export function useBookProject(projectId: string) {
         .from("projects")
         .update({
           income_counter: (projectRow?.income_counter || 0) + 1,
-          invoice_counter: (projectRow?.income_counter || 0) + 1,
+          invoice_counter: (projectRow?.invoice_counter || 0) + 1,
         })
         .eq("id", incomeData.project_id);
 
@@ -1350,6 +1350,7 @@ export function useMaps(projectId: string) {
         .update({
           balance: (balanceData?.balance || 0) - paidAmount,
           total_expense: (balanceData?.total_expense || 0) + paidAmount,
+          maps: (balanceData?.maps || 0) + paidAmount,
         })
         .eq("id", balanceData?.id);
 
@@ -1374,6 +1375,7 @@ export function useMaps(projectId: string) {
         .update({
           balance: accountData.balance - paidAmount,
           total_expense: accountData.total_expense + paidAmount,
+          maps: accountData.maps + paidAmount,
         })
         .eq("id", accountData.id);
 
@@ -1383,7 +1385,7 @@ export function useMaps(projectId: string) {
       await supabase
         .from("projects")
         .update({
-          maps_counter: (project?.map_counter || 0) + 1,
+          map_counter: (project?.map_counter || 0) + 1,
           invoice_counter: (project?.invoice_counter || 0) + 1,
         })
         .eq("id", projectId);

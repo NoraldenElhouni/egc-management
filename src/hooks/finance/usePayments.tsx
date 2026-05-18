@@ -696,6 +696,35 @@ export function useExpensePayments(expenseId: string) {
         }
       }
 
+      const percentageDelta = newPercentageAmount - oldPercentageAmount;
+
+      const { data: projectBalance, error: pbFetchError } = await supabase
+        .from("project_balances")
+        .select("*")
+        .eq("project_id", expenseData.project_id)
+        .eq("currency", expenseData.currency)
+        .single();
+
+      if (pbFetchError || !projectBalance) {
+        console.error("Error fetching project balance", pbFetchError);
+        throw pbFetchError || new Error("Project balance not found");
+      }
+      const { error: pbUpdateError } = await supabase
+        .from("project_balances")
+        .update({
+          balance:
+            Number(projectBalance.balance) - amountDelta - percentageDelta,
+          total_expense: Number(projectBalance.total_expense) + amountDelta,
+          total_percentage:
+            Number(projectBalance.total_percentage) + percentageDelta,
+        })
+        .eq("id", projectBalance.id);
+
+      if (pbUpdateError) {
+        console.error("Error updating project balance", pbUpdateError);
+        throw pbUpdateError;
+      }
+
       return { success: true, error: null, data: updatedPayment };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

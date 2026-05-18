@@ -25,8 +25,6 @@ const ExpensePaymentsPage = () => {
   const { error, loading, payment, expense, accounts, deletePayment } =
     useExpensePayments(expenseId ?? "");
 
-  const { report } = useContractReport(expenseId ?? "");
-
   const totalPayments = payment?.reduce((s, p) => s + (p.amount || 0), 0) || 0;
   const remaining = expense
     ? expense.total_amount - expense.amount_paid - (expense.discounting ?? 0)
@@ -147,20 +145,6 @@ const ExpensePaymentsPage = () => {
             deletePayment={deletePayment}
             onEdit={(p) => setEditingPayment(p)}
           />
-          {expense.contract_id && (
-            <div>
-              <h2 className="text-xl font-bold mb-4">تقرير العقد المرتبط</h2>
-              <GenericTable
-                data={report ?? []}
-                columns={ContractReportColumns}
-                enableSorting
-                enablePagination
-                enableFiltering
-                enableRowSelection
-                showGlobalFilter
-              />
-            </div>
-          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg border p-4">
