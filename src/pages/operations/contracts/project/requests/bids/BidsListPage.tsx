@@ -4,11 +4,10 @@ import LoadingPage from "../../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../../components/ui/errorPage";
 import Button from "../../../../../../components/ui/Button";
 import OverviewStatus from "../../../../../../components/ui/OverviewStatus";
-import { Calendar, Hash, TrendingDown, TrendingUp } from "lucide-react";
 import { formatCurrency, formatDate } from "../../../../../../utils/helpper";
 import Badge, { StatusBadge } from "../../../../../../components/ui/Badge";
 import GenericTable from "../../../../../../components/tables/table";
-import { BidsColumns } from "../../../../../../components/tables/columns/operations/contracts/bidsColumns";
+import { getBidsColumns } from "../../../../../../components/tables/columns/operations/contracts/bidsColumns";
 
 const BidsListPage = () => {
   const { requestId } = useParams<{ requestId: string }>();
@@ -29,6 +28,8 @@ const BidsListPage = () => {
     return (
       <ErrorPage label="حدث خطأ أثناء تحميل البيانات" error={error.message} />
     );
+
+  const columns = getBidsColumns(() => window.location.reload());
 
   const canClose =
     workRequest?.status === "open" || workRequest?.status === "bidding";
@@ -63,30 +64,18 @@ const BidsListPage = () => {
           {
             label: "العروض المستلمة",
             value: workRequest?.bids_count ?? 0,
-            icon: Hash,
-            iconBgColor: "bg-blue-100",
-            iconColor: "text-blue-600",
           },
           {
             label: "أقل عرض",
             value: lowestBid !== null ? formatCurrency(lowestBid) : "—",
-            icon: TrendingDown,
-            iconBgColor: "bg-green-100",
-            iconColor: "text-green-600",
           },
           {
             label: "أعلى عرض",
             value: highestBid !== null ? formatCurrency(highestBid) : "—",
-            icon: TrendingUp,
-            iconBgColor: "bg-red-100",
-            iconColor: "text-red-600",
           },
           {
             label: "آخر موعد للعروض",
             value: formatDate(workRequest?.bid_deadline),
-            icon: Calendar,
-            iconBgColor: "bg-orange-100",
-            iconColor: "text-orange-600",
           },
         ]}
       />
@@ -119,7 +108,7 @@ const BidsListPage = () => {
       {/* bids table */}
       <GenericTable
         data={bids ?? []}
-        columns={BidsColumns}
+        columns={columns}
         enableSorting
         enableFiltering
         showGlobalFilter

@@ -1,79 +1,138 @@
 import { useMemo, useState } from "react";
-import InfoRow from "../../../../../../../components/ui/InfoRow";
+import { StickyNote } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useBidForNegotiation } from "../../../../../../../hooks/operations/contracts/requests/bids/negotiation/useBidNegotiation";
+import LoadingPage from "../../../../../../../components/ui/LoadingPage";
+import ErrorPage from "../../../../../../../components/ui/errorPage";
+import { supabase } from "../../../../../../../lib/supabaseClient";
 import Separator from "../../../../../../../components/ui/separator";
 import { formatCurrency } from "../../../../../../../utils/helpper";
-import { StickyNote } from "lucide-react";
-
-const initialItems = [
-  {
-    id: 1,
-    name: "تمديد مواسير المياه",
-    quantity: 20,
-    unit: "متر",
-    oldPrice: 120,
-    newPrice: 120,
-  },
-  {
-    id: 2,
-    name: "تركيب خلاطات",
-    quantity: 5,
-    unit: "قطعة",
-    oldPrice: 300,
-    newPrice: 280,
-  },
-  {
-    id: 3,
-    name: "صرف أرضي",
-    quantity: 8,
-    unit: "قطعة",
-    oldPrice: 150,
-    newPrice: 150,
-  },
-];
+import InfoRow from "../../../../../../../components/ui/InfoRow";
+import Button from "../../../../../../../components/ui/Button";
 
 const NewCounterOfferPage = () => {
-  const [items, setItems] = useState(initialItems);
-  const [daysNeeded, setDaysNeeded] = useState(29);
-  const [manualTotal, setManualTotal] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const { bidId, requestId } = useParams<{
+    bidId: string;
+    requestId: string;
+    projectId: string;
+  }>();
 
-  const handlePriceChange = (id: number, value: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              newPrice: Number(value),
-            }
-          : item,
-      ),
-    );
-  };
+  const { bid, loading, error } = useBidForNegotiation(bidId ?? "");
+
+  const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
+  const [daysNeeded, setDaysNeeded] = useState<number | null>(null);
+  const [manualTotal, setManualTotal] = useState<number | null>(null);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // ✅ ALL derived values and useMemo BEFORE any early returns
+  const items = useMemo(
+    () =>
+      bid?.contractor_bid_items.map((item) => ({
+        ...item,
+        newPrice: itemPrices[item.id] ?? item.unit_price,
+      })) ?? [],
+    [bid, itemPrices],
+  );
 
   const summary = useMemo(() => {
-    const originalTotal = items.reduce(
-      (acc, item) => acc + item.oldPrice * item.quantity,
-      0,
-    );
-
+    const originalTotal =
+      bid?.contractor_bid_items.reduce(
+        (acc, item) => acc + item.total_price,
+        0,
+      ) ?? 0;
     const calculatedTotal = items.reduce(
       (acc, item) => acc + item.newPrice * item.quantity,
       0,
     );
-
     const modifiedItems = items.filter(
-      (item) => item.oldPrice !== item.newPrice,
+      (item) => item.newPrice !== item.unit_price,
     ).length;
+    return { originalTotal, calculatedTotal, modifiedItems };
+  }, [items, bid]);
 
-    return {
-      originalTotal,
-      calculatedTotal,
-      modifiedItems,
-      unchangedItems: items.length - modifiedItems,
-    };
-  }, [items]);
+  // ✅ Now safe to do early returns
+  if (!bidId) return null;
+  if (loading) return <LoadingPage label="جاري تحميل بيانات العرض..." />;
+  if (error) return <ErrorPage label="حدث خطأ" error={error.message} />;
+  if (!bid) return null;
 
-  const finalTotal =
-    manualTotal !== null ? manualTotal : summary.calculatedTotal;
+  const nextRound = bid.negotiation_round + 1;
+  const contractorName = `${bid.contractors.first_name} ${bid.contractors.last_name ?? ""}`;
+  const effectiveDays = daysNeeded ?? bid.days_needed;
+  const finalTotal = manualTotal ?? summary.calculatedTotal;
+  const isMaxRound = nextRound > 3;
+
+  function handlePriceChange(itemId: string, value: string) {
+    setItemPrices((prev) => ({ ...prev, [itemId]: Number(value) }));
+    setManualTotal(null); // reset manual override when item prices change
+  }
+
+  async function handleSubmit() {
+    if (nextRound > 3 || !bidId || !requestId) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("غير مصرح");
+
+      // 1. Insert the negotiation round
+      const { data: negotiation, error: negError } = await supabase
+        .from("bid_negotiations")
+        .insert({
+          bid_id: bidId,
+          request_id: requestId,
+          round: nextRound,
+          initiated_by: user.id,
+          initiated_role: "engineer" as const, // fix: "company" doesn't exist in enum
+          proposed_total: finalTotal,
+          proposed_days: effectiveDays,
+          note: note || null,
+          status: "pending" as const,
+        })
+        .select()
+        .single();
+
+      if (negError) throw negError;
+
+      // 2. Insert negotiation items
+      const negotiationItems = items.map((item) => ({
+        negotiation_id: negotiation.id,
+        request_item_id: item.request_item_id,
+        original_price: item.unit_price,
+        proposed_price: item.newPrice,
+        quantity: item.quantity,
+        total_price: item.newPrice * item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("bid_negotiation_items")
+        .insert(negotiationItems);
+
+      if (itemsError) throw itemsError;
+
+      // 3. Update bid negotiation round counter
+      const { error: bidUpdateError } = await supabase
+        .from("contractor_bids")
+        .update({
+          is_negotiating: true,
+          negotiation_round: nextRound,
+        })
+        .eq("id", bidId);
+
+      if (bidUpdateError) throw bidUpdateError;
+
+      navigate(-1);
+    } catch (err) {
+      console.error(err);
+      setSaveError("حدث خطأ أثناء الإرسال");
+    }
+    setSaving(false);
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -81,71 +140,76 @@ const NewCounterOfferPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold">إرسال عرض مضاد</h1>
-
           <h4 className="text-sm text-gray-500 mt-1">
-            BID-2025-042 · أعمال السباكة — فيلا النور · شركة الهادي
+            {bid.work_requests.title} · {bid.work_requests.projects.name} ·{" "}
+            {contractorName} · الجولة {nextRound} من 3
           </h4>
         </div>
+        {isMaxRound && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-lg">
+            تم الوصول للحد الأقصى من جولات التفاوض (3 جولات)
+          </div>
+        )}
       </div>
 
-      {/* cards */}
       <div className="grid grid-cols-2 gap-4">
         {/* LEFT */}
         <div className="space-y-4">
           {/* contractor info */}
           <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col">
-            <div className="flex gap-3 items-center mb-2">
-              <h2 className="font-semibold text-gray-900">معلومات المقاول</h2>
-            </div>
-
+            <h2 className="font-semibold text-gray-900 mb-2">
+              معلومات المقاول
+            </h2>
             <Separator />
 
-            <div className="flex gap-3 items-center mb-2">
+            <div className="flex gap-3 items-center my-3">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm shrink-0">
-                {"vsad".charAt(0)}
+                {bid.contractors.first_name.charAt(0)}
               </div>
-
               <div>
                 <h2 className="font-semibold text-gray-900">
-                  شركة الهادي للسباكة
+                  {contractorName}
                 </h2>
-
                 <p className="text-xs text-gray-400">
-                  {"dsafga".slice(0, 8).toUpperCase()}
+                  {bid.contractors.id.slice(0, 8).toUpperCase()}
                 </p>
               </div>
             </div>
 
             <Separator />
 
-            <div className="flex justify-between">
+            <div className="flex justify-between mt-3">
               <div>
-                <h2>العرض الأصلي:</h2>
-                <p>{formatCurrency(18000)}</p>
+                <p className="text-xs text-gray-400">العرض الأصلي</p>
+                <p className="font-semibold">
+                  {formatCurrency(bid.total_price)}
+                </p>
               </div>
-
               <div>
-                <h2>المدة الأصلية:</h2>
-                <p>28 يوم</p>
+                <p className="text-xs text-gray-400">المدة الأصلية</p>
+                <p className="font-semibold">{bid.days_needed} يوم</p>
               </div>
-
               <div>
-                <h2>البنود:</h2>
-                <p>{items.length}</p>
+                <p className="text-xs text-gray-400">عدد البنود</p>
+                <p className="font-semibold">
+                  {bid.contractor_bid_items.length}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">جولة التفاوض</p>
+                <p className="font-semibold">{nextRound} / 3</p>
               </div>
             </div>
           </div>
 
-          {/* table */}
+          {/* items table */}
           <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col">
             <h2 className="font-semibold text-gray-900">
               تعديل الأسعار بنداً بند
             </h2>
-
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 mt-1">
               عدّل السعر مباشرة في الخلية — الإجمالي يحتسب تلقائياً
             </p>
-
             <Separator />
 
             <div className="overflow-x-auto">
@@ -160,23 +224,28 @@ const NewCounterOfferPage = () => {
                     <th className="text-center p-3">الإجمالي</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {items.map((item) => {
                     const total = item.quantity * item.newPrice;
-
+                    const changed = item.newPrice !== item.unit_price;
                     return (
-                      <tr key={item.id} className="border-b">
-                        <td className="p-3 font-medium">{item.name}</td>
-
-                        <td className="text-center p-3">{item.quantity}</td>
-
-                        <td className="text-center p-3">{item.unit}</td>
-
-                        <td className="text-center p-3 text-gray-500">
-                          {formatCurrency(item.oldPrice)}
+                      <tr
+                        key={item.id}
+                        className={`border-b ${changed ? "bg-blue-50" : ""}`}
+                      >
+                        <td className="p-3 font-medium">
+                          {item.work_request_items.services.name}
+                          {item.work_request_items.description && (
+                            <p className="text-xs text-gray-400">
+                              {item.work_request_items.description}
+                            </p>
+                          )}
                         </td>
-
+                        <td className="text-center p-3">{item.quantity}</td>
+                        <td className="text-center p-3">{item.unit}</td>
+                        <td className="text-center p-3 text-gray-400 line-through">
+                          {formatCurrency(item.unit_price)}
+                        </td>
                         <td className="text-center p-3">
                           <input
                             type="number"
@@ -184,10 +253,13 @@ const NewCounterOfferPage = () => {
                             onChange={(e) =>
                               handlePriceChange(item.id, e.target.value)
                             }
-                            className="w-24 border rounded-md px-2 py-1 text-center"
+                            className={`w-28 border rounded-md px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                              changed
+                                ? "border-blue-400 bg-blue-50"
+                                : "border-gray-200"
+                            }`}
                           />
                         </td>
-
                         <td className="text-center p-3 font-semibold">
                           {formatCurrency(total)}
                         </td>
@@ -199,87 +271,174 @@ const NewCounterOfferPage = () => {
             </div>
 
             {/* bottom controls */}
-            <div className="my-6 border-t pt-4 flex items-end justify-between gap-4">
-              <div className="flex gap-4">
-                {/* total */}
+            <div className="my-6 border-t pt-4 flex items-end justify-between gap-4 flex-wrap">
+              <div className="flex gap-4 flex-wrap">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-gray-500">
                     إجمالي العرض الجديد
                   </label>
-
                   <input
                     type="number"
                     value={finalTotal}
-                    onChange={(e) => {
-                      setManualTotal(Number(e.target.value));
-                    }}
-                    className="w-44 border rounded-md px-3 py-2"
+                    onChange={(e) => setManualTotal(Number(e.target.value))}
+                    className="w-44 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
+                  <p className="text-xs text-gray-400">
+                    محتسب: {formatCurrency(summary.calculatedTotal)}
+                  </p>
                 </div>
 
-                {/* days */}
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-gray-500">
                     المدة الجديدة (يوم)
                   </label>
-
                   <input
                     type="number"
-                    value={daysNeeded}
+                    value={effectiveDays}
                     onChange={(e) => setDaysNeeded(Number(e.target.value))}
-                    className="w-32 border rounded-md px-3 py-2"
+                    className="w-32 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
               </div>
-
-              {/* submit */}
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg">
-                إرسال العرض المضاد
-              </button>
             </div>
+
             <Separator />
 
-            <div className="bg-white rounded-lg shadow-sm flex flex-col gap-4">
-              <h2 className="font-semibold text-gray-900">ملاحظات المقاول</h2>
+            {/* note */}
+            <div className="mt-4 flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">
+                ملاحظة للمقاول
+              </label>
               <div className="p-4 rounded-xl border border-amber-200 bg-amber-50">
                 <div className="flex items-center gap-2 mb-3">
                   <StickyNote className="w-4 h-4 text-amber-600" />
                   <h3 className="text-sm font-semibold text-amber-800">
-                    ملاحظة للمقاول
+                    ملاحظة
                   </h3>
                 </div>
-                <p className="text-sm leading-7 text-gray-700">
-                  أسعار تركيب الحمامات وخط المياه أعلى من المعدل المرجعي لمشاريع
-                  مماثلة. نرجو مراجعة هذه البنود.
-                </p>
+                <textarea
+                  rows={3}
+                  placeholder="اكتب ملاحظتك للمقاول هنا..."
+                  className="w-full bg-transparent text-sm leading-7 text-gray-700 focus:outline-none resize-none"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
               </div>
             </div>
           </div>
+
+          {/* previous negotiations */}
+          {bid.bid_negotiations.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="font-semibold text-gray-900 mb-2">
+                سجل التفاوض السابق
+              </h2>
+              <Separator />
+              <div className="space-y-3 mt-3">
+                {bid.bid_negotiations
+                  .sort((a, b) => a.round - b.round)
+                  .map((neg) => (
+                    <div
+                      key={neg.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">
+                          جولة {neg.round} —{" "}
+                          {neg.initiated_role === "engineer"
+                            ? "من الشركة"
+                            : "من المقاول"}
+                        </p>
+                        {neg.note && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {neg.note}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-sm">
+                          {formatCurrency(neg.proposed_total)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {neg.proposed_days} يوم
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* RIGHT */}
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-fit">
-          <h2 className="font-semibold text-gray-900">ملخص التعديل</h2>
-          <Separator />
-          <InfoRow
-            label="العرض الأصلي"
-            value={formatCurrency(summary.originalTotal)}
-          />
-          <InfoRow label="عرضك المقترح" value={formatCurrency(finalTotal)} />
-          <InfoRow
-            label="بنود معدّلة"
-            value={`${summary.modifiedItems}/${items.length}`}
-          />
-          <InfoRow
-            label="بنود بدون تغيير"
-            value={`${summary.unchangedItems}`}
-          />
-          <InfoRow label="المدة الأصلية" value="28 يوم" />
-          <InfoRow
-            label="مدتك المقترحة"
-            value={`${daysNeeded} يوم`}
-            bordered={false}
-          />
+        {/* RIGHT — summary */}
+        <div className="space-y-3">
+          <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-fit">
+            <h2 className="font-semibold text-gray-900">ملخص التعديل</h2>
+            <Separator />
+            <InfoRow
+              label="العرض الأصلي"
+              value={formatCurrency(bid.total_price)}
+            />
+            <InfoRow
+              label="عرضك المقترح"
+              value={
+                <span className="font-semibold text-blue-600">
+                  {formatCurrency(finalTotal)}
+                </span>
+              }
+            />
+            <InfoRow
+              label="الفرق"
+              value={
+                <span
+                  className={`font-semibold ${
+                    finalTotal < bid.total_price
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {finalTotal < bid.total_price ? "−" : "+"}
+                  {formatCurrency(Math.abs(finalTotal - bid.total_price))}
+                </span>
+              }
+            />
+            <InfoRow
+              label="بنود معدّلة"
+              value={`${summary.modifiedItems} / ${items.length}`}
+            />
+            <InfoRow label="المدة الأصلية" value={`${bid.days_needed} يوم`} />
+            <InfoRow label="مدتك المقترحة" value={`${effectiveDays} يوم`} />
+            <InfoRow
+              label="جولة التفاوض"
+              value={`${nextRound} من 3`}
+              bordered={false}
+            />
+          </div>
+
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+              {saveError}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              variant="primary"
+              disabled={isMaxRound || saving}
+              onClick={handleSubmit}
+            >
+              {saving ? "جاري الإرسال..." : "إرسال العرض المضاد"}
+            </Button>
+            <Button variant="primary-outline" onClick={() => navigate(-1)}>
+              إلغاء
+            </Button>
+          </div>
+
+          {isMaxRound && (
+            <p className="text-sm text-red-500">
+              لا يمكن إرسال عرض مضاد — تم استنفاد الجولات الثلاث.
+            </p>
+          )}
         </div>
       </div>
     </div>

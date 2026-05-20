@@ -1,11 +1,6 @@
-import { LucideIcon } from "lucide-react";
-
 interface StatCard {
   label: string;
   value: string | number;
-  icon: LucideIcon;
-  iconBgColor: string;
-  iconColor: string;
   secondaryLabel?: string;
   secondaryValue?: string | number;
   tertiaryLabel?: string;
@@ -26,7 +21,6 @@ const OverviewStatus = ({ stats }: OverviewStatusProps) => {
       style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
     >
       {stats.map((stat, index) => {
-        const Icon = stat.icon;
         return (
           <div
             key={index}
@@ -69,16 +63,6 @@ const OverviewStatus = ({ stats }: OverviewStatusProps) => {
                   )}
                 </div>
               </div>
-
-              {!isCompact && (
-                <div
-                  className={`${stat.iconBgColor} rounded-lg flex-shrink-0 ${count === 5 ? "p-2 ml-2" : "p-3 ml-4"}`}
-                >
-                  <Icon
-                    className={`${stat.iconColor} ${count === 5 ? "w-4 h-4" : "w-6 h-6"}`}
-                  />
-                </div>
-              )}
             </div>
           </div>
         );

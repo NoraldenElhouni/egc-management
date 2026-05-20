@@ -111,6 +111,131 @@ export type Database = {
           },
         ]
       }
+      bid_negotiation_items: {
+        Row: {
+          id: string
+          negotiation_id: string
+          original_price: number
+          proposed_price: number
+          quantity: number
+          request_item_id: string
+          total_price: number
+        }
+        Insert: {
+          id?: string
+          negotiation_id: string
+          original_price: number
+          proposed_price: number
+          quantity: number
+          request_item_id: string
+          total_price: number
+        }
+        Update: {
+          id?: string
+          negotiation_id?: string
+          original_price?: number
+          proposed_price?: number
+          quantity?: number
+          request_item_id?: string
+          total_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bid_negotiation_items_negotiation_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "bid_negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bid_negotiation_items_request_item_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bid_negotiations: {
+        Row: {
+          bid_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          initiated_by: string
+          initiated_role: Database["public"]["Enums"]["negotiation_initiated_by"]
+          note: string | null
+          proposed_days: number
+          proposed_total: number
+          request_id: string
+          responded_at: string | null
+          responded_by: string | null
+          round: number
+          status: Database["public"]["Enums"]["negotiation_status"]
+        }
+        Insert: {
+          bid_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          initiated_by: string
+          initiated_role: Database["public"]["Enums"]["negotiation_initiated_by"]
+          note?: string | null
+          proposed_days: number
+          proposed_total: number
+          request_id: string
+          responded_at?: string | null
+          responded_by?: string | null
+          round?: number
+          status?: Database["public"]["Enums"]["negotiation_status"]
+        }
+        Update: {
+          bid_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          initiated_by?: string
+          initiated_role?: Database["public"]["Enums"]["negotiation_initiated_by"]
+          note?: string | null
+          proposed_days?: number
+          proposed_total?: number
+          request_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          round?: number
+          status?: Database["public"]["Enums"]["negotiation_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bid_negotiations_bid_fkey"
+            columns: ["bid_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_bids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bid_negotiations_initiated_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bid_negotiations_request_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "work_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bid_negotiations_responded_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -478,7 +603,11 @@ export type Database = {
         Row: {
           contractor_id: string
           days_needed: number
+          final_days: number | null
+          final_total: number | null
           id: string
+          is_negotiating: boolean
+          negotiation_round: number
           notes: string | null
           request_id: string
           reviewed_at: string | null
@@ -490,7 +619,11 @@ export type Database = {
         Insert: {
           contractor_id: string
           days_needed: number
+          final_days?: number | null
+          final_total?: number | null
           id?: string
+          is_negotiating?: boolean
+          negotiation_round?: number
           notes?: string | null
           request_id: string
           reviewed_at?: string | null
@@ -502,7 +635,11 @@ export type Database = {
         Update: {
           contractor_id?: string
           days_needed?: number
+          final_days?: number | null
+          final_total?: number | null
           id?: string
+          is_negotiating?: boolean
+          negotiation_round?: number
           notes?: string | null
           request_id?: string
           reviewed_at?: string | null
@@ -3559,6 +3696,13 @@ export type Database = {
       expense_type: "material" | "labor" | "maps"
       fund_type: "client" | "internal" | "sale" | "refund" | "other"
       milestone_status: "pending" | "in_progress" | "completed" | "approved"
+      negotiation_initiated_by: "engineer" | "contractor"
+      negotiation_status:
+        | "pending"
+        | "accepted"
+        | "rejected"
+        | "countered"
+        | "expired"
       owner_type: "employee" | "project" | "company" | "contractor"
       payment_method: "cash" | "bank"
       payment_request_status: "pending" | "approved" | "declined" | "paid"
@@ -3720,6 +3864,14 @@ export const Constants = {
       expense_type: ["material", "labor", "maps"],
       fund_type: ["client", "internal", "sale", "refund", "other"],
       milestone_status: ["pending", "in_progress", "completed", "approved"],
+      negotiation_initiated_by: ["engineer", "contractor"],
+      negotiation_status: [
+        "pending",
+        "accepted",
+        "rejected",
+        "countered",
+        "expired",
+      ],
       owner_type: ["employee", "project", "company", "contractor"],
       payment_method: ["cash", "bank"],
       payment_request_status: ["pending", "approved", "declined", "paid"],

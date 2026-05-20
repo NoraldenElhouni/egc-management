@@ -269,7 +269,9 @@ export function useBidsByRequest(requestId: string) {
 
         const { data: bidsData, error: bidError } = await supabase
           .from("contractor_bids")
-          .select("*, contractors(id, first_name, last_name)")
+          .select(
+            "*, contractors(id, first_name, last_name), work_requests(id, title, project_id, projects(id, name, expense_counter, invoice_counter))",
+          )
           .eq("request_id", requestId);
 
         if (bidError) {
@@ -383,7 +385,9 @@ export function useWorkRequest(requestId: string) {
 
         const { data: bidsData, error: bidError } = await supabase
           .from("contractor_bids")
-          .select("*, contractors(id, first_name, last_name)")
+          .select(
+            "*, contractors(id, first_name, last_name), work_requests(id, title, project_id, projects(id, name, expense_counter, invoice_counter))",
+          )
           .eq("request_id", requestId);
 
         if (bidError) {

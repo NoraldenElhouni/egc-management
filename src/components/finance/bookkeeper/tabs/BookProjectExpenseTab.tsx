@@ -6,7 +6,6 @@ import { ProjectExpenseFormValues } from "../../../../types/schema/ProjectBook.s
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../../types/global.type";
 import OverviewStatus from "../../../ui/OverviewStatus";
-import { Hash } from "lucide-react";
 import Button from "../../../ui/Button";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../../../../utils/helpper";
@@ -94,9 +93,9 @@ const BookProjectExpenseTab = ({
             {
               label: "الرصيد",
               value: formatCurrency(projectBalance),
-              icon: Hash,
-              iconBgColor: "bg-blue-100",
-              iconColor: "text-blue-600",
+              // icon: Hash,
+              // iconBgColor: "bg-blue-100",
+              // iconColor: "text-blue-600",
               secondaryLabel: "رصيد الحالي",
               secondaryValue: formatCurrency(accountBalance),
               tertiaryLabel: "الفرق (غير مدفوع)",
@@ -105,9 +104,7 @@ const BookProjectExpenseTab = ({
             {
               label: "اجمالي الدخل",
               value: formatCurrency(totalIncome),
-              icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
+
               secondaryLabel: "نقدي",
               secondaryValue: formatCurrency(cashIncome),
               tertiaryLabel: "بنكي",
@@ -116,9 +113,7 @@ const BookProjectExpenseTab = ({
             {
               label: "اجمالي المصروفات",
               value: formatCurrency(balanceTotalExpense),
-              icon: Hash,
-              iconBgColor: "bg-red-100",
-              iconColor: "text-red-600",
+
               secondaryLabel: "كاش",
               secondaryValue: formatCurrency(accountTotalExpenseCash),
               tertiaryLabel: "بنك",
@@ -127,9 +122,7 @@ const BookProjectExpenseTab = ({
             {
               label: "رصيد الحسابات",
               value: formatCurrency(accountBalance),
-              icon: Hash,
-              iconBgColor: "bg-teal-100",
-              iconColor: "text-teal-600",
+
               secondaryLabel: "كاش",
               secondaryValue: formatCurrency(accountCashBalance),
               tertiaryLabel: "بنك",
