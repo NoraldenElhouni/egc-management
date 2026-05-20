@@ -7,6 +7,7 @@ import {
   FileText,
   ListOrdered,
   Pencil,
+  Send,
   StickyNote,
   Trash,
   TrendingDown,
@@ -23,6 +24,7 @@ import { useWorkRequest } from "../../../../../hooks/operations/contracts/reques
 import LoadingPage from "../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../components/ui/errorPage";
 import AttachmentsPreview from "../../../../../components/ui/AttachmentsPreview";
+import { useCreateRequest } from "../../../../../hooks/operations/contracts/useContracts";
 
 const timelineSteps = (
   workRequest: NonNullable<ReturnType<typeof useWorkRequest>["workRequest"]>,
@@ -70,6 +72,12 @@ const ContractRequestDetailsPage = () => {
   const { requestId } = useParams<{ requestId: string }>();
 
   const { error, loading, workRequest, bids } = useWorkRequest(requestId ?? "");
+  const {
+    publishRequest,
+    stopRequest,
+    cancelRequest,
+    loading: requestLoading,
+  } = useCreateRequest();
 
   if (!requestId) {
     return (
@@ -113,24 +121,90 @@ const ContractRequestDetailsPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to={"./edit"}>
-            <Button size="sm" variant="primary-outline">
-              <Pencil className="w-4 h-4 ml-2" />
-              تعديل الطلب
-            </Button>
-          </Link>
+          {/* ── DRAFT STATE ───────────────────────────── */}
+          {workRequest.status === "draft" && (
+            <>
+              <Button
+                size="sm"
+                disabled={requestLoading}
+                onClick={async () => {
+                  const { error } = await publishRequest(workRequest.id);
 
-          <Link to={"./bids"}>
-            <Button size="sm" variant="info">
-              <FileText className="w-4 h-4 ml-2" />
-              العروض المستلمة ({workRequest.bids_count})
-            </Button>
-          </Link>
+                  if (error) {
+                    alert("حدث خطأ أثناء نشر الطلب");
+                    return;
+                  }
 
-          <Button size="sm" variant="error">
-            <Ban className="w-4 h-4 ml-2" />
-            إيقاف الطلب
-          </Button>
+                  window.location.reload();
+                }}
+              >
+                <Send className="w-4 h-4 ml-2" />
+                نشر الطلب
+              </Button>
+
+              <Link to={"./edit"}>
+                <Button size="sm" variant="primary-outline">
+                  <Pencil className="w-4 h-4 ml-2" />
+                  تعديل الطلب
+                </Button>
+              </Link>
+
+              <Link to={"./bids"}>
+                <Button size="sm" variant="info">
+                  <FileText className="w-4 h-4 ml-2" />
+                  العروض المستلمة ({workRequest.bids_count})
+                </Button>
+              </Link>
+            </>
+          )}
+
+          {/* ── OPEN STATE ───────────────────────────── */}
+          {workRequest.status === "open" && (
+            <>
+              <Button
+                size="sm"
+                variant="error"
+                disabled={requestLoading}
+                onClick={async () => {
+                  const { error } = await stopRequest(workRequest.id);
+
+                  if (error) {
+                    alert("حدث خطأ أثناء إيقاف الطلب");
+                    return;
+                  }
+
+                  window.location.reload();
+                }}
+              >
+                <Ban className="w-4 h-4 ml-2" />
+                إيقاف الطلب
+              </Button>
+
+              <Link to={"./edit"}>
+                <Button size="sm" variant="primary-outline">
+                  <Pencil className="w-4 h-4 ml-2" />
+                  تعديل الطلب
+                </Button>
+              </Link>
+
+              <Link to={"./bids"}>
+                <Button size="sm" variant="info">
+                  <FileText className="w-4 h-4 ml-2" />
+                  العروض المستلمة ({workRequest.bids_count})
+                </Button>
+              </Link>
+            </>
+          )}
+
+          {/* ── cancelled / STOPPED STATE ─────────────── */}
+          {workRequest.status === "cancelled" && (
+            <Link to={"./bids"}>
+              <Button size="sm" variant="info">
+                <FileText className="w-4 h-4 ml-2" />
+                العروض المستلمة ({workRequest.bids_count})
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -164,10 +238,26 @@ const ContractRequestDetailsPage = () => {
               }
             />
           </div>
-          <Button size="sm" variant="error">
-            <Trash className="w-4 h-4 ml-2" />
-            إلغاء الطلب
-          </Button>
+          {workRequest.status !== "cancelled" && (
+            <Button
+              size="sm"
+              variant="error"
+              disabled={requestLoading}
+              onClick={async () => {
+                const { error } = await cancelRequest(workRequest.id);
+
+                if (error) {
+                  alert("حدث خطأ أثناء إيقاف الطلب");
+                  return;
+                }
+
+                window.location.reload();
+              }}
+            >
+              <Trash className="w-4 h-4 ml-2" />
+              إلغاء الطلب
+            </Button>
+          )}
         </div>
 
         {/* stats */}

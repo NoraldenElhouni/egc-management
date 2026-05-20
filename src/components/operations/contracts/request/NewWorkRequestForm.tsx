@@ -202,6 +202,7 @@ const NewWorkRequestForm = ({
   const [success, setSuccess] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const { createRequest, loading } = useCreateRequest();
+  const [showSubmitMenu, setShowSubmitMenu] = useState(false);
   const navigate = useNavigate();
 
   const [files, setFiles] = useState<AttachmentDraft[]>([]);
@@ -223,6 +224,7 @@ const NewWorkRequestForm = ({
       delay_penalty_terms: "",
       retention_terms: "",
       items: [],
+      status: "open",
     },
   });
 
@@ -685,13 +687,45 @@ const NewWorkRequestForm = ({
             >
               إلغاء
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? "جاري الحفظ..." : "حفظ الطلب"}
-            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setShowSubmitMenu((prev) => !prev)}
+                className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {loading ? "جاري الحفظ..." : "حفظ الطلب"}
+                <span>▾</span>
+              </button>
+
+              {showSubmitMenu && (
+                <div className="absolute bottom-full left-0 mb-2 w-48 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue("status", "open");
+                      setShowSubmitMenu(false);
+                      handleSubmit(onSubmit)();
+                    }}
+                    className="w-full text-right px-4 py-3 text-sm hover:bg-gray-50"
+                  >
+                    نشر الطلب
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue("status", "draft");
+                      setShowSubmitMenu(false);
+                      handleSubmit(onSubmit)();
+                    }}
+                    className="w-full text-right px-4 py-3 text-sm hover:bg-gray-50"
+                  >
+                    حفظ كمسودة
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </form>
       </div>

@@ -11,17 +11,18 @@ export const requestSchemaValues = z
   .object({
     specialization_id: z.string().uuid("التخصص مطلوب"),
     title: z.string().min(3, "العنوان مطلوب"),
-    description: z.string().min(10, "الوصف مطلوب"),
+    description: z.string().min(4, "الوصف مطلوب"),
     bid_deadline: z.string(),
     work_start_at: z.string(),
     bid_mode: z.enum(["open", "direct"]),
-    direct_contractor_id: z.string().uuid().nullable().optional(), // 👈 add this
-    contact_name: z.string().trim().min(1, "اسم جهة التواصل مطلوب"),
-    contact_phone: z.string().trim().min(1, "رقم التواصل مطلوب"),
-    delay_penalty_terms: z.string().trim().min(1, "شرط غرامة التأخير مطلوب"),
-    retention_terms: z.string().trim().min(1, "شرط الاستقطاع / الضمان مطلوب"),
+    direct_contractor_id: z.string().uuid().nullable().optional(),
+    contact_name: z.string(),
+    contact_phone: z.string(),
+    delay_penalty_terms: z.string(),
+    retention_terms: z.string(),
     contractor_provides_materials: z.boolean(),
-    items: z.array(requestItemsSchema).min(1, "يجب إضافة بند واحد على الأقل"),
+    items: z.array(requestItemsSchema),
+    status: z.enum(["open", "draft"]),
   })
   .superRefine((data, ctx) => {
     // 👇 if mode is direct, contractor_id is required
@@ -30,6 +31,16 @@ export const requestSchemaValues = z
         code: z.ZodIssueCode.custom,
         message: "يجب اختيار المقاول في حالة العقد المباشر",
         path: ["direct_contractor_id"],
+      });
+    }
+    if (data.status === "draft") return;
+
+    // open → must have items
+    if (data.items.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: "يجب إضافة بند واحد على الأقل",
       });
     }
   });

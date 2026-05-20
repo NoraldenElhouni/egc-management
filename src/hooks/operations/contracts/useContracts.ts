@@ -213,6 +213,51 @@ export function useCreateRequest() {
     });
   }
 
+  async function stopRequest(requestId: string) {
+    setLoading(true);
+    setError(null);
+
+    const { error: updateError } = await supabase
+      .from("work_requests")
+      .update({
+        status: "draft",
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      setError(updateError);
+      setLoading(false);
+
+      return { error: updateError };
+    }
+
+    setLoading(false);
+
+    return { error: null };
+  }
+  async function cancelRequest(requestId: string) {
+    setLoading(true);
+    setError(null);
+
+    const { error: updateError } = await supabase
+      .from("work_requests")
+      .update({
+        status: "cancelled",
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      setError(updateError);
+      setLoading(false);
+
+      return { error: updateError };
+    }
+
+    setLoading(false);
+
+    return { error: null };
+  }
+
   async function createRequest(values: RequestForm, projectId: string) {
     setLoading(true);
     setError(null);
@@ -238,7 +283,7 @@ export function useCreateRequest() {
         contractor_provides_materials: values.contractor_provides_materials,
         delay_penalty_terms: values.delay_penalty_terms,
         retention_terms: values.retention_terms,
-        status: "open",
+        status: values.status,
         direct_contractor_id:
           values.bid_mode === "direct" ? values.direct_contractor_id : null,
       })
@@ -270,32 +315,33 @@ export function useCreateRequest() {
     }
 
     // الخطوة 3: إرسال الإشعارات
-    try {
-      let pushTokens: string[] = [];
+    if (values.status !== "draft") {
+      try {
+        let pushTokens: string[] = [];
 
-      if (values.bid_mode === "direct" && values.direct_contractor_id) {
-        // المقاول المحدد فقط
-        const { data: contractor } = await supabase
-          .from("contractors")
-          .select("user_id")
-          .eq("id", values.direct_contractor_id)
-          .single();
-
-        if (contractor?.user_id) {
-          const { data: tokenData } = await supabase
-            .from("user_push_tokens")
-            .select("push_token")
-            .eq("user_id", contractor.user_id)
+        if (values.bid_mode === "direct" && values.direct_contractor_id) {
+          // المقاول المحدد فقط
+          const { data: contractor } = await supabase
+            .from("contractors")
+            .select("user_id")
+            .eq("id", values.direct_contractor_id)
             .single();
 
-          if (tokenData?.push_token) pushTokens = [tokenData.push_token];
-        }
-      } else {
-        // جميع المقاولين بنفس التخصص
-        const { data: contractors } = await supabase
-          .from("contractors")
-          .select(
-            `
+          if (contractor?.user_id) {
+            const { data: tokenData } = await supabase
+              .from("user_push_tokens")
+              .select("push_token")
+              .eq("user_id", contractor.user_id)
+              .single();
+
+            if (tokenData?.push_token) pushTokens = [tokenData.push_token];
+          }
+        } else {
+          // جميع المقاولين بنفس التخصص
+          const { data: contractors } = await supabase
+            .from("contractors")
+            .select(
+              `
             user_id,
             users!contractors_user_id_fkey (
               user_specializations!user_specializations_user_id_fkey (
@@ -303,53 +349,204 @@ export function useCreateRequest() {
               )
             )
           `,
-          )
-          .not("user_id", "is", null);
+            )
+            .not("user_id", "is", null);
 
-        if (contractors) {
-          const matchingUserIds = contractors
-            .filter((contractor) => {
-              const specializations = contractor.users?.user_specializations as
-                | { specialization_id: string }[]
-                | undefined;
-              return specializations?.some(
-                (s) => s.specialization_id === values.specialization_id,
-              );
-            })
-            .map((c) => c.user_id)
-            .filter(Boolean) as string[];
+          if (contractors) {
+            const matchingUserIds = contractors
+              .filter((contractor) => {
+                const specializations = contractor.users
+                  ?.user_specializations as
+                  | { specialization_id: string }[]
+                  | undefined;
+                return specializations?.some(
+                  (s) => s.specialization_id === values.specialization_id,
+                );
+              })
+              .map((c) => c.user_id)
+              .filter(Boolean) as string[];
 
-          if (matchingUserIds.length > 0) {
-            const { data: tokens } = await supabase
-              .from("user_push_tokens")
-              .select("push_token")
-              .in("user_id", matchingUserIds);
+            if (matchingUserIds.length > 0) {
+              const { data: tokens } = await supabase
+                .from("user_push_tokens")
+                .select("push_token")
+                .in("user_id", matchingUserIds);
 
-            pushTokens =
-              (tokens?.map((t) => t.push_token).filter(Boolean) as string[]) ??
-              [];
+              pushTokens =
+                (tokens
+                  ?.map((t) => t.push_token)
+                  .filter(Boolean) as string[]) ?? [];
+            }
           }
         }
-      }
 
-      if (pushTokens.length > 0) {
-        await sendPushNotifications(
-          pushTokens,
-          "طلب عمل جديد",
-          values.bid_mode === "direct"
-            ? `تم تكليفك مباشرةً بطلب عمل جديد: ${values.title}`
-            : `يوجد طلب عمل جديد في تخصصك: ${values.title}`,
-        );
+        if (pushTokens.length > 0) {
+          await sendPushNotifications(
+            pushTokens,
+            "طلب عمل جديد",
+            values.bid_mode === "direct"
+              ? `تم تكليفك مباشرةً بطلب عمل جديد: ${values.title}`
+              : `يوجد طلب عمل جديد في تخصصك: ${values.title}`,
+          );
+        }
+      } catch (notifError) {
+        console.error("❌ خطأ في إرسال الإشعار:", notifError);
       }
-    } catch (notifError) {
-      console.error("❌ خطأ في إرسال الإشعار:", notifError);
     }
 
     setLoading(false);
     return { error: null, requestId: request.id };
   }
 
-  return { createRequest, loading, error };
+  async function notifyRequestUsers(request: {
+    id: string;
+    title: string;
+    mode: "open" | "direct";
+    specialization_id: string;
+    direct_contractor_id?: string | null;
+  }) {
+    let pushTokens: string[] = [];
+
+    if (request.mode === "direct" && request.direct_contractor_id) {
+      // direct contractor
+      const { data: contractor } = await supabase
+        .from("contractors")
+        .select("user_id")
+        .eq("id", request.direct_contractor_id)
+        .single();
+
+      if (contractor?.user_id) {
+        const { data: tokenData } = await supabase
+          .from("user_push_tokens")
+          .select("push_token")
+          .eq("user_id", contractor.user_id)
+          .single();
+
+        if (tokenData?.push_token) {
+          pushTokens = [tokenData.push_token];
+        }
+      }
+    } else {
+      // contractors with same specialization
+      const { data: contractors } = await supabase
+        .from("contractors")
+        .select(
+          `
+        user_id,
+        users!contractors_user_id_fkey (
+          user_specializations!user_specializations_user_id_fkey (
+            specialization_id
+          )
+        )
+      `,
+        )
+        .not("user_id", "is", null);
+
+      if (contractors) {
+        const matchingUserIds = contractors
+          .filter((contractor) => {
+            const specializations = contractor.users?.user_specializations as
+              | { specialization_id: string }[]
+              | undefined;
+
+            return specializations?.some(
+              (s) => s.specialization_id === request.specialization_id,
+            );
+          })
+          .map((c) => c.user_id)
+          .filter(Boolean) as string[];
+
+        if (matchingUserIds.length > 0) {
+          const { data: tokens } = await supabase
+            .from("user_push_tokens")
+            .select("push_token")
+            .in("user_id", matchingUserIds);
+
+          pushTokens =
+            (tokens?.map((t) => t.push_token).filter(Boolean) as string[]) ??
+            [];
+        }
+      }
+    }
+
+    if (pushTokens.length > 0) {
+      await sendPushNotifications(
+        pushTokens,
+        "طلب عمل جديد",
+        request.mode === "direct"
+          ? `تم تكليفك مباشرةً بطلب عمل جديد: ${request.title}`
+          : `يوجد طلب عمل جديد في تخصصك: ${request.title}`,
+      );
+    }
+  }
+
+  async function publishRequest(requestId: string) {
+    setLoading(true);
+    setError(null);
+
+    // get request info
+    const { data: request, error: fetchError } = await supabase
+      .from("work_requests")
+      .select(
+        `
+      id,
+      title,
+      mode,
+      specialization_id,
+      direct_contractor_id
+    `,
+      )
+      .eq("id", requestId)
+      .single();
+
+    if (fetchError || !request) {
+      setError(fetchError);
+      setLoading(false);
+
+      return { error: fetchError };
+    }
+
+    // update status
+    const { error: updateError } = await supabase
+      .from("work_requests")
+      .update({
+        status: "open",
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      setError(updateError);
+      setLoading(false);
+
+      return { error: updateError };
+    }
+
+    // notify users
+    try {
+      await notifyRequestUsers({
+        id: request.id,
+        title: request.title,
+        mode: request.mode,
+        specialization_id: request.specialization_id,
+        direct_contractor_id: request.direct_contractor_id,
+      });
+    } catch (notifError) {
+      console.error("❌ خطأ في إرسال الإشعار:", notifError);
+    }
+
+    setLoading(false);
+
+    return { error: null };
+  }
+
+  return {
+    createRequest,
+    loading,
+    error,
+    publishRequest,
+    stopRequest,
+    cancelRequest,
+  };
 }
 
 export function useContractDetails(contractId: string) {
