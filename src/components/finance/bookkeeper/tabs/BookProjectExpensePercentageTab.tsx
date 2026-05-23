@@ -25,7 +25,7 @@ const BookProjectExpensePercentageTab = ({
   return (
     <div className="space-y-4">
       <div>
-        <OverviewStatus
+        {/* <OverviewStatus
           stats={[
             {
               label: "اجمالي المصروفات",
@@ -34,9 +34,6 @@ const BookProjectExpensePercentageTab = ({
                   ?.filter((expense) => expense.status !== "deleted")
                   .reduce((acc, expense) => acc + expense.total_amount, 0) || 0,
               ),
-              icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
             },
             {
               label: "إجمالي مصروفات المدفوعه",
@@ -45,9 +42,6 @@ const BookProjectExpensePercentageTab = ({
                   ?.filter((expense) => expense.status !== "deleted")
                   .reduce((acc, expense) => acc + expense.amount_paid, 0) || 0,
               ),
-              icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
             },
             {
               label: "اجمالي المحجوز",
@@ -57,9 +51,6 @@ const BookProjectExpensePercentageTab = ({
                   0,
                 ) || 0,
               ),
-              icon: Hash,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
             },
 
             {
@@ -75,7 +66,7 @@ const BookProjectExpensePercentageTab = ({
               iconColor: "text-green-600",
             },
           ]}
-        />
+        /> */}
       </div>
       <div>
         <ProjectExpensePercentageForm

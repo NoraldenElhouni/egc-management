@@ -3,9 +3,6 @@ import { useExpensePayments } from "../../../hooks/finance/usePayments";
 import ExpensePaymentList from "../../../components/finance/lists/ExpensePaymentList";
 import ExpensePaymentSummary from "../../../components/finance/cards/ExpensePaymentSummary";
 import ExpensePaymentsForm from "../../../components/finance/form/ExpensePaymentsForm";
-import GenericTable from "../../../components/tables/table";
-import { ContractReportColumns } from "../../../components/tables/columns/ContractReportColumns";
-import { useContractReport } from "../../../hooks/finance/useContractReport";
 import { useState } from "react";
 import type { projectExpensePayments } from "../../../types/extended.type";
 

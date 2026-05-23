@@ -41,7 +41,30 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       const rate = (pp?.percentage ?? 0) / 100;
 
-      // 2. Insert expense with paid_amount = 0
+      // 2. Fetch a fresh snapshot of counters from DB (props may be stale)
+      const { data: freshProject, error: freshErr } = await supabase
+        .from("projects")
+        .select("expense_counter, invoice_counter")
+        .eq("id", project.id)
+        .single();
+
+      if (freshErr) throw freshErr;
+
+      // 3. Increment counters FIRST (reserve the serial slot before inserting),
+      //    using optimistic concurrency to guard against races.
+      const { error: counterErr } = await supabase
+        .from("projects")
+        .update({
+          expense_counter: freshProject.expense_counter + 1,
+          invoice_counter: freshProject.invoice_counter + 1,
+        })
+        .eq("id", project.id)
+        // Only update if no other operation has already bumped the counter
+        .eq("expense_counter", freshProject.expense_counter);
+
+      if (counterErr) throw counterErr;
+
+      // 4. Insert expense using the reserved serial number
       const { data: expense, error: expenseErr } = await supabase
         .from("project_expenses")
         .insert([
@@ -55,7 +78,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
             expense_type: "labor" as const,
             status: "unpaid" as const,
             amount_paid: 0,
-            serial_number: project.expense_counter,
+            serial_number: freshProject.expense_counter, // the slot we just reserved
             contractor_id: bid.contractor_id,
             currency: "LYD" as const,
           },
@@ -65,7 +88,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       if (expenseErr) throw expenseErr;
 
-      // 3. Update project_balances (invoice-based — affects total_expense and percentage even before payment)
+      // 5. Update project_balances (invoice-based — affects total_expense and percentage even before payment)
       const invoicePercentage = bid.total_price * rate;
       const netDelta = bid.total_price + invoicePercentage;
 
@@ -90,7 +113,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       if (balanceUpdateError) throw balanceUpdateError;
 
-      // 4. Accept the winning bid
+      // 6. Accept the winning bid
       const { error: bidErr } = await supabase
         .from("contractor_bids")
         .update({
@@ -102,7 +125,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       if (bidErr) throw bidErr;
 
-      // 5. Reject all other bids for this request
+      // 7. Reject all other bids for this request
       const { error: rejectErr } = await supabase
         .from("contractor_bids")
         .update({ status: "rejected", reviewed_at: new Date().toISOString() })
@@ -111,7 +134,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       if (rejectErr) throw rejectErr;
 
-      // 6. Mark work request as awarded
+      // 8. Mark work request as awarded
       const { error: requestErr } = await supabase
         .from("work_requests")
         .update({ status: "awarded" })
@@ -119,7 +142,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       if (requestErr) throw requestErr;
 
-      // 7. Create the contract
+      // 9. Create the contract
       const { error: contractErr } = await supabase.from("contracts").insert({
         project_id: project.id,
         request_id: bid.request_id,
@@ -135,16 +158,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
 
       if (contractErr) throw contractErr;
 
-      // 8. Update project expense counter
-      await supabase
-        .from("projects")
-        .update({
-          expense_counter: project.expense_counter + 1,
-          invoice_counter: project.invoice_counter + 1,
-        })
-        .eq("id", project.id);
-
-      // 9. Increment expense payment counter
+      // 10. Increment expense payment counter
       await supabase
         .from("project_expenses")
         .update({ payment_counter: expense.payment_counter + 1 })

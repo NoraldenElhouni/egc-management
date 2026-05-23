@@ -5,98 +5,10 @@ import type {
   ProjectExpenses,
 } from "../../types/global.type";
 import { supabase } from "../../lib/supabaseClient";
-import {
-  ContractPaymentWithRelations,
-  projectExpensePayments,
-  ProjectExpenseWithName,
-} from "../../types/extended.type";
+import { projectExpensePayments } from "../../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ExpensePaymentFormValues } from "../../types/schema/ProjectBook.schema";
 import { useAuth } from "../useAuth";
-
-export function usePayments() {
-  const [payments, setPayments] = useState<ProjectExpenseWithName[]>([]);
-  const [contractPayments, setContractPayments] = useState<
-    ContractPaymentWithRelations[]
-  >([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // guard to avoid state updates after unmount
-  const mountedRef = useRef(false);
-
-  const fetchPayments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // fetch expenses and contract payments in parallel
-      const [expensesRes, contractRes] = await Promise.all([
-        supabase
-          .from("project_expenses")
-          .select("*, projects(name)")
-          .eq("status", "partially_paid"),
-        supabase
-          .from("contract_payments")
-          .select(
-            "*, contractors(first_name, last_name), contracts(projects(name))",
-          )
-          .eq("status", "pending"),
-      ]);
-
-      if (expensesRes.error) throw expensesRes.error;
-      if (contractRes.error) throw contractRes.error;
-
-      const expenses = expensesRes.data ?? [];
-      const contractData = contractRes.data ?? [];
-
-      // get unique employee ids and fetch employees only if needed
-      const employeeIds = Array.from(
-        new Set(contractData.map((cp) => cp.created_by).filter(Boolean)),
-      );
-
-      let employeeData: Employees[] = [];
-      if (employeeIds.length) {
-        const empRes = await supabase
-          .from("employees")
-          .select("*")
-          .in("id", employeeIds);
-        if (empRes.error) throw empRes.error;
-        employeeData = empRes.data ?? [];
-      }
-
-      // attach employee to contract payments
-      const contractPaymentsWithEmployees = contractData.map((cp) => ({
-        ...cp,
-        employee: employeeData.find((e) => e.id === cp.created_by) ?? null,
-      }));
-
-      if (!mountedRef.current) return;
-
-      setPayments(expenses as ProjectExpenseWithName[]);
-      setContractPayments(
-        contractPaymentsWithEmployees as ContractPaymentWithRelations[],
-      );
-    } catch (err: unknown) {
-      if (!mountedRef.current) return;
-      const message = (err as PostgrestError)?.message ?? String(err);
-      setError(message);
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    // initial load
-    fetchPayments();
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [fetchPayments]);
-
-  return { payments, contractPayments, loading, error, refetch: fetchPayments };
-}
 
 export function useExpensePayments(expenseId: string) {
   const [payment, setPayment] = useState<projectExpensePayments[] | null>(null);
@@ -694,35 +606,6 @@ export function useExpensePayments(expenseId: string) {
           );
           throw incNewPPErr;
         }
-      }
-
-      const percentageDelta = newPercentageAmount - oldPercentageAmount;
-
-      const { data: projectBalance, error: pbFetchError } = await supabase
-        .from("project_balances")
-        .select("*")
-        .eq("project_id", expenseData.project_id)
-        .eq("currency", expenseData.currency)
-        .single();
-
-      if (pbFetchError || !projectBalance) {
-        console.error("Error fetching project balance", pbFetchError);
-        throw pbFetchError || new Error("Project balance not found");
-      }
-      const { error: pbUpdateError } = await supabase
-        .from("project_balances")
-        .update({
-          balance:
-            Number(projectBalance.balance) - amountDelta - percentageDelta,
-          total_expense: Number(projectBalance.total_expense) + amountDelta,
-          total_percentage:
-            Number(projectBalance.total_percentage) + percentageDelta,
-        })
-        .eq("id", projectBalance.id);
-
-      if (pbUpdateError) {
-        console.error("Error updating project balance", pbUpdateError);
-        throw pbUpdateError;
       }
 
       return { success: true, error: null, data: updatedPayment };

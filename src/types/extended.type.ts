@@ -28,10 +28,6 @@ export type FullProject = Projects & {
   project_percentage: ProjectPercentage[];
 };
 
-export type ProjectExpenseWithName = ProjectExpenses & {
-  projects: { name: string };
-};
-
 // Project related types (export these for use elsewhere)
 export type ProjectAssignmentWithDetails = ProjectAssignments & {
   projects: Projects;

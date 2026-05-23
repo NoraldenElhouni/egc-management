@@ -1,4 +1,3 @@
-import { Activity, DollarSign, Hash } from "lucide-react";
 import { useAuth } from "../../../../hooks/useAuth";
 import { ProjectIncome } from "../../../../types/global.type";
 import { ProjectWithDetailsForBook } from "../../../../types/projects.type";
@@ -48,9 +47,6 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
                 0,
               ) ?? 0,
             ),
-            icon: Hash,
-            iconBgColor: "bg-blue-100",
-            iconColor: "text-blue-600",
             secondaryLabel: "عدد الوداعات",
             secondaryValue: project?.project_incomes?.length || 0,
           },
@@ -63,9 +59,6 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
                 0,
               ) ?? 0,
             ),
-            icon: DollarSign,
-            iconBgColor: "bg-green-100",
-            iconColor: "text-green-600",
             secondaryLabel: "إجمالي الدخل (بنكي)",
             secondaryValue: formatCurrency(
               project?.project_incomes?.reduce(
@@ -79,9 +72,6 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
           {
             label: "الرصيد المتاح",
             value: formatCurrency(totalAvailable),
-            icon: DollarSign,
-            iconBgColor: "bg-green-100",
-            iconColor: "text-green-600",
           },
         ]}
       />

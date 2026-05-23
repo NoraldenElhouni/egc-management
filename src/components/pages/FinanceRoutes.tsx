@@ -7,7 +7,6 @@ import TreasuryPage from "../../pages/finance/treasury/TreasuryPage";
 import TreasuryProjectPage from "../../pages/finance/treasury/TreasuryProjectPage";
 import InvoicesPage from "../../pages/finance/invoices/ProjectsInvoicesPage";
 import ProjectInvoicesDetailsPage from "../../pages/finance/invoices/ProjectInvoicesDetailsPage";
-import PaymentsPage from "../../pages/finance/PaymentsPage";
 import BookkeepingRoutes from "./BookkeepingRoutes";
 import BookkeepingPage from "../../pages/finance/bookkeeper/BookkeepingPage";
 import NewProjectFinance from "../../pages/finance/NewProjectFinance";
@@ -44,7 +43,6 @@ const FinanceRoutes = () => {
           element={<ComapnyExpensePayments />}
         />
 
-        <Route path="payments" element={<PaymentsPage />} />
         <Route path="bookkeeping" element={<BookkeepingPage />} />
         <Route path="projects/add" element={<NewProjectFinance />} />
       </Route>
