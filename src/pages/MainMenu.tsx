@@ -56,7 +56,7 @@ const MainMenu = () => {
       label: "الإعدادات",
       icon: Settings,
       path: "/settings",
-      role: ["Admin", "Finance"],
+      role: ["Admin", "Finance", "Engineer"],
     },
     {
       label: "التشغيل",

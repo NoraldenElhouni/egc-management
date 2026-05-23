@@ -11,14 +11,14 @@ const OperationsPage = () => {
       icon: PackageOpen,
       path: "/operations/maps",
       description: "عرض وإدارة الخرائط",
-      role: [], // public
+      role: ["Admin"], // public
     },
     {
       label: "العقود",
       icon: Paperclip,
       path: "/operations/contracts",
       description: "إدارة العقود والملفات",
-      role: ["Admin"],
+      role: ["Admin", "Engineer"],
     },
   ];
 

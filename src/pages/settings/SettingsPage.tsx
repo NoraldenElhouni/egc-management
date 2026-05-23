@@ -11,24 +11,28 @@ const SettingsPage = () => {
       icon: Users,
       path: "/settings/roles",
       description: "إدارة  الأدوار والصلاحيات",
+      role: ["Admin"],
     },
     {
       label: "اداره اسماء المصروفات",
       icon: Box,
       path: "/settings/expenses",
       description: "إدارة اسماء المصروفات",
+      role: ["Admin"],
     },
     {
       label: "اداره التخصصات",
       icon: BookText,
       path: "/settings/specializations",
       description: "إدارة التخصصات",
+      role: ["Admin", "Engineer"],
     },
     {
       label: "اداره الخرائط",
       icon: Map,
       path: "/settings/maps",
       description: "إدارة الخرائط",
+      role: ["Admin"],
     },
   ];
 
