@@ -13,6 +13,7 @@ import { useSidebar } from "../../contexts/SidebarContext";
 const SettingsLayout = () => {
   const location = useLocation();
   const { isCollapsed, toggle } = useSidebar();
+  const { user, loading } = useAuth();
 
   const menuItems = [
     {
@@ -20,31 +21,33 @@ const SettingsLayout = () => {
       icon: Users,
       path: "/settings/roles",
       description: "إدارة  الأدوار والصلاحيات",
+      role: ["Admin"],
     },
     {
       title: "اداره اسماء المصروفات",
       icon: Box,
       path: "/settings/expenses",
       description: "إدارة اسماء المصروفات",
+      role: ["Admin"],
     },
     {
       title: "اداره التخصصات",
       icon: BookText,
       path: "/settings/specializations",
       description: "إدارة التخصصات",
+      role: ["Admin", "Engineer"],
     },
     {
       title: "اداره الخرائط",
       icon: Map,
       path: "/settings/maps",
       description: "إدارة الخرائط",
+      role: ["Admin"],
     },
   ];
 
-  const { user, loading } = useAuth();
-
   const visibleItems = menuItems.filter((item) => {
-    const roles = (item as { role?: string[] }).role;
+    const roles = item.role;
     if (!roles || loading) return true;
     if (!user || !user.role) return false;
     return roles.includes(user.role);
