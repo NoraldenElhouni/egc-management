@@ -115,3 +115,108 @@ export async function addVendor(form: VendorFormValues) {
     authUserId,
   };
 }
+
+export async function AssignUserToVendor({
+  vendorId,
+  email,
+  password,
+}: {
+  vendorId: string;
+  email: string;
+  password: string;
+}) {
+  const roleId = "7cfabb14-ee17-48bc-b03f-4199ef32d1e0"; // Vendor role
+
+  // 1) Fetch the vendor to get their info for auth metadata
+  const { data: vendor, error: fetchErr } = await supabaseAdmin
+    .from("vendors")
+    .select("id, vendor_name, contact_name, phone_number, specialization_id")
+    .eq("id", vendorId)
+    .single();
+
+  if (fetchErr || !vendor) {
+    return {
+      success: false,
+      error: fetchErr,
+      message: "فشل في جلب بيانات المورد",
+    };
+  }
+
+  // 2) Create the auth user
+  const { data: userData, error: userError } =
+    await supabaseAdmin.auth.admin.createUser({
+      email: email.trim(),
+      password,
+      email_confirm: true,
+      user_metadata: {
+        firstName: vendor.vendor_name,
+        lastName: vendor.contact_name ?? null,
+        phone: vendor.phone_number ?? null,
+        roleId,
+      },
+    });
+
+  if (userError || !userData.user) {
+    return {
+      success: false,
+      error: userError,
+      message: "فشل في إنشاء حساب المستخدم",
+    };
+  }
+
+  const authUserId = userData.user.id;
+
+  // 3) Link the auth user to the vendor row
+  const { error: updateErr } = await supabaseAdmin
+    .from("vendors")
+    .update({ user_id: authUserId, email: email })
+    .eq("id", vendorId);
+
+  if (updateErr) {
+    // Rollback: delete the orphaned auth user
+    await supabaseAdmin.auth.admin.deleteUser(authUserId);
+    return {
+      success: false,
+      error: updateErr,
+      message: "فشل في ربط الحساب بالمورد",
+    };
+  }
+
+  // 4) Assign the vendor role
+  const { error: roleErr } = await supabaseAdmin
+    .from("user_roles")
+    .insert({ role_id: roleId, user_id: authUserId });
+
+  if (roleErr) {
+    return {
+      success: false,
+      error: roleErr,
+      message: "فشل في تعيين دور المستخدم",
+    };
+  }
+
+  // 5) Assign specialization if the vendor has one
+  if (vendor.specialization_id) {
+    const { error: specErr } = await supabaseAdmin
+      .from("user_specializations")
+      .insert({
+        specialization_id: vendor.specialization_id,
+        user_id: authUserId,
+      });
+
+    if (specErr) {
+      return {
+        success: false,
+        error: specErr,
+        message: "فشل في تعيين تخصص المستخدم",
+      };
+    }
+  }
+
+  return {
+    success: true,
+    message: "تم ربط الحساب بالمورد بنجاح",
+    authUserId,
+    vendorId,
+  };
+}

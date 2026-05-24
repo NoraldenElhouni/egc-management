@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Contractors } from "../types/global.type";
 import { supabase } from "../lib/supabaseClient";
 import { PostgrestError } from "@supabase/supabase-js";
+import { supabaseAdmin } from "../lib/adminSupabase";
 
 export function useContractors() {
   const [contractors, setContractors] = useState<Contractors[]>([]);
@@ -28,33 +29,31 @@ export function useContractors() {
 
   return { contractors, loading, error };
 }
-
-export function useContractor(id: string) {
-  const [contractor, setContractor] = useState<Contractors | null>(null);
+export function useContractorsNoUser() {
+  const [contractors, setContractors] = useState<Contractors[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
-    async function fetchContractor() {
+    async function fetchContractors() {
       setLoading(true);
       const { data, error } = await supabase
-        .from("employees")
+        .from("contractors")
         .select("*")
-        .eq("id", id)
-        .single();
+        .is("user_id", null);
 
       if (error) {
-        console.error("error fetching employyes", error);
+        console.error("error fetching contractors", error);
         setError(error);
       } else {
-        setContractor(data ?? null);
+        setContractors(data ?? []);
       }
 
       setLoading(false);
     }
 
-    fetchContractor();
-  }, [id]); // runs once on mount}
+    fetchContractors();
+  }, []); // runs once on mount
 
-  return { contractor, loading, error };
+  return { contractors, loading, error };
 }

@@ -112,3 +112,96 @@ export async function AddContractors(form: ContractorFormValues) {
     authUserId,
   };
 }
+
+export async function AssignUserToContractor({
+  contractorId,
+  email,
+  password,
+}: {
+  contractorId: string;
+  email: string;
+  password: string;
+}) {
+  const roleId = "20606a44-1f4b-4e0a-af58-abc553b70bc0"; // Contractor role
+
+  // 1) Fetch the contractor to get their name/phone for metadata
+  const { data: contractor, error: fetchErr } = await supabaseAdmin
+    .from("contractors")
+    .select("id, first_name, last_name, phone_number")
+    .eq("id", contractorId)
+    .single();
+
+  if (fetchErr || !contractor) {
+    console.error(fetchErr);
+    return {
+      success: false,
+      error: fetchErr,
+      message: "فشل في جلب بيانات المقاول",
+    };
+  }
+
+  // 2) Create the auth user
+  const { data: userData, error: userError } =
+    await supabaseAdmin.auth.admin.createUser({
+      email: email.trim(),
+      password,
+      email_confirm: true,
+      user_metadata: {
+        firstName: contractor.first_name,
+        lastName: contractor.last_name ?? "",
+        phone: contractor.phone_number ?? null,
+        roleId,
+      },
+    });
+
+  if (userError || !userData.user) {
+    console.error(userError);
+
+    return {
+      success: false,
+      error: userError,
+      message: "فشل في إنشاء حساب المستخدم",
+    };
+  }
+
+  const authUserId = userData.user.id;
+
+  // 3) Link the auth user to the contractor row
+  const { error: updateErr } = await supabaseAdmin
+    .from("contractors")
+    .update({ user_id: authUserId, email: email })
+    .eq("id", contractorId);
+
+  if (updateErr) {
+    console.error(updateErr);
+
+    // Auth user was created but linking failed — you may want to delete the auth user here
+    await supabaseAdmin.auth.admin.deleteUser(authUserId);
+    return {
+      success: false,
+      error: updateErr,
+      message: "فشل في ربط الحساب بالمقاول",
+    };
+  }
+
+  // 4) Assign the contractor role
+  const { error: roleErr } = await supabaseAdmin
+    .from("user_roles")
+    .insert({ role_id: roleId, user_id: authUserId });
+
+  if (roleErr) {
+    console.error(roleErr);
+    return {
+      success: false,
+      error: roleErr,
+      message: "فشل في تعيين دور المستخدم",
+    };
+  }
+
+  return {
+    success: true,
+    message: "تم ربط الحساب بالمقاول بنجاح",
+    authUserId,
+    contractorId,
+  };
+}

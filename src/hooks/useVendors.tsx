@@ -26,3 +26,32 @@ export function useVendors() {
 
   return { vendors, loading, error };
 }
+
+export function useVendorsNoUser() {
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    async function fetchVendors() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("*")
+        .is("user_id", null);
+
+      if (error) {
+        console.error("error fetching vendors", error);
+        setError(error);
+      } else {
+        setVendors(data ?? []);
+      }
+
+      setLoading(false);
+    }
+
+    fetchVendors();
+  }, []);
+
+  return { vendors, loading, error };
+}

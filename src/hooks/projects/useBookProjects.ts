@@ -29,42 +29,83 @@ export function useBookProject(projectId: string) {
 
   useEffect(() => {
     async function fetchProject() {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("projects")
-        .select(
-          "*,clients(*), project_incomes(*), project_expenses(*, vendors(vendor_name), contractors(first_name,last_name)), project_balances(*), project_refund(*), accounts(*), project_maps(*)",
-        )
-        .eq("id", projectId)
-        .single();
+      try {
+        setLoading(true);
 
-      if (error) {
-        console.error("error fetching project", error);
-        setError(error);
-      } else {
-        const projectWithNames: ProjectWithDetailsForBook = {
-          ...data,
-          client: data.clients, // Add this line to fix the missing property
-          project_expenses: (data.project_expenses ?? []).map((expense) => {
-            const contractorName = [
-              expense.contractors?.first_name,
-              expense.contractors?.last_name,
-            ]
+        // 1. Fetch project (WITHOUT expenses)
+        const { data: projectData, error: projectError } = await supabase
+          .from("projects")
+          .select(
+            `
+        *,
+        clients(*),
+        project_incomes(*),
+        project_balances(*),
+        project_refund(*),
+        accounts(*),
+        project_maps(*)
+      `,
+          )
+          .eq("id", projectId)
+          .single();
+
+        if (projectError) throw projectError;
+
+        // 2. Fetch ALL expenses in batches
+        const pageSize = 1000;
+        let from = 0;
+        let expenses: any[] = [];
+
+        while (true) {
+          const { data: batch, error: expenseError } = await supabase
+            .from("project_expenses")
+            .select(
+              `
+          *,
+          vendors(vendor_name),
+          contractors(first_name,last_name)
+        `,
+            )
+            .eq("project_id", projectId)
+            .range(from, from + pageSize - 1)
+            .order("created_at", { ascending: false });
+
+          if (expenseError) throw expenseError;
+
+          if (!batch?.length) break;
+
+          expenses.push(...batch);
+
+          if (batch.length < pageSize) break;
+
+          from += pageSize;
+        }
+
+        // 3. Transform expenses
+        const transformedExpenses = expenses.map((expense) => ({
+          ...expense,
+          vendor_name: expense.vendors?.vendor_name ?? undefined,
+          contract_name:
+            [expense.contractors?.first_name, expense.contractors?.last_name]
               .filter(Boolean)
-              .join(" ");
+              .join(" ") || undefined,
+        }));
 
-            return {
-              ...expense,
-              vendor_name: expense.vendors?.vendor_name ?? undefined,
-              contract_name: contractorName || undefined,
-            };
-          }),
+        // 4. Merge result
+        const projectWithNames: ProjectWithDetailsForBook = {
+          ...projectData,
+          client: projectData.clients,
+          project_expenses: transformedExpenses,
         };
 
         setProject(projectWithNames);
+        setError(null);
+      } catch (err) {
+        console.error("error fetching project", err);
+        setError(err as Error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     fetchProject();

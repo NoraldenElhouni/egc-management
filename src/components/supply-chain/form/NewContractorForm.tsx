@@ -19,6 +19,7 @@ const NewContractorForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const navigate = useNavigate();
+
   const { data: specializations, loading: spLoading } =
     useSpecializations("Contractor");
 
@@ -46,7 +47,7 @@ const NewContractorForm = () => {
 
       setSuccess(result.message || "تم إضافة المقاول بنجاح");
       reset();
-      navigate("/supply-chain/contractors"); // choose your route
+      navigate("/supply-chain/contractors");
     } catch (error) {
       console.error("Error adding contractor:", error);
       setServerError("An unexpected error occurred");
