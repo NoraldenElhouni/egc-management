@@ -5,6 +5,18 @@ export const requestItemsSchema = z.object({
   name: z.string(),
   unit: z.string(),
   quantity: z.number(),
+  is_custom: z.boolean().optional(), // 👈 new
+  custom_name: z.string().optional(), // 👈 new
+});
+
+export const requestMilestoneSchema = z.object({
+  title: z.string().min(2, "اسم المرحلة مطلوب"),
+  description: z.string().optional(),
+  percentage: z
+    .number()
+    .min(1, "النسبة يجب أن تكون أكبر من 0")
+    .max(100, "النسبة يجب أن تكون أقل من 100"),
+  order_index: z.number(),
 });
 
 export const requestSchemaValues = z
@@ -22,10 +34,10 @@ export const requestSchemaValues = z
     retention_terms: z.string(),
     contractor_provides_materials: z.boolean(),
     items: z.array(requestItemsSchema),
+    milestones: z.array(requestMilestoneSchema), // 👈 new
     status: z.enum(["open", "draft"]),
   })
   .superRefine((data, ctx) => {
-    // 👇 if mode is direct, contractor_id is required
     if (data.bid_mode === "direct" && !data.direct_contractor_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -35,7 +47,6 @@ export const requestSchemaValues = z
     }
     if (data.status === "draft") return;
 
-    // open → must have items
     if (data.items.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -43,6 +54,33 @@ export const requestSchemaValues = z
         message: "يجب إضافة بند واحد على الأقل",
       });
     }
+
+    // validate custom items have a name
+    data.items.forEach((item, i) => {
+      if (item.is_custom && !item.custom_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["items", i, "custom_name"],
+          message: "اسم البند مطلوب",
+        });
+      }
+    });
+
+    // milestone percentages must sum to 100 (only if milestones exist)
+    if (data.milestones.length > 0) {
+      const total = data.milestones.reduce(
+        (s, m) => s + (m.percentage || 0),
+        0,
+      );
+      if (Math.round(total) !== 100) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["milestones"],
+          message: `مجموع النسب يجب أن يساوي 100% (الحالي: ${total}%)`,
+        });
+      }
+    }
   });
 
 export type RequestForm = z.infer<typeof requestSchemaValues>;
+export type RequestMilestone = z.infer<typeof requestMilestoneSchema>;

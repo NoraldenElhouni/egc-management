@@ -296,31 +296,48 @@ export function useCreateRequest() {
       return { error: requestError };
     }
 
-    // الخطوة 2: إضافة عناصر الطلب
-    const { error: itemsError } = await supabase
-      .from("work_request_items")
-      .insert(
-        values.items.map((item) => ({
-          request_id: request.id,
-          service_id: item.id,
-          quantity: item.quantity,
-          unit: item.unit,
-        })),
-      );
+    // الخطوة 2: إضافة عناصر الطلب (خدمات من الكتالوج أو بنود مخصصة)
+    if (values.items.length > 0) {
+      const { error: itemsError } = await supabase
+        .from("work_request_items")
+        .insert(
+          values.items.map((item) => ({
+            request_id: request.id,
+            service_id: item.is_custom ? null : item.id, // null for custom items
+            custom_name: item.is_custom ? item.custom_name : null,
+            quantity: item.quantity,
+            unit: item.unit,
+          })),
+        );
 
-    if (itemsError) {
-      setError(itemsError);
-      setLoading(false);
-      return { error: itemsError };
+      if (itemsError) {
+        setError(itemsError);
+        setLoading(false);
+        return { error: itemsError };
+      }
     }
 
-    // الخطوة 3: إرسال الإشعارات
+    // الخطوة 3: إضافة المراحل (إن وجدت)
+    if (values.milestones.length > 0) {
+      const { error: milestonesError } = await supabase
+        .from("request_milestones")
+        .insert(
+          values.milestones.map((milestone) => ({
+            request_id: request.id,
+            title: milestone.title,
+            description: milestone.description ?? null,
+            percentage: milestone.percentage,
+            amount: 0,
+          })),
+        );
+    }
+
+    // الخطوة 4: إرسال الإشعارات
     if (values.status !== "draft") {
       try {
         let pushTokens: string[] = [];
 
         if (values.bid_mode === "direct" && values.direct_contractor_id) {
-          // المقاول المحدد فقط
           const { data: contractor } = await supabase
             .from("contractors")
             .select("user_id")
@@ -337,18 +354,15 @@ export function useCreateRequest() {
             if (tokenData?.push_token) pushTokens = [tokenData.push_token];
           }
         } else {
-          // جميع المقاولين بنفس التخصص
           const { data: contractors } = await supabase
             .from("contractors")
             .select(
-              `
-            user_id,
-            users!contractors_user_id_fkey (
-              user_specializations!user_specializations_user_id_fkey (
-                specialization_id
-              )
-            )
-          `,
+              `user_id,
+             users!contractors_user_id_fkey (
+               user_specializations!user_specializations_user_id_fkey (
+                 specialization_id
+               )
+             )`,
             )
             .not("user_id", "is", null);
 

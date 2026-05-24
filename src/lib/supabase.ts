@@ -505,6 +505,7 @@ export type Database = {
           due_date: string | null
           id: string
           order_index: number
+          source_milestone_id: string | null
           status: Database["public"]["Enums"]["milestone_status"]
           title: string
         }
@@ -518,6 +519,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           order_index?: number
+          source_milestone_id?: string | null
           status?: Database["public"]["Enums"]["milestone_status"]
           title: string
         }
@@ -531,6 +533,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           order_index?: number
+          source_milestone_id?: string | null
           status?: Database["public"]["Enums"]["milestone_status"]
           title?: string
         }
@@ -547,6 +550,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_milestones_source_milestone_id_fkey"
+            columns: ["source_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "request_milestones"
             referencedColumns: ["id"]
           },
         ]
@@ -2233,6 +2243,47 @@ export type Database = {
           },
         ]
       }
+      request_milestones: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          order_index: number
+          request_id: string
+          title: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          order_index?: number
+          request_id: string
+          title: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          order_index?: number
+          request_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_milestones_request_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "work_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           permission_id: string
@@ -3199,29 +3250,32 @@ export type Database = {
       work_request_items: {
         Row: {
           created_at: string
+          custom_name: string | null
           description: string | null
           id: string
           quantity: number
           request_id: string
-          service_id: string
+          service_id: string | null
           unit: string
         }
         Insert: {
           created_at?: string
+          custom_name?: string | null
           description?: string | null
           id?: string
           quantity: number
           request_id: string
-          service_id: string
+          service_id?: string | null
           unit?: string
         }
         Update: {
           created_at?: string
+          custom_name?: string | null
           description?: string | null
           id?: string
           quantity?: number
           request_id?: string
-          service_id?: string
+          service_id?: string | null
           unit?: string
         }
         Relationships: [
