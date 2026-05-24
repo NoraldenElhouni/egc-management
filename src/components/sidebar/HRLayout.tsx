@@ -28,13 +28,13 @@ const HRLayout = () => {
       description: "تسجيل موظف جديد",
       role: ["Admin", "HR", "Manager"],
     },
-    {
-      title: "الرواتب",
-      icon: DollarSign,
-      path: "/hr/payroll",
-      description: "الرواتب والتعويضات",
-      role: ["Admin", "Manager"],
-    },
+    // {
+    //   title: "الرواتب",
+    //   icon: DollarSign,
+    //   path: "/hr/payroll",
+    //   description: "الرواتب والتعويضات",
+    //   role: ["Admin", "Manager"],
+    // },
     // {
     //   title: "القروض والسلف",
     //   icon: TrendingUp,

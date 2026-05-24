@@ -29,7 +29,7 @@ const EmergencyContactCard = ({
       employee.emergency_contact,
       employee.emergency_contact_relation,
       employee.emergency_contact_phone,
-    ]
+    ],
   );
 
   const [formData, setFormData] =
@@ -41,7 +41,7 @@ const EmergencyContactCard = ({
 
   const updateField = <K extends keyof EmergencyContactValues>(
     key: K,
-    value: EmergencyContactValues[K]
+    value: EmergencyContactValues[K],
   ) => {
     setFormData((s) => ({ ...s, [key]: value }));
   };

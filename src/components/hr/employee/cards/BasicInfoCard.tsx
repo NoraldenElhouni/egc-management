@@ -13,7 +13,6 @@ export type BasicInfoValues = Pick<
   | "place_of_birth"
   | "dob"
   | "blood_type"
-  | "marital_status"
   | "nationality"
   | "personal_photo_url"
 >;
@@ -37,23 +36,21 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
       place_of_birth: employee.place_of_birth ?? null,
       dob: employee.dob ?? null,
       blood_type: employee.blood_type ?? null,
-      marital_status: employee.marital_status ?? null,
       nationality: employee.nationality ?? null,
       personal_photo_url: employee.personal_photo_url ?? null,
     }),
-    [employee]
+    [employee],
   );
 
   const [formData, setFormData] = useState<BasicInfoValues>(initialValues);
 
   useEffect(() => {
-    // if employee changes (refetch), sync the local form
     setFormData(initialValues);
   }, [initialValues]);
 
   const updateField = <K extends keyof BasicInfoValues>(
     key: K,
-    value: BasicInfoValues[K]
+    value: BasicInfoValues[K],
   ) => {
     setFormData((s) => ({ ...s, [key]: value }));
   };
@@ -68,17 +65,15 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
       setEditMode(false);
       return;
     }
-
     try {
       setSaving(true);
-      await onSave(formData); // ✅ await async save/refetch
-      setEditMode(false); // ✅ only after success
+      await onSave(formData);
+      setEditMode(false);
     } finally {
       setSaving(false);
     }
   };
 
-  // Bucket and folder for profile image
   const bucket = "employees";
   const folder = employee.employee_id || employee.id;
 
@@ -106,7 +101,6 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
             >
               {saving ? "..." : "حفظ"}
             </button>
-
             <button
               className="px-3 py-1 rounded-md bg-gray-100 text-sm disabled:opacity-50"
               disabled={saving}
@@ -193,34 +187,48 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-600">
+              {/* Gender — select in edit mode */}
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-400" />
                 {editMode ? (
-                  <input
-                    className="border rounded px-2 py-1 text-sm"
+                  <select
+                    className="border rounded px-2 py-1 text-sm bg-white"
                     value={formData.gender ?? ""}
-                    onChange={(e) => updateField("gender", e.target.value)}
+                    onChange={(e) =>
+                      updateField("gender", e.target.value || null)
+                    }
                     disabled={saving}
-                  />
+                  >
+                    <option value="">-- اختر --</option>
+                    <option value="Male">ذكر</option>
+                    <option value="Female">أنثى</option>
+                  </select>
                 ) : (
-                  <span>{employee.gender ?? "غير محدد"}</span>
+                  <span>
+                    {employee.gender === "Male"
+                      ? "ذكر"
+                      : employee.gender === "Female"
+                        ? "أنثى"
+                        : "غير محدد"}
+                  </span>
                 )}
               </div>
 
+              {/* Email — always disabled */}
               <div className="flex items-center gap-2">
                 <ArrowRight className="h-4 w-4 text-gray-400" />
                 {editMode ? (
                   <input
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border rounded px-2 py-1 text-sm bg-gray-50 cursor-not-allowed text-gray-400"
                     value={formData.email ?? ""}
-                    onChange={(e) => updateField("email", e.target.value)}
-                    disabled={saving}
+                    disabled
                   />
                 ) : (
                   <span>{employee.email ?? "غير محدد"}</span>
                 )}
               </div>
 
+              {/* Phone */}
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-gray-400" />
                 {editMode ? (
@@ -258,12 +266,14 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
                 <div>{employee.place_of_birth ?? "غير محدد"}</div>
               )}
 
+              {/* DOB — date input */}
               <div className="mt-3 text-xs text-gray-400">تاريخ الميلاد</div>
               {editMode ? (
                 <input
+                  type="date"
                   className="w-full border rounded px-2 py-1 text-sm"
                   value={formData.dob ?? ""}
-                  onChange={(e) => updateField("dob", e.target.value)}
+                  onChange={(e) => updateField("dob", e.target.value || null)}
                   disabled={saving}
                 />
               ) : (
@@ -272,32 +282,30 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
 
               <div className="mt-3 text-xs text-gray-400">فصيلة الدم</div>
               {editMode ? (
-                <input
-                  className="w-full border rounded px-2 py-1 text-sm"
+                <select
+                  className="w-full border rounded px-2 py-1 text-sm bg-white"
                   value={formData.blood_type ?? ""}
-                  onChange={(e) => updateField("blood_type", e.target.value)}
+                  onChange={(e) =>
+                    updateField("blood_type", e.target.value || null)
+                  }
                   disabled={saving}
-                />
+                >
+                  <option value="">-- اختر --</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                </select>
               ) : (
                 <div>{employee.blood_type ?? "غير محدد"}</div>
               )}
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs text-gray-400">الحالة الاجتماعية</div>
-              {editMode ? (
-                <input
-                  className="w-full border rounded px-2 py-1 text-sm"
-                  value={formData.marital_status ?? ""}
-                  onChange={(e) =>
-                    updateField("marital_status", e.target.value)
-                  }
-                  disabled={saving}
-                />
-              ) : (
-                <div>{employee.marital_status ?? "غير محدد"}</div>
-              )}
-
               <div className="mt-3 text-xs text-gray-400">الجنسية</div>
               {editMode ? (
                 <input

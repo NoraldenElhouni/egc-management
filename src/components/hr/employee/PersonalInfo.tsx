@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabaseClient";
 import { FullEmployee } from "../../../types/extended.type";
 import AddressCard, { AddressValues } from "./cards/AddressCard";
+import BankInformationCard, { BankValues } from "./cards/BankInformationCard";
 import BasicInfoCard, { BasicInfoValues } from "./cards/BasicInfoCard";
 import EducationCard, { EducationValues } from "./cards/EducationCard";
 import EmergencyContactCard, {
@@ -100,6 +101,16 @@ const PersonalInfo = ({ employee, onUpdated }: PersonalInfoProps) => {
 
     await onUpdated();
   };
+  const handleSaveBank = async (data: BankValues) => {
+    const { error } = await supabase
+      .from("employees")
+      .update(data)
+      .eq("id", employee.id);
+
+    if (error) throw error;
+
+    await onUpdated();
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -121,6 +132,7 @@ const PersonalInfo = ({ employee, onUpdated }: PersonalInfoProps) => {
               employee={employee}
               onSave={handleSaveEmergency}
             />
+            <BankInformationCard employee={employee} onSave={handleSaveBank} />
           </div>
         </div>
       </div>
