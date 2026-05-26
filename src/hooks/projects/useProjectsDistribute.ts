@@ -23,6 +23,8 @@ export interface ProjectAssignment {
     id: string;
     first_name: string;
     last_name: string | null;
+    bank_name: string | null;
+    bank_account_number: string | null;
   };
 }
 
@@ -145,7 +147,7 @@ export function useProjectsDistribute() {
            project_assignments(
              id,
              percentage,
-             employee:employees(id, first_name, last_name)
+             employee:employees(id, first_name, last_name, bank_name, bank_account_number)
            )`,
         )
         .eq("status", "active")

@@ -32,7 +32,15 @@ function buildPayload(projects: DistributionProject[]): SharesReportPayload {
   const today = new Date().toISOString().split("T")[0];
 
   // Aggregate per employee across all projects + currencies
-  const earningsMap = new Map<string, { name: string; amount: number }>();
+  const earningsMap = new Map<
+    string,
+    {
+      name: string;
+      amount: number;
+      bank_name?: string;
+      bank_account_number?: string;
+    }
+  >();
 
   projects.forEach((project) => {
     CURRENCIES.forEach((currency) => {
@@ -48,7 +56,12 @@ function buildPayload(projects: DistributionProject[]): SharesReportPayload {
   });
 
   const shareholders: ShareHolder[] = Array.from(earningsMap.values()).map(
-    (e) => ({ name: e.name, amount: Math.round(e.amount * 100) / 100 }),
+    (e) => ({
+      name: e.name,
+      amount: Math.round(e.amount * 100) / 100,
+      bank_name: e.bank_name,
+      bank_account_number: e.bank_account_number,
+    }),
   );
 
   const total = shareholders.reduce((sum, s) => sum + s.amount, 0);

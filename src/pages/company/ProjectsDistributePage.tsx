@@ -12,6 +12,8 @@ import StepTwoProjectDistribute from "../../components/company/StepTwoProjectDis
 import StepThreeProjectDistribute from "../../components/company/StepThreeProjectDistribute";
 import StepOneProjectDistribute from "../../components/company/SetpOneProjectDistibute";
 import SharesPdfButton from "../../components/pdf-buttons/SharesPdfButton";
+import Button from "../../components/ui/Button";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 
 // ─── Progress Checklist Overlay ───────────────────────────────────────────────
 
@@ -124,6 +126,7 @@ const ProjectsDistributePage = () => {
     DistributionProject[] | null
   >(null);
   const [invalidProjectIds, setInvalidProjectIds] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const { projects, loading, error, submitDistribution, refetch } =
     useProjectsDistribute();
@@ -195,7 +198,8 @@ const ProjectsDistributePage = () => {
   const safeProjects = projects ?? [];
 
   // ── Progress overlay (while submitting) ───────────────────────────────────
-  if (isSubmitting && progress.length > 0) {
+  if (isSubmitting) {
+    // remove the progress.length check
     return <DistributionProgressOverlay items={progress} />;
   }
 
@@ -311,18 +315,30 @@ const ProjectsDistributePage = () => {
             التالي
           </button>
         ) : (
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={[
-              "px-4 py-2 rounded-md text-white",
-              isSubmitting
-                ? "bg-green-200 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700",
-            ].join(" ")}
-          >
-            {isSubmitting ? "جاري الإرسال..." : "تأكيد التوزيع"}
-          </button>
+          <>
+            <Button
+              variant="success"
+              size="md"
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              onClick={() => setConfirmOpen(true)} // ← open dialog instead of submitting directly
+            >
+              تأكيد التوزيع
+            </Button>
+
+            <ConfirmDialog
+              open={confirmOpen}
+              onCancel={() => setConfirmOpen(false)}
+              onConfirm={() => {
+                setConfirmOpen(false);
+                handleSubmit();
+              }}
+              title="تأكيد توزيع المشاريع"
+              message="هل أنت متأكد من تأكيد توزيع المشاريع؟ لا يمكن التراجع عن هذا الإجراء بعد الإرسال."
+              confirmLabel="نعم، تأكيد التوزيع"
+              confirmVariant="success"
+            />
+          </>
         )}
       </div>
     </div>

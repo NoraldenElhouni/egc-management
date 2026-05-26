@@ -50,7 +50,7 @@ const MainMenu = () => {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      role: ["Manager"],
+      role: ["Manager", "Admin"],
     },
     {
       label: "الإعدادات",

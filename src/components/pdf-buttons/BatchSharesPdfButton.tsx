@@ -7,7 +7,15 @@ import { DistributionBatch } from "../company/distribution/useDistributionBatche
 interface ShareHolder {
   name: string;
   amount: number;
+  bank_account_number: string | null;
+  bank_name: string | null;
 }
+type EarningsEntry = {
+  name: string;
+  amount: number;
+  bank_account_number: string | null;
+  bank_name: string | null;
+};
 
 interface SharesReportPayload {
   report_date: string;
@@ -42,7 +50,7 @@ async function fetchBatchPayload(
     .select(
       `period_id, user_id, item_type, total,
        employee:employees!project_percentage_period_items_user_id_fkey(
-         first_name, last_name
+         first_name, last_name, bank_account_number, bank_name
        )`,
     )
     .in("period_id", periodIds)
@@ -51,22 +59,32 @@ async function fetchBatchPayload(
   if (error) throw new Error(error.message);
 
   // Aggregate total per employee across all periods in this batch
-  const earningsMap = new Map<string, { name: string; amount: number }>();
+  const earningsMap = new Map<string, EarningsEntry>();
 
   for (const item of data ?? []) {
     if (!item.user_id) continue;
+
     const amount = Number(item.total ?? 0);
     if (amount <= 0) continue;
 
     const emp = item.employee as {
       first_name: string;
       last_name: string | null;
+      bank_account_number: string | null;
+      bank_name: string | null;
     } | null;
+
     const name = emp
       ? `${emp.first_name} ${emp.last_name ?? ""}`.trim()
       : item.user_id;
 
-    const prev = earningsMap.get(item.user_id) ?? { name, amount: 0 };
+    const prev = earningsMap.get(item.user_id) ?? {
+      name,
+      amount: 0,
+      bank_account_number: emp?.bank_account_number ?? null,
+      bank_name: emp?.bank_name ?? null,
+    };
+
     prev.amount += amount;
     earningsMap.set(item.user_id, prev);
   }
@@ -75,6 +93,8 @@ async function fetchBatchPayload(
     (e) => ({
       name: e.name,
       amount: Math.round(e.amount * 100) / 100,
+      bank_name: e.bank_name,
+      bank_account_number: e.bank_account_number,
     }),
   );
 

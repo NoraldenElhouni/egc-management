@@ -20,6 +20,7 @@ import Separator from "../../../ui/separator";
 import { Trash2, Plus, X, Flag } from "lucide-react";
 import { uploadFile } from "../../../../lib/storage-client";
 import { contractorWithSpecializations } from "../../../../types/extended.type";
+import ConfirmDialog from "../../../ui/ConfirmDialog";
 
 interface NewWorkRequestFormProps {
   specializations: Specializations[];
@@ -194,6 +195,10 @@ const NewWorkRequestForm = ({
   const [showSubmitMenu, setShowSubmitMenu] = useState(false);
   const navigate = useNavigate();
   const [files, setFiles] = useState<AttachmentDraft[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<"open" | "draft" | null>(
+    null,
+  );
 
   const {
     register,
@@ -326,6 +331,14 @@ const NewWorkRequestForm = ({
       });
     };
   }, [files]);
+
+  const handleConfirmSubmit = () => {
+    if (!pendingStatus) return;
+    setValue("status", pendingStatus);
+    setConfirmOpen(false);
+    setPendingStatus(null);
+    handleSubmit(onSubmit)();
+  };
 
   return (
     <>
@@ -892,9 +905,9 @@ const NewWorkRequestForm = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setValue("status", "open");
                       setShowSubmitMenu(false);
-                      handleSubmit(onSubmit)();
+                      setPendingStatus("open");
+                      setConfirmOpen(true);
                     }}
                     className="w-full text-right px-4 py-3 text-sm hover:bg-gray-50"
                   >
@@ -903,9 +916,9 @@ const NewWorkRequestForm = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setValue("status", "draft");
                       setShowSubmitMenu(false);
-                      handleSubmit(onSubmit)();
+                      setPendingStatus("draft");
+                      setConfirmOpen(true);
                     }}
                     className="w-full text-right px-4 py-3 text-sm hover:bg-gray-50"
                   >
@@ -915,6 +928,26 @@ const NewWorkRequestForm = ({
               )}
             </div>
           </div>
+
+          <ConfirmDialog
+            open={confirmOpen}
+            onCancel={() => {
+              setConfirmOpen(false);
+              setPendingStatus(null);
+            }}
+            onConfirm={handleConfirmSubmit}
+            title={pendingStatus === "open" ? "نشر طلب العقد" : "حفظ كمسودة"}
+            message={
+              pendingStatus === "open"
+                ? "هل أنت متأكد من نشر هذا الطلب؟ سيصبح مرئياً للمقاولين فور النشر."
+                : "هل تريد حفظ هذا الطلب كمسودة؟ يمكنك نشره لاحقاً."
+            }
+            confirmLabel={
+              pendingStatus === "open" ? "نعم، انشر الطلب" : "نعم، احفظ كمسودة"
+            }
+            confirmVariant={pendingStatus === "open" ? "success" : "primary"}
+            loading={loading}
+          />
         </form>
       </div>
     </>
