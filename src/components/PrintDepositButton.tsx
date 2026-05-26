@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Button from "./ui/Button";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../hooks/useAuth";
 
 interface PrintDepositButtonProps {
   incomeId: string;
@@ -19,6 +20,7 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
 
   // Amount preview
   const [amount, setAmount] = useState<number>(0);
+  const { user } = useAuth();
 
   /**
    * Open dialog + fetch amount first
@@ -33,16 +35,13 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
 
       if (error || !data) {
         console.error(error);
-
         throw new Error("فشل جلب المبلغ");
       }
 
       setAmount(Number(data.amount ?? 0));
-
       setOpenDialog(true);
     } catch (err) {
       console.error(err);
-
       alert(err instanceof Error ? err.message : "حدث خطأ أثناء جلب البيانات");
     }
   };
@@ -84,7 +83,6 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
 
       if (error || !data) {
         console.error(error);
-
         throw new Error("فشل جلب بيانات الدخل");
       }
 
@@ -94,26 +92,23 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
         description: data.description ?? "",
         currency: data.currency ?? "LYD",
         amount: Number(data.amount ?? 0),
-
         payment_method: data.payment_method ?? "",
         fund: data.fund ?? "",
         income_date: data.income_date ?? "",
         client_name: data.client_name ?? "",
 
-        // New fields
+        // Extra fields
         reason,
         amount_in_word: amountInWords,
         note,
 
-        project_name: (data.projects as any)?.name ?? "",
-
-        created_by: (() => {
-          const u = (data as any)?.users;
-
-          if (!u) return data.created_by ?? "";
-
-          return `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim();
-        })(),
+        project_name: data.projects?.name ?? "",
+        created_by: user?.name,
+        // created_by: (() => {
+        //   const u = data?.users;
+        //   if (!u) return data.created_by ?? "";
+        //   return `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim();
+        // })(),
       };
 
       console.log("PDF Payload:", income);
@@ -133,15 +128,12 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
       // Handle backend errors
       if (!response.ok) {
         const errText = await response.text();
-
         console.error("API Error:", errText);
-
         throw new Error(`فشل إنشاء PDF (${response.status})`);
       }
 
       // Check content type
       const contentType = response.headers.get("content-type");
-
       console.log("Content-Type:", contentType);
 
       // Convert to blob
@@ -150,38 +142,29 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
       // Validate PDF
       if (!blob.type.includes("pdf") && contentType !== "application/pdf") {
         const text = await blob.text();
-
         console.error("Non-PDF Response:", text);
-
         throw new Error("الاستجابة ليست ملف PDF");
       }
 
       // Download file
       const url = URL.createObjectURL(blob);
-
       const a = document.createElement("a");
-
       a.href = url;
-
       a.download = `income-${income.serial_number}.pdf`;
-
       document.body.appendChild(a);
-
       a.click();
-
       a.remove();
-
       URL.revokeObjectURL(url);
 
       // Reset form
       setReason("");
       setAmountInWords("");
+      setNote("");
 
       // Close dialog
       setOpenDialog(false);
     } catch (err) {
       console.error(err);
-
       alert(err instanceof Error ? err.message : "حدث خطأ أثناء تحميل الإيصال");
     } finally {
       setLoading(false);
@@ -202,7 +185,6 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
             {/* Reason */}
             <div className="mb-4">
               <label className="mb-1 block text-sm font-medium">السبب</label>
-
               <input
                 type="text"
                 value={reason}
@@ -215,16 +197,14 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
             {/* Amount Display */}
             <div className="mb-4 rounded bg-gray-100 p-3">
               <p className="text-sm text-gray-600">المبلغ:</p>
-
               <p className="text-lg font-bold">{amount} دينار</p>
             </div>
 
             {/* Amount In Words */}
             <div className="mb-4">
               <label className="mb-1 block text-sm font-medium">
-                المبلغ كتابة
+                المبلغ كتابة <span className="text-red-500">*</span>
               </label>
-
               <textarea
                 value={amountInWords}
                 onChange={(e) => setAmountInWords(e.target.value)}
@@ -234,11 +214,11 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
               />
             </div>
 
+            {/* Note */}
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium">ملاحظة </label>
-
+              <label className="mb-1 block text-sm font-medium">ملاحظة</label>
               <textarea
-                value={amountInWords}
+                value={note}
                 onChange={(e) => setNote(e.target.value)}
                 className="w-full rounded border p-2"
                 rows={2}
@@ -251,10 +231,9 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
               <Button onClick={() => setOpenDialog(false)} disabled={loading}>
                 إلغاء
               </Button>
-
               <Button
                 onClick={handlePrint}
-                disabled={loading || !reason.trim() || !amountInWords.trim()}
+                disabled={loading || !amountInWords.trim()}
               >
                 {loading ? "جارٍ إنشاء الإيصال..." : "تأكيد وطباعة"}
               </Button>

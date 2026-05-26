@@ -93,7 +93,7 @@ const BookkeeperLayout: React.FC = () => {
 
   const isActive = (id: string) => {
     const expectedPaths = [
-      `/finance/bookkeeping/projects/${id}`,
+      `/finance/bookkeeping/project/${id}`,
       `/projects/${id}`,
     ];
 
