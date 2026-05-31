@@ -25,7 +25,7 @@ const FinancePage = () => {
       icon: Vault,
       path: "/finance/treasury",
       description: "إدارة الخزينة",
-      role: ["Admin", "Finance", "Treasurer"],
+      role: ["Admin", "Finance", "Treasurer", "Bookkeeper"],
     },
     // {
     //   label: "المدفوعات",

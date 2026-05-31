@@ -26,13 +26,13 @@ const MainMenu = () => {
       label: "إدارة العملاء",
       icon: ShieldUser,
       path: "/crm",
-      role: ["Admin", "Manager", "Sales", "Support"],
+      role: ["Admin", "Manager", "Sales", "Support", "Bookkeeper"],
     },
     {
       label: "سلسلة التوريد",
       icon: LinkIcon,
       path: "/supply-chain",
-      role: ["Admin", "Finance"],
+      role: ["Admin", "Finance", "Bookkeeper"],
     },
     {
       label: "المشاريع",
@@ -56,7 +56,7 @@ const MainMenu = () => {
       label: "الإعدادات",
       icon: Settings,
       path: "/settings",
-      role: ["Admin", "Finance", "Engineer"],
+      role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
     },
     {
       label: "التشغيل",
