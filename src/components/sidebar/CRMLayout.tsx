@@ -1,12 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import {
-  Users,
-  UserPlus,
-  Calendar,
-  ChevronRight,
-  ChevronLeft,
-} from "lucide-react";
+import { Users, UserPlus, ChevronRight, ChevronLeft } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
 const CRMLayout = () => {
@@ -25,13 +19,6 @@ const CRMLayout = () => {
       icon: UserPlus,
       path: "/crm/clients/new",
       description: "تسجيل عميل جديد",
-    },
-
-    {
-      title: "المواعيد",
-      icon: Calendar,
-      path: "/crm/appointments",
-      description: "جدول المواعيد",
     },
   ];
 

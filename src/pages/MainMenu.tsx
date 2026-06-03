@@ -14,7 +14,6 @@ import { useAuth } from "../hooks/useAuth";
 
 const MainMenu = () => {
   const { user, loading } = useAuth();
-  // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
   const menuItems = [
     {
       label: "إدارة الموظفين",
@@ -26,25 +25,25 @@ const MainMenu = () => {
       label: "إدارة العملاء",
       icon: ShieldUser,
       path: "/crm",
-      role: ["Admin", "Manager", "Sales", "Support", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper"],
     },
     {
       label: "سلسلة التوريد",
       icon: LinkIcon,
       path: "/supply-chain",
-      role: ["Admin", "Finance", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper"],
     },
     {
       label: "المشاريع",
       icon: MapPin,
       path: "/projects",
-      role: ["Admin", "Manager"],
+      role: ["Admin"],
     },
     {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      role: ["Admin", "Finance", "Bookkeeper", "Accountant", "Manager"],
+      role: ["Admin", "Finance", "Bookkeeper", "Manager"],
     },
     {
       label: "الشركة",
@@ -62,6 +61,7 @@ const MainMenu = () => {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
+      role: ["Admin", "Engineer"],
     },
   ];
 

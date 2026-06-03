@@ -21,28 +21,28 @@ const SettingsLayout = () => {
       icon: Users,
       path: "/settings/roles",
       description: "إدارة  الأدوار والصلاحيات",
-      role: ["Admin"],
+      role: ["Admin", "Manager", "Bookkeeper"],
     },
     {
       title: "اداره اسماء المصروفات",
       icon: Box,
       path: "/settings/expenses",
       description: "إدارة اسماء المصروفات",
-      role: ["Admin"],
+      role: ["Admin", "Manager", "Bookkeeper"],
     },
     {
       title: "اداره التخصصات",
       icon: BookText,
       path: "/settings/specializations",
       description: "إدارة التخصصات",
-      role: ["Admin", "Engineer"],
+      role: ["Admin", "Engineer", "Manager", "Bookkeeper"],
     },
     {
       title: "اداره الخرائط",
       icon: Map,
       path: "/settings/maps",
       description: "إدارة الخرائط",
-      role: ["Admin"],
+      role: ["Admin", "Manager", "Bookkeeper"],
     },
   ];
 
