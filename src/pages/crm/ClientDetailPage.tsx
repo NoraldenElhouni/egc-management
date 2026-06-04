@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
-import { formatCurrency, formatDate } from "../../utils/helpper";
+import { formatDate } from "../../utils/helpper";
 import {
   User,
   Mail,
@@ -12,7 +12,6 @@ import {
   Building2,
   MapPin,
   Calendar,
-  DollarSign,
   TrendingUp,
   Clock,
   CheckCircle2,
@@ -24,33 +23,11 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-
-interface Project {
-  id: string;
-  code: string;
-  name: string;
-  address: string | null;
-  status: string;
-  created_at: string;
-  description: string | null;
-  latitude: number | null;
-  longitude: number | null;
-}
-
-interface ProjectBalance {
-  currency: string;
-  balance: number;
-  total_transactions: number;
-  total_expense: number;
-}
-
-interface ProjectWithBalance extends Project {
-  balances?: ProjectBalance[];
-}
+import { Projects } from "../../types/global.type";
 
 const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [projects, setProjects] = useState<ProjectWithBalance[]>([]);
+  const [projects, setProjects] = useState<Projects[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,12 +63,7 @@ const ClientDetailPage = () => {
       setLoadingProjects(true);
       const { data, error } = await supabase
         .from("projects")
-        .select(
-          `
-          *,
-          balances:project_balances(currency, balance, total_transactions, total_expense)
-        `
-        )
+        .select("*")
         .eq("client_id", id)
         .order("created_at", { ascending: false });
 
@@ -204,7 +176,7 @@ const ClientDetailPage = () => {
   const totalProjects = projects.length;
   const activeProjects = projects.filter((p) => p.status === "active").length;
   const completedProjects = projects.filter(
-    (p) => p.status === "completed"
+    (p) => p.status === "completed",
   ).length;
 
   return (
@@ -457,7 +429,7 @@ const ClientDetailPage = () => {
                             </h3>
                             <span
                               className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                                project.status
+                                project.status,
                               )}`}
                             >
                               {getStatusIcon(project.status)}
@@ -484,40 +456,6 @@ const ClientDetailPage = () => {
                           )}
                         </div>
                       </div>
-
-                      {/* Project Balances */}
-                      {project.balances && project.balances.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {project.balances.map((balance, idx) => (
-                              <div
-                                key={idx}
-                                className="bg-gray-50 rounded-lg p-3"
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <DollarSign className="w-4 h-4 text-gray-400" />
-                                  <span className="text-xs font-medium text-gray-600">
-                                    الرصيد ({balance.currency})
-                                  </span>
-                                </div>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {formatCurrency(
-                                    balance.balance,
-                                    balance.currency
-                                  )}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  المصروفات:{" "}
-                                  {formatCurrency(
-                                    balance.total_expense,
-                                    balance.currency
-                                  )}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Actions */}
