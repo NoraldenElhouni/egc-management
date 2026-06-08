@@ -3,11 +3,10 @@ import { useProjects } from "../../../hooks/useProjects";
 import { createProjectsColumns } from "../../tables/columns/ProjectsColumns";
 import GenericTable from "../../tables/table";
 import OverviewStatus from "../../ui/OverviewStatus";
-import { DollarSign, Target, Workflow } from "lucide-react";
 import { formatCurrency } from "../../../utils/helpper";
 
 interface ProjectsListProps {
-  basePath?: string; // Renamed for clarity
+  basePath?: string;
   version?: string;
 }
 
@@ -17,105 +16,100 @@ const ProjectsList = ({
 }: ProjectsListProps) => {
   const { projects } = useProjects();
 
-  // Create columns with the desired link path
   const columns = useMemo(
     () => createProjectsColumns((id) => `${basePath}/${id}`, version),
     [basePath, version],
   );
 
-  const totalActiveProjects =
-    projects?.reduce(
-      (acc, project) => acc + (project.status === "active" ? 1 : 0),
-      0,
-    ) || 0;
+  // -----------------------------
+  // ❌ EXCLUDED TEST PROJECT IDS
+  // -----------------------------
+  const excludedProjectIds = [
+    "eed51009-4cfa-497c-87a1-cbf5a756f3da",
+    "e0a50575-bcc1-474a-98b8-8f57770a14fa",
+    "5451aaae-c632-46f4-9913-8670cffcc8e7",
+  ];
 
-  const totalBalance =
-    projects?.reduce(
-      (acc, project) =>
-        acc +
-        (project.accounts?.reduce(
-          (bAcc, balance) => bAcc + (balance.balance || 0),
-          0,
-        ) || 0),
-      0,
-    ) || 0;
+  // -----------------------------
+  // FILTER PROJECTS
+  // -----------------------------
+  const filteredProjects =
+    projects?.filter((p) => !excludedProjectIds.includes(p.id)) || [];
 
-  const totalIncome =
-    projects?.reduce(
-      (acc, project) =>
-        acc +
-        (project.accounts?.reduce(
-          (bAcc, balance) => bAcc + (balance.total_transactions || 0),
-          0,
-        ) || 0),
-      0,
-    ) || 0;
+  // -----------------------------
+  // FLATTEN ACCOUNTS
+  // -----------------------------
+  const allAccounts = filteredProjects
+    .flatMap((p) => p.accounts || [])
+    .filter(Boolean);
 
-  const totalExpense =
-    projects?.reduce(
-      (acc, project) =>
-        acc +
-        (project.accounts?.reduce(
-          (bAcc, balance) => bAcc + (balance.total_expense || 0),
-          0,
-        ) || 0),
-      0,
-    ) || 0;
+  // -----------------------------
+  // STATS
+  // -----------------------------
+  const totalActiveProjects = filteredProjects.reduce(
+    (acc, project) => acc + (project.status === "active" ? 1 : 0),
+    0,
+  );
 
-  const totalPercentages =
-    projects?.reduce(
-      (acc, project) =>
-        acc +
-        (project.accounts?.reduce(
-          (bAcc, balance) => bAcc + (balance.total_percentage || 0),
-          0,
-        ) || 0),
-      0,
-    ) || 0;
+  const totalBalance = allAccounts.reduce(
+    (acc, a) => acc + (a.balance || 0),
+    0,
+  );
+
+  const totalCashBalance = allAccounts
+    .filter((a) => a.type === "cash")
+    .reduce((acc, a) => acc + (a.balance || 0), 0);
+
+  const totalBankBalance = allAccounts
+    .filter((a) => a.type === "bank")
+    .reduce((acc, a) => acc + (a.balance || 0), 0);
+
+  const totalIncome = allAccounts.reduce(
+    (acc, a) => acc + (a.total_transactions || 0),
+    0,
+  );
+
+  const totalExpense = allAccounts.reduce(
+    (acc, a) => acc + (a.total_expense || 0),
+    0,
+  );
+
+  const totalPercentages = allAccounts.reduce(
+    (acc, a) => acc + (a.total_percentage || 0),
+    0,
+  );
 
   return (
     <div>
-      <div>
-        {version === "finance" ? (
-          <div>
-            <OverviewStatus
-              stats={[
-                {
-                  label: "عدد المشاريع النشطة",
-                  value: totalActiveProjects,
-                  icon: Target,
-                  iconBgColor: "bg-blue-100",
-                  iconColor: "text-blue-600",
-                },
-                {
-                  label: "اجمالي المصاريف",
-                  value: formatCurrency(totalExpense),
-                  icon: DollarSign,
-                  iconBgColor: "bg-green-100",
-                  iconColor: "text-green-600",
-                  secondaryLabel: "النسبة",
-                  secondaryValue: formatCurrency(totalPercentages),
-                },
+      {version === "finance" && (
+        <OverviewStatus
+          stats={[
+            {
+              label: "عدد المشاريع النشطة",
+              value: totalActiveProjects,
+            },
+            {
+              label: "اجمالي المصاريف",
+              value: formatCurrency(totalExpense),
+              secondaryLabel: "النسبة",
+              secondaryValue: formatCurrency(totalPercentages),
+            },
+            {
+              label: "اجمالي المدفوع",
+              value: formatCurrency(totalIncome),
+            },
+            {
+              label: "الرصيد المتاح",
+              value: formatCurrency(totalBalance),
+              secondaryLabel: "كاش",
+              secondaryValue: formatCurrency(totalCashBalance),
+              tertiaryLabel: "بنك",
+              tertiaryValue: formatCurrency(totalBankBalance),
+            },
+          ]}
+        />
+      )}
 
-                {
-                  label: "اجمالي الايرادات",
-                  value: formatCurrency(totalIncome),
-                  icon: DollarSign,
-                  iconBgColor: "bg-green-100",
-                  iconColor: "text-green-600",
-                },
-                {
-                  label: "الرصيد المتاح",
-                  value: formatCurrency(totalBalance),
-                  icon: Workflow,
-                  iconBgColor: "bg-orange-100",
-                  iconColor: "text-orange-600",
-                },
-              ]}
-            />
-          </div>
-        ) : null}
-      </div>
       <GenericTable
         data={projects ?? []}
         columns={columns}

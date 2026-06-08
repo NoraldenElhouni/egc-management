@@ -103,3 +103,22 @@ export const translateCompanyExpenseType = (type: string): string => {
 
   return translations[type] || type;
 };
+
+export const roleTranslations: Record<string, string> = {
+  LS: "مورد عمال",
+  HR: "الموارد البشرية",
+  CON: "مقاول",
+  ENG: "مهندس",
+  HFINA: "رئيس المالية",
+  SEC: "سكرتير",
+  ADM: "ادمن",
+  VEN: "مورد",
+  CL: "عميل",
+  TR: "الخزينة",
+  FINA: "مالية",
+  CS: "مشرف نظافة",
+  M: "مدير",
+  BOK: "محاسب",
+  DEV: "مطور",
+  SUP: "مورد",
+};

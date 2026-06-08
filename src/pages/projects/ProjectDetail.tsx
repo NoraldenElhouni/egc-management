@@ -239,14 +239,14 @@ function getStartDate(range: TimeRange): string | null {
 
 function fmtMonth(m: string) {
   const [y, mo] = m.split("-");
-  return new Date(Number(y), Number(mo) - 1).toLocaleString("ar-LY", {
+  return new Date(Number(y), Number(mo) - 1).toLocaleString("en-LY", {
     month: "short",
     year: "2-digit",
   });
 }
 
 function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString("ar-LY", {
+  return new Date(d).toLocaleDateString("en-LY", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -640,7 +640,7 @@ function FinancialCard({
           </span>
           {type && (
             <span className="text-xs text-muted-foreground capitalize">
-              {type}
+              {type === "cash" ? "كاش" : "بنك"}
             </span>
           )}
         </div>

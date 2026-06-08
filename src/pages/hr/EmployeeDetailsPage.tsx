@@ -3,11 +3,14 @@ import PersonalInfo from "../../components/hr/employee/PersonalInfo";
 import { useEmployee } from "../../hooks/useEmployees";
 import { useParams } from "react-router-dom";
 import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
-import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
+import { useAuth } from "../../hooks/useAuth";
+import EmployeeRole from "../../components/hr/employee/EmployeeRole";
+// import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 
 export default function EmployeeDetailsPage() {
   const [activeTab, setActiveTab] = useState("personal-info");
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const employeeId = id || "";
   const { employee, loading, error, refetch } = useEmployee(employeeId);
@@ -25,12 +28,8 @@ export default function EmployeeDetailsPage() {
       id: "employee-details",
       label: "تفاصيل الموظف",
       content: <EmployeeDetails employee={employee} onUpdated={refetch} />,
+      roles: ["Admin", "Manager"], // 👈 restricted
     },
-    // {
-    //   id: "salary-details",
-    //   label: "تفاصيل الرواتب",
-    //   content: <SalaryDetails payroll={employee.payroll} />,
-    // },
     {
       id: "documents",
       label: "الوثائق",
@@ -43,15 +42,28 @@ export default function EmployeeDetailsPage() {
         />
       ),
     },
+    {
+      id: "employee-role",
+      label: "الأدوار",
+      content: <EmployeeRole employee={employee} onUpdated={refetch} />,
+      roles: ["Admin", "Manager"],
+    },
   ];
 
+  const canView = (allowedRoles?: string[]) => {
+    if (!allowedRoles) return true; // public tab
+    if (!user?.role) return false;
+    return allowedRoles.includes(user.role);
+  };
+
+  const visibleTabs = tabs.filter((tab) => canView(tab.roles));
   return (
     <div className="bg-background min-h-screen">
       <div>
         {/* Tabs */}
         <div className="px-6 py-4 border-b bg-white">
           <ul className="flex gap-6 text-sm text-gray-600">
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <li key={tab.id}>
                 <button
                   className={`pb-2 transition-colors ${
@@ -70,7 +82,7 @@ export default function EmployeeDetailsPage() {
 
         {/* Tab Content */}
         <div className="p-6">
-          {tabs.find((tab) => tab.id === activeTab)?.content}
+          {visibleTabs.find((tab) => tab.id === activeTab)?.content}
         </div>
       </div>
     </div>

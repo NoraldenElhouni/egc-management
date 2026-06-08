@@ -1,8 +1,9 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { Employees } from "../../../types/global.type";
 import { Link } from "react-router-dom";
+import { employeesWithRole } from "../../hr/list/EmployeesList";
+import { roleTranslations } from "../../../utils/translations";
 
-export const EmployeesColumns: ColumnDef<Employees>[] = [
+export const EmployeesColumns: ColumnDef<employeesWithRole>[] = [
   // Selection column (first column)
   {
     id: "select",
@@ -53,28 +54,19 @@ export const EmployeesColumns: ColumnDef<Employees>[] = [
     header: "البريد الإلكتروني",
   },
 
-  // Role column with select box
-  // {
-  //   accessorKey: "role",
-  //   header: "الدور",
-  //   cell: ({ row }) => {
-  //     const user = row.original;
-  //     return (
-  //       <select
-  //         value={user.role}
-  //         onChange={(e) =>
-  //           handleRoleChange(user.id, e.target.value as User["role"])
-  //         }
-  //         className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-  //         aria-label={`Change role for ${user.name}`}
-  //       >
-  //         <option value="Admin">Admin</option>
-  //         <option value="Editor">Editor</option>
-  //         <option value="Viewer">Viewer</option>
-  //       </select>
-  //     );
-  //   },
-  // },
+  {
+    accessorKey: "role",
+    header: "الدور",
+    cell: ({ row }) => {
+      const emp = row.original;
+
+      const code = emp.users?.roles?.code;
+
+      return (
+        <div>{roleTranslations[code] || emp.users?.roles?.name || "-"}</div>
+      );
+    },
+  },
 
   {
     accessorKey: "created_at",

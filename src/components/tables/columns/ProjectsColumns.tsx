@@ -130,7 +130,7 @@ export const createProjectsColumns = (
     },
     {
       accessorKey: "income",
-      header: "اجمالي الايرادات",
+      header: "اجمالي المدفوع",
       accessorFn: (row) => {
         return (
           row.accounts

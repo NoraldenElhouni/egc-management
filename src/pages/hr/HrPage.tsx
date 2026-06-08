@@ -1,4 +1,4 @@
-import { DollarSign, UserPlus, Users } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -20,13 +20,13 @@ const HrPage = () => {
       description: "تسجيل موظف جديد",
       role: ["Admin", "HR", "Manager"],
     },
-    {
-      label: "الرواتب",
-      icon: DollarSign,
-      path: "/hr/payroll",
-      description: "الرواتب والتعويضات",
-      role: ["Manager"],
-    },
+    // {
+    //   label: "الرواتب",
+    //   icon: DollarSign,
+    //   path: "/hr/payroll",
+    //   description: "الرواتب والتعويضات",
+    //   role: ["Manager"],
+    // },
     // {
     //   label: "القروض والسلف",
     //   icon: TrendingUp,
