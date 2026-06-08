@@ -330,6 +330,12 @@ export function useCreateRequest() {
             amount: 0,
           })),
         );
+
+      if (milestonesError) {
+        setError(milestonesError);
+        setLoading(false);
+        return { error: milestonesError };
+      }
     }
 
     // الخطوة 4: إرسال الإشعارات

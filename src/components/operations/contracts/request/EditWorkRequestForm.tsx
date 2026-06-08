@@ -14,12 +14,13 @@ import { TextField } from "../../../ui/inputs/TextField";
 import { TextAreaField } from "../../../ui/inputs/TextAreaField";
 import { DateField } from "../../../ui/inputs/DateField";
 import Separator from "../../../ui/separator";
-import { Trash2, Plus, X } from "lucide-react";
+import { Trash2, Plus, X, Flag } from "lucide-react";
 import { contractorWithSpecializations } from "../../../../types/extended.type";
 import {
   ExistingRequest,
   useEditRequest,
 } from "../../../../hooks/operations/contracts/requests/useRequests";
+import ConfirmDialog from "../../../ui/ConfirmDialog";
 
 interface EditWorkRequestFormProps {
   specializations: Specializations[];
@@ -90,7 +91,6 @@ const ServicePickerDialog = ({
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
-
         <div className="p-3 border-b">
           <input
             type="text"
@@ -100,7 +100,6 @@ const ServicePickerDialog = ({
             className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {loading ? (
             <p className="text-center text-sm text-gray-400 py-8">
@@ -150,7 +149,6 @@ const ServicePickerDialog = ({
             ))
           )}
         </div>
-
         <div className="p-4 border-t flex items-center justify-between gap-3">
           <span className="text-sm text-gray-500">
             {picked.length > 0
@@ -197,17 +195,25 @@ const EditWorkRequestForm = ({
   const [showDialog, setShowDialog] = useState(false);
   const { editRequest, loading } = useEditRequest();
   const navigate = useNavigate();
-
-  // Attachments are new uploads only (existing attachments handled separately if needed)
   const [files, setFiles] = useState<AttachmentDraft[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // ── Derive default values from the existing request ──────────────────────
   const defaultItems = existingRequest.work_request_items.map((item) => ({
     id: item.service_id,
     name: item.services?.name ?? "",
     unit: item.unit,
     quantity: item.quantity,
+    is_custom: false,
   }));
+
+  const defaultMilestones = (existingRequest.request_milestones ?? []).map(
+    (m) => ({
+      title: m.title,
+      description: m.description ?? "",
+      percentage: m.percentage,
+      order_index: m.order_index,
+    }),
+  );
 
   const {
     register,
@@ -233,19 +239,28 @@ const EditWorkRequestForm = ({
       contractor_provides_materials:
         existingRequest.contractor_provides_materials ?? false,
       items: defaultItems,
+      milestones: defaultMilestones,
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "items",
-  });
+  const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  const {
+    fields: milestoneFields,
+    append: appendMilestone,
+    remove: removeMilestone,
+  } = useFieldArray({ control, name: "milestones" });
 
   const bidMode = watch("bid_mode");
   const currentItems = watch("items");
+  const milestones = watch("milestones");
   const selectedSpecializationId = watch("specialization_id");
 
-  // Sync parent spec state so services load correctly on mount
+  const percentageTotal = milestones.reduce(
+    (s, m) => s + (Number(m.percentage) || 0),
+    0,
+  );
+
   useEffect(() => {
     onSpecChange(existingRequest.specialization_id);
     onBidModeChange(existingRequest.mode);
@@ -261,7 +276,6 @@ const EditWorkRequestForm = ({
     value: s.id,
     label: s.name,
   }));
-
   const contractorOptions = filteredContractors.map((c) => ({
     value: c.id,
     label: `${c.first_name} ${c.last_name ?? ""}`.trim(),
@@ -269,9 +283,35 @@ const EditWorkRequestForm = ({
 
   const handleServicesConfirm = (selected: Service[]) => {
     selected.forEach((s) =>
-      append({ id: s.id, name: s.name, unit: s.unit ?? "عدد", quantity: 1 }),
+      append({
+        id: s.id,
+        name: s.name,
+        unit: s.unit ?? "عدد",
+        quantity: 1,
+        is_custom: false,
+      }),
     );
     setShowDialog(false);
+  };
+
+  const handleAddCustomItem = () => {
+    append({
+      id: crypto.randomUUID(),
+      name: "",
+      unit: "عدد",
+      quantity: 1,
+      is_custom: true,
+      custom_name: "",
+    });
+  };
+
+  const handleAddMilestone = () => {
+    appendMilestone({
+      title: "",
+      description: "",
+      percentage: 0,
+      order_index: milestoneFields.length + 1,
+    });
   };
 
   const onSubmit = async (data: RequestForm) => {
@@ -311,7 +351,9 @@ const EditWorkRequestForm = ({
         <ServicePickerDialog
           services={services}
           loading={servLoading}
-          alreadySelected={currentItems.map((i) => i.id)}
+          alreadySelected={currentItems
+            .filter((i) => !i.is_custom)
+            .map((i) => i.id)}
           onConfirm={handleServicesConfirm}
           onClose={() => setShowDialog(false)}
         />
@@ -327,7 +369,7 @@ const EditWorkRequestForm = ({
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          {/* ── Section 1: General Info ──────────────────────────────────── */}
+          {/* ── General Info ──────────────────────────────────────────────── */}
           <p className="text-sm font-semibold text-gray-500 mb-3">
             المعلومات العامة
           </p>
@@ -351,14 +393,12 @@ const EditWorkRequestForm = ({
                 />
               )}
             />
-
             <TextField
               id="title"
               label="العنوان"
               register={register("title")}
               error={errors.title}
             />
-
             <div className="col-span-2">
               <TextAreaField
                 id="description"
@@ -367,7 +407,6 @@ const EditWorkRequestForm = ({
                 error={errors.description}
               />
             </div>
-
             <DateField
               id="bid_deadline"
               label="آخر موعد للعروض"
@@ -383,13 +422,10 @@ const EditWorkRequestForm = ({
           </div>
           <Separator />
 
-          {/* ── Contact Info ─────────────────────────────────────────────── */}
-          <div className="col-span-2">
-            <p className="text-sm font-semibold text-gray-500 mb-3 mt-2">
-              معلومات التواصل والشروط
-            </p>
-          </div>
-
+          {/* ── Contact Info ──────────────────────────────────────────────── */}
+          <p className="text-sm font-semibold text-gray-500 mb-3 mt-2">
+            معلومات التواصل والشروط
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TextField
               id="contact_name"
@@ -404,7 +440,6 @@ const EditWorkRequestForm = ({
               error={errors.contact_phone}
             />
           </div>
-
           <div className="col-span-2">
             <TextAreaField
               id="delay_penalty_terms"
@@ -414,7 +449,6 @@ const EditWorkRequestForm = ({
               rows={4}
             />
           </div>
-
           <div className="col-span-2">
             <TextAreaField
               id="retention_terms"
@@ -424,7 +458,6 @@ const EditWorkRequestForm = ({
               rows={4}
             />
           </div>
-
           <div className="col-span-2">
             <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition-colors">
               <input
@@ -445,7 +478,7 @@ const EditWorkRequestForm = ({
           </div>
           <Separator />
 
-          {/* ── Section 2: Mode Tabs ─────────────────────────────────────── */}
+          {/* ── Contract Mode ─────────────────────────────────────────────── */}
           <div className="flex items-end gap-4 mb-4">
             <div>
               <p className="text-sm font-semibold text-gray-500 mb-3">
@@ -471,7 +504,6 @@ const EditWorkRequestForm = ({
                 ))}
               </div>
             </div>
-
             {bidMode === "direct" && (
               <div className="w-72">
                 <Controller
@@ -500,17 +532,27 @@ const EditWorkRequestForm = ({
           </div>
           <Separator />
 
-          {/* ── Section 3: Items ─────────────────────────────────────────── */}
+          {/* ── Items ─────────────────────────────────────────────────────── */}
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-gray-500">البنود</p>
-            <button
-              type="button"
-              onClick={() => setShowDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة بند
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleAddCustomItem}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-400 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                بند مخصص
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDialog(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                إضافة من الخدمات
+              </button>
+            </div>
           </div>
 
           {errors.items?.root && (
@@ -529,56 +571,218 @@ const EditWorkRequestForm = ({
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-b">
-                <span className="col-span-5">الخدمة</span>
+                <span className="col-span-5">الخدمة / البند</span>
                 <span className="col-span-3">الوحدة</span>
                 <span className="col-span-3">الكمية</span>
                 <span className="col-span-1" />
               </div>
+              {fields.map((field, index) => {
+                const isCustom = field.is_custom;
+                return (
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b last:border-0"
+                  >
+                    <div className="col-span-5">
+                      {isCustom ? (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="اسم البند"
+                            {...register(`items.${index}.custom_name`)}
+                            className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          {errors.items?.[index]?.custom_name && (
+                            <p className="text-xs text-red-500 mt-0.5">
+                              {errors.items[index].custom_name?.message}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm font-medium truncate">
+                          {field.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-3">
+                      {isCustom ? (
+                        <input
+                          type="text"
+                          placeholder="عدد"
+                          {...register(`items.${index}.unit`)}
+                          className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">{field.unit}</p>
+                      )}
+                    </div>
+                    <div className="col-span-3">
+                      <input
+                        type="number"
+                        min={1}
+                        {...register(`items.${index}.quantity`, {
+                          valueAsNumber: true,
+                          setValueAs: (v) => (v === "" ? 0 : Number(v)),
+                        })}
+                        className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      {errors.items?.[index]?.quantity && (
+                        <p className="text-xs text-red-500 mt-0.5">
+                          {errors.items[index].quantity?.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <Separator />
 
-              {fields.map((field, index) => (
+          {/* ── Milestones ────────────────────────────────────────────────── */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-semibold text-gray-500">المراحل</p>
+              {milestoneFields.length > 0 && (
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    Math.round(percentageTotal) === 100
+                      ? "bg-green-100 text-green-700"
+                      : "bg-orange-100 text-orange-600"
+                  }`}
+                >
+                  {percentageTotal}% / 100%
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAddMilestone}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
+            >
+              <Flag className="w-4 h-4" />
+              إضافة مرحلة
+            </button>
+          </div>
+
+          {typeof errors.milestones?.message === "string" && (
+            <p className="text-sm text-red-500 mb-2">
+              {errors.milestones.message}
+            </p>
+          )}
+
+          {milestoneFields.length === 0 ? (
+            <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-400 text-sm">
+              لم يتم إضافة أي مراحل بعد — المراحل اختيارية
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {milestoneFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b last:border-0"
+                  className="border rounded-xl p-4 space-y-3 bg-gray-50"
                 >
-                  <p className="col-span-5 text-sm font-medium truncate">
-                    {field.name}
-                  </p>
-                  <p className="col-span-3 text-sm text-gray-500">
-                    {field.unit}
-                  </p>
-                  <div className="col-span-3">
-                    <input
-                      type="number"
-                      min={1}
-                      {...register(`items.${index}.quantity`, {
-                        valueAsNumber: true,
-                        setValueAs: (v) => (v === "" ? 0 : Number(v)),
-                      })}
-                      className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    {errors.items?.[index]?.quantity && (
-                      <p className="text-xs text-red-500 mt-0.5">
-                        {errors.items[index].quantity?.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="col-span-1 flex justify-center">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-400">
+                      مرحلة {index + 1}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => remove(index)}
-                      className="text-red-400 hover:text-red-600 transition-colors"
+                      onClick={() => removeMilestone(index)}
+                      className="text-red-400 hover:text-red-600"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">
+                        اسم المرحلة
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="مثال: أعمال الحفر والأساسات"
+                        {...register(`milestones.${index}.title`)}
+                        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                      />
+                      {errors.milestones?.[index]?.title && (
+                        <p className="text-xs text-red-500 mt-0.5">
+                          {errors.milestones[index].title?.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        النسبة %
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="25"
+                          {...register(`milestones.${index}.percentage`, {
+                            valueAsNumber: true,
+                            setValueAs: (v) => (v === "" ? 0 : Number(v)),
+                          })}
+                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white pr-8"
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                          %
+                        </span>
+                      </div>
+                      {errors.milestones?.[index]?.percentage && (
+                        <p className="text-xs text-red-500 mt-0.5">
+                          {errors.milestones[index].percentage?.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      وصف المرحلة (اختياري)
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="تفاصيل إضافية عن هذه المرحلة..."
+                      {...register(`milestones.${index}.description`)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white resize-none"
+                    />
+                  </div>
                 </div>
               ))}
+
+              <div className="border rounded-xl p-3 bg-white flex items-center gap-3">
+                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      Math.round(percentageTotal) === 100
+                        ? "bg-green-500"
+                        : "bg-blue-500"
+                    }`}
+                    style={{ width: `${Math.min(percentageTotal, 100)}%` }}
+                  />
+                </div>
+                <span
+                  className={`text-xs font-semibold shrink-0 ${Math.round(percentageTotal) === 100 ? "text-green-600" : "text-gray-500"}`}
+                >
+                  {percentageTotal}%
+                </span>
+              </div>
             </div>
           )}
-
           <Separator />
 
-          {/* ── Attachments ──────────────────────────────────────────────── */}
+          {/* ── Attachments ───────────────────────────────────────────────── */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-500">
@@ -591,14 +795,12 @@ const EditWorkRequestForm = ({
                   type="file"
                   multiple
                   hidden
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.files || []);
-                    selected.forEach(handleAddFile);
-                  }}
+                  onChange={(e) =>
+                    Array.from(e.target.files || []).forEach(handleAddFile)
+                  }
                 />
               </label>
             </div>
-
             {files.length === 0 ? (
               <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-400 text-sm">
                 لا توجد مرفقات جديدة
@@ -627,15 +829,14 @@ const EditWorkRequestForm = ({
                           </div>
                         )}
                       </div>
-
                       <div className="flex-1 min-w-0 space-y-2">
                         <input
                           type="text"
                           value={item.title}
                           onChange={(e) => {
-                            const newFiles = [...files];
-                            newFiles[index].title = e.target.value;
-                            setFiles(newFiles);
+                            const f = [...files];
+                            f[index].title = e.target.value;
+                            setFiles(f);
                           }}
                           placeholder="عنوان الملف"
                           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -645,7 +846,6 @@ const EditWorkRequestForm = ({
                           <p>{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
                       </div>
-
                       <button
                         type="button"
                         onClick={() =>
@@ -662,7 +862,7 @@ const EditWorkRequestForm = ({
             )}
           </div>
 
-          {/* ── Footer ───────────────────────────────────────────────────── */}
+          {/* ── Footer ────────────────────────────────────────────────────── */}
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
@@ -672,13 +872,28 @@ const EditWorkRequestForm = ({
               إلغاء
             </button>
             <button
-              type="submit"
+              type="button"
               disabled={loading}
+              onClick={() => setConfirmOpen(true)}
               className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {loading ? "جاري الحفظ..." : "حفظ التعديلات"}
             </button>
           </div>
+
+          <ConfirmDialog
+            open={confirmOpen}
+            onCancel={() => setConfirmOpen(false)}
+            onConfirm={() => {
+              setConfirmOpen(false);
+              handleSubmit(onSubmit)();
+            }}
+            title="حفظ التعديلات"
+            message="هل أنت متأكد من حفظ التعديلات على هذا الطلب؟"
+            confirmLabel="نعم، احفظ التعديلات"
+            confirmVariant="primary"
+            loading={loading}
+          />
         </form>
       </div>
     </>

@@ -18,7 +18,7 @@ const OperationsPage = () => {
       icon: Paperclip,
       path: "/operations/contracts",
       description: "إدارة العقود والملفات",
-      role: ["Admin", "Engineer"],
+      role: ["Admin", "Engineer", "Manager"],
     },
   ];
 

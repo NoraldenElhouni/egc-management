@@ -61,7 +61,7 @@ const MainMenu = () => {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
-      role: ["Admin", "Engineer"],
+      role: ["Admin", "Engineer", "Manager"],
     },
   ];
 

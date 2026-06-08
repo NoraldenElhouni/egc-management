@@ -1451,13 +1451,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_assignments_project_role_id_fkey"
-            columns: ["project_role_id"]
-            isOneToOne: false
-            referencedRelation: "project_roles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "project_assignments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -2251,6 +2244,7 @@ export type Database = {
           due_date: string | null
           id: string
           order_index: number
+          percentage: number
           request_id: string
           title: string
         }
@@ -2261,6 +2255,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           order_index?: number
+          percentage?: number
           request_id: string
           title: string
         }
@@ -2271,6 +2266,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           order_index?: number
+          percentage?: number
           request_id?: string
           title?: string
         }

@@ -157,9 +157,6 @@ export function useProjectsDistribute() {
           `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da)`,
         )
         .order("serial_number", { ascending: true });
-      // .neq("id", "5451aaae-c632-46f4-9913-8670cffcc8e7")
-      // .neq("id", "e0a50575-bcc1-474a-98b8-8f57770a14fa")
-      // .neq("id", "eed51009-4cfa-497c-87a1-cbf5a756f3da")
       // .in("id", [
       //   "5451aaae-c632-46f4-9913-8670cffcc8e7",
       //   "e0a50575-bcc1-474a-98b8-8f57770a14fa",

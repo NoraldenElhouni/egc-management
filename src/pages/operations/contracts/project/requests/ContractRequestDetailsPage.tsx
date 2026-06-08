@@ -1,17 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "../../../../../components/ui/Button";
-import {
-  Ban,
-  Briefcase,
-  FileText,
-  ListOrdered,
-  Pencil,
-  Send,
-  StickyNote,
-  Trash,
-  TrendingDown,
-} from "lucide-react";
+import { Ban, FileText, Pencil, Send, StickyNote, Trash } from "lucide-react";
 import Badge, { StatusBadge } from "../../../../../components/ui/Badge";
 import OverviewStatus from "../../../../../components/ui/OverviewStatus";
 import { formatCurrency, formatDate } from "../../../../../utils/helpper";
@@ -25,6 +15,7 @@ import LoadingPage from "../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../components/ui/errorPage";
 import AttachmentsPreview from "../../../../../components/ui/AttachmentsPreview";
 import { useCreateRequest } from "../../../../../hooks/operations/contracts/useContracts";
+import { RequestMilestonesColumns } from "../../../../../components/tables/columns/operations/contracts/RequestMilestonesColumns";
 
 const timelineSteps = (
   workRequest: NonNullable<ReturnType<typeof useWorkRequest>["workRequest"]>,
@@ -266,23 +257,14 @@ const ContractRequestDetailsPage = () => {
             {
               label: "التخصص",
               value: workRequest.specializations.name,
-              icon: Briefcase,
-              iconBgColor: "bg-blue-100",
-              iconColor: "text-blue-600",
             },
             {
               label: "عدد البنود",
               value: workRequest.work_request_items.length,
-              icon: ListOrdered,
-              iconBgColor: "bg-green-100",
-              iconColor: "text-green-600",
             },
             {
               label: "أقل عرض حتى الآن",
               value: lowestBid,
-              icon: TrendingDown,
-              iconBgColor: "bg-orange-100",
-              iconColor: "text-orange-600",
             },
           ]}
         />
@@ -499,6 +481,16 @@ const ContractRequestDetailsPage = () => {
           <GenericTable
             data={workRequest.work_request_items}
             columns={WorkRequestItemsColumns}
+            enableSorting
+          />
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">مراحل الطلب</h2>
+          <Separator />
+          <GenericTable
+            data={workRequest.request_milestones}
+            columns={RequestMilestonesColumns}
             enableSorting
           />
         </div>

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Attachments, WorkRequests } from "../../../../types/global.type";
+import {
+  Attachments,
+  RequestMilestones,
+  WorkRequests,
+} from "../../../../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../../lib/supabaseClient";
 import { RequestBids, RequestPage } from "../../../../types/contracts.type";
@@ -26,6 +30,7 @@ export type ExistingRequest = {
     unit: string;
     services: { id: string; name: string; unit: string | null } | null;
   }[];
+  request_milestones: RequestMilestones[];
 };
 
 export interface BidItem {
@@ -40,7 +45,7 @@ export interface BidItem {
     description: string | null;
     services: {
       name: string;
-    };
+    } | null;
   };
 }
 
@@ -303,7 +308,7 @@ export interface WorkRequestItem {
   services: {
     id: string;
     name: string;
-  };
+  } | null;
 }
 
 export interface WorkRequestDetail {
@@ -336,6 +341,7 @@ export interface WorkRequestDetail {
     phone_number: string | null;
   } | null; // null when mode is "open"
   attachments: Attachments[];
+  request_milestones: RequestMilestones[];
 }
 
 export function useWorkRequest(requestId: string) {
@@ -361,7 +367,8 @@ export function useWorkRequest(requestId: string) {
             contractor_bids(count),
             work_request_items(*, services(id, name)),
             employees!work_requests_created_by_fkey(id, first_name, last_name),
-            contractors!work_requests_direct_contractor_fkey(id, first_name, last_name, phone_number)`,
+            contractors!work_requests_direct_contractor_fkey(id, first_name, last_name, phone_number),
+            request_milestones(*)`,
           )
           .eq("id", requestId)
           .single();

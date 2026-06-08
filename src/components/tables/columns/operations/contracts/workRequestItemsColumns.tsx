@@ -14,7 +14,7 @@ export const WorkRequestItemsColumns: ColumnDef<WorkRequestItem>[] = [
   {
     id: "service_name",
     header: "البند / الخدمة",
-    accessorFn: (row) => row.services.name,
+    accessorFn: (row) => row.services?.name,
     cell: ({ getValue }) => (
       <span className="font-semibold text-gray-900">{getValue<string>()}</span>
     ),
@@ -36,7 +36,7 @@ export const WorkRequestItemsColumns: ColumnDef<WorkRequestItem>[] = [
   {
     id: "service_id",
     header: "رقم الخدمة",
-    accessorFn: (row) => row.services.id,
+    accessorFn: (row) => row.services?.id,
     cell: ({ getValue }) => (
       <span className="text-gray-400 text-sm font-mono">
         {/* Show a short code — replace with real SKU if you add it later */}
