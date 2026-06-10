@@ -20,6 +20,7 @@ import {
   ProjectPercentageLogs,
   CompanyExpensePayments,
   Contractors,
+  MilestoneReports,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -110,4 +111,12 @@ export interface contractorWithSpecializations extends Contractors {
       user_id: string;
     }[];
   } | null;
+}
+
+export interface MilestoneReportsWithEmployee extends MilestoneReports {
+  employees: {
+    first_name: string;
+    id: string;
+    last_name: string | null;
+  };
 }

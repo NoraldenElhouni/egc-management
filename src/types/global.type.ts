@@ -67,6 +67,7 @@ export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
 export type Attachments = Tables<"attachments">;
 export type RequestMilestones = Tables<"request_milestones">;
+export type MilestoneReports = Tables<"milestone_reports">;
 
 export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
 

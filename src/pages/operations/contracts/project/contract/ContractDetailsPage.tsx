@@ -2,16 +2,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "../../../../../components/ui/Button";
-import {
-  Briefcase,
-  FileText,
-  ListOrdered,
-  Plus,
-  Timer,
-  Trash,
-  TrendingDown,
-  Wallet,
-} from "lucide-react";
+import { FileText, Plus, Trash, Wallet } from "lucide-react";
 import { StatusBadge } from "../../../../../components/ui/Badge";
 import OverviewStatus from "../../../../../components/ui/OverviewStatus";
 import { formatCurrency, formatDate } from "../../../../../utils/helpper";
@@ -23,6 +14,7 @@ import { PaymentRequestsColumns } from "../../../../../components/tables/columns
 import LoadingPage from "../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../components/ui/errorPage";
 import { useContractDetails } from "../../../../../hooks/operations/contracts/useContracts";
+import { MilestoneReportsColumns } from "../../../../../components/tables/columns/operations/contracts/milestoneReportsColumns";
 
 const contractStatusBadge = (status: string) => {
   switch (status) {
@@ -142,39 +134,24 @@ const ContractDetailsPage = () => {
           {
             label: "إجمالي العقد",
             value: formatCurrency(contract.total_amount),
-            icon: Briefcase,
-            iconBgColor: "bg-blue-100",
-            iconColor: "text-blue-600",
           },
           {
             label: "المدفوع",
             value: formatCurrency(totalPaid),
-            icon: ListOrdered,
-            iconBgColor: "bg-green-100",
-            iconColor: "text-green-600",
             secondaryLabel: "نسبة الإنجاز",
             secondaryValue: `${paidPercent}%`,
           },
           {
             label: "المتبقي",
             value: formatCurrency(totalRemaining),
-            icon: TrendingDown,
-            iconBgColor: "bg-orange-100",
-            iconColor: "text-orange-600",
           },
           {
             label: "المراحل",
             value: `${completedMilestones} / ${contract.contract_milestones.length}`,
-            icon: ListOrdered,
-            iconBgColor: "bg-purple-100",
-            iconColor: "text-purple-600",
           },
           {
             label: "الأيام المتبقية",
             value: daysRemaining !== null ? String(daysRemaining) : "—",
-            icon: Timer,
-            iconBgColor: "bg-red-100",
-            iconColor: "text-red-600",
           },
         ]}
       />
@@ -274,6 +251,19 @@ const ContractDetailsPage = () => {
         <GenericTable
           data={contract.payment_requests}
           columns={PaymentRequestsColumns}
+          enableSorting
+        />
+      </div>
+
+      {/* milestone reports table */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-semibold text-gray-900">تقارير المراحل</h2>
+        </div>
+        <Separator />
+        <GenericTable
+          data={contract.milestone_reports}
+          columns={MilestoneReportsColumns}
           enableSorting
         />
       </div>

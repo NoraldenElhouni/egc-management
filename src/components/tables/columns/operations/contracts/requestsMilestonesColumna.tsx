@@ -1,28 +1,30 @@
-// components/tables/columns/operations/contracts/paymentRequestsColumns.tsx
+// components/tables/columns/operations/contracts/requestsMilestonesColumns.tsx
 import { ColumnDef } from "@tanstack/react-table";
 import { formatCurrency } from "../../../../../utils/helpper";
 import { StatusBadge } from "../../../../ui/Badge";
 import { PaymentRequest } from "../../../../../hooks/operations/contracts/useContracts";
-
-const paymentStatusBadge = (status: PaymentRequest["status"]) => {
-  switch (status) {
-    case "paid":
-      return <StatusBadge.Paid />;
-    case "approved":
-      return <StatusBadge.Awarded />;
-    case "declined":
-      return <StatusBadge.Rejected />;
-    default:
-      return <StatusBadge.Pending />;
-  }
-};
 
 const paymentMethodLabel: Record<string, string> = {
   cash: "نقداً",
   bank: "تحويل بنكي",
 };
 
-export const PaymentRequestsColumns: ColumnDef<PaymentRequest>[] = [
+function paymentStatusBadge(status: PaymentRequest["status"]) {
+  switch (status) {
+    case "pending":
+      return <StatusBadge.Pending />;
+    case "approved":
+      return <StatusBadge.Awarded />;
+    case "paid":
+      return <StatusBadge.Completed />;
+    case "declined":
+      return <StatusBadge.Rejected />;
+    default:
+      return <span className="text-gray-400">—</span>;
+  }
+}
+
+export const requestsMilestonesColumns: ColumnDef<PaymentRequest>[] = [
   {
     id: "serial",
     header: "رقم الطلب",

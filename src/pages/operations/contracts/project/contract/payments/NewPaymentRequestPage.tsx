@@ -65,6 +65,18 @@ const NewPaymentRequestPage = () => {
     [contract],
   );
 
+  const reportedByMilestone = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const m of contract?.contract_milestones ?? []) {
+      const reported = m.milestone_reports.reduce(
+        (sum, r) => sum + (r.amount_done ?? 0),
+        0,
+      );
+      if (reported > 0) map[m.id] = reported;
+    }
+    return map;
+  }, [contract]);
+
   // ── early returns after all hooks ─────────────────────────────────────────
 
   if (!contractId || !projectId) return null;
@@ -79,7 +91,9 @@ const NewPaymentRequestPage = () => {
   function milestoneRemaining(milestoneId: string): number {
     const m = contract!.contract_milestones.find((m) => m.id === milestoneId);
     if (!m) return 0;
-    return Math.max(m.amount - (paidByMilestone[milestoneId] ?? 0), 0);
+    const reported = reportedByMilestone[milestoneId]; // undefined = no reports
+    const cap = reported !== undefined ? reported : m.amount;
+    return Math.max(cap - (paidByMilestone[milestoneId] ?? 0), 0);
   }
 
   const chosenIds = entries.map((e) => e.milestoneId).filter(Boolean);
@@ -228,6 +242,23 @@ const NewPaymentRequestPage = () => {
                         </p>
                       </div>
                     )}
+
+                    {/* report cap notice */}
+                    {entry.milestoneId &&
+                      reportedByMilestone[entry.milestoneId] !== undefined && (
+                        <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                          <p className="text-xs text-blue-700">
+                            تقارير الإنجاز تُظهر{" "}
+                            <span className="font-semibold">
+                              {formatCurrency(
+                                reportedByMilestone[entry.milestoneId],
+                              )}
+                            </span>{" "}
+                            — الحد الأقصى للدفعة محدود بهذا المبلغ.
+                          </p>
+                        </div>
+                      )}
 
                     {entry.milestoneId && (
                       <div className="space-y-1">

@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Contracts, Specializations } from "../../../types/global.type";
 import { supabase } from "../../../lib/supabaseClient";
 import { RequestForm } from "../../../types/schema/contracts.schema";
-import { contractorWithSpecializations } from "../../../types/extended.type";
+import {
+  contractorWithSpecializations,
+  MilestoneReportsWithEmployee,
+} from "../../../types/extended.type";
 
 export type Service = {
   id: string;
@@ -28,6 +31,7 @@ export interface ContractMilestone {
   order_index: number;
   completed_at: string | null;
   created_at: string;
+  milestone_reports: { amount_done: number | null }[]; // ← add
 }
 
 export interface PaymentRequest {
@@ -67,6 +71,7 @@ export interface ContractDetail {
   employees: { id: string; first_name: string; last_name: string | null };
   contract_milestones: ContractMilestone[];
   payment_requests: PaymentRequest[];
+  milestone_reports: MilestoneReportsWithEmployee[];
 }
 
 export function useContracts(projectId: string) {
@@ -588,7 +593,8 @@ export function useContractDetails(contractId: string) {
             work_requests(id, title, specializations(name)),
             contractors(id, first_name, last_name, phone_number, email),
             employees!contracts_created_by_fkey(id, first_name, last_name),
-            contract_milestones(*),
+            contract_milestones(*, milestone_reports(amount_done)),
+            milestone_reports(*, employees(id, first_name, last_name)),
             payment_requests(
               *,
               contract_milestones(title),
