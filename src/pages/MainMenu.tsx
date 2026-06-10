@@ -49,7 +49,7 @@ const MainMenu = () => {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      role: ["Manager", "Admin"],
+      role: ["Manager"],
     },
     {
       label: "الإعدادات",
