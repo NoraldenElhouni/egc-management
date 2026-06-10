@@ -32,6 +32,7 @@ export interface ContractMilestone {
 
 export interface PaymentRequest {
   id: string;
+  milestone_id: string; // ← add this
   amount: number;
   description: string | null;
   status: "pending" | "approved" | "declined" | "paid";
