@@ -1,5 +1,8 @@
 import { PostgrestError } from "@supabase/supabase-js";
-import { Specializations } from "../../../../types/global.type";
+import {
+  AttachmentDraft,
+  Specializations,
+} from "../../../../types/global.type";
 import {
   Service,
   useCreateRequest,
@@ -36,12 +39,6 @@ interface NewWorkRequestFormProps {
   contractorsLoading: boolean;
   onBidModeChange: (mode: "open" | "direct") => void;
 }
-
-type AttachmentDraft = {
-  file: File;
-  title: string;
-  preview?: string;
-};
 
 // ── Service Picker Dialog ─────────────────────────────────────────────────────
 const ServicePickerDialog = ({

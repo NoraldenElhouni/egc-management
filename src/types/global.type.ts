@@ -121,3 +121,9 @@ export type ButtonVariant =
   | "info"
   | "ghost"
   | "muted";
+
+export type AttachmentDraft = {
+  file: File;
+  title: string;
+  preview?: string;
+};

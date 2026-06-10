@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
+import { MilestoneReportsWithEmployee } from "../../../types/extended.type";
 
 export interface MilestoneReport {
   id: string;
@@ -36,7 +37,7 @@ export interface MilestoneDetail {
     contractors: { first_name: string; last_name: string | null };
     work_requests: { title: string };
   };
-  milestone_reports: MilestoneReport[];
+  milestone_reports: MilestoneReportsWithEmployee[];
 }
 
 export function useMilestone(milestoneId: string) {
@@ -61,7 +62,7 @@ export function useMilestone(milestoneId: string) {
             ),
             milestone_reports(
               *,
-              employees!milestone_reports_submitted_by_fkey(first_name, last_name)
+              employees!milestone_reports_submitted_by_fkey(id, first_name, last_name)
             )`,
           )
           .eq("id", milestoneId)

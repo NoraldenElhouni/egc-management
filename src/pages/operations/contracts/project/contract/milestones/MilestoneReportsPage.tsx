@@ -8,9 +8,11 @@ import Button from "../../../../../../components/ui/Button";
 import Separator from "../../../../../../components/ui/separator";
 import GenericTable from "../../../../../../components/tables/table";
 import { MilestoneReportsColumns } from "../../../../../../components/tables/columns/operations/contracts/milestoneReportsColumns";
-import { formatCurrency, formatDate } from "../../../../../../utils/helpper";
+import { formatCurrency } from "../../../../../../utils/helpper";
 import { Plus, Upload } from "lucide-react";
 import { supabase } from "../../../../../../lib/supabaseClient";
+import { uploadFile } from "../../../../../../lib/storage-client";
+import { AttachmentDraft } from "../../../../../../types/global.type";
 
 const inputClass =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
@@ -23,6 +25,7 @@ const MilestoneReportsPage = () => {
     contractId: string;
     projectId: string;
   }>();
+  const [files, setFiles] = useState<AttachmentDraft[]>([]);
 
   const { milestone, loading, error } = useMilestone(milestoneId ?? "");
 
@@ -64,6 +67,16 @@ const MilestoneReportsPage = () => {
       });
       if (error) throw error;
 
+      for (const item of files) {
+        await uploadFile({
+          file: item.file,
+          entityType: "milestone_report", // ← fix this
+          entityId: milestoneId!,
+          title: item.title,
+          bucket: "reports",
+        });
+      }
+
       setDescription("");
       setAmountDone(0);
       setShowForm(false);
@@ -73,6 +86,15 @@ const MilestoneReportsPage = () => {
       setSaveError(err.message ?? "حدث خطأ أثناء الحفظ");
     }
     setSaving(false);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    const drafts: AttachmentDraft[] = selected.map((f) => ({
+      file: f,
+      title: f.name, // or let user edit titles
+    }));
+    setFiles(drafts);
   }
 
   return (
@@ -157,8 +179,9 @@ const MilestoneReportsPage = () => {
               </label>
               <input
                 type="file"
-                disabled
-                className={`${inputClass} opacity-40 cursor-not-allowed`}
+                multiple
+                className={inputClass}
+                onChange={handleFileChange}
               />
             </div>
           </div>
