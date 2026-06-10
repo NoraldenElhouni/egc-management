@@ -55,6 +55,6 @@ export const ClientsColumns: ColumnDef<Clients>[] = [
 
   {
     accessorKey: "phone_number",
-    header: "رقم العاتف",
+    header: "رقم الهاتف",
   },
 ];

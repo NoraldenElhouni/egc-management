@@ -238,34 +238,40 @@ export type Database = {
       }
       clients: {
         Row: {
+          code: string | null
           created_at: string
           email: string
           first_name: string
           id: string
           last_name: string | null
           phone_number: string
+          user_id: string | null
         }
         Insert: {
+          code?: string | null
           created_at?: string
           email: string
           first_name: string
-          id: string
+          id?: string
           last_name?: string | null
           phone_number: string
+          user_id?: string | null
         }
         Update: {
+          code?: string | null
           created_at?: string
           email?: string
           first_name?: string
           id?: string
           last_name?: string | null
           phone_number?: string
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "clients_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
+            foreignKeyName: "clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -2238,10 +2244,8 @@ export type Database = {
       }
       request_milestones: {
         Row: {
-          amount: number
           created_at: string
           description: string | null
-          due_date: string | null
           id: string
           order_index: number
           percentage: number
@@ -2249,10 +2253,8 @@ export type Database = {
           title: string
         }
         Insert: {
-          amount: number
           created_at?: string
           description?: string | null
-          due_date?: string | null
           id?: string
           order_index?: number
           percentage?: number
@@ -2260,10 +2262,8 @@ export type Database = {
           title: string
         }
         Update: {
-          amount?: number
           created_at?: string
           description?: string | null
-          due_date?: string | null
           id?: string
           order_index?: number
           percentage?: number

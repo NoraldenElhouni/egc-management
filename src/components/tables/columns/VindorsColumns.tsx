@@ -51,7 +51,7 @@ export const VendorsColumns: ColumnDef<Vendor>[] = [
 
   {
     accessorKey: "alt_phone_number",
-    header: "رقم هاتف بديل",
+    header: "رقم هاتف البديل",
     cell: ({ row }) =>
       row.original.alt_phone_number ? (
         row.original.alt_phone_number
