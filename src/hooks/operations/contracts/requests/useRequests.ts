@@ -67,9 +67,14 @@ export interface BidDetail {
     email: string | null;
   };
   work_requests: {
+    id: string; // ← add
     title: string;
+    project_id: string; // ← add
     projects: {
+      id: string; // ← add
       name: string;
+      expense_counter: number; // ← add
+      invoice_counter: number; // ← add
     };
   };
   contractor_bid_items: BidItem[];
@@ -430,11 +435,16 @@ export function useBidDetail(bidId: string) {
           .from("contractor_bids")
           .select(
             `*,
-            contractors(id, first_name, last_name, phone_number, email),
-            work_requests(title, projects(name)),
-            contractor_bid_items(
-              *,
-              work_request_items(description, services(name))
+              contractors(id, first_name, last_name, phone_number, email),
+              work_requests(
+                id,
+                title,
+                project_id,
+                projects(id, name, expense_counter, invoice_counter)
+              ),
+              contractor_bid_items(
+                *,
+                work_request_items(description, services(name))
             )`,
           )
           .eq("id", bidId)

@@ -1,5 +1,5 @@
-import React from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Button from "../../../../../../components/ui/Button";
 import { Ban, Check, Info, StickyNote } from "lucide-react";
 import Separator from "../../../../../../components/ui/separator";
@@ -11,11 +11,28 @@ import GenericTable from "../../../../../../components/tables/table";
 import { StatusBadge } from "../../../../../../components/ui/Badge";
 import { useBidDetail } from "../../../../../../hooks/operations/contracts/requests/useRequests";
 import { BidItemsColumns } from "../../../../../../components/tables/columns/operations/bidItemsColumns";
+import AcceptBidDialog from "../../../../../../components/dialog/AcceptBidDialog";
+import { RequestBids } from "../../../../../../types/contracts.type";
+import { supabase } from "../../../../../../lib/supabaseClient";
 
 const BidDetailPage = () => {
   const { bidId } = useParams<{ bidId: string }>();
 
   const { bid, loading, error } = useBidDetail(bidId ?? "");
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const navigate = useNavigate();
+
+  async function handleDecline() {
+    if (!bid) return;
+    setDeclining(true);
+    await supabase
+      .from("contractor_bids")
+      .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+      .eq("id", bid.id);
+    setDeclining(false);
+    navigate(0);
+  }
 
   if (!bidId) {
     return (
@@ -47,9 +64,14 @@ const BidDetailPage = () => {
         </div>
         {isPending && (
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="error">
+            <Button
+              size="sm"
+              variant="error"
+              disabled={declining}
+              onClick={handleDecline}
+            >
               <Ban className="w-4 h-4 ml-2" />
-              رفض العرض
+              {declining ? "جاري الرفض..." : "رفض العرض"}
             </Button>
             <Link to={`./counter/new`}>
               <Button size="sm" variant="warning">
@@ -57,7 +79,11 @@ const BidDetailPage = () => {
                 عرض مضاد
               </Button>
             </Link>
-            <Button size="sm" variant="success">
+            <Button
+              size="sm"
+              variant="success"
+              onClick={() => setShowAcceptDialog(true)}
+            >
               <Check className="w-4 h-4 ml-2" />
               قبول العرض وإنشاء العقد
             </Button>
@@ -165,17 +191,36 @@ const BidDetailPage = () => {
         </div>
         {isPending && (
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="error">
+            <Button
+              size="sm"
+              variant="error"
+              disabled={declining}
+              onClick={handleDecline}
+            >
               <Ban className="w-4 h-4 ml-2" />
-              رفض العرض
+              {declining ? "جاري الرفض..." : "رفض العرض"}
             </Button>
-            <Button size="sm" variant="success">
+            <Button
+              size="sm"
+              variant="success"
+              onClick={() => setShowAcceptDialog(true)}
+            >
               <Check className="w-4 h-4 ml-2" />
               قبول العرض وإنشاء العقد
             </Button>
           </div>
         )}
       </div>
+      {showAcceptDialog && (
+        <AcceptBidDialog
+          bid={bid as unknown as RequestBids}
+          onClose={() => setShowAcceptDialog(false)}
+          onSuccess={() => {
+            setShowAcceptDialog(false);
+            navigate(0); // re-runs the current route loader, re-fetches data
+          }}
+        />
+      )}
     </div>
   );
 };

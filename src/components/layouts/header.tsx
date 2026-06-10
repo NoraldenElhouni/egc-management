@@ -76,6 +76,7 @@ const Header = () => {
     counter: "العرض المضاد",
     milestones: "مرحلة",
     reports: "تقارير",
+    team: "الفريق",
   };
 
   return (
