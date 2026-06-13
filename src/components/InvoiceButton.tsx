@@ -150,11 +150,11 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `INV-${project?.serial_number}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      window.open(url, "_blank");
+
+      // Optional cleanup after some time
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {
       setError(
         "فشل إنشاء الفاتورة: " +

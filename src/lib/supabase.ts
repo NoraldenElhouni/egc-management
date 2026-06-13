@@ -736,6 +736,7 @@ export type Database = {
           created_by: string
           days_allocated: number
           end_date: string | null
+          expense_id: string | null
           id: string
           notes: string | null
           project_id: string
@@ -752,6 +753,7 @@ export type Database = {
           created_by: string
           days_allocated: number
           end_date?: string | null
+          expense_id?: string | null
           id?: string
           notes?: string | null
           project_id: string
@@ -768,6 +770,7 @@ export type Database = {
           created_by?: string
           days_allocated?: number
           end_date?: string | null
+          expense_id?: string | null
           id?: string
           notes?: string | null
           project_id?: string
@@ -798,6 +801,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "project_expenses"
             referencedColumns: ["id"]
           },
           {
@@ -1454,6 +1464,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
             referencedColumns: ["id"]
           },
           {

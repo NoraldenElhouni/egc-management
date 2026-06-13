@@ -195,6 +195,7 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
           status: "active" as const,
           start_date: startDate || null,
           end_date: endDate || null,
+          expense_id: expense.id,
         })
         .select("id")
         .single();
