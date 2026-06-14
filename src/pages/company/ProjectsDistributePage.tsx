@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useProjectsDistribute,
   DistributionProject,
@@ -142,15 +142,22 @@ const ProjectsDistributePage = () => {
 
   const maxStep = steps.length;
 
+  const isSubmittingRef = useRef(false); // ← add this
+
   const handleSubmit = async () => {
+    // ✅ Synchronous guard — blocks double-calls immediately
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     if (!projects || projects.length === 0) {
       window.alert("لا توجد مشاريع للتوزيع");
+      isSubmittingRef.current = false;
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setProgress([]); // reset from any previous run
+      setProgress([]);
 
       const {
         data: { user },
@@ -160,11 +167,7 @@ const ProjectsDistributePage = () => {
         return;
       }
 
-      const result = await submitDistribution(
-        projects,
-        user.id,
-        setProgress, // ← pass the progress callback
-      );
+      const result = await submitDistribution(projects, user.id, setProgress);
 
       if (!result.success) {
         window.alert(`حدث خطأ: ${result.error}`);
@@ -176,11 +179,14 @@ const ProjectsDistributePage = () => {
       console.error(e);
       window.alert("حدث خطأ أثناء إرسال البيانات. الرجاء المحاولة مرة أخرى.");
     } finally {
+      isSubmittingRef.current = false; // ← always release
       setIsSubmitting(false);
     }
   };
 
   const handleReset = () => {
+    // refetch the projects to get fresh data from the server
+    refetch();
     setDistributedProjects(null);
     setProgress([]);
     setStep(1);

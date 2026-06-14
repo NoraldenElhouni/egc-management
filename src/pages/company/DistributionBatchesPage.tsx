@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDistributionBatches } from "./useDistributionBatches";
-import LoadingPage from "../../ui/LoadingPage";
-import ErrorPage from "../../ui/errorPage";
-import { formatCurrency } from "../../../utils/helpper";
-import BatchSharesPdfButton from "../../pdf-buttons/BatchSharesPdfButton";
+import { useDistributionBatches } from "../../hooks/company/useDistributionBatches";
+import LoadingPage from "../../components/ui/LoadingPage";
+import ErrorPage from "../../components/ui/errorPage";
+import { formatCurrency } from "../../utils/helpper";
+import BatchSharesPdfButton from "../../components/pdf-buttons/BatchSharesPdfButton";
 
 const CURRENCIES = ["LYD", "USD", "EUR"];
 

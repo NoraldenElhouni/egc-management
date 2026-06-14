@@ -19,12 +19,16 @@ export interface ProjectPercentageRow {
 export interface ProjectAssignment {
   id: string;
   percentage: number;
+  project_role_id: string | null;
+  project_role?: {
+    id: string;
+    name: string;
+  } | null;
+
   employee: {
     id: string;
     first_name: string;
     last_name: string | null;
-    bank_name: string | null;
-    bank_account_number: string | null;
   };
 }
 
@@ -74,6 +78,8 @@ export function calcEmployeeEarnings(
   employeeId: string;
   name: string;
   assignmentPct: number;
+  projectRoleId?: string;
+  projectRoleName?: string;
   earning: number;
   cashEarning: number;
   bankEarning: number;
@@ -84,10 +90,16 @@ export function calcEmployeeEarnings(
   );
   return project.project_assignments.map((a) => {
     const pct = Number(a.percentage) / 100;
+
     return {
       employeeId: a.employee.id,
       name: `${a.employee.first_name} ${a.employee.last_name ?? ""}`.trim(),
+
       assignmentPct: Number(a.percentage),
+
+      projectRoleId: a.project_role_id ?? undefined,
+      projectRoleName: a.project_role?.name ?? undefined,
+
       earning: total * pct,
       cashEarning: cash * pct,
       bankEarning: bank * pct,
@@ -142,26 +154,44 @@ export function useProjectsDistribute() {
       const { data, error } = await supabase
         .from("projects")
         .select(
-          `*,
-           project_percentage(*),
-           project_assignments(
-             id,
-             percentage,
-             employee:employees(id, first_name, last_name, bank_name, bank_account_number)
-           )`,
+          `
+          *,
+          project_percentage(*),
+          project_assignments(
+          id,
+          percentage,
+          project_role_id,
+          project_role:project_roles(
+            id,
+            name
+          ),
+          employee:employees(
+            id,
+            first_name,
+            last_name,
+            bank_name,
+            bank_account_number
+          )
+        )
+        `,
         )
         .eq("status", "active")
-        .not(
-          "id",
-          "in",
-          `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da)`,
+        .in("id", [
+          "5451aaae-c632-46f4-9913-8670cffcc8e7",
+          "eed51009-4cfa-497c-87a1-cbf5a756f3da",
+        ])
+        .neq(
+          "project_assignments.project_role_id",
+          "c7823151-2290-4861-a383-5e00a78128ce",
         )
         .order("serial_number", { ascending: true });
-      // .in("id", [
-      //   "5451aaae-c632-46f4-9913-8670cffcc8e7",
-      //   "e0a50575-bcc1-474a-98b8-8f57770a14fa",
-      //   "eed51009-4cfa-497c-87a1-cbf5a756f3da",
-      // ])
+
+      // .not(
+      //   "id",
+      //   "in",
+      //   `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da)`,
+      // )
+
       if (error) throw error;
 
       const filtered = (data ?? []).filter((p) =>
@@ -181,7 +211,7 @@ export function useProjectsDistribute() {
   const submitDistribution = async (
     projects: DistributionProject[],
     createdBy: string,
-    onProgress?: (items: DistributionProgress[]) => void, // ← NEW
+    onProgress?: (items: DistributionProgress[]) => void,
   ): Promise<{ success: boolean; error?: string }> => {
     const today = new Date().toISOString().split("T")[0];
     const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
@@ -190,13 +220,11 @@ export function useProjectsDistribute() {
       string,
       { employeeId: string; amount: number }
     >();
-
     const deltas = {
       main: { cash: 0, bank: 0 },
       bank: { cash: 0, bank: 0 },
     };
 
-    // ── Initialize progress list ──────────────────
     const progressItems: DistributionProgress[] = projects.map((p) => ({
       projectId: p.id,
       projectName: p.name,
@@ -205,31 +233,24 @@ export function useProjectsDistribute() {
     onProgress?.([...progressItems]);
 
     try {
-      // ── company accounts ─────────────────────────
       const { data: companyAccounts, error: caError } = await supabase
         .from("company_account")
         .select("id, type, bank_balance, cash_balance")
         .eq("status", "active")
         .in("type", ["main", "bank"]);
 
-      if (caError || !companyAccounts?.length) {
+      if (caError || !companyAccounts?.length)
         return { success: false, error: "لم يتم العثور على حسابات الشركة" };
-      }
 
       const mainAccount = companyAccounts.find((a) => a.type === "main");
       const bankAccount = companyAccounts.find((a) => a.type === "bank");
-
-      if (!mainAccount || !bankAccount) {
+      if (!mainAccount || !bankAccount)
         return { success: false, error: "حسابات الشركة غير مكتملة" };
-      }
 
-      // ── main loop ────────────────────────────────
       for (const project of projects) {
         const progressIdx = progressItems.findIndex(
           (i) => i.projectId === project.id,
         );
-
-        // Mark as processing
         progressItems[progressIdx].status = "processing";
         onProgress?.([...progressItems]);
 
@@ -238,17 +259,37 @@ export function useProjectsDistribute() {
           const companyPct = Number(project.default_company_percentage);
 
           for (const currency of CURRENCIES) {
-            const pctRows = project.project_percentage.filter(
-              (r) => r.currency === currency && Number(r.period_percentage) > 0,
-            );
+            // ✅ FIX 1: Read fresh period_percentage from DB, don't trust in-memory
+            const { data: freshPctRows, error: freshErr } = await supabase
+              .from("project_percentage")
+              .select("*")
+              .eq("project_id", project.id)
+              .eq("currency", currency)
+              .gt("period_percentage", 0);
 
-            if (!pctRows.length) continue;
+            if (freshErr) throw freshErr;
+            if (!freshPctRows?.length) continue;
 
-            for (const pctRow of pctRows) {
+            for (const pctRow of freshPctRows) {
               const rowAmount = Number(pctRow.period_percentage);
               const isBank = pctRow.type === "bank";
 
-              // ── logs fetch ───────────────────────
+              // ✅ FIX 2: Duplicate guard — check if already distributed today
+              const { data: existing } = await supabase
+                .from("project_percentage_periods")
+                .select("id")
+                .eq("source_percentage_id", pctRow.id)
+                .eq("end_date", today)
+                .maybeSingle();
+
+              if (existing) {
+                console.warn(
+                  `[${project.name}/${currency}] Already distributed today — skipping`,
+                );
+                continue;
+              }
+
+              // logs fetch
               const { data: logs, error: logsError } = await supabase
                 .from("project_percentage_logs")
                 .select("id, amount")
@@ -257,16 +298,7 @@ export function useProjectsDistribute() {
 
               if (logsError) throw logsError;
 
-              const logsSum =
-                logs?.reduce((s, l) => s + Number(l.amount), 0) ?? 0;
-
-              if (logs?.length) {
-                console.warn(
-                  `[${project.name}/${currency}/${pctRow.type}] logs (${logsSum}) ≠ period (${rowAmount})`,
-                );
-              }
-
-              // ── period insert ─────────────────────
+              // period insert
               const { data: period, error: periodError } = await supabase
                 .from("project_percentage_periods")
                 .insert({
@@ -287,9 +319,17 @@ export function useProjectsDistribute() {
               if (periodError || !period) throw periodError;
 
               const periodId = period.id;
-
               const bankAmount = rowAmount * (bankPct / 100);
               const companyAmount = rowAmount * (companyPct / 100);
+
+              // ✅ FIX 3: Actually accumulate deltas
+              if (isBank) {
+                deltas.bank.bank += bankAmount;
+                deltas.main.bank += companyAmount;
+              } else {
+                deltas.bank.cash += bankAmount;
+                deltas.main.cash += companyAmount;
+              }
 
               const employeeRows = project.project_assignments.map((a) => ({
                 employeeId: a.employee.id,
@@ -298,7 +338,6 @@ export function useProjectsDistribute() {
                 amount: rowAmount * (Number(a.percentage) / 100),
               }));
 
-              // ── items ─────────────────────────────
               await supabase.from("project_percentage_period_items").insert([
                 {
                   period_id: periodId,
@@ -369,7 +408,6 @@ export function useProjectsDistribute() {
                 payrollMap.set(emp.employeeId, prev);
               }
 
-              // ── logs update ───────────────────────
               if (logs?.length) {
                 const { error: updateLogsError } = await supabase
                   .from("project_percentage_logs")
@@ -380,7 +418,7 @@ export function useProjectsDistribute() {
                 if (updateLogsError) throw updateLogsError;
               }
 
-              // ── reset percentage ──────────────────
+              // Reset — now safe, we read fresh from DB above
               await supabase
                 .from("project_percentage")
                 .update({ period_percentage: 0 })
@@ -388,18 +426,16 @@ export function useProjectsDistribute() {
             }
           }
 
-          // Mark as done
           progressItems[progressIdx].status = "done";
           onProgress?.([...progressItems]);
         } catch (projectErr) {
-          // Mark this project as error but continue with the rest
           progressItems[progressIdx].status = "error";
           onProgress?.([...progressItems]);
-          throw projectErr; // re-throw to outer catch
+          throw projectErr;
         }
       }
 
-      // ── company accounts update ─────────────────
+      // Company account update now uses real accumulated deltas
       await supabase
         .from("company_account")
         .update({
@@ -416,7 +452,6 @@ export function useProjectsDistribute() {
         })
         .eq("id", bankAccount.id);
 
-      // ── payroll insert ──────────────────────────
       for (const [, acc] of payrollMap) {
         await supabase.from("payroll").insert({
           employee_id: acc.employeeId,

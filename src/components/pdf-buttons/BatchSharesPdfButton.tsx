@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { DistributionBatch } from "../company/distribution/useDistributionBatches";
+import { DistributionBatch } from "../../hooks/company/useDistributionBatches";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

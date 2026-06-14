@@ -21,6 +21,8 @@ const rowSchema = z.object({
   label: z.string(),
   type: z.enum(["bank", "company", "employee"]),
   employeeId: z.string().optional(),
+  projectRoleId: z.string().optional(),
+  projectRoleName: z.string().optional(),
   currency: z.enum(["LYD", "USD", "EUR"]),
   total: z.number(),
   percentage: z
@@ -107,6 +109,10 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
           label: `👤 ${emp.name}`,
           type: "employee",
           employeeId: emp.employeeId,
+
+          projectRoleId: emp.projectRoleId,
+          projectRoleName: emp.projectRoleName,
+
           currency,
           total: dist.total,
           percentage: Number(emp.assignmentPct || 0),
@@ -149,12 +155,14 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
     employeeId: string,
     name: string,
     percentage: number,
+    roleId: string,
+    roleName: string,
   ) => {
     const { error } = await supabase.from("project_assignments").insert({
       project_id: project.id,
       user_id: employeeId,
       percentage,
-      project_role_id: "b872f455-2ceb-432e-a72d-fd35d0582e0c",
+      project_role_id: roleId,
     });
 
     if (error) {
@@ -173,6 +181,8 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
       total,
       percentage,
       amount: Number(((percentage / 100) * total).toFixed(2)),
+      projectRoleId: roleId,
+      projectRoleName: roleName,
     });
   };
 
@@ -278,9 +288,16 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
             )
             .map((r) => r.employeeId)
             .filter((id): id is string => Boolean(id))}
-          onAdd={(empId, name, pct) =>
-            handleAddEmployee(pickerCurrency, empId, name, pct)
-          }
+          onAdd={(empId, name, pct, roleId, roleName) => {
+            void handleAddEmployee(
+              pickerCurrency,
+              empId,
+              name,
+              pct,
+              roleId,
+              roleName,
+            );
+          }}
           onClose={() => setPickerCurrency(null)}
         />
       )}
@@ -329,6 +346,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                 <thead>
                   <tr className="bg-gray-50 text-right text-gray-500">
                     <th className="px-2 py-2">الجهة</th>
+                    <th className="px-2 py-2">الدور</th>
                     <th className="px-2 py-2 w-28">النسبة %</th>
                     <th className="px-2 py-2 w-32">المبلغ</th>
                     <th className="px-2 py-2 w-8" />
@@ -359,6 +377,11 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                       >
                         <td className="px-2 py-2 font-medium">
                           {rowData?.label}
+                        </td>
+                        <td className="px-2 py-2">
+                          {rowType === "employee"
+                            ? (rowData?.projectRoleName ?? "-")
+                            : "-"}
                         </td>
 
                         {/* Percentage — drives amount on change */}

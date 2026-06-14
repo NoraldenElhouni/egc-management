@@ -1,13 +1,25 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useEmployees } from "../../../hooks/useEmployees";
 import { formatCurrency } from "../../../utils/helpper";
 import { Currency } from "../../../types/global.type";
+import { supabase } from "../../../lib/supabaseClient";
+
+interface ProjectRole {
+  id: string;
+  name: string;
+}
 
 interface EmployeePickerProps {
   currency: Currency;
   total: number;
   existingIds: string[];
-  onAdd: (employeeId: string, name: string, percentage: number) => void;
+  onAdd: (
+    employeeId: string,
+    name: string,
+    percentage: number,
+    roleId: string,
+    roleName: string,
+  ) => void;
   onClose: () => void;
 }
 
@@ -23,13 +35,48 @@ const EmployeePicker = ({
   const [percentage, setPercentage] = useState<number | "">("");
   const [query, setQuery] = useState("");
 
+  // ── Role state ────────────────────────────────────────────────────────────
+  const [roles, setRoles] = useState<ProjectRole[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState("");
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      setRolesLoading(true);
+      const { data, error } = await supabase
+        .from("project_roles")
+        .select("id, name")
+        .order("name");
+      if (!error && data) setRoles(data);
+      setRolesLoading(false);
+    };
+    fetchRoles();
+  }, []);
+
   const available = employees.filter((e) => !existingIds.includes(e.id));
 
   const handleAdd = () => {
-    if (!selectedId || percentage === "" || Number(percentage) <= 0) return;
+    if (
+      !selectedId ||
+      percentage === "" ||
+      Number(percentage) <= 0 ||
+      !selectedRoleId
+    )
+      return;
+
     const emp = employees.find((e) => e.id === selectedId);
     if (!emp) return;
-    onAdd(selectedId, emp.first_name, Number(percentage));
+
+    const role = roles.find((r) => r.id === selectedRoleId);
+    if (!role) return;
+
+    onAdd(
+      selectedId,
+      `${emp.first_name} ${emp.last_name ?? ""}`.trim(),
+      Number(percentage),
+      role.id,
+      role.name,
+    );
     onClose();
   };
 
@@ -37,6 +84,8 @@ const EmployeePicker = ({
     const fullName = `${emp.first_name} ${emp.last_name}`;
     return fullName.toLowerCase().includes(query.toLowerCase());
   });
+
+  const selectedRole = roles.find((r) => r.id === selectedRoleId);
 
   return (
     <div
@@ -61,15 +110,14 @@ const EmployeePicker = ({
           </button>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="بحث عن موظف..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded border border-gray-300 px-2 py-1.5 text-right text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="بحث عن موظف..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full rounded border border-gray-300 px-2 py-1.5 text-right text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        />
 
         {/* Body */}
         {loading ? (
@@ -100,8 +148,33 @@ const EmployeePicker = ({
               ))}
             </div>
 
-            {/* Percentage input — shown after selecting an employee */}
+            {/* Role picker — shown after selecting an employee */}
             {selectedId && (
+              <div className="space-y-1">
+                <label className="text-xs text-gray-600 font-medium">
+                  الدور في المشروع
+                </label>
+                {rolesLoading ? (
+                  <p className="text-xs text-gray-400">جاري تحميل الأدوار...</p>
+                ) : (
+                  <select
+                    value={selectedRoleId}
+                    onChange={(e) => setSelectedRoleId(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-right text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">اختر الدور...</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+
+            {/* Percentage input — shown after selecting a role */}
+            {selectedId && selectedRoleId && (
               <div className="space-y-1">
                 <label className="text-xs text-gray-600 font-medium">
                   النسبة %
@@ -146,7 +219,10 @@ const EmployeePicker = ({
                 type="button"
                 onClick={handleAdd}
                 disabled={
-                  !selectedId || percentage === "" || Number(percentage) <= 0
+                  !selectedId ||
+                  !selectedRoleId ||
+                  percentage === "" ||
+                  Number(percentage) <= 0
                 }
                 className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-40"
               >

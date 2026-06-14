@@ -3,8 +3,8 @@ import CompanyLayout from "../sidebar/CompanyLayout";
 import CompanyPage from "../../pages/company/CompanyPage";
 import ProjectsDistributePage from "../../pages/company/ProjectsDistributePage";
 import CompanyOverview from "../../pages/company/CompanyOverview";
-import DistributionBatchesPage from "../company/distribution/DistributionBatchesPage";
-import ProjectDistributionDetailPage from "../company/distribution/ProjectDistributionDetailPage";
+import DistributionBatchesPage from "../../pages/company/DistributionBatchesPage";
+import ProjectDistributionDetailPage from "../../pages/company/ProjectDistributionDetailPage";
 
 const CompanyRoutes = () => {
   return (

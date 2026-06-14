@@ -1,6 +1,4 @@
-import React from "react";
 import OverviewStatus from "../../components/ui/OverviewStatus";
-import { DollarSign, Lock } from "lucide-react";
 import { useCompanyFinance } from "../../hooks/company/useCompanyFinance";
 import { formatCurrency } from "../../utils/helpper";
 import LoadingPage from "../../components/ui/LoadingPage";
@@ -39,16 +37,10 @@ const CompanyOverview = () => {
           {
             label: "حساب الاساسي",
             value: formatCurrency(totalMainAccount),
-            icon: DollarSign,
-            iconBgColor: "bg-blue-100",
-            iconColor: "text-blue-600",
           },
           {
             label: "حساب الاحتياطي",
             value: formatCurrency(totalReserveAccount),
-            icon: Lock,
-            iconBgColor: "bg-blue-100",
-            iconColor: "text-blue-600",
           },
         ]}
       />

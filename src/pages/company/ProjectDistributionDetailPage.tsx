@@ -3,12 +3,12 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   DistributionPeriod,
   useDistributionHistory,
-} from "../../../hooks/projects/useDistributionHistory";
-import { formatCurrency } from "../../../utils/helpper";
-import { supabase } from "../../../lib/supabaseClient";
-import LoadingPage from "../../ui/LoadingPage";
-import ErrorPage from "../../ui/errorPage";
-import ReverseDistributionDialog from "../ReverseDistributionDialog";
+} from "../../hooks/projects/useDistributionHistory";
+import { formatCurrency } from "../../utils/helpper";
+import { supabase } from "../../lib/supabaseClient";
+import LoadingPage from "../../components/ui/LoadingPage";
+import ErrorPage from "../../components/ui/errorPage";
+import ReverseDistributionDialog from "../../components/company/ReverseDistributionDialog";
 
 type Currency = "LYD" | "USD" | "EUR";
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
