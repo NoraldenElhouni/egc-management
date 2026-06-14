@@ -1,5 +1,6 @@
 import { useBookProject } from "../../../../hooks/projects/useBookProjects";
 import Tabs from "../../../ui/Tabs";
+import BookProjectExpenseNotPaidTab from "../tabs/BookProjectExpenseNotPaidTab";
 import BookProjectExpensePercentageTab from "../tabs/BookProjectExpensePercentageTab";
 import BookProjectExpenseTab from "../tabs/BookProjectExpenseTab";
 import BookProjectMapsTab from "../tabs/BookProjectMapsTab";
@@ -16,6 +17,11 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
       content: (
         <BookProjectExpenseTab project={project} addExpense={addExpense} />
       ),
+    },
+    {
+      id: "not-paid",
+      label: "غير مدفوع",
+      content: <BookProjectExpenseNotPaidTab project={project} />,
     },
     {
       id: "refund",
