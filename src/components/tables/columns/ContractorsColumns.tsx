@@ -1,8 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { Contractors } from "../../../types/global.type";
 import { Link } from "react-router-dom";
+import { contractorWithSpecializations } from "../../../types/extended.type";
 
-export const ContractorsColumns: ColumnDef<Contractors>[] = [
+export const ContractorsColumns: ColumnDef<contractorWithSpecializations>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -45,6 +45,39 @@ export const ContractorsColumns: ColumnDef<Contractors>[] = [
         </Link>
       </div>
     ),
+  },
+
+  {
+    id: "specializations",
+    header: "التخصصات",
+    accessorFn: (row) =>
+      row.users?.user_specializations
+        ?.map((us) => us.specializations?.name)
+        .filter(Boolean)
+        .join(", ") ?? "",
+    cell: ({ row }) => {
+      const specializations =
+        row.original.users?.user_specializations
+          ?.map((us) => us.specializations?.name)
+          .filter(Boolean) ?? [];
+
+      return (
+        <div className="flex flex-wrap gap-1">
+          {specializations.length > 0 ? (
+            specializations.map((name) => (
+              <span
+                key={name}
+                className="px-2 py-1 text-xs bg-gray-100 rounded"
+              >
+                {name}
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-400">لا يوجد</span>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "email",

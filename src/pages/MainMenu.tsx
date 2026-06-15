@@ -37,7 +37,7 @@ const MainMenu = () => {
       label: "المشاريع",
       icon: MapPin,
       path: "/projects",
-      role: ["Admin"],
+      role: ["Admin", "Manager"],
     },
     {
       label: "المالية",

@@ -13,7 +13,7 @@ interface Permission {
     name: string;
   };
 }
-interface users {
+interface Users {
   id: string;
   first_name: string;
   last_name: string | null;
@@ -25,7 +25,7 @@ interface Project {
 
 export function getUserProjectPermissions(projectId: string, userId: string) {
   const [permissions, setPermissions] = useState<Permission[] | null>(null);
-  const [user, setUser] = useState<users | null>(null);
+  const [user, setUser] = useState<Users | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
@@ -54,7 +54,7 @@ export function getUserProjectPermissions(projectId: string, userId: string) {
         return;
       }
 
-      const { data: user, error: userError } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, first_name, last_name")
         .eq("id", userId)
@@ -66,7 +66,7 @@ export function getUserProjectPermissions(projectId: string, userId: string) {
         return;
       }
 
-      const { data: project, error: projectError } = await supabase
+      const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select("id, name")
         .eq("id", projectId)
@@ -75,13 +75,13 @@ export function getUserProjectPermissions(projectId: string, userId: string) {
       if (projectError) {
         setError(projectError);
         setPermissions(data);
-        setUser(user);
+        setUser(userData);
         return;
       }
 
       setPermissions(data);
-      setUser(user);
-      setProject(project);
+      setUser(userData);
+      setProject(projectData);
     } catch (err) {
       setError(err as PostgrestError);
     } finally {
@@ -102,18 +102,19 @@ export function getUserProjectPermissions(projectId: string, userId: string) {
     refetch: fetchPermissions,
   };
 }
+
 export function usePermissions() {
   const [permissions, setPermissions] = useState<Permissions[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
-    async function fetchpermissions() {
+    async function fetchPermissions() {
       setLoading(true);
       const { data, error } = await supabase.from("permissions").select("*");
 
       if (error) {
-        console.error("error fetching employyes", error);
+        console.error("error fetching permissions", error);
         setError(error);
       } else {
         setPermissions(data);
@@ -122,8 +123,8 @@ export function usePermissions() {
       setLoading(false);
     }
 
-    fetchpermissions();
-  }, []); // runs once on mount
+    fetchPermissions();
+  }, []);
 
   return { permissions, loading, error };
 }

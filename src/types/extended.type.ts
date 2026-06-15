@@ -21,6 +21,7 @@ import {
   CompanyExpensePayments,
   Contractors,
   MilestoneReports,
+  Vendor,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -105,10 +106,26 @@ export interface CompanyPaymentsWithUser extends CompanyExpensePayments {
 
 export interface contractorWithSpecializations extends Contractors {
   users: {
-    id: string;
     user_specializations: {
       specialization_id: string;
-      user_id: string;
+      specializations: {
+        id: string;
+        name: string;
+        role_id: string;
+      };
+    }[];
+  } | null;
+}
+
+export interface VendorsWithSpecializations extends Vendor {
+  users: {
+    user_specializations: {
+      specialization_id: string;
+      specializations: {
+        id: string;
+        name: string;
+        role_id: string;
+      };
     }[];
   } | null;
 }

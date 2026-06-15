@@ -2,16 +2,22 @@ import { useEffect, useState } from "react";
 import { Vendor } from "../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
+import { VendorsWithSpecializations } from "../types/extended.type";
 
 export function useVendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vendors, setVendors] = useState<VendorsWithSpecializations[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
     async function fetchVendors() {
       setLoading(true);
-      const { data, error } = await supabase.from("vendors").select("*");
+      const { data, error } = await supabase.from("vendors").select(`*, users (
+          user_specializations (
+            specialization_id,
+            specializations (*)
+          )
+        )`);
       if (error) {
         console.error("error fetching vendors", error);
         setError(error);

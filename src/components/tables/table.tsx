@@ -67,7 +67,7 @@ export default function GenericTable<TData extends object>({
 }: GenericTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [],
   );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
@@ -185,7 +185,7 @@ export default function GenericTable<TData extends object>({
                       >
                         {flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                         {enableSorting && header.column.getCanSort() && (
                           <span
@@ -232,7 +232,7 @@ export default function GenericTable<TData extends object>({
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </td>
                   ))}
@@ -296,7 +296,7 @@ export default function GenericTable<TData extends object>({
                 table.setPageSize(Number(e.target.value));
               }}
             >
-              {[5, 10, 20, 50, 100].map((size) => (
+              {[5, 10, 20, 50, 100, 200, 300, 500, 1000, 2000].map((size) => (
                 <option key={size} value={size}>
                   {size}
                 </option>

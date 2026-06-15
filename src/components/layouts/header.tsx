@@ -77,6 +77,8 @@ const Header = () => {
     milestones: "مرحلة",
     reports: "تقارير",
     team: "الفريق",
+    permissions: "الصلاحيات",
+    batches: "دفعات",
   };
 
   return (

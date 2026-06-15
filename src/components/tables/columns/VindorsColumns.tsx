@@ -1,8 +1,9 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { Vendor } from "../../../types/global.type";
+import { VendorsWithSpecializations } from "../../../types/extended.type";
+import { formatDate } from "../../../utils/helpper";
 
-export const VendorsColumns: ColumnDef<Vendor>[] = [
+export const VendorsColumns: ColumnDef<VendorsWithSpecializations>[] = [
   // Selection column
   {
     id: "select",
@@ -45,6 +46,44 @@ export const VendorsColumns: ColumnDef<Vendor>[] = [
   },
 
   {
+    id: "specializations",
+    header: "التخصصات",
+    accessorFn: (row) =>
+      row.users?.user_specializations
+        ?.map((us) => us.specializations?.name)
+        .filter(Boolean)
+        .join(", ") ?? "",
+    cell: ({ row }) => {
+      const specializations =
+        row.original.users?.user_specializations
+          ?.map((us) => us.specializations?.name)
+          .filter(Boolean) ?? [];
+
+      return (
+        <div className="flex flex-wrap gap-1">
+          {specializations.length > 0 ? (
+            specializations.map((name) => (
+              <span
+                key={name}
+                className="px-2 py-1 text-xs bg-gray-100 rounded"
+              >
+                {name}
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-400">لا يوجد</span>
+          )}
+        </div>
+      );
+    },
+  },
+
+  {
+    accessorKey: "email",
+    header: "البريد الإلكتروني",
+  },
+
+  {
     accessorKey: "phone_number",
     header: "رقم الهاتف",
   },
@@ -61,20 +100,11 @@ export const VendorsColumns: ColumnDef<Vendor>[] = [
   },
 
   {
-    accessorKey: "email",
-    header: "البريد الإلكتروني",
-  },
-
-  {
     accessorKey: "created_at",
     header: "تاريخ الإنشاء",
     cell: ({ row }) => {
-      const date = new Date(row.original.created_at);
-      return date.toLocaleDateString("ar-LY", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      const date = row.original.created_at;
+      return formatDate(date);
     },
   },
 ];
