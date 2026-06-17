@@ -13,7 +13,7 @@ import ReverseDistributionDialog from "../../components/company/ReverseDistribut
 type Currency = "LYD" | "USD" | "EUR";
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
 
-// ─── Per-currency card (cash + bank merged) ───────────────────────────────────
+// ─── Per-currency card ────────────────────────────────────────────────────────
 
 function CurrencyCard({
   currency,
@@ -32,7 +32,6 @@ function CurrencyCard({
   const activePeriods = relevant.filter((p) => p.status !== "reversed");
   const hasReversed = relevant.some((p) => p.status === "reversed");
 
-  // Active totals only for the summary
   const totalAmount = activePeriods.reduce(
     (s, p) => s + Number(p.total_amount),
     0,
@@ -54,6 +53,81 @@ function CurrencyCard({
     0,
   );
 
+  // Merge all active periods into one unified table by entity
+  const mergedBank = activePeriods.reduce(
+    (acc, p) => {
+      const item = p.items.find((i) => i.item_type === "bank");
+      if (!item) return acc;
+      return {
+        percentage: acc.percentage + item.percentage,
+        cash_amount: acc.cash_amount + item.cash_amount,
+        bank_amount: acc.bank_amount + item.bank_amount,
+        total: acc.total + item.total,
+      };
+    },
+    { percentage: 0, cash_amount: 0, bank_amount: 0, total: 0 },
+  );
+  const hasBankItem = activePeriods.some((p) =>
+    p.items.find((i) => i.item_type === "bank"),
+  );
+
+  const mergedCompany = activePeriods.reduce(
+    (acc, p) => {
+      const item = p.items.find((i) => i.item_type === "company");
+      if (!item) return acc;
+      return {
+        percentage: acc.percentage + item.percentage,
+        cash_amount: acc.cash_amount + item.cash_amount,
+        bank_amount: acc.bank_amount + item.bank_amount,
+        total: acc.total + item.total,
+      };
+    },
+    { percentage: 0, cash_amount: 0, bank_amount: 0, total: 0 },
+  );
+  const hasCompanyItem = activePeriods.some((p) =>
+    p.items.find((i) => i.item_type === "company"),
+  );
+
+  // Merge employee rows by user_id across all active periods
+  const employeeMap = new Map<
+    string,
+    {
+      name: string;
+      percentage: number;
+      cash_amount: number;
+      bank_amount: number;
+      total: number;
+    }
+  >();
+  for (const p of activePeriods) {
+    for (const item of p.items.filter((i) => i.item_type === "employee")) {
+      const key = item.user_id ?? item.employee_name ?? "unknown";
+      const existing = employeeMap.get(key);
+      if (existing) {
+        existing.percentage += item.percentage;
+        existing.cash_amount += item.cash_amount;
+        existing.bank_amount += item.bank_amount;
+        existing.total += item.total;
+      } else {
+        employeeMap.set(key, {
+          name: item.employee_name ?? item.user_id ?? "—",
+          percentage: item.percentage,
+          cash_amount: item.cash_amount,
+          bank_amount: item.bank_amount,
+          total: item.total,
+        });
+      }
+    }
+  }
+  const mergedEmployees = Array.from(employeeMap.values());
+
+  const empCashTotal = mergedEmployees.reduce((s, e) => s + e.cash_amount, 0);
+  const empBankTotal = mergedEmployees.reduce((s, e) => s + e.bank_amount, 0);
+  const empTotal = mergedEmployees.reduce((s, e) => s + e.total, 0);
+
+  // Reversed periods listed separately below
+  const reversedPeriods = relevant.filter((p) => p.status === "reversed");
+
   return (
     <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
       {/* Card header */}
@@ -74,199 +148,179 @@ function CurrencyCard({
             {formatCurrency(totalAmount, currency)}
           </span>
           <span
-            className={`text-gray-400 transition-transform duration-200 ${
-              expanded ? "rotate-180" : ""
-            }`}
+            className={`text-gray-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
           >
             ▾
           </span>
         </div>
       </button>
 
-      {/* Cash / Bank employee split summary (active only) */}
+      {/* Cash / Bank summary strip */}
       <div className="flex border-t divide-x divide-x-reverse bg-gray-50">
         <div className="flex-1 px-5 py-3 text-center">
           <p className="text-xs text-gray-400 mb-0.5">نقد (موظفين)</p>
-          <p className="font-semibold text-gray-700 tabular-nums text-sm">
+          <p className="font-semibold text-amber-700 tabular-nums text-sm">
             {formatCurrency(cashTotal, currency)}
           </p>
         </div>
         <div className="flex-1 px-5 py-3 text-center">
           <p className="text-xs text-gray-400 mb-0.5">بنك (موظفين)</p>
-          <p className="font-semibold text-gray-700 tabular-nums text-sm">
+          <p className="font-semibold text-blue-700 tabular-nums text-sm">
             {formatCurrency(bankTotal, currency)}
           </p>
         </div>
       </div>
 
-      {/* Expanded: per-period breakdown */}
+      {/* Expanded: single merged table */}
       {expanded && (
-        <div className="border-t divide-y">
-          {relevant.map((period) => {
-            const isReversed = period.status === "reversed";
-
-            const employeeItems = period.items.filter(
-              (i) => i.item_type === "employee",
-            );
-            const bankItem = period.items.find((i) => i.item_type === "bank");
-            const companyItem = period.items.find(
-              (i) => i.item_type === "company",
-            );
-
-            // Per-period employee cash/bank totals
-            const periodCash = employeeItems.reduce(
-              (s, i) => s + i.cash_amount,
-              0,
-            );
-            const periodBank = employeeItems.reduce(
-              (s, i) => s + i.bank_amount,
-              0,
-            );
-
-            return (
-              <div
-                key={period.id}
-                className={`px-5 py-4 space-y-3 ${
-                  isReversed ? "opacity-60 bg-red-50" : ""
-                }`}
-              >
-                {/* Period meta */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        period.type === "cash"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {period.type === "cash" ? "نقد" : "بنك"}
-                    </span>
-                    {isReversed ? (
-                      <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-                        ✕ معكوس
-                      </span>
-                    ) : (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                        ● نشط
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm font-bold tabular-nums text-gray-800">
-                    {formatCurrency(Number(period.total_amount), currency)}
+        <div className="border-t">
+          {/* Active periods reverse buttons */}
+          {activePeriods.length > 0 && (
+            <div className="px-5 pt-3 flex flex-wrap gap-2">
+              {activePeriods.map((p) => (
+                <div key={p.id} className="flex items-center gap-2">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      p.type === "cash"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {p.type === "cash" ? "نقد" : "بنك"} —{" "}
+                    {formatCurrency(Number(p.total_amount), currency)}
                   </span>
+                  <button
+                    onClick={() => onReverse(p)}
+                    className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2 py-0.5 rounded transition-colors"
+                  >
+                    عكس
+                  </button>
                 </div>
+              ))}
+            </div>
+          )}
 
-                {/* Cash + Bank employee mini-summary */}
-                {!isReversed && (
-                  <div className="flex gap-2">
-                    <div className="flex-1 rounded-md bg-amber-50 border border-amber-100 px-3 py-2 text-center">
-                      <p className="text-xs text-gray-400">نقد</p>
-                      <p className="text-sm font-semibold tabular-nums text-amber-700">
-                        {formatCurrency(periodCash, currency)}
-                      </p>
-                    </div>
-                    <div className="flex-1 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-center">
-                      <p className="text-xs text-gray-400">بنك</p>
-                      <p className="text-sm font-semibold tabular-nums text-blue-700">
-                        {formatCurrency(periodBank, currency)}
-                      </p>
-                    </div>
-                  </div>
+          {/* Single unified table */}
+          <div className="overflow-x-auto px-5 py-4">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-right text-gray-400 bg-gray-50">
+                  <th className="px-2 py-1.5">الجهة</th>
+                  <th className="px-2 py-1.5">النسبة</th>
+                  <th className="px-2 py-1.5 text-amber-600">نقد</th>
+                  <th className="px-2 py-1.5 text-blue-600">بنك</th>
+                  <th className="px-2 py-1.5">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {hasBankItem && (
+                  <tr className="bg-yellow-50 text-right">
+                    <td className="px-2 py-2 font-medium">🏦 الاحتياطي</td>
+                    <td className="px-2 py-2 tabular-nums">
+                      {mergedBank.percentage / 2}%
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-amber-700">
+                      {formatCurrency(mergedBank.cash_amount, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-blue-700">
+                      {formatCurrency(mergedBank.bank_amount, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums font-semibold">
+                      {formatCurrency(mergedBank.total, currency)}
+                    </td>
+                  </tr>
+                )}
+                {hasCompanyItem && (
+                  <tr className="bg-green-50 text-right">
+                    <td className="px-2 py-2 font-medium">🏢 الشركة</td>
+                    <td className="px-2 py-2 tabular-nums">
+                      {mergedCompany.percentage / 2}%
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-amber-700">
+                      {formatCurrency(mergedCompany.cash_amount, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-blue-700">
+                      {formatCurrency(mergedCompany.bank_amount, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums font-semibold">
+                      {formatCurrency(mergedCompany.total, currency)}
+                    </td>
+                  </tr>
                 )}
 
-                {/* Reversal note */}
-                {isReversed && period.reversal_note && (
-                  <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                    <span className="font-semibold">سبب الإلغاء: </span>
-                    {period.reversal_note}
-                  </div>
-                )}
-
-                {/* Distribution breakdown table */}
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-right text-gray-400 bg-gray-50">
-                      <th className="px-2 py-1.5">الجهة</th>
-                      <th className="px-2 py-1.5">النسبة</th>
-                      <th className="px-2 py-1.5">نقد</th>
-                      <th className="px-2 py-1.5">بنك</th>
-                      <th className="px-2 py-1.5">الإجمالي</th>
+                {/* Section divider */}
+                {(hasBankItem || hasCompanyItem) &&
+                  mergedEmployees.length > 0 && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-2 py-1 text-xs text-gray-400 bg-gray-50 font-medium"
+                      >
+                        الموظفين
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {bankItem && (
-                      <tr className="bg-yellow-50 text-right">
-                        <td className="px-2 py-1.5 font-medium">
-                          🏦 الاحتياطي
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {bankItem.percentage}%
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {formatCurrency(bankItem.cash_amount, currency)}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {formatCurrency(bankItem.bank_amount, currency)}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums font-semibold">
-                          {formatCurrency(bankItem.total, currency)}
-                        </td>
-                      </tr>
-                    )}
-                    {companyItem && (
-                      <tr className="bg-green-50 text-right">
-                        <td className="px-2 py-1.5 font-medium">🏢 الشركة</td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {companyItem.percentage}%
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {formatCurrency(companyItem.cash_amount, currency)}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {formatCurrency(companyItem.bank_amount, currency)}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums font-semibold">
-                          {formatCurrency(companyItem.total, currency)}
-                        </td>
-                      </tr>
-                    )}
-                    {employeeItems.map((item) => (
-                      <tr key={item.id} className="text-right">
-                        <td className="px-2 py-1.5 font-medium">
-                          👤 {item.employee_name ?? item.user_id ?? "—"}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {item.percentage}%
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {formatCurrency(item.cash_amount, currency)}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums">
-                          {formatCurrency(item.bank_amount, currency)}
-                        </td>
-                        <td className="px-2 py-1.5 tabular-nums font-semibold">
-                          {formatCurrency(item.total, currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  )}
 
-                {/* Per-period reverse button */}
-                {!isReversed && (
-                  <div className="flex justify-end pt-1">
-                    <button
-                      onClick={() => onReverse(period)}
-                      className="text-xs text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors"
-                    >
-                      عكس هذه الفترة
-                    </button>
-                  </div>
+                {mergedEmployees.map((emp) => (
+                  <tr key={emp.name} className="text-right hover:bg-gray-50">
+                    <td className="px-2 py-2 font-medium">👤 {emp.name}</td>
+                    <td className="px-2 py-2 tabular-nums">
+                      {emp.percentage / 2}%
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-amber-700">
+                      {formatCurrency(emp.cash_amount, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-blue-700">
+                      {formatCurrency(emp.bank_amount, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums font-semibold">
+                      {formatCurrency(emp.total, currency)}
+                    </td>
+                  </tr>
+                ))}
+
+                {/* Employee totals footer */}
+                {mergedEmployees.length > 0 && (
+                  <tr className="border-t-2 border-gray-200 bg-gray-50 text-right font-semibold">
+                    <td className="px-2 py-2" colSpan={2}>
+                      إجمالي الموظفين
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-amber-700">
+                      {formatCurrency(empCashTotal, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums text-blue-700">
+                      {formatCurrency(empBankTotal, currency)}
+                    </td>
+                    <td className="px-2 py-2 tabular-nums">
+                      {formatCurrency(empTotal, currency)}
+                    </td>
+                  </tr>
                 )}
-              </div>
-            );
-          })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Reversed periods — shown collapsed below */}
+          {reversedPeriods.length > 0 && (
+            <div className="border-t px-5 py-3 space-y-2">
+              <p className="text-xs text-gray-400 font-medium">فترات معكوسة</p>
+              {reversedPeriods.map((p) => (
+                <div
+                  key={p.id}
+                  className="rounded-md bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700 opacity-70"
+                >
+                  <span className="font-semibold">
+                    {formatCurrency(Number(p.total_amount), currency)}
+                  </span>
+                  {p.reversal_note && (
+                    <span className="text-red-500 mr-2">
+                      — {p.reversal_note}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -398,7 +452,6 @@ const ProjectDistributionDetailPage = () => {
       });
   }, [projectId]);
 
-  // Reverse a single period
   const handleReverse = async (note: string) => {
     if (!reversalTarget) return;
     const {
@@ -419,7 +472,6 @@ const ProjectDistributionDetailPage = () => {
     window.alert("تم عكس التوزيع بنجاح");
   };
 
-  // Reverse ALL active periods for this project in this batch
   const handleReverseAll = async (note: string) => {
     const {
       data: { user },
@@ -455,7 +507,6 @@ const ProjectDistributionDetailPage = () => {
 
   const activePeriods = periods.filter((p) => p.status !== "reversed");
 
-  // Grand totals — active only
   const grandTotals: Record<string, number> = {};
   for (const p of activePeriods) {
     const c = p.currency ?? "LYD";
@@ -465,16 +516,8 @@ const ProjectDistributionDetailPage = () => {
   const activeCurrencies = CURRENCIES.filter((c) => (grandTotals[c] ?? 0) > 0);
 
   return (
-    <div className="p-4" dir="rtl">
-      <div className="max-w-3xl mx-auto">
-        {/* Back */}
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-blue-600 hover:underline mb-4 flex items-center gap-1"
-        >
-          ‹ رجوع
-        </button>
-
+    <div className="p-4">
+      <div className="max-w-6xl mx-auto">
         {/* Project header */}
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
@@ -485,8 +528,6 @@ const ProjectDistributionDetailPage = () => {
               <p className="text-sm text-gray-400 mt-0.5">دفعة {batchDate}</p>
             )}
           </div>
-
-          {/* Reverse all button — only if there are active periods */}
           {activePeriods.length > 0 && (
             <button
               onClick={() => setShowReverseAll(true)}
@@ -497,7 +538,7 @@ const ProjectDistributionDetailPage = () => {
           )}
         </div>
 
-        {/* Currency totals summary strip (active only) */}
+        {/* Currency totals summary strip */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
           {CURRENCIES.map((c) => (
             <div

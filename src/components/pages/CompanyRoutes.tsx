@@ -5,6 +5,7 @@ import ProjectsDistributePage from "../../pages/company/ProjectsDistributePage";
 import CompanyOverview from "../../pages/company/CompanyOverview";
 import DistributionBatchesPage from "../../pages/company/DistributionBatchesPage";
 import ProjectDistributionDetailPage from "../../pages/company/ProjectDistributionDetailPage";
+import BatchDetailPage from "../../pages/company/DistributionBatchPage";
 
 const CompanyRoutes = () => {
   return (
@@ -17,6 +18,7 @@ const CompanyRoutes = () => {
           path="/distribute/batches"
           element={<DistributionBatchesPage />}
         />
+        <Route path="/distribute/batch/:date" element={<BatchDetailPage />} />
         <Route
           path="/distribute/project/:projectId"
           element={<ProjectDistributionDetailPage />}

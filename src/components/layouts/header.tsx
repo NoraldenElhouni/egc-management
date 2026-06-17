@@ -79,6 +79,8 @@ const Header = () => {
     team: "الفريق",
     permissions: "الصلاحيات",
     batches: "دفعات",
+    batch: "دفعة",
+    distribution: "التوزيع",
   };
 
   return (

@@ -130,7 +130,6 @@ const ProjectsDistributePage = () => {
 
   const { projects, loading, error, submitDistribution, refetch } =
     useProjectsDistribute();
-
   const steps = useMemo(
     () => [
       { title: "عرض المشاريع" },

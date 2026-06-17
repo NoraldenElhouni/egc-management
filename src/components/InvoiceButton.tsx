@@ -17,7 +17,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
 
   const formatPayload = (project: ProjectWithDetailsForBook) => {
     const lydExpenses = project.project_expenses.filter(
-      (e) => e.currency === "LYD",
+      (e) => e.currency === "LYD" && e.deleted_at === null,
     );
 
     const totalMetrials = r(
