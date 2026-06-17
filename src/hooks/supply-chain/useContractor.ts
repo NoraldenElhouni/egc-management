@@ -3,9 +3,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Contractors } from "../../types/global.type";
 import { ContractorBid } from "../../types/contracts.type";
+import { ProjectExpenseGroup } from "./vendors/useVendors";
 
 export function useContractor(contractorId: string) {
   const [contractor, setContractor] = useState<Contractors | null>(null);
+  const [groupedExpenses, setGroupedExpenses] = useState<ProjectExpenseGroup[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -25,6 +29,40 @@ export function useContractor(contractorId: string) {
         } else {
           setContractor(data);
         }
+
+        const { data: expensesData, error: expensesError } = await supabase
+          .from("project_expenses")
+          .select("*, projects(id, name, serial_number)")
+          .eq("contractor_id", contractorId)
+          .is("deleted_at", null);
+
+        if (expensesError) {
+          console.error("error fetching contractor expenses", expensesError);
+          setError(expensesError);
+        } else {
+          const flat = expensesData ?? [];
+
+          const groupMap = new Map<string, ProjectExpenseGroup>();
+          for (const expense of flat) {
+            const project = expense.projects;
+            const projectId = project?.id ?? "unknown";
+
+            if (!groupMap.has(projectId)) {
+              groupMap.set(projectId, {
+                projectId,
+                projectName: project?.name ?? "مشروع غير معروف",
+                projectSerialNumber: project?.serial_number ?? null,
+                expenses: [],
+              });
+            }
+            const group = groupMap.get(projectId);
+            if (group) {
+              group.expenses.push(expense);
+            }
+          }
+
+          setGroupedExpenses(Array.from(groupMap.values()));
+        }
       } catch (err) {
         console.error("unexpected error fetching contractor", err);
         setError(err as PostgrestError);
@@ -34,7 +72,7 @@ export function useContractor(contractorId: string) {
     fetchcontractor();
   }, [contractorId]);
 
-  return { contractor, loading, error };
+  return { contractor, groupedExpenses, loading, error };
 }
 
 // useContractorBids()               // contractor's own submitted bids (all statuses)

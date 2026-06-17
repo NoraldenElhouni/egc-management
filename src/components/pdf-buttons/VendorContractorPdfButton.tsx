@@ -89,12 +89,20 @@ async function fetchPayload(
 
     if (expensesError) throw new Error(expensesError.message);
 
-    const invoices: InvoiceItem[] = (expenses ?? []).map((e) => ({
-      project_name: (e.project as { name: string } | null)?.name ?? "—",
-      invoice_number: e.serial_number?.toString() ?? "—",
-      amount: Number(e.total_amount ?? 0),
-      date: e.expense_date,
-    }));
+    const invoices: InvoiceItem[] = (expenses ?? [])
+      .sort((a, b) => {
+        const nameA = (a.project as { name: string } | null)?.name ?? "";
+        const nameB = (b.project as { name: string } | null)?.name ?? "";
+        const nameCompare = nameA.localeCompare(nameB, "ar");
+        if (nameCompare !== 0) return nameCompare;
+        return (a.serial_number ?? 0) - (b.serial_number ?? 0);
+      })
+      .map((e) => ({
+        project_name: (e.project as { name: string } | null)?.name ?? "—",
+        invoice_number: e.serial_number?.toString() ?? "—",
+        amount: Number(e.total_amount ?? 0),
+        date: e.expense_date,
+      }));
 
     const total_amount =
       Math.round(invoices.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
@@ -124,15 +132,16 @@ const VendorContractorPdfButton = ({ id, type }: Props) => {
         },
       );
 
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}`);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${type}-report-${payload.name}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      window.open(url, "_blank");
+
+      // Optional cleanup after some time
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err: unknown) {
       console.error("Error generating PDF:", err);
       setError(
