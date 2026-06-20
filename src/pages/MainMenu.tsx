@@ -55,13 +55,13 @@ const MainMenu = () => {
       label: "الإعدادات",
       icon: Settings,
       path: "/settings",
-      role: ["Admin", "Finance", "Engineer", "Bookkeeper", "Manager"],
+      role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
     },
     {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
-      role: ["Admin", "Engineer", "Manager"],
+      role: ["Admin", "Engineer"],
     },
   ];
 
