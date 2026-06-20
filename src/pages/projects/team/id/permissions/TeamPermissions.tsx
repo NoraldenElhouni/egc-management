@@ -30,7 +30,7 @@ const TeamPermissions = () => {
     permissions: allPermissions,
     loading: permsLoading,
     error: permsError,
-  } = usePermissions();
+  } = usePermissions("project");
 
   const {
     permissions: assigned,

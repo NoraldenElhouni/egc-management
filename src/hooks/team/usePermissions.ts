@@ -103,7 +103,7 @@ export function getUserProjectPermissions(projectId: string, userId: string) {
   };
 }
 
-export function usePermissions() {
+export function usePermissions(type: string) {
   const [permissions, setPermissions] = useState<Permissions[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PostgrestError | null>(null);
@@ -111,7 +111,10 @@ export function usePermissions() {
   useEffect(() => {
     async function fetchPermissions() {
       setLoading(true);
-      const { data, error } = await supabase.from("permissions").select("*");
+      const { data, error } = await supabase
+        .from("permissions")
+        .select("*")
+        .eq("type", type);
 
       if (error) {
         console.error("error fetching permissions", error);

@@ -176,21 +176,21 @@ export function useProjectsDistribute() {
         `,
         )
         .eq("status", "active")
-        .in("id", [
-          "5451aaae-c632-46f4-9913-8670cffcc8e7",
-          "eed51009-4cfa-497c-87a1-cbf5a756f3da",
-        ])
+        .not(
+          "id",
+          "in",
+          `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da)`,
+        )
         .neq(
           "project_assignments.project_role_id",
           "c7823151-2290-4861-a383-5e00a78128ce",
         )
         .order("serial_number", { ascending: true });
 
-      // .not(
-      //   "id",
-      //   "in",
-      //   `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da)`,
-      // )
+      // .in("id", [
+      //   "5451aaae-c632-46f4-9913-8670cffcc8e7",
+      //   "eed51009-4cfa-497c-87a1-cbf5a756f3da",
+      // ])
 
       if (error) throw error;
 

@@ -10,21 +10,54 @@ import {
   SortingState,
   ColumnFiltersState,
   RowSelectionState,
+  Table,
+  FilterFn,
 } from "@tanstack/react-table";
 import Button from "../ui/Button";
 import { Link } from "react-router-dom";
 import { ButtonVariant } from "../../types/global.type";
 
-// Generic reusable table component
-// Props:
-// - data: array of row objects
-// - columns: TanStack ColumnDef[] defined by the consumer
-// - initialSorting: optional initial sorting
-// - pageSize: initial page size for pagination
-// - enableSorting / enablePagination / enableFiltering / enableRowSelection: booleans for enabling features
-// - onRowClick: optional click handler
-// - onRowSelectionChange: optional selection change handler
-// - showGlobalFilter: show search box for filtering all columns
+// ── Custom filter functions ───────────────────────────────────────────────────
+
+/**
+ * Date-range filter.
+ * Column filter value: [fromISO?: string, toISO?: string]
+ * Cell value: a date string parseable by `new Date()`
+ */
+const dateRangeFilter: FilterFn<unknown> = (row, columnId, value) => {
+  const [from, to] = value as [string | undefined, string | undefined];
+  const raw = row.getValue(columnId) as string;
+  if (!raw) return false;
+  const date = new Date(raw).getTime();
+  const fromMs = from ? new Date(from).getTime() : -Infinity;
+  const toMs = to ? new Date(to + "T23:59:59").getTime() : Infinity;
+  return date >= fromMs && date <= toMs;
+};
+dateRangeFilter.autoRemove = (val: unknown) => {
+  const [a, b] = (val ?? []) as [unknown, unknown];
+  return !a && !b;
+};
+
+/**
+ * Numeric range filter.
+ * Column filter value: [min?: number, max?: number]
+ */
+const numberRangeFilter: FilterFn<unknown> = (row, columnId, value) => {
+  const [min, max] = value as [number | undefined, number | undefined];
+  const num = Number(row.getValue(columnId) ?? 0);
+  if (min !== undefined && num < min) return false;
+  if (max !== undefined && num > max) return false;
+  return true;
+};
+numberRangeFilter.autoRemove = (val: unknown) => {
+  const [a, b] = (val ?? []) as [unknown, unknown];
+  return a === undefined && b === undefined;
+};
+
+// Register custom filter functions so TanStack can resolve them by name
+const filterFns = { dateRangeFilter, numberRangeFilter } as const;
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 type GenericTableProps<TData> = {
   data: TData[];
@@ -40,11 +73,23 @@ type GenericTableProps<TData> = {
   onRowSelectionChange?: (selectedRows: TData[]) => void;
   className?: string;
   emptyMessage?: string;
+
+  /** Legacy: arbitrary node shown on the left of the top bar */
   header?: React.ReactNode;
+
+  /**
+   * Render prop – receives the live TanStack `table` instance so callers can
+   * build rich filter UIs (e.g. <ExpenseTableFilters table={table} />).
+   * Rendered directly above the table, below the header bar.
+   */
+  headerActions?: (table: Table<TData>) => React.ReactNode;
+
   link?: string;
   linkLabel?: string;
   linkVariant?: ButtonVariant;
 };
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GenericTable<TData extends object>({
   data,
@@ -61,6 +106,7 @@ export default function GenericTable<TData extends object>({
   className = "",
   emptyMessage = "لا توجد بيانات لعرضها.",
   header,
+  headerActions,
   link,
   linkLabel,
   linkVariant,
@@ -75,6 +121,7 @@ export default function GenericTable<TData extends object>({
   const table = useReactTable({
     data,
     columns,
+    filterFns,
     state: {
       sorting,
       columnFilters,
@@ -93,9 +140,7 @@ export default function GenericTable<TData extends object>({
       : undefined,
     enableRowSelection: enableRowSelection,
     initialState: {
-      pagination: {
-        pageSize: pageSize,
-      },
+      pagination: { pageSize },
     },
     debugTable: false,
   });
@@ -112,8 +157,8 @@ export default function GenericTable<TData extends object>({
 
   return (
     <div className={`w-full overflow-auto p-2 ${className}`}>
-      {/* Optional Header / Link */}
-      {header || link ? (
+      {/* ── Top bar: legacy header + optional link ── */}
+      {(header || link) && (
         <div className="mb-4 flex justify-between items-center">
           {header && <div>{header}</div>}
           {link && (
@@ -122,78 +167,87 @@ export default function GenericTable<TData extends object>({
             </Button>
           )}
         </div>
-      ) : null}
+      )}
 
-      {/* Global Filter */}
+      {/* ── Header actions (filter panel render prop) ── */}
+      {headerActions && (
+        <div className="mb-4">
+          {headerActions(table as unknown as Table<TData>)}
+        </div>
+      )}
+
+      {/* ── Global Filter ── */}
       {showGlobalFilter && enableFiltering && (
         <div className="mb-3">
           <input
             type="text"
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
-            placeholder="Search all columns..."
+            placeholder="بحث في كل الأعمدة..."
             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       )}
 
-      {/* Selection Info */}
+      {/* ── Selection info ── */}
       {enableRowSelection && Object.keys(rowSelection).length > 0 && (
         <div className="mb-2 text-sm text-blue-600">
-          {Object.keys(rowSelection).length} row(s) selected
+          {Object.keys(rowSelection).length} صف محدد
         </div>
       )}
 
-      {/* Table */}
+      {/* ── Table ── */}
       <div className="w-full overflow-x-auto border rounded">
         <table className="min-w-full border-collapse table-auto">
           <thead className="bg-gray-50">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map((col) => (
                   <th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    className=" py-3 px-4 font-semibold text-sm select-none border-b border-gray-200"
+                    key={col.id}
+                    colSpan={col.colSpan}
+                    className="py-3 px-4 font-semibold text-sm select-none border-b border-gray-200"
                   >
-                    {header.isPlaceholder ? null : (
+                    {col.isPlaceholder ? null : (
                       <div
-                        {...{
-                          onClick:
-                            header.column.getCanSort() && enableSorting
-                              ? header.column.getToggleSortingHandler()
+                        onClick={
+                          col.column.getCanSort() && enableSorting
+                            ? col.column.getToggleSortingHandler()
+                            : undefined
+                        }
+                        role={
+                          col.column.getCanSort() && enableSorting
+                            ? "button"
+                            : undefined
+                        }
+                        aria-label={
+                          col.column.getCanSort() && enableSorting
+                            ? `Sort by ${col.column.id}`
+                            : undefined
+                        }
+                        style={{
+                          cursor:
+                            col.column.getCanSort() && enableSorting
+                              ? "pointer"
                               : undefined,
-                          role:
-                            header.column.getCanSort() && enableSorting
-                              ? "button"
-                              : undefined,
-                          "aria-label":
-                            header.column.getCanSort() && enableSorting
-                              ? `Sort by ${header.column.id}`
-                              : undefined,
-                          style: {
-                            cursor:
-                              header.column.getCanSort() && enableSorting
-                                ? "pointer"
-                                : undefined,
-                          },
-                          className:
-                            header.column.getCanSort() && enableSorting
-                              ? "flex items-center gap-2 hover:text-blue-600 transition-colors"
-                              : "",
                         }}
+                        className={
+                          col.column.getCanSort() && enableSorting
+                            ? "flex items-center gap-2 hover:text-blue-600 transition-colors"
+                            : ""
+                        }
                       >
                         {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
+                          col.column.columnDef.header,
+                          col.getContext(),
                         )}
-                        {enableSorting && header.column.getCanSort() && (
+                        {enableSorting && col.column.getCanSort() && (
                           <span
                             className="inline-block text-gray-400"
                             aria-hidden="true"
                           >
-                            {header.column.getIsSorted()
-                              ? header.column.getIsSorted() === "asc"
+                            {col.column.getIsSorted()
+                              ? col.column.getIsSorted() === "asc"
                                 ? "🔼"
                                 : "🔽"
                               : "⇅"}
@@ -243,7 +297,7 @@ export default function GenericTable<TData extends object>({
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* ── Pagination ── */}
       {enablePagination && table.getPageCount() > 0 && (
         <div className="flex items-center justify-between gap-2 mt-4 flex-wrap">
           <div className="flex items-center gap-2">
@@ -282,19 +336,17 @@ export default function GenericTable<TData extends object>({
           </div>
 
           <div className="text-sm text-gray-600">
-            Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{" "}
+            صفحة <strong>{table.getState().pagination.pageIndex + 1}</strong> من{" "}
             <strong>{table.getPageCount()}</strong> (
-            {table.getFilteredRowModel().rows.length} total rows)
+            {table.getFilteredRowModel().rows.length} صف)
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Rows per page:</label>
+            <label className="text-sm text-gray-600">صفوف لكل صفحة:</label>
             <select
               className="px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={table.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
+              onChange={(e) => table.setPageSize(Number(e.target.value))}
             >
               {[5, 10, 20, 50, 100, 200, 300, 500, 1000, 2000].map((size) => (
                 <option key={size} value={size}>

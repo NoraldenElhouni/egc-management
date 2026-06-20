@@ -1423,16 +1423,19 @@ export type Database = {
           id: string
           name: string
           parent_permission_id: string | null
+          type: string
         }
         Insert: {
           id?: string
           name: string
           parent_permission_id?: string | null
+          type: string
         }
         Update: {
           id?: string
           name?: string
           parent_permission_id?: string | null
+          type?: string
         }
         Relationships: [
           {
@@ -3021,6 +3024,58 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_requests: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          project_id: string | null
+          specialty_id: string
+          status: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          project_id?: string | null
+          specialty_id: string
+          status?: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          project_id?: string | null
+          specialty_id?: string
+          status?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_requests_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
             referencedColumns: ["id"]
           },
         ]

@@ -6,6 +6,7 @@ import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
 import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
 import { useAuth } from "../../hooks/useAuth";
 import EmployeeRole from "../../components/hr/employee/EmployeeRole";
+import EmployeesPermissions from "../../components/hr/employee/EmployeesPermissions";
 // import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 
 export default function EmployeeDetailsPage() {
@@ -46,6 +47,12 @@ export default function EmployeeDetailsPage() {
       id: "employee-role",
       label: "الأدوار",
       content: <EmployeeRole employee={employee} onUpdated={refetch} />,
+      roles: ["Admin", "Manager"],
+    },
+    {
+      id: "employee-permissions",
+      label: "الصلاحيات",
+      content: <EmployeesPermissions employee={employee} />,
       roles: ["Admin", "Manager"],
     },
   ];

@@ -1,6 +1,5 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, FilterFnOption } from "@tanstack/react-table";
 
-// ⬅ Your translation utils
 import {
   translateExpenseStatus,
   translateExpenseType,
@@ -11,7 +10,6 @@ import { getExpenseStatusColor } from "../../../utils/colors/status";
 import { Link } from "react-router-dom";
 import { Expense } from "../../../types/projects.type";
 
-// Safe number conversion
 const toNum = (v: unknown) => (typeof v === "number" ? v : Number(v || 0));
 
 export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
@@ -41,6 +39,7 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
       </div>
     ),
     size: 32,
+    enableColumnFilter: false,
   },
 
   {
@@ -55,6 +54,7 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
       </Link>
     ),
     size: 32,
+    enableColumnFilter: false,
   },
 
   // DESCRIPTION
@@ -88,10 +88,11 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
     size: 150,
   },
 
-  // EXPENSE TYPE (عمالة / مواد)
+  // EXPENSE TYPE – filtered by the <ExpenseTableFilters> select
   {
     accessorKey: "expense_type",
     header: "نوع المصروف",
+    filterFn: "equalsString", // exact match; TanStack built-in
     cell: ({ row }) => (
       <span className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-800">
         {translateExpenseType(row.original.expense_type)}
@@ -100,10 +101,11 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
     size: 100,
   },
 
-  // PHASE (إنشاء / تشطيب)
+  // PHASE – filtered by the <ExpenseTableFilters> select
   {
     accessorKey: "phase",
     header: "المرحلة",
+    filterFn: "equalsString",
     cell: ({ row }) => (
       <span className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-orange-100 text-orange-800">
         {translatePhase(row.original.phase)}
@@ -112,10 +114,11 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
     size: 120,
   },
 
-  // TOTAL
+  // TOTAL – filtered by numberRangeFilter (custom, registered in GenericTable)
   {
     accessorKey: "total_amount",
     header: "الإجمالي",
+    filterFn: "numberRangeFilter" as FilterFnOption<Expense>,
     cell: ({ row }) => (
       <div className="font-medium whitespace-nowrap">
         {toNum(row.original.total_amount).toLocaleString()} LYD
@@ -128,6 +131,7 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
   {
     accessorKey: "amount_paid",
     header: "المبلغ المدفوع",
+    enableColumnFilter: false,
     cell: ({ row }) => (
       <div className="font-medium whitespace-nowrap">
         {toNum(row.original.amount_paid).toLocaleString()} LYD
@@ -136,16 +140,16 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
     size: 120,
   },
 
-  // REMAINING AMOUNT (handles negative / overpay)
+  // REMAINING AMOUNT
   {
     accessorKey: "remaining_amount",
     header: "المبلغ المتبقي",
+    enableColumnFilter: false,
     cell: ({ row }) => {
       const total = toNum(row.original.total_amount);
       const paid = toNum(row.original.amount_paid);
       const discount = toNum(row.original.discounting);
       const rawRemaining = total - paid - discount;
-
       const isOverpaid = rawRemaining < 0;
       const remaining = Math.max(0, rawRemaining);
 
@@ -177,6 +181,7 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
   {
     accessorKey: "discounting",
     header: "الخصم",
+    enableColumnFilter: false,
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
         {row.original.discounting
@@ -187,10 +192,11 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
     size: 100,
   },
 
-  // DATE
+  // DATE – filtered by dateRangeFilter (custom, registered in GenericTable)
   {
     accessorKey: "expense_date",
     header: "التاريخ",
+    filterFn: "dateRangeFilter" as FilterFnOption<Expense>,
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
         {new Date(row.original.expense_date).toLocaleDateString()}
@@ -199,10 +205,11 @@ export const ProjectsExpensesColumns: ColumnDef<Expense>[] = [
     size: 120,
   },
 
-  // STATUS
+  // STATUS – filtered by the <ExpenseTableFilters> select
   {
     accessorKey: "status",
     header: "الحالة",
+    filterFn: "equalsString",
     cell: ({ row }) => (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getExpenseStatusColor(

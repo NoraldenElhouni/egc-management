@@ -1,4 +1,7 @@
-import { ProjectWithDetailsForBook } from "../../../../types/projects.type";
+import {
+  Expense,
+  ProjectWithDetailsForBook,
+} from "../../../../types/projects.type";
 import { ProjectsExpensesColumns } from "../../../tables/columns/ProjectExpenseColumns";
 import GenericTable from "../../../tables/table";
 import ProjectExpenseForm from "../../form/ProjectExpenseForm";
@@ -10,6 +13,7 @@ import Button from "../../../ui/Button";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../../../../utils/helpper";
 import InvoiceButton from "../../../InvoiceButton";
+import ExpenseTableFilters from "../../../tables/filters/ExpenseTableFilters";
 
 interface BookProjectExpenseTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -93,9 +97,6 @@ const BookProjectExpenseTab = ({
             {
               label: "الرصيد",
               value: formatCurrency(projectBalance),
-              // icon: Hash,
-              // iconBgColor: "bg-blue-100",
-              // iconColor: "text-blue-600",
               secondaryLabel: "رصيد الحالي",
               secondaryValue: formatCurrency(accountBalance),
               tertiaryLabel: "الفرق (غير مدفوع)",
@@ -104,7 +105,6 @@ const BookProjectExpenseTab = ({
             {
               label: "اجمالي الدخل",
               value: formatCurrency(totalIncome),
-
               secondaryLabel: "نقدي",
               secondaryValue: formatCurrency(cashIncome),
               tertiaryLabel: "بنكي",
@@ -113,7 +113,6 @@ const BookProjectExpenseTab = ({
             {
               label: "اجمالي المصروفات",
               value: formatCurrency(balanceTotalExpense),
-
               secondaryLabel: "كاش",
               secondaryValue: formatCurrency(accountTotalExpenseCash),
               tertiaryLabel: "بنك",
@@ -122,7 +121,6 @@ const BookProjectExpenseTab = ({
             {
               label: "رصيد الحسابات",
               value: formatCurrency(accountBalance),
-
               secondaryLabel: "كاش",
               secondaryValue: formatCurrency(accountCashBalance),
               tertiaryLabel: "بنك",
@@ -140,7 +138,7 @@ const BookProjectExpenseTab = ({
       </div>
 
       <div>
-        <GenericTable
+        <GenericTable<Expense>
           enableFiltering
           showGlobalFilter
           enableSorting
@@ -148,6 +146,8 @@ const BookProjectExpenseTab = ({
           initialSorting={[{ id: "serial_number", desc: true }]}
           data={filteredProject || []}
           columns={ProjectsExpensesColumns}
+          // ── Filter panel wired to the live table instance ──────────────
+          headerActions={(table) => <ExpenseTableFilters table={table} />}
         />
       </div>
     </div>
