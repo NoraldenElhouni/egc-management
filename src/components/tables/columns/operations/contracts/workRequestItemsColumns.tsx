@@ -15,33 +15,31 @@ export const WorkRequestItemsColumns: ColumnDef<WorkRequestItem>[] = [
     id: "service_name",
     header: "البند / الخدمة",
     accessorFn: (row) => row.services?.name,
-    cell: ({ getValue }) => (
-      <span className="font-semibold text-gray-900">{getValue<string>()}</span>
+    cell: ({ row }) => (
+      <span className="font-semibold text-gray-900">
+        {row.original.services?.name ?? row.original.custom_name}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "description",
+    header: "الوصف",
+    cell: ({ row }) => (
+      <span className="text-gray-500 text-sm">{row.original.description}</span>
     ),
   },
   {
     accessorKey: "quantity",
     header: "الكمية",
-    cell: ({ getValue }) => (
-      <span className="text-gray-700">{getValue<number>()}</span>
+    cell: ({ row }) => (
+      <span className="text-gray-700">{row.original.quantity}</span>
     ),
   },
   {
     accessorKey: "unit",
     header: "الوحدة",
-    cell: ({ getValue }) => (
-      <span className="text-gray-700">{getValue<string>()}</span>
-    ),
-  },
-  {
-    id: "service_id",
-    header: "رقم الخدمة",
-    accessorFn: (row) => row.services?.id,
-    cell: ({ getValue }) => (
-      <span className="text-gray-400 text-sm font-mono">
-        {/* Show a short code — replace with real SKU if you add it later */}
-        {`SVC-${getValue<string>().slice(0, 6).toUpperCase()}`}
-      </span>
+    cell: ({ row }) => (
+      <span className="text-gray-700">{row.original.unit}</span>
     ),
   },
 ];

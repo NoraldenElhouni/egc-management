@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { RequestBids } from "../../../../types/contracts.type";
 import { supabase } from "../../../../lib/supabaseClient";
 import AcceptBidDialog from "../../../dialog/AcceptBidDialog";
@@ -44,11 +43,11 @@ const BidActionsCell = ({ bid, onRefresh }: BidActionsCellProps) => {
         >
           قبول
         </button>
-        <Link to={`./${bid.id}/counter/new`}>
+        {/* <Link to={`./${bid.id}/counter/new`}>
           <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-100 transition-colors">
             عرض مضاد
           </button>
-        </Link>
+        </Link> */}
         <button
           onClick={handleDecline}
           disabled={declining}

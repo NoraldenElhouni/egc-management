@@ -191,7 +191,7 @@ export function useContractors(enabled: boolean) {
 
       const { data, error } = await supabase
         .from("contractors")
-        .select(`*,users (id, user_specializations(*))`);
+        .select(`*,users(user_specializations(*, specializations(*)))`);
       if (error) setError(error);
       else setContractors(data ?? []);
 
@@ -333,7 +333,6 @@ export function useCreateRequest() {
             title: milestone.title,
             description: milestone.description ?? null,
             percentage: milestone.percentage,
-            amount: 0,
           })),
         );
 

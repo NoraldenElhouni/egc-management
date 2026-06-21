@@ -310,6 +310,7 @@ export interface WorkRequestItem {
   unit: string;
   description: string | null;
   created_at: string;
+  custom_name: string | null;
   services: {
     id: string;
     name: string;

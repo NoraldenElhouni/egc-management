@@ -336,9 +336,16 @@ const AcceptBidDialog = ({ bid, onClose, onSuccess }: AcceptBidDialogProps) => {
                       )}
                     </div>
                     {m.percentage > 0 && (
-                      <span className="flex-shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                        {m.percentage}%
-                      </span>
+                      <>
+                        <span className="flex-shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          {m.percentage}%
+                        </span>
+                        <span className="flex-shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          {formatCurrency(
+                            (bid.total_price * m.percentage) / 100,
+                          )}
+                        </span>
+                      </>
                     )}
                   </div>
                   <div className="flex items-center gap-2 pr-7">

@@ -15,7 +15,7 @@ export const BidItemsColumns: ColumnDef<BidItem>[] = [
   {
     id: "service_name",
     header: "الخدمة",
-    accessorFn: (row) => row.work_request_items.services.name,
+    accessorFn: (row) => row.work_request_items.services?.name ?? "—",
     cell: ({ getValue }) => (
       <span className="font-semibold text-gray-900">{getValue<string>()}</span>
     ),
