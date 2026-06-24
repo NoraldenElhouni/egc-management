@@ -6,6 +6,7 @@ import GenericTable from "../../../tables/table";
 import OverviewStatus from "../../../ui/OverviewStatus";
 import ProjectIncomeForm from "../../form/ProjectIncomeForm";
 import { formatCurrency } from "../../../../utils/helpper";
+import IncomesListPdfButton from "../../../pdf-buttons/IncomesListPdfButton";
 
 interface BookProjectIncomeTabProps {
   project: ProjectWithDetailsForBook | null;
@@ -32,6 +33,8 @@ const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
   const totalAvailable = totalBalance;
   return (
     <div className="space-y-4">
+      <IncomesListPdfButton projectId={project?.id ?? ""} />
+
       <div>
         <ProjectIncomeForm projectId={project?.id || ""} />
       </div>
