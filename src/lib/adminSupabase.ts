@@ -9,11 +9,13 @@ const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY as
 
 if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error(
-    "Missing VITE_SUPABASE_URL or VITE_SUPABASE_SERVICE_KEY. Add them to your .env"
+    "Missing VITE_SUPABASE_URL or VITE_SUPABASE_SERVICE_KEY. Add them to your .env",
   );
 }
 
-export const supabaseAdmin = createClient<Database>(
-  supabaseUrl,
-  supabaseServiceKey
-);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
