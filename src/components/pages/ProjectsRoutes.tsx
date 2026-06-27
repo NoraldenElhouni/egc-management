@@ -4,8 +4,8 @@ import ProjectsPage from "../../pages/projects/Projects";
 import NewProjectPage from "../../pages/projects/NewProject";
 import ProjectTeamPage from "../../pages/projects/team/ProjectTeamPage";
 import ProjectTeamDetailsPage from "../../pages/projects/team/id/ProjectTeamDetailsPage";
-import ProjectDetailsPage from "../../pages/projects/ProjectDetail";
 import TeamPermissions from "../../pages/projects/team/id/permissions/TeamPermissions";
+import ProjectDetailsPage from "../../pages/projects/ProjectDetailsPage";
 
 const ProjectsRoutes = () => {
   return (

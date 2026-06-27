@@ -1,4 +1,3 @@
-import { useParams } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabaseClient";
@@ -787,10 +786,7 @@ function KpiRow({
 // الصفحة الرئيسية
 // ─────────────────────────────────────────────
 
-const ProjectDetailsPage = () => {
-  const params = useParams<{ id: string }>();
-  const projectId = params.id ?? "";
-
+const ProjectDetails = ({ projectId }: { projectId: string }) => {
   const [timeRange, setTimeRange] = useState<TimeRange>("year");
   const { stats, loading, error } = useProjectStats(projectId);
 
@@ -847,4 +843,4 @@ const ProjectDetailsPage = () => {
   );
 };
 
-export default ProjectDetailsPage;
+export default ProjectDetails;

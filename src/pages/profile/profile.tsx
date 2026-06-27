@@ -113,6 +113,14 @@ const ProfilePage = () => {
         },
       );
       if (error) throw error;
+
+      const { error: errorUser } = await supabaseAdmin
+        .from("users")
+        .update({
+          first_login: true,
+        })
+        .eq("id", foundUser.id);
+      if (errorUser) throw errorUser;
       setResetSuccess(true);
       setNewPassword("");
       setConfirmPassword("");
