@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import FinanceLayout from "../sidebar/FinanceLayout";
 import FinancePage from "../../pages/finance/FinancePage";
-import PayrollFinancePage from "../../pages/finance/payroll/PayrollFinancePage";
 import AccountingPage from "../../pages/finance/accounting/AccountingPage";
 import TreasuryPage from "../../pages/finance/treasury/TreasuryPage";
 import TreasuryProjectPage from "../../pages/finance/treasury/TreasuryProjectPage";
@@ -24,7 +23,6 @@ const FinanceRoutes = () => {
       <Route element={<FinanceLayout />}>
         <Route index element={<FinancePage />} />
 
-        <Route path="payroll" element={<PayrollFinancePage />} />
         <Route path="accounting" element={<AccountingPage />} />
         <Route path="accounting/project/:id" element={<AccountingPage />} />
 

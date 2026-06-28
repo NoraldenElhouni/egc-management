@@ -42,31 +42,16 @@ export const EmployeePayrollColumns: ColumnDef<Payroll>[] = [
   {
     accessorKey: "basic_salary",
     header: "الراتب الأساسي",
-    cell: ({ row }) =>
-      row.original.basic_salary != null
-        ? formatCurrency(row.original.basic_salary, "LYD")
-        : "-",
+    cell: ({ row }) => formatCurrency(row.original.basic_salary ?? 0),
   },
   {
     accessorKey: "percentage_salary",
     header: "النسبة",
-    cell: ({ row }) =>
-      row.original.percentage_salary != null
-        ? `${row.original.percentage_salary}`
-        : "-",
+    cell: ({ row }) => formatCurrency(row.original.percentage_salary ?? 0),
   },
   {
     accessorKey: "total_salary",
     header: "إجمالي الراتب",
     cell: ({ row }) => formatCurrency(row.original.total_salary, "LYD"),
-  },
-  {
-    accessorKey: "status",
-    header: "الحالة",
-    cell: ({ row }) => (
-      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100">
-        {row.original.status}
-      </span>
-    ),
   },
 ];

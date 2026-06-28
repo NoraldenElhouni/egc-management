@@ -2,7 +2,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { PayrollWithRelations } from "../../../types/extended.type";
 import { Link } from "react-router-dom";
-import AcceptPayrollPayments from "../actions/payroll/AcceptPayrollPayments";
 import { translateStatus } from "../../../utils/translations";
 import { statusColor } from "../../../utils/colors/status";
 
@@ -48,7 +47,7 @@ export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
       if (!employee) return "N/A";
       return (
         <Link
-          to={`/hr/payroll/${row.original.id}`}
+          to={`/hr/employees/${row.original.employee_id}`}
           className="font-medium hover:underline"
         >
           {`${employee.first_name} ${employee.last_name || ""}`.trim()}
@@ -95,20 +94,6 @@ export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
       >
         {translateStatus(row.original.status)}
       </span>
-    ),
-  },
-
-  // Actions column
-  {
-    id: "actions",
-    header: "الإجراءات",
-    cell: ({ row }) => (
-      <div className="flex justify-center gap-2">
-        <AcceptPayrollPayments
-          payrollPaymentId={row.original.id}
-          totalAmount={row.original.total_salary}
-        />
-      </div>
     ),
   },
 ];

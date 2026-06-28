@@ -49,7 +49,8 @@ export function useEmployee(id: string) {
           `
           *,
           employee_certifications(*),
-          employee_documents(*)
+          employee_documents(*),
+          payroll(*)
         `,
         )
         .eq("id", id)
@@ -74,6 +75,11 @@ export function useEmployee(id: string) {
         .select(`*, projects(*), project_roles(*)`)
         .eq("user_id", id);
 
+      const normalizedProjectData = (projectData ?? []).map((project) => ({
+        ...project,
+        project_roles: project.project_roles ?? { id: "", name: "" },
+      }));
+
       // 4) payroll
       const { data: payrollData } = await supabase
         .from("payroll")
@@ -85,7 +91,7 @@ export function useEmployee(id: string) {
       const fullEmployeeData: FullEmployee = {
         ...employeeData,
         user_role: roleData ?? null,
-        projects: projectData ?? [],
+        projects: normalizedProjectData,
         payroll: payrollData ?? [],
       };
 

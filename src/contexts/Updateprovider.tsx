@@ -118,6 +118,10 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
           ? "must_update"
           : "up_to_date",
       );
+      console.log("CURRENT RAW:", currentVersion);
+      console.log("REQUIRED:", requiredVersion);
+      console.log("CURRENT PARSED:", parseVersion(currentVersion));
+      console.log("REQUIRED PARSED:", parseVersion(requiredVersion));
     } catch (err) {
       console.error("UpdateProvider: unexpected error", err);
       setStatus("up_to_date"); // fail-open
