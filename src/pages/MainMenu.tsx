@@ -8,6 +8,7 @@ import {
   Settings,
   Building,
   PackageOpen,
+  Store,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -62,6 +63,12 @@ const MainMenu = () => {
       icon: PackageOpen,
       path: "/operations",
       role: ["Admin", "Engineer"],
+    },
+    {
+      label: "المحلات",
+      icon: Store,
+      path: "/shops",
+      role: ["Admin", "Manager"],
     },
   ];
 

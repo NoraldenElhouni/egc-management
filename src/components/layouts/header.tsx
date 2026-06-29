@@ -81,6 +81,7 @@ const Header = () => {
     batches: "دفعات",
     batch: "دفعة",
     distribution: "التوزيع",
+    shops: "متاجر",
   };
 
   return (

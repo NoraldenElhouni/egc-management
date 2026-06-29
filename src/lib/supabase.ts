@@ -1667,7 +1667,7 @@ export type Database = {
           income_date: string
           payment_method: Database["public"]["Enums"]["account_type"]
           project_id: string
-          related_expense: string | null
+          ref_number: string | null
           serial_number: number
           updated_at: string
         }
@@ -1683,7 +1683,7 @@ export type Database = {
           income_date?: string
           payment_method: Database["public"]["Enums"]["account_type"]
           project_id: string
-          related_expense?: string | null
+          ref_number?: string | null
           serial_number: number
           updated_at?: string
         }
@@ -1699,7 +1699,7 @@ export type Database = {
           income_date?: string
           payment_method?: Database["public"]["Enums"]["account_type"]
           project_id?: string
-          related_expense?: string | null
+          ref_number?: string | null
           serial_number?: number
           updated_at?: string
         }
@@ -1716,13 +1716,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_incomes_related_expense_fkey"
-            columns: ["related_expense"]
-            isOneToOne: false
-            referencedRelation: "project_expenses"
             referencedColumns: ["id"]
           },
         ]
@@ -2486,6 +2479,7 @@ export type Database = {
           division_id: string
           icon_path: string | null
           id: string
+          is_active: boolean
           name: string
         }
         Insert: {
@@ -2494,6 +2488,7 @@ export type Database = {
           division_id: string
           icon_path?: string | null
           id?: string
+          is_active?: boolean
           name: string
         }
         Update: {
@@ -2502,6 +2497,7 @@ export type Database = {
           division_id?: string
           icon_path?: string | null
           id?: string
+          is_active?: boolean
           name?: string
         }
         Relationships: [
@@ -2519,6 +2515,7 @@ export type Database = {
           created_at: string
           icon_path: string | null
           id: string
+          is_active: boolean
           name: string
           specialization_id: string | null
         }
@@ -2526,6 +2523,7 @@ export type Database = {
           created_at?: string
           icon_path?: string | null
           id?: string
+          is_active?: boolean
           name: string
           specialization_id?: string | null
         }
@@ -2533,6 +2531,7 @@ export type Database = {
           created_at?: string
           icon_path?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           specialization_id?: string | null
         }
@@ -2917,6 +2916,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_active: boolean
           name: string
         }
         Insert: {
@@ -2924,6 +2924,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           name: string
         }
         Update: {
@@ -2931,6 +2932,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           name?: string
         }
         Relationships: [
