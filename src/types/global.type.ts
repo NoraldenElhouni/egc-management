@@ -71,6 +71,11 @@ export type MilestoneReports = Tables<"milestone_reports">;
 
 export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
 
+//shops
+export type Divisions = Tables<"shop_divisions">;
+export type Categories = Tables<"shop_categories">;
+export type Subcategories = Tables<"shop_subcategories">;
+
 //contracts
 
 // ------------------------------------------------------------
