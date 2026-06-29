@@ -75,6 +75,7 @@ export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
 export type Divisions = Tables<"shop_divisions">;
 export type Categories = Tables<"shop_categories">;
 export type Subcategories = Tables<"shop_subcategories">;
+export type Products = Tables<"shop_products">;
 
 //contracts
 

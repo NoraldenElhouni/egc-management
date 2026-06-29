@@ -83,6 +83,9 @@ const Header = () => {
     distribution: "التوزيع",
     shops: "متاجر",
     divisions: "الأقسام",
+    categories: "التصنيفات",
+    subcategories: "التصنيفات الفرعية",
+    products: "المنتجات",
   };
 
   return (
