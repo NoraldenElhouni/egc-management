@@ -1,9 +1,12 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { Subcategories } from "../../../../../types/global.type";
+import { formatDate } from "../../../../../utils/helpper";
 
-export const SubcategoriesColumns: ColumnDef<Subcategories>[] = [
-  // Selection column (first column)
+export const getSubcategoriesColumns = (
+  onToggleActive: (id: string, isActive: boolean) => void,
+  categoryNameById: Record<string, string>,
+): ColumnDef<Subcategories>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -37,7 +40,7 @@ export const SubcategoriesColumns: ColumnDef<Subcategories>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/subcategories/${row.original.id}`}
+          to={`./${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}
@@ -49,7 +52,9 @@ export const SubcategoriesColumns: ColumnDef<Subcategories>[] = [
   {
     accessorKey: "category_id",
     header: "التصنيف الرئيسي",
-    cell: ({ row }) => <span>{row.original.category_id || "-"}</span>,
+    cell: ({ row }) => (
+      <span>{categoryNameById[row.original.category_id] || "-"}</span>
+    ),
   },
 
   {
@@ -65,11 +70,7 @@ export const SubcategoriesColumns: ColumnDef<Subcategories>[] = [
   {
     accessorKey: "created_at",
     header: "تاريخ الإنشاء",
-    cell: ({ row }) => (
-      <span>
-        {new Date(row.original.created_at).toLocaleDateString("ar-EG")}
-      </span>
-    ),
+    cell: ({ row }) => <span>{formatDate(row.original.created_at)}</span>,
   },
 
   {
@@ -80,11 +81,9 @@ export const SubcategoriesColumns: ColumnDef<Subcategories>[] = [
       return (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              // Handle toggle logic here
-              // You'll need to implement the update function
-              // For example: updateSubcategoryStatus(row.original.id, !isActive)
-            }}
+            type="button"
+            dir="ltr"
+            onClick={() => onToggleActive(row.original.id, !isActive)}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full transition-colors
               ${isActive ? "bg-green-600" : "bg-gray-300"}
