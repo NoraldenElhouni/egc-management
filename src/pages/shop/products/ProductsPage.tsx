@@ -1,11 +1,18 @@
+// ProductsPage.tsx
+import { useMemo } from "react";
 import { useProducts } from "../../../hooks/shop/products/useProducts";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
 import GenericTable from "../../../components/tables/table";
-import { ProductsColumns } from "../../../components/tables/columns/shops/products/ProductsColumns";
+import { getProductsColumns } from "../../../components/tables/columns/shops/products/ProductsColumns";
 
 const ProductsPage = () => {
-  const { products, error, loading } = useProducts();
+  const { products, error, loading, toggleProductActive } = useProducts();
+
+  const columns = useMemo(
+    () => getProductsColumns(toggleProductActive),
+    [toggleProductActive],
+  );
 
   if (loading) return <LoadingPage />;
   if (error) return <ErrorPage error={error.message} />;
@@ -14,7 +21,7 @@ const ProductsPage = () => {
     <div className="p-4">
       <GenericTable
         data={products}
-        columns={ProductsColumns}
+        columns={columns}
         header={<h1 className="text-2xl font-bold text-gray-800">المنتجات</h1>}
         link="./new"
         linkLabel="+ إضافة منتج جديد"

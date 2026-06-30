@@ -6,7 +6,6 @@ import NewDivisionPage from "../../pages/shop/divisions/NewDivisionPage";
 import DivisionDetailPage from "../../pages/shop/divisions/DivisionDetailPage";
 import CategoriesPage from "../../pages/shop/categories/CategoriesPage";
 import NewCategoryPage from "../../pages/shop/categories/NewCategoryPage";
-import VendorsPage from "../../pages/supply-chain/VendorsPage";
 import NewVendorPage from "../../pages/supply-chain/NewVendorPage";
 import VendorDetailPage from "../../pages/supply-chain/VendorDetailPage";
 import CategoryDetailPage from "../../pages/shop/categories/CategoryDetailPage";
@@ -17,6 +16,7 @@ import SubcategoryProductsPage from "../../pages/shop/subcategories/SubcategoryP
 import ProductsPage from "../../pages/shop/products/ProductsPage";
 import NewProductPage from "../../pages/shop/products/NewProductPage";
 import ProductDetailPage from "../../pages/shop/products/ProductDetailPage";
+import ShopVendorsList from "../../pages/shop/vendors/ShopVendorsList";
 
 export default function ShopsRoutes() {
   return (
@@ -53,7 +53,7 @@ export default function ShopsRoutes() {
         <Route path="products/:productId" element={<ProductDetailPage />} />
 
         {/* ── Vendors ───────────────────────────────────────────────────── */}
-        <Route path="vendors" element={<VendorsPage />} />
+        <Route path="vendors" element={<ShopVendorsList />} />
         <Route path="vendors/new" element={<NewVendorPage />} />
         <Route path="vendors/:vendorId" element={<VendorDetailPage />} />
       </Route>

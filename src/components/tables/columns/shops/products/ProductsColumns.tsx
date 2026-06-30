@@ -1,9 +1,30 @@
+// ProductsColumns.tsx
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { Products } from "../../../../../types/global.type";
+import { formatDate } from "../../../../../utils/helpper";
 
-export const ProductsColumns: ColumnDef<Products>[] = [
-  // Selection column (first column)
+export type Products = {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  image_path: string | null;
+  subcategory_id: string;
+  created_at: string;
+  shop_subcategories?: {
+    id: string;
+    name: string;
+    category_id: string;
+    shop_categories?: {
+      id: string;
+      name: string;
+    } | null;
+  } | null;
+};
+
+export const getProductsColumns = (
+  onToggleActive: (id: string, isActive: boolean) => void,
+): ColumnDef<Products>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -37,7 +58,7 @@ export const ProductsColumns: ColumnDef<Products>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/products/${row.original.id}`}
+          to={`./${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}
@@ -65,9 +86,23 @@ export const ProductsColumns: ColumnDef<Products>[] = [
   },
 
   {
-    accessorKey: "subcategory_id",
+    id: "category",
+    header: "التصنيف الرئيسي",
+    accessorFn: (row) => row.shop_subcategories?.shop_categories?.name ?? "",
+    cell: ({ row }) => (
+      <span>
+        {row.original.shop_subcategories?.shop_categories?.name || "-"}
+      </span>
+    ),
+  },
+
+  {
+    id: "subcategory",
     header: "التصنيف الفرعي",
-    cell: ({ row }) => <span>{row.original.subcategory_id || "-"}</span>,
+    accessorFn: (row) => row.shop_subcategories?.name ?? "",
+    cell: ({ row }) => (
+      <span>{row.original.shop_subcategories?.name || "-"}</span>
+    ),
   },
 
   {
@@ -83,11 +118,7 @@ export const ProductsColumns: ColumnDef<Products>[] = [
   {
     accessorKey: "created_at",
     header: "تاريخ الإنشاء",
-    cell: ({ row }) => (
-      <span>
-        {new Date(row.original.created_at).toLocaleDateString("ar-EG")}
-      </span>
-    ),
+    cell: ({ row }) => <span>{formatDate(row.original.created_at)}</span>,
   },
 
   {
@@ -98,11 +129,9 @@ export const ProductsColumns: ColumnDef<Products>[] = [
       return (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              // Handle toggle logic here
-              // You'll need to implement the update function
-              // For example: updateProductStatus(row.original.id, !isActive)
-            }}
+            type="button"
+            dir="ltr"
+            onClick={() => onToggleActive(row.original.id, !isActive)}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full transition-colors
               ${isActive ? "bg-green-600" : "bg-gray-300"}

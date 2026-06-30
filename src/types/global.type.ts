@@ -76,6 +76,7 @@ export type Divisions = Tables<"shop_divisions">;
 export type Categories = Tables<"shop_categories">;
 export type Subcategories = Tables<"shop_subcategories">;
 export type Products = Tables<"shop_products">;
+export type ProductSizes = Tables<"shop_product_sizes">;
 
 //contracts
 

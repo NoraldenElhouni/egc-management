@@ -3,7 +3,7 @@ import NewShopSubcategoryForm from "../../../components/shop/subcategory/NewShop
 
 const NewSubcategoryPage = () => {
   return (
-    <div>
+    <div className="p-4">
       <NewShopSubcategoryForm />
     </div>
   );
