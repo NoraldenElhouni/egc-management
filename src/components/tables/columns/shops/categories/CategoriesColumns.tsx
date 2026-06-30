@@ -2,9 +2,13 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { Categories } from "../../../../../types/global.type";
+import { formatDate } from "../../../../../utils/helpper";
+import { DynamicIcon, IconName } from "lucide-react/dynamic";
 
-export const CategoriesColumns: ColumnDef<Categories>[] = [
-  // Selection column (first column)
+export const getCategoriesColumns = (
+  onToggleActive: (id: string, isActive: boolean) => void,
+  divisionNameById: Record<string, string>,
+): ColumnDef<Categories>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -38,7 +42,7 @@ export const CategoriesColumns: ColumnDef<Categories>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/categories/${row.original.id}`}
+          to={`./${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}
@@ -53,10 +57,9 @@ export const CategoriesColumns: ColumnDef<Categories>[] = [
     cell: ({ row }) => (
       <div>
         {row.original.icon_path ? (
-          <img
-            src={row.original.icon_path}
-            alt={row.original.name}
-            className="w-8 h-8 object-contain"
+          <DynamicIcon
+            name={row.original.icon_path as IconName}
+            className="w-6 h-6 text-foreground"
           />
         ) : (
           <span className="text-gray-400">-</span>
@@ -68,7 +71,9 @@ export const CategoriesColumns: ColumnDef<Categories>[] = [
   {
     accessorKey: "division_id",
     header: "القسم",
-    cell: ({ row }) => <span>{row.original.division_id || "-"}</span>,
+    cell: ({ row }) => (
+      <span>{divisionNameById[row.original.division_id] || "-"}</span>
+    ),
   },
 
   {
@@ -84,11 +89,7 @@ export const CategoriesColumns: ColumnDef<Categories>[] = [
   {
     accessorKey: "created_at",
     header: "تاريخ الإنشاء",
-    cell: ({ row }) => (
-      <span>
-        {new Date(row.original.created_at).toLocaleDateString("ar-EG")}
-      </span>
-    ),
+    cell: ({ row }) => <span>{formatDate(row.original.created_at)}</span>,
   },
 
   {
@@ -99,11 +100,9 @@ export const CategoriesColumns: ColumnDef<Categories>[] = [
       return (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              // Handle toggle logic here
-              // You'll need to implement the update function
-              // For example: updateCategoryStatus(row.original.id, !isActive)
-            }}
+            type="button"
+            dir="ltr"
+            onClick={() => onToggleActive(row.original.id, !isActive)}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full transition-colors
               ${isActive ? "bg-green-600" : "bg-gray-300"}
