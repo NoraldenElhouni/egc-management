@@ -6,10 +6,6 @@ interface Props {
   data: DimensionSummary[];
 }
 
-function fmt(n: number) {
-  return n.toLocaleString("ar-LY", { maximumFractionDigits: 2 });
-}
-
 function initials(name: string) {
   return name
     .split(" ")
@@ -36,7 +32,7 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
   if (data.length === 0)
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-4 text-center text-gray-400 text-sm">
-        No contractor expenses recorded.
+        لم يتم تسجيل أي نفقات للمقاول.
       </div>
     );
 
@@ -53,11 +49,11 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
             aria-hidden="true"
           />
           <h2 className="text-sm font-semibold text-gray-700">
-            Cost by contractor
+            التكلفة حسب المقاول
           </h2>
         </div>
         <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-          {data.length} contractors
+          {data.length} مقاول
         </span>
       </div>
 
@@ -66,20 +62,20 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b border-gray-100">
-              <th className="text-left px-5 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide w-2/5">
-                Contractor
+              <th className="text-right px-5 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide w-2/5">
+                مقاول
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Total
+                المجموع
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Jobs
+                عدد الاعمال
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Avg
+                المتوسط العمل
               </th>
               <th className="px-5 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide w-48">
-                Share
+                النسبة
               </th>
             </tr>
           </thead>
@@ -108,7 +104,7 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
                         </p>
                         {row.unpaid > 0 && (
                           <p className="text-xs text-red-500">
-                            {fmt(row.unpaid)} due
+                            {formatCurrency(row.unpaid)} مستحق
                           </p>
                         )}
                       </div>
@@ -121,7 +117,7 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
                       {formatCurrency(row.total)}
                     </p>
                     <p className="text-xs text-green-600">
-                      {formatCurrency(row.paid)} paid
+                      {formatCurrency(row.paid)} مدفوع
                     </p>
                   </td>
 
@@ -132,7 +128,7 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
 
                   {/* Avg */}
                   <td className="px-4 py-3.5 text-right text-gray-600">
-                    {fmt(row.average)}
+                    {formatCurrency(row.average)}
                     <span className="text-xs text-gray-400 ml-1">LYD</span>
                   </td>
 
@@ -159,7 +155,7 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
           <tfoot className="border-t border-gray-200">
             <tr>
               <td className="px-5 py-3 text-xs font-semibold text-gray-500">
-                Total
+                المجموع
               </td>
               <td className="px-4 py-3 text-right text-xs font-semibold text-gray-700">
                 {formatCurrency(data.reduce((s, r) => s + r.total, 0))}
@@ -185,8 +181,8 @@ export const ContractorBreakdown = React.memo(function ContractorBreakdown({
               aria-hidden="true"
             />
             {expanded
-              ? "Show less"
-              : `Show ${data.length - PAGE_SIZE} more contractors`}
+              ? "عرض أقل"
+              : `عرض ${data.length - PAGE_SIZE} المزيد من المقاولين`}
           </button>
         </div>
       )}

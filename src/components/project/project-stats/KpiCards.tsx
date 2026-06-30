@@ -1,5 +1,6 @@
 import React from "react";
 import { ProjectStats } from "../../../types/project-stats/types";
+import { formatCurrency } from "../../../utils/helpper";
 
 interface Props {
   stats: ProjectStats;
@@ -61,10 +62,6 @@ function KpiCard({
   );
 }
 
-function fmt(n: number, currency: string) {
-  return `${n.toLocaleString("ar-LY", { maximumFractionDigits: 2 })} ${currency}`;
-}
-
 export const KpiCards = React.memo(function KpiCards({ stats }: Props) {
   const {
     totalCost,
@@ -80,41 +77,41 @@ export const KpiCards = React.memo(function KpiCards({ stats }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
       <KpiCard
-        label="Total cost"
-        value={fmt(totalCost, currency)}
-        sub={`${expenseCount} expenses`}
+        label="التكلفة الإجمالية"
+        value={formatCurrency(totalCost, currency)}
+        sub={`${expenseCount} مصاريف`}
         icon="ti-receipt"
         accent="blue"
       />
       <KpiCard
-        label="Total paid"
-        value={fmt(totalPaid, currency)}
+        label="إجمالي المبلغ المدفوع"
+        value={formatCurrency(totalPaid, currency)}
         icon="ti-circle-check"
         accent="green"
       />
       <KpiCard
-        label="Remaining"
-        value={fmt(totalUnpaid, currency)}
+        label="متبقي"
+        value={formatCurrency(totalUnpaid, currency)}
         icon="ti-clock-dollar"
         accent="red"
       />
       <KpiCard
-        label="Avg / phase"
-        value={fmt(averageCostPerPhase, currency)}
+        label="المتوسط ​​/ المرحلة"
+        value={formatCurrency(averageCostPerPhase, currency)}
         icon="ti-chart-pie"
         accent="purple"
       />
       <KpiCard
-        label="Contractors"
+        label="المقاولون"
         value={byContractor.length.toString()}
-        sub={`Avg ${fmt(stats.averageCostPerContractor, currency)}`}
+        sub={`المتوسط ${formatCurrency(stats.averageCostPerContractor, currency)}`}
         icon="ti-hard-hat"
         accent="amber"
       />
       <KpiCard
-        label="Vendors"
+        label="الموردون"
         value={byVendor.length.toString()}
-        sub={`Avg ${fmt(stats.averageCostPerVendor, currency)}`}
+        sub={`المتوسط ${formatCurrency(stats.averageCostPerVendor, currency)}`}
         icon="ti-building-store"
       />
     </div>

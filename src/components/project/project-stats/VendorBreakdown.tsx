@@ -1,12 +1,9 @@
 import React, { useState } from "react";
 import { DimensionSummary } from "../../../types/project-stats/types";
+import { formatCurrency } from "../../../utils/helpper";
 
 interface Props {
   data: DimensionSummary[];
-}
-
-function fmt(n: number) {
-  return n.toLocaleString("ar-LY", { maximumFractionDigits: 2 });
 }
 
 const PAGE_SIZE = 10;
@@ -20,7 +17,7 @@ export const VendorBreakdown = React.memo(function VendorBreakdown({
   if (data.length === 0)
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-4 text-center text-gray-400 text-sm">
-        No vendor expenses recorded.
+        لم يتم تسجيل أي نفقات للموردين.
       </div>
     );
 
@@ -37,11 +34,11 @@ export const VendorBreakdown = React.memo(function VendorBreakdown({
             aria-hidden="true"
           />
           <h2 className="text-sm font-semibold text-gray-700">
-            Cost by vendor
+            التكلفة حسب المورِّد
           </h2>
         </div>
         <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-          {data.length} vendors
+          {data.length} مورد
         </span>
       </div>
 
@@ -50,20 +47,20 @@ export const VendorBreakdown = React.memo(function VendorBreakdown({
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b border-gray-100">
-              <th className="text-left px-5 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide w-1/3">
-                Vendor
+              <th className="text-right px-5 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide w-1/3">
+                المورِّد
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Total
+                المجموع
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Orders
+                عدد الطلبات
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Avg
+                متوسط الطلب
               </th>
               <th className="px-5 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide w-28">
-                Share
+                النسبة
               </th>
             </tr>
           </thead>
@@ -87,17 +84,13 @@ export const VendorBreakdown = React.memo(function VendorBreakdown({
                   </div>
                 </td>
                 <td className="px-4 py-3.5 text-right font-semibold text-gray-800">
-                  {fmt(row.total)}
-                  <span className="text-xs font-normal text-gray-400 ml-1">
-                    LYD
-                  </span>
+                  {formatCurrency(row.total)}
                 </td>
                 <td className="px-4 py-3.5 text-right text-gray-600">
                   {row.count}
                 </td>
                 <td className="px-4 py-3.5 text-right text-gray-600">
-                  {fmt(row.average)}
-                  <span className="text-xs text-gray-400 ml-1">LYD</span>
+                  {formatCurrency(row.average)}
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
@@ -120,10 +113,10 @@ export const VendorBreakdown = React.memo(function VendorBreakdown({
           <tfoot className="border-t border-gray-200">
             <tr>
               <td className="px-5 py-3 text-xs font-semibold text-gray-500">
-                Total
+                المجموع
               </td>
               <td className="px-4 py-3 text-right text-xs font-semibold text-gray-700">
-                {fmt(data.reduce((s, r) => s + r.total, 0))} LYD
+                {formatCurrency(data.reduce((s, r) => s + r.total, 0))}
               </td>
               <td className="px-4 py-3 text-right text-xs font-semibold text-gray-700">
                 {data.reduce((s, r) => s + r.count, 0)}
@@ -146,8 +139,8 @@ export const VendorBreakdown = React.memo(function VendorBreakdown({
               aria-hidden="true"
             />
             {expanded
-              ? "Show less"
-              : `Show ${data.length - PAGE_SIZE} more vendors`}
+              ? "عرض أقل"
+              : `عرض ${data.length - PAGE_SIZE} المزيد من الموردين`}
           </button>
         </div>
       )}

@@ -12,7 +12,7 @@ export function ProjectStatsTab({ projectId }: { projectId: string }) {
     return (
       <div className="flex items-center justify-center gap-2 h-40 text-gray-400 text-sm">
         <i className="ti ti-loader-2 animate-spin text-lg" aria-hidden="true" />
-        Loading statistics...
+        جارٍ تحميل الإحصائيات...
       </div>
     );
 
@@ -24,7 +24,7 @@ export function ProjectStatsTab({ projectId }: { projectId: string }) {
           onClick={refetch}
           className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
         >
-          Try again
+          حاول ثانية
         </button>
       </div>
     );
@@ -33,7 +33,7 @@ export function ProjectStatsTab({ projectId }: { projectId: string }) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 h-40 text-gray-400 text-sm">
         <i className="ti ti-chart-bar-off text-2xl" aria-hidden="true" />
-        No expenses recorded yet.
+        لم يتم تسجيل أي نفقات بعد.
       </div>
     );
 

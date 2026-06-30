@@ -1,5 +1,7 @@
 import React from "react";
 import { DimensionSummary } from "../../../types/project-stats/types";
+import { formatCurrency } from "../../../utils/helpper";
+import { translateExpenseType } from "../../../utils/translations";
 
 interface Props {
   data: DimensionSummary[];
@@ -29,17 +31,13 @@ function getConfig(label: string) {
   );
 }
 
-function fmt(n: number) {
-  return n.toLocaleString("ar-LY", { maximumFractionDigits: 2 });
-}
-
 export const ExpenseTypeBreakdown = React.memo(function ExpenseTypeBreakdown({
   data,
 }: Props) {
   if (data.length === 0)
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-4 text-center text-gray-400 text-sm">
-        No expense type data.
+        لا توجد بيانات لنوع المصروفات.
       </div>
     );
 
@@ -48,7 +46,7 @@ export const ExpenseTypeBreakdown = React.memo(function ExpenseTypeBreakdown({
       <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
         <i className="ti ti-tags text-gray-400 text-lg" aria-hidden="true" />
         <h2 className="text-sm font-semibold text-gray-700">
-          Cost by expense type
+          التكلفة حسب نوع المصروف
         </h2>
       </div>
       <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -67,12 +65,14 @@ export const ExpenseTypeBreakdown = React.memo(function ExpenseTypeBreakdown({
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-700 capitalize">
-                    {row.label}
+                    {translateExpenseType(
+                      row.label as "material" | "labor" | "maps",
+                    )}
                   </p>
-                  <p className="text-xs text-gray-400">{row.count} expenses</p>
+                  <p className="text-xs text-gray-400">{row.count} مصروف</p>
                 </div>
                 <span className="text-sm font-semibold text-gray-800">
-                  {fmt(row.total)} LYD
+                  {formatCurrency(row.total)}
                 </span>
               </div>
 
@@ -84,10 +84,14 @@ export const ExpenseTypeBreakdown = React.memo(function ExpenseTypeBreakdown({
               </div>
 
               <div className="flex justify-between text-xs text-gray-400">
-                <span>Avg {fmt(row.average)} LYD</span>
+                <span>المتوسط {formatCurrency(row.average)} </span>
                 <div className="flex gap-3">
-                  <span className="text-green-600">Paid {fmt(row.paid)}</span>
-                  <span className="text-red-500">Unpaid {fmt(row.unpaid)}</span>
+                  <span className="text-green-600">
+                    المدفوع {formatCurrency(row.paid)}
+                  </span>
+                  <span className="text-red-500">
+                    الفير مدفوع {formatCurrency(row.unpaid)}
+                  </span>
                 </div>
               </div>
             </div>

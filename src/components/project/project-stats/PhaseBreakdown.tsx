@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 import { PhaseSummary } from "../../../types/project-stats/types";
+import { formatCurrency } from "../../../utils/helpper";
+import {
+  translateExpenseType,
+  translatePhase,
+} from "../../../utils/translations";
 
 interface Props {
   phases: PhaseSummary[];
@@ -36,10 +41,6 @@ function getColors(label: string) {
   );
 }
 
-function fmt(n: number) {
-  return n.toLocaleString("ar-LY", { maximumFractionDigits: 2 });
-}
-
 export const PhaseBreakdown = React.memo(function PhaseBreakdown({
   phases,
 }: Props) {
@@ -50,7 +51,7 @@ export const PhaseBreakdown = React.memo(function PhaseBreakdown({
   if (phases.length === 0)
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-4 text-center text-gray-400 text-sm">
-        No phase data recorded yet.
+        لم يتم تسجيل أي بيانات للمرحلة بعد.
       </div>
     );
 
@@ -61,7 +62,9 @@ export const PhaseBreakdown = React.memo(function PhaseBreakdown({
           className="ti ti-layout-columns text-gray-400 text-lg"
           aria-hidden="true"
         />
-        <h2 className="text-sm font-semibold text-gray-700">Cost by phase</h2>
+        <h2 className="text-sm font-semibold text-gray-700">
+          التكلفة حسب المرحلة
+        </h2>
       </div>
 
       <div className="divide-y divide-gray-50">
@@ -79,7 +82,9 @@ export const PhaseBreakdown = React.memo(function PhaseBreakdown({
                   className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.bar}`}
                 />
                 <span className="text-sm font-medium text-gray-700 capitalize w-28 flex-shrink-0">
-                  {phase.label}
+                  {translatePhase(
+                    phase.label as "construction" | "finishing" | "initial",
+                  )}
                 </span>
 
                 <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -93,7 +98,7 @@ export const PhaseBreakdown = React.memo(function PhaseBreakdown({
                   {phase.percentage.toFixed(1)}%
                 </span>
                 <span className="text-sm font-semibold text-gray-800 w-32 text-right flex-shrink-0">
-                  {fmt(phase.total)} LYD
+                  {formatCurrency(phase.total)}
                 </span>
                 <i
                   className={`ti ti-chevron-down text-gray-400 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
@@ -105,27 +110,27 @@ export const PhaseBreakdown = React.memo(function PhaseBreakdown({
                 <div className="px-5 pb-4 bg-gray-50/50">
                   <div className="flex gap-4 mb-4 pt-3">
                     <div className="bg-white rounded-lg border border-gray-100 px-4 py-2 flex-1 text-center">
-                      <p className="text-xs text-gray-400 mb-0.5">Expenses</p>
+                      <p className="text-xs text-gray-400 mb-0.5">المصاريف</p>
                       <p className="text-sm font-semibold text-gray-700">
                         {phase.count}
                       </p>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-100 px-4 py-2 flex-1 text-center">
-                      <p className="text-xs text-gray-400 mb-0.5">Average</p>
+                      <p className="text-xs text-gray-400 mb-0.5">المتوسط</p>
                       <p className="text-sm font-semibold text-gray-700">
-                        {fmt(phase.average)} LYD
+                        {formatCurrency(phase.average)}
                       </p>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-100 px-4 py-2 flex-1 text-center">
-                      <p className="text-xs text-gray-400 mb-0.5">Paid</p>
+                      <p className="text-xs text-gray-400 mb-0.5">المدفوع</p>
                       <p className="text-sm font-semibold text-green-600">
-                        {fmt(phase.paid)} LYD
+                        {formatCurrency(phase.paid)}
                       </p>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-100 px-4 py-2 flex-1 text-center">
-                      <p className="text-xs text-gray-400 mb-0.5">Unpaid</p>
+                      <p className="text-xs text-gray-400 mb-0.5">غير مدفوع</p>
                       <p className="text-sm font-semibold text-red-500">
-                        {fmt(phase.unpaid)} LYD
+                        {formatCurrency(phase.unpaid)}
                       </p>
                     </div>
                   </div>
@@ -133,22 +138,30 @@ export const PhaseBreakdown = React.memo(function PhaseBreakdown({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                        <th className="text-left pb-2 font-medium">Type</th>
-                        <th className="text-right pb-2 font-medium">Total</th>
-                        <th className="text-right pb-2 font-medium">Count</th>
-                        <th className="text-right pb-2 font-medium">Average</th>
-                        <th className="text-right pb-2 font-medium">Share</th>
+                        <th className="text-right pb-2 font-medium">نوع</th>
+                        <th className="text-right pb-2 font-medium">
+                          الاجمالي
+                        </th>
+                        <th className="text-right pb-2 font-medium">العدد</th>
+                        <th className="text-right pb-2 font-medium">المتوسط</th>
+                        <th className="text-right pb-2 font-medium">النسبة</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {phase.byExpenseType.map((t) => (
                         <tr key={t.label} className="text-gray-600">
                           <td className="py-2 capitalize font-medium text-gray-700">
-                            {t.label}
+                            {translateExpenseType(
+                              t.label as "material" | "labor" | "maps",
+                            )}
                           </td>
-                          <td className="py-2 text-right">{fmt(t.total)}</td>
+                          <td className="py-2 text-right">
+                            {formatCurrency(t.total)}
+                          </td>
                           <td className="py-2 text-right">{t.count}</td>
-                          <td className="py-2 text-right">{fmt(t.average)}</td>
+                          <td className="py-2 text-right">
+                            {formatCurrency(t.average)}
+                          </td>
                           <td className="py-2 text-right">
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors.badge}`}
