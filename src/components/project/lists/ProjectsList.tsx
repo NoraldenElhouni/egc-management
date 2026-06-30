@@ -28,6 +28,7 @@ const ProjectsList = ({
     "eed51009-4cfa-497c-87a1-cbf5a756f3da",
     "e0a50575-bcc1-474a-98b8-8f57770a14fa",
     "5451aaae-c632-46f4-9913-8670cffcc8e7",
+    "f2d38514-32e0-4eeb-b6cd-fcdbed6a93ab",
   ];
 
   // -----------------------------

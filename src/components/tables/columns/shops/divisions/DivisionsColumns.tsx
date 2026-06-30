@@ -1,9 +1,13 @@
+// components/tables/columns/shops/divisions/DivisionsColumns.tsx
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { Divisions } from "../../../../../types/global.type";
+import { formatDate } from "../../../../../utils/helpper";
+import { DynamicIcon, IconName } from "lucide-react/dynamic";
 
-export const DivisionsColumns: ColumnDef<Divisions>[] = [
-  // Selection column (first column)
+export const getDivisionsColumns = (
+  onToggleActive: (id: string, isActive: boolean) => void,
+): ColumnDef<Divisions>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -37,7 +41,7 @@ export const DivisionsColumns: ColumnDef<Divisions>[] = [
     cell: ({ row }) => (
       <div>
         <Link
-          to={`/divisions/${row.original.id}`}
+          to={`./${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}
@@ -52,10 +56,9 @@ export const DivisionsColumns: ColumnDef<Divisions>[] = [
     cell: ({ row }) => (
       <div>
         {row.original.icon_path ? (
-          <img
-            src={row.original.icon_path}
-            alt={row.original.name}
-            className="w-8 h-8 object-contain"
+          <DynamicIcon
+            name={row.original.icon_path as IconName}
+            className="w-6 h-6 text-foreground"
           />
         ) : (
           <span className="text-gray-400">-</span>
@@ -65,19 +68,9 @@ export const DivisionsColumns: ColumnDef<Divisions>[] = [
   },
 
   {
-    accessorKey: "specialization_id",
-    header: "التخصص",
-    cell: ({ row }) => <span>{row.original.specialization_id || "-"}</span>,
-  },
-
-  {
     accessorKey: "created_at",
     header: "تاريخ الإنشاء",
-    cell: ({ row }) => (
-      <span>
-        {new Date(row.original.created_at).toLocaleDateString("ar-EG")}
-      </span>
-    ),
+    cell: ({ row }) => <span>{formatDate(row.original.created_at)}</span>,
   },
 
   {
@@ -88,11 +81,9 @@ export const DivisionsColumns: ColumnDef<Divisions>[] = [
       return (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              // Handle toggle logic here
-              // You'll need to implement the update function
-              // For example: updateDivisionStatus(row.original.id, !isActive)
-            }}
+            dir="ltr"
+            type="button"
+            onClick={() => onToggleActive(row.original.id, !isActive)}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full transition-colors
               ${isActive ? "bg-green-600" : "bg-gray-300"}

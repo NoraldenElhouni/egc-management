@@ -65,7 +65,7 @@ const MainMenu = () => {
       role: ["Admin", "Engineer"],
     },
     {
-      label: "المحلات",
+      label: "المتاجر",
       icon: Store,
       path: "/shops",
       role: ["Admin", "Manager"],
