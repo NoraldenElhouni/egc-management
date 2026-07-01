@@ -58,6 +58,7 @@ export const PayrollColumns: ColumnDef<PayrollWithRelations>[] = [
   {
     accessorKey: "pay_date",
     header: "تاريخ الدفع",
+    filterFn: "dateRangeFilter",
     cell: ({ row }) => formatDate(row.original.pay_date),
   },
   {

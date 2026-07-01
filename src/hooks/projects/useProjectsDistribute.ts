@@ -29,6 +29,8 @@ export interface ProjectAssignment {
     id: string;
     first_name: string;
     last_name: string | null;
+    bank_name: string | null;
+    bank_account_number: string | null;
   };
 }
 
@@ -190,6 +192,7 @@ export function useProjectsDistribute() {
       // .in("id", [
       //   "5451aaae-c632-46f4-9913-8670cffcc8e7",
       //   "eed51009-4cfa-497c-87a1-cbf5a756f3da",
+      //   "f2d38514-32e0-4eeb-b6cd-fcdbed6a93ab"
       // ])
 
       if (error) throw error;

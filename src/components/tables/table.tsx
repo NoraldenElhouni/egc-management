@@ -57,6 +57,13 @@ numberRangeFilter.autoRemove = (val: unknown) => {
 // Register custom filter functions so TanStack can resolve them by name
 const filterFns = { dateRangeFilter, numberRangeFilter } as const;
 
+declare module "@tanstack/react-table" {
+  interface FilterFns {
+    dateRangeFilter: FilterFn<unknown>;
+    numberRangeFilter: FilterFn<unknown>;
+  }
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 type GenericTableProps<TData> = {

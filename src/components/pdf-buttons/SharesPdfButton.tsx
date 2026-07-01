@@ -8,6 +8,8 @@ import {
 interface ShareHolder {
   name: string;
   amount: number;
+  bank_name?: string;
+  bank_account_number?: string;
 }
 
 interface SharesReportPayload {
@@ -27,11 +29,40 @@ interface Props {
  *
  * If you need per-currency PDFs, call this once per currency and pass a filter.
  */
+interface ShareHolder {
+  name: string;
+  amount: number;
+  bank_name?: string;
+  bank_account_number?: string;
+}
+
+interface SharesReportPayload {
+  report_date: string;
+  total_amount: number;
+  shareholders: ShareHolder[];
+}
+
 function buildPayload(projects: DistributionProject[]): SharesReportPayload {
   const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
   const today = new Date().toISOString().split("T")[0];
 
-  // Aggregate per employee across all projects + currencies
+  // ── Build a bank-info lookup from project_assignments (already has employee.bank_name / bank_account_number) ──
+  const bankInfoMap = new Map<
+    string,
+    { bank_name?: string; bank_account_number?: string }
+  >();
+  projects.forEach((project) => {
+    (project.project_assignments ?? []).forEach((a) => {
+      if (!bankInfoMap.has(a.employee.id)) {
+        bankInfoMap.set(a.employee.id, {
+          bank_name: a.employee.bank_name ?? undefined,
+          bank_account_number: a.employee.bank_account_number ?? undefined,
+        });
+      }
+    });
+  });
+
+  // ── Aggregate per employee across all projects + currencies ──
   const earningsMap = new Map<
     string,
     {
@@ -47,7 +78,11 @@ function buildPayload(projects: DistributionProject[]): SharesReportPayload {
       calcEmployeeEarnings(project, currency).forEach(
         ({ employeeId, name, earning }) => {
           if (earning <= 0) return;
-          const prev = earningsMap.get(employeeId) ?? { name, amount: 0 };
+          const prev = earningsMap.get(employeeId) ?? {
+            name,
+            amount: 0,
+            ...bankInfoMap.get(employeeId),
+          };
           prev.amount += earning;
           earningsMap.set(employeeId, prev);
         },
