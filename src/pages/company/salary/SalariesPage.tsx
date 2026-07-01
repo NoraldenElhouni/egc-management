@@ -1,87 +1,21 @@
 import { useMemo, useState } from "react";
 import { Calendar, Users, Wallet, CheckCircle2, Clock } from "lucide-react";
-import { Table } from "@tanstack/react-table";
 import GenericTable from "../../../components/tables/table";
+import MonthFilterSync from "../../../components/tables/filters/MonthFilterSync";
+import BulkActionBar from "../../../components/tables/BulkActionBar";
+import KpiCard from "../../../components/ui/KpiCard";
 import { PayrollColumns } from "../../../components/tables/columns/PayrollColumns";
 import { usePayroll } from "../../../hooks/usePayroll";
 import { PayrollWithRelations } from "../../../types/extended.type";
 import { formatCurrency } from "../../../utils/helpper";
-
-const getCurrentMonth = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-};
-
-const getMonthRange = (month: string) => {
-  const [year, m] = month.split("-").map(Number);
-  const from = `${month}-01`;
-  const lastDay = new Date(year, m, 0).getDate();
-  const to = `${month}-${String(lastDay).padStart(2, "0")}`;
-  return { from, to };
-};
-
-const isInMonth = (dateStr: string | null | undefined, month: string) => {
-  if (!dateStr || !month) return true;
-  const { from, to } = getMonthRange(month);
-  const date = new Date(dateStr).getTime();
-  const fromMs = new Date(from).getTime();
-  const toMs = new Date(to + "T23:59:59").getTime();
-  return date >= fromMs && date <= toMs;
-};
-
-function MonthFilterSync({
-  table,
-  month,
-}: {
-  table: Table<PayrollWithRelations>;
-  month: string;
-}) {
-  const { from, to } = getMonthRange(month);
-  useMemo(() => {
-    table.getColumn("pay_date")?.setFilterValue(month ? [from, to] : undefined);
-  }, [month]);
-  return null;
-}
-
-// ── KPI Card ──────────────────────────────────────────────────────────────
-function KpiCard({
-  label,
-  value,
-  icon: Icon,
-  tone = "indigo",
-}: {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  tone?: "indigo" | "green" | "amber" | "blue";
-}) {
-  const toneMap = {
-    indigo: "bg-indigo-50 text-indigo-600",
-    green: "bg-green-50 text-green-600",
-    amber: "bg-amber-50 text-amber-600",
-    blue: "bg-blue-50 text-blue-600",
-  };
-
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div
-        className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneMap[tone]}`}
-      >
-        <Icon className="h-5 w-5" strokeWidth={2} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-gray-500">{label}</p>
-        <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
-      </div>
-    </div>
-  );
-}
+import { getCurrentMonth, isInMonth } from "../../../utils/date";
 
 const SalariesPage = () => {
   const [month, setMonth] = useState(getCurrentMonth());
-  const { payroll, loading, error } = usePayroll();
+  const [selectedRows, setSelectedRows] = useState<PayrollWithRelations[]>([]);
+  const [markingPaid, setMarkingPaid] = useState(false);
+
+  const { payroll, loading, error, markAsPaid } = usePayroll();
 
   const stats = useMemo(() => {
     const filtered = payroll.filter((p) => isInMonth(p.pay_date, month));
@@ -96,6 +30,21 @@ const SalariesPage = () => {
 
     return { totalEmployees, totalSalaries, paidCount, pendingCount };
   }, [payroll, month]);
+
+  const handleMarkAsPaid = async () => {
+    setMarkingPaid(true);
+    try {
+      const ids = selectedRows.map((r) => r.id);
+      const result = await markAsPaid(ids);
+      if (!result.success) {
+        window.alert(`حدث خطأ: ${result.error}`);
+        return;
+      }
+      setSelectedRows([]);
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
 
   if (loading) return <div>جاري التحميل...</div>;
   if (error) return <div>حدث خطأ: {error.message}</div>;
@@ -130,6 +79,8 @@ const SalariesPage = () => {
         />
       </div>
 
+      {/* ── Bulk action bar (only visible when rows are selected) ── */}
+
       <GenericTable
         data={payroll}
         columns={PayrollColumns}
@@ -137,10 +88,10 @@ const SalariesPage = () => {
         enableFiltering
         enableRowSelection
         showGlobalFilter
+        onRowSelectionChange={setSelectedRows}
         header={
           <div className="flex items-center justify-between w-full flex-wrap gap-3">
             <h2 className="text-xl font-bold text-gray-900">رواتب الموظفين</h2>
-
             <div className="relative">
               <Calendar
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -154,6 +105,14 @@ const SalariesPage = () => {
                 className="pl-9 pr-3 py-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-sm hover:border-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-colors"
               />
             </div>
+            <BulkActionBar
+              count={selectedRows.length}
+              actionLabel="تحديد كمدفوع"
+              confirmTitle="تأكيد الدفع"
+              confirmMessage={`هل أنت متأكد من تحديد ${selectedRows.length} كشف راتب كمدفوع؟ لا يمكن التراجع عن هذا الإجراء.`}
+              onConfirm={handleMarkAsPaid}
+              loading={markingPaid}
+            />
           </div>
         }
         headerActions={(table) => (
