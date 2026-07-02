@@ -132,11 +132,9 @@ const BatchSharesPdfButton = ({ batch }: Props) => {
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `shares-${payload.report_date}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      window.open(url, "_blank");
+      // Delay revoke so the new tab has time to actually load the blob
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err: unknown) {
       console.error("Error generating PDF:", err);
       setError(

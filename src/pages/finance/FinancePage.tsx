@@ -1,4 +1,4 @@
-import { BookOpen, Building2, Vault } from "lucide-react";
+import { BookOpen, Building2, CreditCard, Vault } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -27,13 +27,7 @@ const FinancePage = () => {
       description: "إدارة الخزينة",
       role: ["Admin", "Manager", "Bookkeeper"],
     },
-    // {
-    //   label: "المدفوعات",
-    //   icon: CreditCard,
-    //   path: "/finance/payments",
-    //   description: "متابعة المدفوعات",
-    //   role: ["Admin", "Finance", "Bookkeeper"],
-    // },
+
     // {
     //   label: "الفواتير",
     //   icon: Building2,
@@ -60,6 +54,13 @@ const FinancePage = () => {
       icon: Building2,
       path: "/finance/projects/add",
       description: "إضافة مشاريع جديدة",
+      role: ["Admin", "Manager", "Bookkeeper"],
+    },
+    {
+      label: "المدفوعات",
+      icon: CreditCard,
+      path: "/finance/payments",
+      description: "متابعة المدفوعات",
       role: ["Admin", "Manager", "Bookkeeper"],
     },
   ];

@@ -32,3 +32,18 @@ export interface ProjectWithIncome extends Projects {
 export interface DistributionProject extends Projects {
   project_percentage: ProjectPercentage[];
 }
+
+export interface ExpenseWithProject extends ProjectExpenses {
+  contractors: {
+    first_name: string;
+    last_name: string | null;
+  } | null;
+  projects: {
+    id: string;
+    name: string;
+    serial_number: number | null;
+  };
+  vendors: {
+    vendor_name: string;
+  } | null;
+}
