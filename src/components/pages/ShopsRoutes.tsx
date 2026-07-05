@@ -17,6 +17,10 @@ import ProductsPage from "../../pages/shop/products/ProductsPage";
 import NewProductPage from "../../pages/shop/products/NewProductPage";
 import ProductDetailPage from "../../pages/shop/products/ProductDetailPage";
 import ShopVendorsList from "../../pages/shop/vendors/ShopVendorsList";
+import PorjectsOrdersPage from "../../pages/shop/orders/PorjectsOrdersPage";
+import PorjectsOrdersDetailsPage from "../../pages/shop/orders/PorjectsOrdersDetailsPage";
+import OrdersPage from "../../pages/shop/orders/OrdersPage";
+import OrderDetailsPage from "../../pages/shop/orders/OrderDetailsPage";
 
 export default function ShopsRoutes() {
   return (
@@ -56,6 +60,18 @@ export default function ShopsRoutes() {
         <Route path="vendors" element={<ShopVendorsList />} />
         <Route path="vendors/new" element={<NewVendorPage />} />
         <Route path="vendors/:vendorId" element={<VendorDetailPage />} />
+
+        {/* ── orders ──────────────────────────────────────────────────── */}
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="orders/projects" element={<PorjectsOrdersPage />} />
+        <Route
+          path="orders/project/:projectId"
+          element={<PorjectsOrdersDetailsPage />}
+        />
+        <Route
+          path="orders/project/:projectId/:orderId"
+          element={<OrderDetailsPage />}
+        />
       </Route>
     </Routes>
   );

@@ -87,6 +87,7 @@ const Header = () => {
     subcategories: "التصنيفات الفرعية",
     products: "المنتجات",
     salaries: "الرواتب",
+    orders: "الطلبات",
   };
 
   return (

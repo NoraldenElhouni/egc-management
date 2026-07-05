@@ -41,6 +41,13 @@ const ShopsPage = () => {
       description: "إدارة الموردين",
       role: [],
     },
+    {
+      label: "الطلبات",
+      icon: Store,
+      path: "/shops/orders/projects",
+      description: "إدارة الطلبات",
+      role: ["Admin", "Manager"],
+    },
   ];
 
   return (

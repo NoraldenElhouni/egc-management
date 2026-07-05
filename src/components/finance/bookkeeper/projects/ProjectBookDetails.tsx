@@ -1,4 +1,5 @@
 import { useBookProject } from "../../../../hooks/projects/useBookProjects";
+import ProjectBookDetailsSkeleton from "../../../ui/loading/ProjectBookDetailsSkeleton";
 import Tabs from "../../../ui/Tabs";
 import BookProjectExpenseNotPaidTab from "../tabs/BookProjectExpenseNotPaidTab";
 import BookProjectExpensePercentageTab from "../tabs/BookProjectExpensePercentageTab";
@@ -53,7 +54,7 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
   ];
 
   if (loading) {
-    return <div>جاري التحميل...</div>;
+    return <ProjectBookDetailsSkeleton />;
   }
   if (error) {
     return <div>خطأ في تحميل المشروع: {error.message}</div>;
