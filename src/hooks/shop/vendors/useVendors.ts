@@ -6,6 +6,7 @@ import { VendorsWithSpecializations } from "../../../types/extended.type";
 
 const VENDORS_SELECT = `
   *,
+  specializations(*),
   users (
     id,
     user_specializations (
@@ -38,7 +39,7 @@ export function useVendors() {
         return;
       }
 
-      setVendors((data as VendorsWithSpecializations[]) || []);
+      setVendors((data as unknown as VendorsWithSpecializations[]) || []);
     } catch (err) {
       console.error("Unexpected error fetching vendors:", err);
       setError(err as PostgrestError);
@@ -79,7 +80,7 @@ export function useVendors() {
 
       setVendors((prev) =>
         prev.map((v) =>
-          v.id === id ? (data as VendorsWithSpecializations) : v,
+          v.id === id ? (data as unknown as VendorsWithSpecializations) : v,
         ),
       );
       return data;

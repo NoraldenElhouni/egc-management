@@ -12,17 +12,21 @@ export function useVendors() {
   useEffect(() => {
     async function fetchVendors() {
       setLoading(true);
-      const { data, error } = await supabase.from("vendors").select(`*, users (
-          user_specializations (
-            specialization_id,
-            specializations (*)
-          )
-        )`);
+      const { data, error } = await supabase.from("vendors").select(`*,
+            specializations(*),
+            users (
+              user_specializations (
+                specialization_id,
+                specializations (*)
+              )
+            )
+          `);
+
       if (error) {
         console.error("error fetching vendors", error);
         setError(error);
       } else {
-        setVendors(data ?? []);
+        setVendors((data ?? []) as unknown as VendorsWithSpecializations[]);
       }
 
       setLoading(false);

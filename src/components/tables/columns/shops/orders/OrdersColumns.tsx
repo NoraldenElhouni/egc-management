@@ -1,10 +1,10 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { Orders } from "../../../../../types/global.type";
 import { formatDate, formatCurrency } from "../../../../../utils/helpper";
 import { statusLabel, statusStyle } from "../../../../../utils/orderStatus";
+import { OrdersWithVendors } from "../../../../../types/extended.type";
 
-export const getOrdersColumns = (): ColumnDef<Orders>[] => [
+export const getOrdersColumns = (): ColumnDef<OrdersWithVendors>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -60,7 +60,7 @@ export const getOrdersColumns = (): ColumnDef<Orders>[] => [
   {
     accessorKey: "vendor_ref",
     header: "المورد",
-    cell: ({ row }) => <span>{row.original.vendor_ref || "—"}</span>,
+    cell: ({ row }) => <span>{row.original.vendors?.vendor_name || "—"}</span>,
   },
 
   {

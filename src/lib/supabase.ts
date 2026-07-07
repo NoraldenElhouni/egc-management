@@ -2712,6 +2712,9 @@ export type Database = {
           quoted_at: string | null
           rejected_at: string | null
           rejected_by: string | null
+          requires_senior_review: boolean
+          senior_reviewed_at: string | null
+          senior_reviewed_by: string | null
           specialization_id: string
           status: string
           total_price: number | null
@@ -2734,6 +2737,9 @@ export type Database = {
           quoted_at?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
+          requires_senior_review?: boolean
+          senior_reviewed_at?: string | null
+          senior_reviewed_by?: string | null
           specialization_id: string
           status?: string
           total_price?: number | null
@@ -2756,6 +2762,9 @@ export type Database = {
           quoted_at?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
+          requires_senior_review?: boolean
+          senior_reviewed_at?: string | null
+          senior_reviewed_by?: string | null
           specialization_id?: string
           status?: string
           total_price?: number | null
@@ -2810,6 +2819,13 @@ export type Database = {
             columns: ["rejected_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_senior_reviewed_by_fkey"
+            columns: ["senior_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -3275,11 +3291,11 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
+          flow: number | null
           id: string
           is_shop: boolean
-          latitude: number | null
-          longitude: number | null
           phone_number: string | null
+          price_limit: number | null
           specialization_id: string | null
           updated_at: string
           user_id: string | null
@@ -3293,11 +3309,11 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          flow?: number | null
           id?: string
           is_shop?: boolean
-          latitude?: number | null
-          longitude?: number | null
           phone_number?: string | null
+          price_limit?: number | null
           specialization_id?: string | null
           updated_at?: string
           user_id?: string | null
@@ -3311,11 +3327,11 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          flow?: number | null
           id?: string
           is_shop?: boolean
-          latitude?: number | null
-          longitude?: number | null
           phone_number?: string | null
+          price_limit?: number | null
           specialization_id?: string | null
           updated_at?: string
           user_id?: string | null

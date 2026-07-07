@@ -22,6 +22,7 @@ import {
   Contractors,
   MilestoneReports,
   Vendor,
+  Orders,
 } from "./global.type";
 
 export type FullProject = Projects & {
@@ -118,6 +119,11 @@ export interface contractorWithSpecializations extends Contractors {
 }
 
 export interface VendorsWithSpecializations extends Vendor {
+  specializations: {
+    id: string;
+    name: string;
+    role_id: string;
+  } | null; // ✅ object or null, not an array
   users: {
     user_specializations: {
       specialization_id: string;
@@ -127,6 +133,13 @@ export interface VendorsWithSpecializations extends Vendor {
         role_id: string;
       };
     }[];
+  } | null;
+}
+
+export interface OrdersWithVendors extends Orders {
+  vendors: {
+    id: string;
+    vendor_name: string;
   } | null;
 }
 

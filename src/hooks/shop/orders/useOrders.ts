@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
-import { Orders } from "../../../types/global.type";
+import { OrdersWithVendors } from "../../../types/extended.type";
 
 export function useOrders(projectId: string) {
-  const [orders, setOrders] = useState<Orders[]>([]);
+  const [orders, setOrders] = useState<OrdersWithVendors[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -16,7 +16,7 @@ export function useOrders(projectId: string) {
     try {
       const { data, error: ordersError } = await supabase
         .from("shop_orders")
-        .select("*")
+        .select("*, vendors(id, vendor_name)")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
 

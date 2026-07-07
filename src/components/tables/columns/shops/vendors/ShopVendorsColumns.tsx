@@ -54,7 +54,9 @@ export const getShopVendorsColumns = (
       row.users?.user_specializations
         ?.map((us) => us.specializations?.name)
         .filter(Boolean)
-        .join(", ") ?? "",
+        .join(", ") ||
+      row.specializations?.name ||
+      "",
     cell: ({ row }) => {
       const specializations =
         row.original.users?.user_specializations
@@ -72,6 +74,10 @@ export const getShopVendorsColumns = (
                 {name}
               </span>
             ))
+          ) : row.original.specializations ? (
+            <span className="px-2 py-1 text-xs bg-gray-100 rounded">
+              {row.original.specializations.name}
+            </span>
           ) : (
             <span className="text-gray-400">لا يوجد</span>
           )}
