@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "../../ui/Button";
 import { TextField } from "../../ui/inputs/TextField";
-import { SelectField } from "../../ui/inputs/SelectField";
+import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
 import {
   ProjectFormValues,
   ProjectSchema,
@@ -12,21 +12,33 @@ import { useProjects } from "../../../hooks/useProjects";
 import { useClients } from "../../../hooks/useClients";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { useNavigate } from "react-router-dom";
+import { LocationPicker } from "../../ui/inputs/LocationPicker";
 
 const NewProjectForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const { addProject, loading, error } = useProjects();
-  const { clients } = useClients();
+  const { clients, loading: clientsLoading } = useClients();
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm({
     resolver: zodResolver(ProjectSchema),
   });
+
+  const latitude = watch("latitude");
+  const longitude = watch("longitude");
+
+  const handleMapClick = (lat: number, lng: number) => {
+    setValue("latitude", Number(lat.toFixed(6)), { shouldValidate: true });
+    setValue("longitude", Number(lng.toFixed(6)), { shouldValidate: true });
+  };
 
   const onSubmit = async (data: ProjectFormValues) => {
     try {
@@ -59,16 +71,24 @@ const NewProjectForm: React.FC = () => {
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
-        <SelectField
-          id="client_id"
-          label="العميل"
-          register={register("client_id")}
-          error={errors.client_id}
-          options={clients.map((c) => ({
-            value: c.id,
-            label: `${c.first_name} ${c.last_name ?? ""}`,
-          }))}
-          placeholder="-- اختر عميل --"
+        <Controller
+          name="client_id"
+          control={control}
+          render={({ field }) => (
+            <SearchableSelectField
+              id="client_id"
+              label="العميل"
+              placeholder="-- اختر عميل --"
+              error={errors.client_id}
+              loading={clientsLoading}
+              value={field.value}
+              onChange={field.onChange}
+              options={clients.map((c) => ({
+                value: c.id,
+                label: `${c.first_name} ${c.last_name ?? ""}`,
+              }))}
+            />
+          )}
         />
 
         <TextField
@@ -91,6 +111,12 @@ const NewProjectForm: React.FC = () => {
           step="1"
           register={register("percentage", { valueAsNumber: true })}
           error={errors.percentage}
+        />
+
+        <LocationPicker
+          latitude={latitude}
+          longitude={longitude}
+          onChange={handleMapClick}
         />
 
         <div className="md:col-span-2">
