@@ -18,6 +18,8 @@ export const statusColor = (s: string) => {
   switch (s) {
     case "active":
       return "bg-emerald-100 text-emerald-800";
+    case "paid":
+      return "bg-emerald-100 text-emerald-800";
     case "paused":
       return "bg-amber-100 text-amber-800";
     case "completed":

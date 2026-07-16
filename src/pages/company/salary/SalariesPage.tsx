@@ -89,6 +89,7 @@ const SalariesPage = () => {
         enableRowSelection
         showGlobalFilter
         onRowSelectionChange={setSelectedRows}
+        initialSorting={[{ id: "status", desc: true }]}
         header={
           <div className="flex items-center justify-between w-full flex-wrap gap-3">
             <h2 className="text-xl font-bold text-gray-900">رواتب الموظفين</h2>

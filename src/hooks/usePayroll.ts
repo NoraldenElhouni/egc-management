@@ -26,8 +26,7 @@ export function usePayroll() {
     const { data: payrollData, error: payrollError } = await supabase
       .from("payroll")
       .select(`*, employees(first_name, last_name)`)
-      .in("employee_id", employees?.map((emp) => emp.id) || [])
-      .eq("status", "pending");
+      .in("employee_id", employees?.map((emp) => emp.id) || []);
 
     if (payrollError) {
       console.error("error fetching payroll", payrollError);
@@ -49,10 +48,33 @@ export function usePayroll() {
     if (payrollIds.length === 0) return { success: true };
 
     try {
+      // check current status of the selected rows first
+      const { data: existing, error: fetchError } = await supabase
+        .from("payroll")
+        .select("id, status")
+        .in("id", payrollIds);
+
+      if (fetchError) throw fetchError;
+
+      const alreadyPaidIds =
+        existing?.filter((p) => p.status === "paid").map((p) => p.id) ?? [];
+      const idsToUpdate = payrollIds.filter(
+        (id) => !alreadyPaidIds.includes(id),
+      );
+
+      if (alreadyPaidIds.length > 0) {
+        return {
+          success: false,
+          error: `${alreadyPaidIds.length} من الرواتب المحددة مدفوعة بالفعل`,
+        };
+      }
+
+      if (idsToUpdate.length === 0) return { success: true };
+
       const { error } = await supabase
         .from("payroll")
         .update({ status: "paid" })
-        .in("id", payrollIds);
+        .in("id", idsToUpdate);
 
       if (error) throw error;
 

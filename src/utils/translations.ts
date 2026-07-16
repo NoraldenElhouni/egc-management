@@ -88,6 +88,11 @@ export const translateStatus = (status: string): string => {
     rejected: "مرفوض",
     completed: "مكتمل",
     cancelled: "ملغي",
+    paid: "مدفوع",
+    unpaid: "غير مدفوع",
+    partially_paid: "مدفوع جزئياً",
+    overdue: "متأخر",
+    deleted: "محذوف",
   };
   return statusTranslations[status] || status;
 };
