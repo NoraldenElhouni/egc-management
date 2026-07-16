@@ -1,11 +1,14 @@
+import { useNavigate } from "react-router-dom";
 import { BatchDetailEmployee } from "../../../../hooks/company/useDistributionBatch";
 import { formatCurrency } from "../../../../utils/helpper";
+import { ArrowLeft } from "lucide-react";
 
 const CURRENCIES = ["LYD", "USD", "EUR"];
 
 interface EmployeesCardProps {
   employees: BatchDetailEmployee[];
   totalsByCurrency: Record<string, number>;
+  date: string;
 }
 
 const getInitials = (firstName: string, lastName: string | null): string => {
@@ -14,7 +17,9 @@ const getInitials = (firstName: string, lastName: string | null): string => {
   return `${first}${last}`.toUpperCase();
 };
 
-const EmployeesCard = ({ employees, totalsByCurrency }: EmployeesCardProps) => {
+const EmployeesCard = ({ employees, date }: EmployeesCardProps) => {
+  const navigate = useNavigate();
+
   const totalAmount = employees.reduce((sum, emp) => {
     return (
       sum +
@@ -24,6 +29,7 @@ const EmployeesCard = ({ employees, totalsByCurrency }: EmployeesCardProps) => {
       )
     );
   }, 0);
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
       {/* Header */}
@@ -41,9 +47,14 @@ const EmployeesCard = ({ employees, totalsByCurrency }: EmployeesCardProps) => {
 
       {/* Rows */}
       {employees.map((emp) => (
-        <div
+        <button
           key={emp.employeeId}
-          className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0"
+          onClick={() =>
+            navigate(
+              `/company/distribute/employee/${emp.employeeId}?date=${date}`,
+            )
+          }
+          className="w-full flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors text-right group"
         >
           <div className="flex items-center gap-2.5">
             {/* Avatar */}
@@ -51,7 +62,7 @@ const EmployeesCard = ({ employees, totalsByCurrency }: EmployeesCardProps) => {
               {getInitials(emp.firstName, emp.lastName)}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-700">
+              <p className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
                 {emp.firstName} {emp.lastName ?? ""}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
@@ -62,19 +73,24 @@ const EmployeesCard = ({ employees, totalsByCurrency }: EmployeesCardProps) => {
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-0.5 shrink-0">
-            {CURRENCIES.filter((c) => (emp.totalsByCurrency[c] ?? 0) > 0).map(
-              (c) => (
-                <span
-                  key={c}
-                  className="text-xs text-gray-500 tabular-nums bg-gray-100 px-2 py-0.5 rounded"
-                >
-                  {formatCurrency(emp.totalsByCurrency[c], c)}
-                </span>
-              ),
-            )}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col items-end gap-0.5">
+              {CURRENCIES.filter((c) => (emp.totalsByCurrency[c] ?? 0) > 0).map(
+                (c) => (
+                  <span
+                    key={c}
+                    className="text-xs text-gray-500 tabular-nums bg-gray-100 px-2 py-0.5 rounded"
+                  >
+                    {formatCurrency(emp.totalsByCurrency[c], c)}
+                  </span>
+                ),
+              )}
+            </div>
+            <span className="text-gray-300 group-hover:text-blue-400 text-sm">
+              <ArrowLeft size={16} />
+            </span>
           </div>
-        </div>
+        </button>
       ))}
 
       {employees.length === 0 && (

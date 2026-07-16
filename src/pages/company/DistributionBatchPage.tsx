@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
 import { formatCurrency } from "../../utils/helpper";
@@ -13,7 +13,6 @@ type Tab = "projects" | "employees";
 
 const BatchDetailPage = () => {
   const { date } = useParams<{ date: string }>();
-  const navigate = useNavigate();
   const { batch, loading, error } = useBatchDetail(date!);
 
   const [activeTab, setActiveTab] = useState<Tab>("projects");
@@ -129,6 +128,7 @@ const BatchDetailPage = () => {
           <EmployeesCard
             employees={filteredEmployees}
             totalsByCurrency={batch.totalsByCurrency}
+            date={date!}
           />
           {filteredEmployees.length === 0 && (
             <p className="text-center text-gray-400 text-sm py-8">

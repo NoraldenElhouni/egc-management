@@ -4,6 +4,7 @@ import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
 import { formatCurrency } from "../../utils/helpper";
 import BatchSharesPdfButton from "../../components/pdf-buttons/BatchSharesPdfButton";
+import { ArrowLeft } from "lucide-react";
 
 const CURRENCIES = ["LYD", "USD", "EUR"];
 
@@ -81,7 +82,9 @@ const DistributionBatchesPage = () => {
                   <BatchSharesPdfButton batch={batch} />
                 </div>
 
-                <span className="text-gray-300 text-sm">‹</span>
+                <span className="text-gray-300 text-sm">
+                  <ArrowLeft size={16} />
+                </span>
               </div>
             </div>
           ))}

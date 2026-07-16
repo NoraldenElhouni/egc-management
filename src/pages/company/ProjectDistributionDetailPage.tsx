@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
   DistributionPeriod,
   useDistributionHistory,
@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
 import ReverseDistributionDialog from "../../components/company/ReverseDistributionDialog";
+import PeriodDistributionEditDialog from "../../components/company/distribution/PeriodDistributionEditDialog";
 
 type Currency = "LYD" | "USD" | "EUR";
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
@@ -19,10 +20,12 @@ function CurrencyCard({
   currency,
   periods,
   onReverse,
+  onEdited,
 }: {
   currency: Currency;
   periods: DistributionPeriod[];
   onReverse: (period: DistributionPeriod) => void;
+  onEdited: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -174,29 +177,37 @@ function CurrencyCard({
       {/* Expanded: single merged table */}
       {expanded && (
         <div className="border-t">
-          {/* Active periods reverse buttons */}
+          {/* Active periods — one shared edit button + per-period reverse */}
           {activePeriods.length > 0 && (
-            <div className="px-5 pt-3 flex flex-wrap gap-2">
-              {activePeriods.map((p) => (
-                <div key={p.id} className="flex items-center gap-2">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      p.type === "cash"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}
-                  >
-                    {p.type === "cash" ? "نقد" : "بنك"} —{" "}
-                    {formatCurrency(Number(p.total_amount), currency)}
-                  </span>
-                  <button
-                    onClick={() => onReverse(p)}
-                    className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2 py-0.5 rounded transition-colors"
-                  >
-                    عكس
-                  </button>
-                </div>
-              ))}
+            <div className="px-5 pt-3 space-y-2">
+              <div className="flex justify-end">
+                <PeriodDistributionEditDialog
+                  periods={activePeriods}
+                  onSave={onEdited}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {activePeriods.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        p.type === "cash"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {p.type === "cash" ? "نقد" : "بنك"} —{" "}
+                      {formatCurrency(Number(p.total_amount), currency)}
+                    </span>
+                    <button
+                      onClick={() => onReverse(p)}
+                      className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2 py-0.5 rounded transition-colors"
+                    >
+                      عكس
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -420,13 +431,13 @@ const ProjectDistributionDetailPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams] = useSearchParams();
   const batchDate = searchParams.get("date");
-  const navigate = useNavigate();
 
   const {
     periods: allPeriods,
     loading,
     error,
     reverseDistribution,
+    refetch,
   } = useDistributionHistory();
 
   const [projectName, setProjectName] = useState<string>("");
@@ -575,6 +586,7 @@ const ProjectDistributionDetailPage = () => {
                   currency={c}
                   periods={periods}
                   onReverse={setReversalTarget}
+                  onEdited={refetch}
                 />
               ),
             )}

@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { BatchDetailProject } from "../../../../hooks/company/useDistributionBatch";
 import { formatCurrency } from "../../../../utils/helpper";
+import { ArrowLeft } from "lucide-react";
 
 const CURRENCIES = ["LYD", "USD", "EUR"];
 
@@ -85,7 +86,7 @@ const ProjectsCard = ({
               ))}
             </div>
             <span className="text-gray-300 group-hover:text-blue-400 text-sm">
-              ‹
+              <ArrowLeft size={16} />
             </span>
           </div>
         </button>
