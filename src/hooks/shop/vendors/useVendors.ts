@@ -18,10 +18,18 @@ const VENDORS_SELECT = `
   )
 `;
 
+type ActionError = { message: string };
+
 export function useVendors() {
   const [vendors, setVendors] = useState<VendorsWithSpecializations[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
+
+  // Separate from `error` on purpose: `error` = page can't load data (blocking).
+  // `actionError` = a single mutation (toggle/edit) failed (non-blocking, transient).
+  const [actionError, setActionError] = useState<ActionError | null>(null);
+
+  const clearActionError = useCallback(() => setActionError(null), []);
 
   const fetchVendors = useCallback(async () => {
     setLoading(true);
@@ -52,47 +60,125 @@ export function useVendors() {
     fetchVendors();
   }, [fetchVendors]);
 
-  const toggleVendorShop = useCallback(async (id: string, isShop: boolean) => {
-    setError(null);
+  const toggleVendorShop = useCallback(
+    async (id: string, isShop: boolean) => {
+      setActionError(null);
 
-    // Optimistic update
-    setVendors((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, is_shop: isShop } : v)),
-    );
-
-    try {
-      const { data, error: updateError } = await supabase
-        .from("vendors")
-        .update({ is_shop: isShop })
-        .eq("id", id)
-        .select(VENDORS_SELECT)
-        .single();
-
-      if (updateError) {
-        console.error("Error toggling vendor shop status:", updateError);
-        setError(updateError);
-        // Revert on failure
-        setVendors((prev) =>
-          prev.map((v) => (v.id === id ? { ...v, is_shop: !isShop } : v)),
-        );
-        return null;
+      if (isShop) {
+        const vendor = vendors.find((v) => v.id === id);
+        if (!vendor?.flow) {
+          setActionError({
+            message: "يجب اختيار مسار العمل أولاً قبل تفعيل المتجر",
+          });
+          return { success: false as const };
+        }
       }
 
       setVendors((prev) =>
+        prev.map((v) => (v.id === id ? { ...v, is_shop: isShop } : v)),
+      );
+
+      try {
+        const { data, error: updateError } = await supabase
+          .from("vendors")
+          .update({ is_shop: isShop })
+          .eq("id", id)
+          .select(VENDORS_SELECT)
+          .single();
+
+        if (updateError) {
+          console.error("Error toggling vendor shop status:", updateError);
+          setActionError({ message: "تعذر تحديث حالة المتجر" });
+          setVendors((prev) =>
+            prev.map((v) => (v.id === id ? { ...v, is_shop: !isShop } : v)),
+          );
+          return { success: false as const };
+        }
+
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === id ? (data as unknown as VendorsWithSpecializations) : v,
+          ),
+        );
+        return { success: true as const, data };
+      } catch (err) {
+        console.error("Unexpected error toggling vendor shop status:", err);
+        setActionError({ message: "تعذر تحديث حالة المتجر" });
+        setVendors((prev) =>
+          prev.map((v) => (v.id === id ? { ...v, is_shop: !isShop } : v)),
+        );
+        return { success: false as const };
+      }
+    },
+    [vendors],
+  );
+
+  const updateVendorLimitFlow = useCallback(
+    async (
+      id: string,
+      payload: { price_limit: number | null; flow: 1 | 2 },
+    ) => {
+      setActionError(null);
+
+      const prevVendor = vendors.find((v) => v.id === id);
+
+      setVendors((prev) =>
         prev.map((v) =>
-          v.id === id ? (data as unknown as VendorsWithSpecializations) : v,
+          v.id === id
+            ? { ...v, price_limit: payload.price_limit, flow: payload.flow }
+            : v,
         ),
       );
-      return data;
-    } catch (err) {
-      console.error("Unexpected error toggling vendor shop status:", err);
-      setError(err as PostgrestError);
-      setVendors((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, is_shop: !isShop } : v)),
-      );
-      return null;
-    }
-  }, []);
 
-  return { vendors, loading, error, refetch: fetchVendors, toggleVendorShop };
+      try {
+        const { data, error: updateError } = await supabase
+          .from("vendors")
+          .update({
+            price_limit: payload.price_limit,
+            flow: payload.flow,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .select(VENDORS_SELECT)
+          .single();
+
+        if (updateError) {
+          console.error("Error updating vendor limit/flow:", updateError);
+          setActionError({ message: "تعذر حفظ التعديلات" });
+          if (prevVendor) {
+            setVendors((prev) =>
+              prev.map((v) => (v.id === id ? prevVendor : v)),
+            );
+          }
+          return { success: false as const, error: updateError };
+        }
+
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === id ? (data as unknown as VendorsWithSpecializations) : v,
+          ),
+        );
+        return { success: true as const, data };
+      } catch (err) {
+        console.error("Unexpected error updating vendor limit/flow:", err);
+        setActionError({ message: "تعذر حفظ التعديلات" });
+        if (prevVendor) {
+          setVendors((prev) => prev.map((v) => (v.id === id ? prevVendor : v)));
+        }
+        return { success: false as const, error: err as PostgrestError };
+      }
+    },
+    [vendors],
+  );
+
+  return {
+    vendors,
+    loading,
+    error,
+    actionError,
+    clearActionError,
+    refetch: fetchVendors,
+    toggleVendorShop,
+    updateVendorLimitFlow,
+  };
 }

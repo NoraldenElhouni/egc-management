@@ -2,11 +2,17 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { VendorsWithSpecializations } from "../../../../../types/extended.type";
+import EditVendorActionsDialog from "../../../actions/shop/EditVendorActionsDialog";
+
+type UpdateVendorLimitFlow = (
+  id: string,
+  payload: { price_limit: number | null; flow: 1 | 2 },
+) => Promise<{ success: boolean; error?: unknown }>;
 
 export const getShopVendorsColumns = (
   onToggleShop: (id: string, isShop: boolean) => void,
+  onUpdateLimitFlow: UpdateVendorLimitFlow,
 ): ColumnDef<VendorsWithSpecializations>[] => [
-  // Selection column
   {
     id: "select",
     header: ({ table }) => (
@@ -87,6 +93,17 @@ export const getShopVendorsColumns = (
   },
 
   {
+    accessorKey: "price_limit",
+    header: "الحد الأقصى",
+    cell: ({ row }) => row.original.price_limit ?? "-",
+  },
+  {
+    accessorKey: "flow",
+    header: "المسار",
+    cell: ({ row }) => (row.original.flow ? `مسار ${row.original.flow}` : "-"),
+  },
+
+  {
     accessorKey: "is_shop",
     header: "متجر",
     cell: ({ row }) => {
@@ -115,6 +132,17 @@ export const getShopVendorsColumns = (
             {isShop ? "مفعل" : "غير مفعل"}
           </span>
         </div>
+      );
+    },
+  },
+
+  {
+    id: "actions",
+    header: "الإجراءات",
+    cell: ({ row }) => {
+      const vendor = row.original;
+      return (
+        <EditVendorActionsDialog vendor={vendor} onUpdate={onUpdateLimitFlow} />
       );
     },
   },
