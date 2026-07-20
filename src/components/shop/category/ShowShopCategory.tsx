@@ -2,15 +2,10 @@
 import React from "react";
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import Button from "../../ui/Button";
+import { Categories } from "../../../types/global.type";
 
 interface ShowShopCategoryProps {
-  category: {
-    name: string;
-    description: string | null;
-    icon_path: string | null;
-    division_id: string;
-    is_active: boolean;
-  };
+  category: Categories;
   divisionName?: string;
   onEdit: () => void;
   onDelete: () => void;
@@ -25,7 +20,7 @@ const ShowShopCategory: React.FC<ShowShopCategoryProps> = ({
   deleting = false,
 }) => {
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-sm">
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">تفاصيل التصنيف</h1>
         <div className="flex gap-2">

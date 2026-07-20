@@ -24,7 +24,7 @@ const ShowShopDivision: React.FC<ShowShopDivisionProps> = ({
   deleting = false,
 }) => {
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-sm">
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">تفاصيل القسم</h1>
         <div className="flex gap-2">

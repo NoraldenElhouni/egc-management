@@ -1,11 +1,14 @@
 // hooks/shop/categories/useCategory.ts
 import { useState, useEffect } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
-import { Categories } from "../../../types/global.type";
+import { Categories, Subcategories } from "../../../types/global.type";
 import { supabase } from "../../../lib/supabaseClient";
 
 export function useCategory(id: string) {
   const [category, setCategory] = useState<Categories | null>(null);
+  const [subcategories, setSubcategories] = useState<Subcategories[] | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -29,7 +32,20 @@ export function useCategory(id: string) {
           return;
         }
 
+        const { data: subcategoriesData, error: subcategoriesError } =
+          await supabase
+            .from("shop_subcategories")
+            .select("*")
+            .eq("category_id", id);
+
+        if (subcategoriesError) {
+          console.error("Error fetching subcategories:", subcategoriesError);
+          setError(subcategoriesError);
+          return;
+        }
+
         setCategory(data);
+        setSubcategories(subcategoriesData);
       } catch (err) {
         console.error("Unexpected error fetching shop category:", err);
         setError(err as PostgrestError);
@@ -101,6 +117,7 @@ export function useCategory(id: string) {
 
   return {
     category,
+    subcategories,
     loading,
     error,
     setCategory,

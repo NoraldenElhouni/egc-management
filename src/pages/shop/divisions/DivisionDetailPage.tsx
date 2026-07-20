@@ -1,10 +1,13 @@
 // components/shop/divisions/ShopDivisionPage.tsx
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDivision } from "../../../hooks/shop/divisions/useDivision";
 import { useSpecializations } from "../../../hooks/useSpecializations";
 import EditShopDivisionForm from "../../../components/shop/division/EditShopDivisionForm";
 import ShowShopDivision from "../../../components/shop/division/ShowShopDivision";
+import GenericTable from "../../../components/tables/table";
+import { getCategoriesColumns } from "../../../components/tables/columns/shops/categories/CategoriesColumns";
+import { useCategories } from "../../../hooks/shop/categories/useCategories";
 
 const DivisionDetailPage = () => {
   const { divisionId } = useParams<{ divisionId: string }>();
@@ -12,8 +15,16 @@ const DivisionDetailPage = () => {
 
   if (!divisionId) return <div>not found</div>;
 
-  const { division, loading, error, updateDivision, deleteDivision } =
-    useDivision(divisionId);
+  const {
+    division,
+    loading,
+    error,
+    updateDivision,
+    deleteDivision,
+    categories,
+  } = useDivision(divisionId);
+  const { toggleCategoryActive } = useCategories();
+
   const { data: specializations } = useSpecializations("Vendor");
   const [isEditing, setIsEditing] = useState(false);
 
@@ -28,6 +39,15 @@ const DivisionDetailPage = () => {
     }
     navigate("/shops/divisions");
   };
+
+  const columns = useMemo(
+    () =>
+      getCategoriesColumns(
+        toggleCategoryActive,
+        division ? { [division.id]: division.name } : {},
+      ),
+    [toggleCategoryActive, division],
+  );
 
   if (loading && !division)
     return <div className="p-6 text-center">جاري التحميل...</div>;
@@ -63,13 +83,31 @@ const DivisionDetailPage = () => {
   }
 
   return (
-    <ShowShopDivision
-      division={division}
-      specializationName={specializationName}
-      onEdit={() => setIsEditing(true)}
-      onDelete={handleDelete}
-      deleting={loading}
-    />
+    <div className="p-4 max-w-4xl mx-auto space-y-2">
+      <ShowShopDivision
+        division={division}
+        specializationName={specializationName}
+        onEdit={() => setIsEditing(true)}
+        onDelete={handleDelete}
+        deleting={loading}
+      />
+
+      <GenericTable
+        data={categories ?? []}
+        columns={columns}
+        header={
+          <h1 className="text-2xl font-bold text-gray-800">
+            التصنيفات الفرعية
+          </h1>
+        }
+        pageSize={10}
+        enableSorting
+        enablePagination
+        enableFiltering
+        enableRowSelection
+        showGlobalFilter
+      />
+    </div>
   );
 };
 

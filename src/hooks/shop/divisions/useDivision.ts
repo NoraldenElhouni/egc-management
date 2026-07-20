@@ -2,11 +2,12 @@
 // Single-record fetch + update by id, used by the show/edit parent
 import { useState, useEffect } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
-import { Divisions } from "../../../types/global.type";
+import { Categories, Divisions } from "../../../types/global.type";
 import { supabase } from "../../../lib/supabaseClient";
 
 export function useDivision(id: string) {
   const [division, setDivision] = useState<Divisions | null>(null);
+  const [categories, setCategories] = useState<Categories[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -30,6 +31,18 @@ export function useDivision(id: string) {
           return;
         }
 
+        const { data: categoryData, error: categoryError } = await supabase
+          .from("shop_categories")
+          .select("*")
+          .eq("division_id", id);
+
+        if (categoryError) {
+          console.error("Error fetching categories:", categoryError);
+          setError(categoryError);
+          return;
+        }
+
+        setCategories(categoryData);
         setDivision(data);
       } catch (err) {
         console.error("Unexpected error fetching shop division:", err);
@@ -105,6 +118,7 @@ export function useDivision(id: string) {
 
   return {
     division,
+    categories,
     loading,
     error,
     setDivision,

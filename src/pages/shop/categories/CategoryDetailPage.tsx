@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCategory } from "../../../hooks/shop/categories/useCategory";
 import { useDivisions } from "../../../hooks/shop/divisions/useDivisions";
 import EditShopCategoryForm from "../../../components/shop/category/EditShopCategoryForm";
 import ShowShopCategory from "../../../components/shop/category/ShowShopCategory";
+import GenericTable from "../../../components/tables/table";
+import { getSubcategoriesColumns } from "../../../components/tables/columns/shops/subcategories/SubcategoriesColumns";
+import { useSubcategories } from "../../../hooks/shop/subcategories/useSubcategories";
 
 const CategoryDetailPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -11,9 +14,16 @@ const CategoryDetailPage = () => {
 
   if (!categoryId) return <div>not found</div>;
 
-  const { category, loading, error, updateCategory, deleteCategory } =
-    useCategory(categoryId);
+  const {
+    category,
+    loading,
+    error,
+    updateCategory,
+    deleteCategory,
+    subcategories,
+  } = useCategory(categoryId);
   const { divisions } = useDivisions();
+  const { toggleSubcategoryActive } = useSubcategories();
   const [isEditing, setIsEditing] = useState(false);
 
   const handleDelete = async () => {
@@ -27,6 +37,15 @@ const CategoryDetailPage = () => {
     }
     navigate("/shops/categories");
   };
+
+  const columns = useMemo(
+    () =>
+      getSubcategoriesColumns(
+        toggleSubcategoryActive,
+        category ? { [category.id]: category.name } : {},
+      ),
+    [toggleSubcategoryActive, category],
+  );
 
   if (loading && !category)
     return <div className="p-6 text-center">جاري التحميل...</div>;
@@ -65,13 +84,33 @@ const CategoryDetailPage = () => {
   }
 
   return (
-    <ShowShopCategory
-      category={category}
-      divisionName={divisionName}
-      onEdit={() => setIsEditing(true)}
-      onDelete={handleDelete}
-      deleting={loading}
-    />
+    <div className="p-4 max-w-4xl mx-auto space-y-2">
+      <ShowShopCategory
+        category={category}
+        divisionName={divisionName}
+        onEdit={() => setIsEditing(true)}
+        onDelete={handleDelete}
+        deleting={loading}
+      />
+
+      <GenericTable
+        data={subcategories ?? []}
+        columns={columns}
+        header={
+          <h1 className="text-2xl font-bold text-gray-800">
+            التصنيفات الفرعية
+          </h1>
+        }
+        link="./new"
+        linkLabel="+ إضافة تصنيف فرعي جديد"
+        pageSize={10}
+        enableSorting
+        enablePagination
+        enableFiltering
+        enableRowSelection
+        showGlobalFilter
+      />
+    </div>
   );
 };
 
