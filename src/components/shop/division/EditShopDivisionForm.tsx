@@ -12,10 +12,11 @@ import {
   ShopDivisionFormValues,
   ShopDivisionSchema,
 } from "../../../types/schema/shop/division.schema";
-import { Divisions } from "../../../types/global.type";
+import { Divisions, expenses } from "../../../types/global.type";
 
 interface EditShopDivisionFormProps {
   defaultValues: ShopDivisionFormValues;
+  expenses: expenses[];
   updateDivision: (
     updates: Partial<Omit<Divisions, "id" | "created_at">>,
   ) => Promise<Divisions | null>;
@@ -27,6 +28,7 @@ interface EditShopDivisionFormProps {
 
 const EditShopDivisionForm: React.FC<EditShopDivisionFormProps> = ({
   defaultValues,
+  expenses,
   updateDivision,
   loading,
   error,
@@ -103,6 +105,25 @@ const EditShopDivisionForm: React.FC<EditShopDivisionFormProps> = ({
                 label: s.name,
               }))}
               placeholder="-- اختر تخصص --"
+            />
+          )}
+        />
+
+        <Controller
+          name="expense_id"
+          control={control}
+          render={({ field }) => (
+            <SearchableSelectField
+              id="expense_id"
+              label="المصروف الافتراضي"
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              error={errors.expense_id}
+              options={expenses.map((e) => ({
+                value: e.id,
+                label: e.name,
+              }))}
+              placeholder="-- اختر مصروف --"
             />
           )}
         />

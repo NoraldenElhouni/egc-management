@@ -8,9 +8,11 @@ interface ShowShopDivisionProps {
     name: string;
     icon_path: string | null;
     specialization_id: string | null;
+    expense_id: string | null;
     is_active: boolean;
   };
   specializationName?: string;
+  expenseName?: string;
   onEdit: () => void;
   onDelete: () => void;
   deleting?: boolean;
@@ -19,6 +21,7 @@ interface ShowShopDivisionProps {
 const ShowShopDivision: React.FC<ShowShopDivisionProps> = ({
   division,
   specializationName,
+  expenseName,
   onEdit,
   onDelete,
   deleting = false,
@@ -54,6 +57,11 @@ const ShowShopDivision: React.FC<ShowShopDivisionProps> = ({
         <div>
           <p className="text-sm text-gray-500">التخصص</p>
           <p className="text-base">{specializationName ?? "-"}</p>
+        </div>
+
+        <div>
+          <p className="text-sm text-gray-500">المصروف الافتراضي</p>
+          <p className="text-base">{expenseName ?? "-"}</p>
         </div>
 
         <div>

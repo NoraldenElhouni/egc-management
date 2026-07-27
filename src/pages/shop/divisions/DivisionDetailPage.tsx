@@ -8,6 +8,7 @@ import ShowShopDivision from "../../../components/shop/division/ShowShopDivision
 import GenericTable from "../../../components/tables/table";
 import { getCategoriesColumns } from "../../../components/tables/columns/shops/categories/CategoriesColumns";
 import { useCategories } from "../../../hooks/shop/categories/useCategories";
+import { useExpenses } from "../../../hooks/settings/useExpenses";
 
 const DivisionDetailPage = () => {
   const { divisionId } = useParams<{ divisionId: string }>();
@@ -24,6 +25,7 @@ const DivisionDetailPage = () => {
     categories,
   } = useDivision(divisionId);
   const { toggleCategoryActive } = useCategories();
+  const { expenses } = useExpenses();
 
   const { data: specializations } = useSpecializations("Vendor");
   const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +47,7 @@ const DivisionDetailPage = () => {
       getCategoriesColumns(
         toggleCategoryActive,
         division ? { [division.id]: division.name } : {},
+        (category) => `/shops/categories/${category.id}`, // override, optional
       ),
     [toggleCategoryActive, division],
   );
@@ -64,6 +67,8 @@ const DivisionDetailPage = () => {
     (s) => s.id === division.specialization_id,
   )?.name;
 
+  const expenseName = expenses.find((e) => e.id === division.expense_id)?.name;
+
   if (isEditing) {
     return (
       <EditShopDivisionForm
@@ -72,7 +77,9 @@ const DivisionDetailPage = () => {
           specialization_id: division.specialization_id,
           icon_path: division.icon_path,
           is_active: division.is_active,
+          expense_id: division.expense_id,
         }}
+        expenses={expenses}
         updateDivision={updateDivision}
         loading={loading}
         error={error}
@@ -87,6 +94,7 @@ const DivisionDetailPage = () => {
       <ShowShopDivision
         division={division}
         specializationName={specializationName}
+        expenseName={expenseName}
         onEdit={() => setIsEditing(true)}
         onDelete={handleDelete}
         deleting={loading}
@@ -100,6 +108,8 @@ const DivisionDetailPage = () => {
             التصنيفات الفرعية
           </h1>
         }
+        link="/shops/categories/new"
+        linkLabel="+ إضافة تصنيف جديد"
         pageSize={10}
         enableSorting
         enablePagination

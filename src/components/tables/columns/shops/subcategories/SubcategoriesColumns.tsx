@@ -6,6 +6,8 @@ import { formatDate } from "../../../../../utils/helpper";
 export const getSubcategoriesColumns = (
   onToggleActive: (id: string, isActive: boolean) => void,
   categoryNameById: Record<string, string>,
+  getRowLink: (subcategory: Subcategories) => string = (subcategory) =>
+    `./${subcategory.id}`,
 ): ColumnDef<Subcategories>[] => [
   {
     id: "select",
@@ -40,7 +42,7 @@ export const getSubcategoriesColumns = (
     cell: ({ row }) => (
       <div>
         <Link
-          to={`./${row.original.id}`}
+          to={getRowLink(row.original)}
           className="font-medium hover:underline"
         >
           {row.original.name}

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounts: {
@@ -2513,6 +2538,7 @@ export type Database = {
       shop_divisions: {
         Row: {
           created_at: string
+          expense_id: string | null
           icon_path: string | null
           id: string
           is_active: boolean
@@ -2521,6 +2547,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expense_id?: string | null
           icon_path?: string | null
           id?: string
           is_active?: boolean
@@ -2529,6 +2556,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expense_id?: string | null
           icon_path?: string | null
           id?: string
           is_active?: boolean
@@ -2536,6 +2564,13 @@ export type Database = {
           specialization_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shop_divisions_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shop_divisions_specialization_id_fkey"
             columns: ["specialization_id"]
@@ -2547,6 +2582,7 @@ export type Database = {
       }
       shop_order_items: {
         Row: {
+          available_quantity: number | null
           created_at: string
           id: string
           name: string | null
@@ -2558,6 +2594,7 @@ export type Database = {
           quoted_unit_price: number | null
         }
         Insert: {
+          available_quantity?: number | null
           created_at?: string
           id?: string
           name?: string | null
@@ -2569,6 +2606,7 @@ export type Database = {
           quoted_unit_price?: number | null
         }
         Update: {
+          available_quantity?: number | null
           created_at?: string
           id?: string
           name?: string | null
@@ -2720,6 +2758,7 @@ export type Database = {
           total_price: number | null
           vendor_id: string | null
           vendor_ref: string | null
+          vendor_seen_at: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -2745,6 +2784,7 @@ export type Database = {
           total_price?: number | null
           vendor_id?: string | null
           vendor_ref?: string | null
+          vendor_seen_at?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -2770,6 +2810,7 @@ export type Database = {
           total_price?: number | null
           vendor_id?: string | null
           vendor_ref?: string | null
+          vendor_seen_at?: string | null
         }
         Relationships: [
           {
@@ -3339,6 +3380,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "vendors_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vendors_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -3534,6 +3582,17 @@ export type Database = {
       }
       get_my_contractor_project_expenses: {
         Args: { p_contractor_id: string }
+        Returns: {
+          amount_paid: number
+          not_paid: number
+          project_code: string
+          project_id: string
+          project_name: string
+          total_amount: number
+        }[]
+      }
+      get_my_vendor_project_expenses: {
+        Args: { p_vendor_id: string }
         Returns: {
           amount_paid: number
           not_paid: number
@@ -3999,6 +4058,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       account_type: ["cash", "bank"],

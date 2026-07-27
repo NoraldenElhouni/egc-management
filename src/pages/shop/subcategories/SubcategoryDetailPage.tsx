@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSubcategory } from "../../../hooks/shop/subcategories/useSubcategory";
 import { useCategories } from "../../../hooks/shop/categories/useCategories";
+import { useProducts } from "../../../hooks/shop/products/useProducts";
 import EditShopSubcategoryForm from "../../../components/shop/subcategory/EditShopSubcategoryForm";
 import ShowShopSubcategory from "../../../components/shop/subcategory/ShowShopSubcategory";
+import GenericTable from "../../../components/tables/table";
+import { getProductsColumns } from "../../../components/tables/columns/shops/products/ProductsColumns";
 
 const SubcategoryDetailPage = () => {
   const { subcategoryId } = useParams<{ subcategoryId: string }>();
@@ -14,6 +17,7 @@ const SubcategoryDetailPage = () => {
   const { subcategory, loading, error, updateSubcategory, deleteSubcategory } =
     useSubcategory(subcategoryId);
   const { categories } = useCategories();
+  const { products, toggleProductActive } = useProducts();
   const [isEditing, setIsEditing] = useState(false);
 
   const handleDelete = async () => {
@@ -27,6 +31,20 @@ const SubcategoryDetailPage = () => {
     }
     navigate("/shops/subcategories");
   };
+
+  const subcategoryProducts = useMemo(
+    () => products.filter((p) => p.subcategory_id === subcategoryId),
+    [products, subcategoryId],
+  );
+
+  const columns = useMemo(
+    () =>
+      getProductsColumns(
+        toggleProductActive,
+        (product) => `/shops/products/${product.id}`,
+      ),
+    [toggleProductActive, subcategory],
+  );
 
   if (loading && !subcategory)
     return <div className="p-6 text-center">جاري التحميل...</div>;
@@ -66,13 +84,29 @@ const SubcategoryDetailPage = () => {
   }
 
   return (
-    <ShowShopSubcategory
-      subcategory={subcategory}
-      categoryName={categoryName}
-      onEdit={() => setIsEditing(true)}
-      onDelete={handleDelete}
-      deleting={loading}
-    />
+    <div className="p-4 max-w-4xl mx-auto space-y-2">
+      <ShowShopSubcategory
+        subcategory={subcategory}
+        categoryName={categoryName}
+        onEdit={() => setIsEditing(true)}
+        onDelete={handleDelete}
+        deleting={loading}
+      />
+
+      <GenericTable
+        data={subcategoryProducts}
+        columns={columns}
+        header={<h1 className="text-2xl font-bold text-gray-800">المنتجات</h1>}
+        link="./new"
+        linkLabel="+ إضافة منتج جديد"
+        pageSize={10}
+        enableSorting
+        enablePagination
+        enableFiltering
+        enableRowSelection
+        showGlobalFilter
+      />
+    </div>
   );
 };
 

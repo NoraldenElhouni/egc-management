@@ -8,6 +8,8 @@ import { DynamicIcon, IconName } from "lucide-react/dynamic";
 export const getCategoriesColumns = (
   onToggleActive: (id: string, isActive: boolean) => void,
   divisionNameById: Record<string, string>,
+  getRowLink: (category: Categories) => string = (category) =>
+    `./${category.id}`,
 ): ColumnDef<Categories>[] => [
   {
     id: "select",
@@ -42,7 +44,7 @@ export const getCategoriesColumns = (
     cell: ({ row }) => (
       <div>
         <Link
-          to={`./${row.original.id}`}
+          to={getRowLink(row.original)}
           className="font-medium hover:underline"
         >
           {row.original.name}

@@ -24,6 +24,7 @@ export type Products = {
 
 export const getProductsColumns = (
   onToggleActive: (id: string, isActive: boolean) => void,
+  getRowLink: (product: Products) => string = (product) => `./${product.id}`,
 ): ColumnDef<Products>[] => [
   {
     id: "select",
@@ -58,7 +59,7 @@ export const getProductsColumns = (
     cell: ({ row }) => (
       <div>
         <Link
-          to={`./${row.original.id}`}
+          to={getRowLink(row.original)}
           className="font-medium hover:underline"
         >
           {row.original.name}

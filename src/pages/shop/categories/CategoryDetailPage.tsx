@@ -43,6 +43,7 @@ const CategoryDetailPage = () => {
       getSubcategoriesColumns(
         toggleSubcategoryActive,
         category ? { [category.id]: category.name } : {},
+        (subcategory) => `/shops/subcategories/${subcategory.id}`,
       ),
     [toggleSubcategoryActive, category],
   );
@@ -101,7 +102,7 @@ const CategoryDetailPage = () => {
             التصنيفات الفرعية
           </h1>
         }
-        link="./new"
+        link="/shops/subcategories/new"
         linkLabel="+ إضافة تصنيف فرعي جديد"
         pageSize={10}
         enableSorting
