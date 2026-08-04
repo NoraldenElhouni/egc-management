@@ -20,6 +20,13 @@ const OperationsPage = () => {
       description: "إدارة العقود والملفات",
       role: ["Admin", "Engineer", "Manager"],
     },
+    {
+      label: "حصر الكميات",
+      icon: Paperclip,
+      path: "/operations/boq",
+      description: "إدارة حصر الكميات",
+      role: [],
+    },
   ];
 
   return (

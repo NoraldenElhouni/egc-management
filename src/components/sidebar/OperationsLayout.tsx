@@ -27,6 +27,13 @@ const OperationsLayout = () => {
       description: "إدارة العقود والملفات",
       role: ["Admin"],
     },
+    {
+      title: "حصر الكميات",
+      icon: Paperclip,
+      path: "/operations/boq",
+      description: "إدارة حصر الكميات",
+      role: [],
+    },
   ];
 
   const { user, loading } = useAuth();
