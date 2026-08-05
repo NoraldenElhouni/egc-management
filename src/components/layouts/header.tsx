@@ -88,6 +88,13 @@ const Header = () => {
     products: "المنتجات",
     salaries: "الرواتب",
     orders: "الطلبات",
+    boq: "جدول الكميات",
+    types: "الأنواع",
+    type: "النوع",
+    boqtype: "نوع جدول الكميات",
+    boqtypes: "أنواع جدول الكميات",
+    boqreview: "مراجعة جدول الكميات",
+    zones: "المناطق",
   };
 
   return (
