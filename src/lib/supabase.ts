@@ -12,6 +12,159 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  boq: {
+    Tables: {
+      items: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          quantity: number
+          sort_order: number
+          unit: string
+          unit_price: number | null
+          work_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          quantity?: number
+          sort_order?: number
+          unit: string
+          unit_price?: number | null
+          work_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          quantity?: number
+          sort_order?: number
+          unit?: string
+          unit_price?: number | null
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          sort_order: number
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number
+          version?: number
+        }
+        Relationships: []
+      }
+      works: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          type_id: string
+          zone_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          type_id: string
+          zone_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          type_id?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "works_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "works_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zones: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -3141,22 +3294,28 @@ export type Database = {
       }
       update: {
         Row: {
+          android_url: string | null
           created_at: string
           id: string
+          ios_url: string | null
           is_must: boolean
           type: string
           version: string
         }
         Insert: {
+          android_url?: string | null
           created_at?: string
           id?: string
+          ios_url?: string | null
           is_must?: boolean
           type: string
           version: string
         }
         Update: {
+          android_url?: string | null
           created_at?: string
           id?: string
+          ios_url?: string | null
           is_must?: boolean
           type?: string
           version?: string
@@ -4058,6 +4217,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  boq: {
+    Enums: {},
+  },
   graphql_public: {
     Enums: {},
   },

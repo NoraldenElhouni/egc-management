@@ -9,6 +9,8 @@ interface TextFieldProps {
   register?: UseFormRegisterReturn; // ✅ correct type
   error?: FieldError;
   step?: string;
+  defaultValue?: string;
+  list?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -20,6 +22,8 @@ export const TextField: React.FC<TextFieldProps> = ({
   register,
   error,
   step,
+  defaultValue,
+  list,
   onChange,
 }) => {
   return (
@@ -33,6 +37,8 @@ export const TextField: React.FC<TextFieldProps> = ({
         type={type}
         placeholder={placeholder}
         step={step}
+        defaultValue={defaultValue}
+        list={list}
         // spread RHF register props FIRST
         {...register}
         // ✅ merge onChange (RHF + custom)
