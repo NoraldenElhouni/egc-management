@@ -21,6 +21,7 @@ import OperationsRoutes from "./pages/OperationsRoutes";
 import { SidebarProvider } from "../contexts/SidebarContext";
 import { UpdateProvider } from "../contexts/Updateprovider";
 import ShopsRoutes from "./pages/ShopsRoutes";
+import LogsRoutes from "./pages/logsRoute";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -127,6 +128,9 @@ const AppRouter = () => {
             <Route path="/company/*" element={<CompanyRoutes />} />
 
             <Route path="/website" element={<WebsitePage />} />
+
+            {/* Logs */}
+            <Route path="/logs/*" element={<LogsRoutes />} />
           </Route>
         </Route>
       )}
