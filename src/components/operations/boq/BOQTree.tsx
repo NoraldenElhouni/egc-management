@@ -6,6 +6,8 @@ import { WorkFull, ItemRow } from "../../../hooks/operations/boq/types";
 import { Zone } from "../../../hooks/operations/boq/useZones";
 import { formatCurrency } from "../../../utils/helpper";
 
+export type QuantityUpdate = { id: string; quantity: number };
+
 type BOQTreeProps = {
   zones: Zone[];
   works: WorkFull[];
@@ -17,6 +19,8 @@ type BOQTreeProps = {
   onEditItem: (work: WorkFull, item: ItemRow) => void;
   onDeleteItem: (work: WorkFull, item: ItemRow) => void;
   onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
+  onSaveQuantities: (work: WorkFull, updates: QuantityUpdate[]) => void;
+  savingQuantities?: boolean;
 };
 
 function useExpanded() {
@@ -43,6 +47,8 @@ const BOQTree: React.FC<BOQTreeProps> = ({
   onEditItem,
   onDeleteItem,
   onReorderItems,
+  onSaveQuantities,
+  savingQuantities,
 }) => {
   const { expanded, toggle } = useExpanded();
 
@@ -71,6 +77,8 @@ const BOQTree: React.FC<BOQTreeProps> = ({
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
           onReorderItems={onReorderItems}
+          onSaveQuantities={onSaveQuantities}
+          savingQuantities={savingQuantities}
         />
       ))}
     </div>
@@ -90,6 +98,8 @@ type ZoneRowProps = {
   onEditItem: (work: WorkFull, item: ItemRow) => void;
   onDeleteItem: (work: WorkFull, item: ItemRow) => void;
   onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
+  onSaveQuantities: (work: WorkFull, updates: QuantityUpdate[]) => void;
+  savingQuantities?: boolean;
 };
 
 const ZoneRow: React.FC<ZoneRowProps> = ({
@@ -105,25 +115,27 @@ const ZoneRow: React.FC<ZoneRowProps> = ({
   onEditItem,
   onDeleteItem,
   onReorderItems,
+  onSaveQuantities,
+  savingQuantities,
 }) => {
   const key = `zone:${zone.id}`;
   const isOpen = expanded.has(key);
 
   return (
     <div className="bg-white">
-      <div className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors">
+      <div className="flex items-start justify-between gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors">
         <button
           type="button"
-          className="flex items-center gap-2.5 text-[15px] font-semibold text-gray-900 min-w-0"
+          className="flex items-start gap-2.5 text-[15px] font-semibold text-gray-900 min-w-0 text-right"
           onClick={() => toggle(key)}
         >
           {isOpen ? (
-            <ChevronDown className="w-4 h-4 shrink-0 text-gray-400" />
+            <ChevronDown className="w-4 h-4 shrink-0 text-gray-400 mt-0.5" />
           ) : (
-            <ChevronLeft className="w-4 h-4 shrink-0 text-gray-400" />
+            <ChevronLeft className="w-4 h-4 shrink-0 text-gray-400 mt-0.5" />
           )}
-          <span className="truncate">{zone.name}</span>
-          <span className="text-xs text-gray-400 font-normal shrink-0">
+          <span className="break-words">{zone.name}</span>
+          <span className="text-xs text-gray-400 font-normal shrink-0 mt-0.5">
             {works.length} عمل
           </span>
         </button>
@@ -158,6 +170,8 @@ const ZoneRow: React.FC<ZoneRowProps> = ({
                   onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
                   onReorderItems={onReorderItems}
+                  onSaveQuantities={onSaveQuantities}
+                  savingQuantities={savingQuantities}
                 />
               )}
             />
@@ -178,6 +192,8 @@ type WorkRowProps = {
   onEditItem: (work: WorkFull, item: ItemRow) => void;
   onDeleteItem: (work: WorkFull, item: ItemRow) => void;
   onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
+  onSaveQuantities: (work: WorkFull, updates: QuantityUpdate[]) => void;
+  savingQuantities?: boolean;
 };
 
 const WorkRow: React.FC<WorkRowProps> = ({
@@ -190,29 +206,63 @@ const WorkRow: React.FC<WorkRowProps> = ({
   onEditItem,
   onDeleteItem,
   onReorderItems,
+  onSaveQuantities,
+  savingQuantities,
 }) => {
   const key = `work:${work.id}`;
   const isOpen = expanded.has(key);
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>(
+    {},
+  );
+
+  const handleQuantityDraftChange = (itemId: string, value: string) => {
+    setQuantityDrafts((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const pendingUpdates: QuantityUpdate[] = Object.entries(quantityDrafts)
+    .map(([id, value]) => {
+      const item = work.items.find((i) => i.id === id);
+      if (!item || value === "") return null;
+      const quantity = Number(value);
+      if (Number.isNaN(quantity) || quantity === item.quantity) return null;
+      return { id, quantity };
+    })
+    .filter((u): u is QuantityUpdate => u !== null);
+
+  const handleSaveQuantities = () => {
+    if (pendingUpdates.length === 0) return;
+    onSaveQuantities(work, pendingUpdates);
+    setQuantityDrafts({});
+  };
 
   return (
     <div className="border rounded-lg bg-gray-50/40 hover:bg-gray-50 transition-colors overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-start justify-between gap-3 px-4 py-3">
         <button
           type="button"
-          className="flex items-center gap-2.5 text-sm font-medium text-gray-800 min-w-0"
+          className="flex items-start gap-2.5 text-sm font-medium text-gray-800 min-w-0 text-right"
           onClick={() => toggle(key)}
         >
           {isOpen ? (
-            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400 mt-0.5" />
           ) : (
-            <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+            <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-gray-400 mt-0.5" />
           )}
-          <span className="truncate">{work.name}</span>
-          <span className="text-xs text-gray-400 font-normal shrink-0">
+          <span className="break-words">{work.name}</span>
+          <span className="text-xs text-gray-400 font-normal shrink-0 mt-0.5">
             {work.items.length} بند
           </span>
         </button>
         <div className="flex items-center gap-1 shrink-0">
+          {pendingUpdates.length > 0 && (
+            <Button
+              size="xs"
+              onClick={handleSaveQuantities}
+              loading={savingQuantities}
+            >
+              حفظ الكميات ({pendingUpdates.length})
+            </Button>
+          )}
           <Button
             size="xs"
             variant="ghost"
@@ -248,25 +298,32 @@ const WorkRow: React.FC<WorkRowProps> = ({
             onReorder={(reordered) => onReorderItems(work, reordered)}
             emptyMessage="لا توجد بنود بعد"
             renderItem={(item) => (
-              <div className="flex items-center justify-between gap-3 text-sm bg-white border rounded-md px-3.5 py-2.5 hover:border-gray-300 transition-colors">
-                <div className="min-w-0 flex items-baseline gap-2">
-                  <span className="font-medium text-gray-900 truncate">
+              <div className="flex items-center gap-3 text-sm bg-white border rounded-md px-3.5 py-3 hover:border-gray-300 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-gray-900 break-words">
                     {item.name}
-                  </span>
-                  <span className="text-gray-400 text-xs shrink-0">
-                    {item.unit} {item.quantity}
-                  </span>
-                  {item.unit_price !== null && (
-                    <span className="text-gray-400 text-xs shrink-0">
-                      السعر: {formatCurrency(item.unit_price)}
-                    </span>
-                  )}
-                  {item.unit_price !== null && (
-                    <span className="text-gray-400 text-xs shrink-0">
-                      الاجمالي: {formatCurrency(item.unit_price * item.quantity)}
-                    </span>
-                  )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-400 text-xs mt-1">
+                    <span>{item.unit}</span>
+                    {item.unit_price !== null && (
+                      <span>السعر: {formatCurrency(item.unit_price)}</span>
+                    )}
+                    {item.unit_price !== null && (
+                      <span>
+                        الاجمالي: {formatCurrency(item.unit_price * item.quantity)}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                <input
+                  aria-label="الكمية"
+                  type="number"
+                  className="w-20 shrink-0 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={quantityDrafts[item.id] ?? item.quantity}
+                  onChange={(e) =>
+                    handleQuantityDraftChange(item.id, e.target.value)
+                  }
+                />
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
@@ -288,6 +345,17 @@ const WorkRow: React.FC<WorkRowProps> = ({
               </div>
             )}
           />
+          {pendingUpdates.length > 0 && (
+            <div className="flex justify-end mt-3">
+              <Button
+                size="sm"
+                onClick={handleSaveQuantities}
+                loading={savingQuantities}
+              >
+                حفظ الكميات ({pendingUpdates.length})
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -91,19 +91,19 @@ const WorkRow: React.FC<WorkRowProps> = ({
 
   return (
     <div className="border rounded-lg bg-gray-50/40 hover:bg-gray-50 transition-colors overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-start justify-between gap-3 px-4 py-3">
         <button
           type="button"
-          className="flex items-center gap-2.5 text-sm font-medium text-gray-800 min-w-0"
+          className="flex items-start gap-2.5 text-sm font-medium text-gray-800 min-w-0 text-right"
           onClick={() => toggle(key)}
         >
           {isOpen ? (
-            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400 mt-0.5" />
           ) : (
-            <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+            <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-gray-400 mt-0.5" />
           )}
-          <span className="truncate">{work.name}</span>
-          <span className="text-xs text-gray-400 font-normal shrink-0">
+          <span className="break-words">{work.name}</span>
+          <span className="text-xs text-gray-400 font-normal shrink-0 mt-0.5">
             {work.items.length} بند
           </span>
         </button>
@@ -143,9 +143,9 @@ const WorkRow: React.FC<WorkRowProps> = ({
             onReorder={(reordered) => onReorderItems(work, reordered)}
             emptyMessage="لا توجد بنود بعد"
             renderItem={(item) => (
-              <div className="flex items-center justify-between gap-3 text-sm bg-white border rounded-md px-3.5 py-2.5 hover:border-gray-300 transition-colors">
-                <div className="min-w-0 flex items-baseline gap-2">
-                  <span className="font-medium text-gray-900 truncate">
+              <div className="flex items-start justify-between gap-3 text-sm bg-white border rounded-md px-3.5 py-3 hover:border-gray-300 transition-colors">
+                <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                  <span className="font-medium text-gray-900 break-words">
                     {item.name}
                   </span>
                   <span className="text-gray-400 text-xs shrink-0">

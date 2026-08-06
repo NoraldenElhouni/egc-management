@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuth } from "../../useAuth";
 import { supabase } from "../../../lib/supabaseClient";
 import { computeNextSortOrder } from "./sortOrder";
+import { ItemRow } from "./types";
 
 export interface Item {
   id: string;
@@ -92,6 +93,55 @@ export function useUpdateItem() {
   }
 
   return { updateItem, loading, error };
+}
+
+export interface QuantityUpdate {
+  id: string;
+  quantity: number;
+}
+
+/**
+ * Bulk-persists inline quantity edits made directly in the BOQ tree.
+ * Upserts full rows (not just id/quantity) because Postgres validates
+ * NOT NULL columns on the candidate row before checking for a conflict.
+ */
+export function useBulkUpdateQuantities() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  async function bulkUpdateQuantities(workId: string, items: ItemRow[]) {
+    if (items.length === 0) return { error: null };
+
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase
+      .schema("boq")
+      .from("items")
+      .upsert(
+        items.map((item) => ({
+          id: item.id,
+          work_id: workId,
+          name: item.name,
+          unit: item.unit,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          sort_order: item.sort_order,
+          created_by: item.created_by,
+        })),
+        { onConflict: "id" },
+      );
+
+    setLoading(false);
+    if (error) {
+      console.error("error bulk updating item quantities", error);
+      setError(error);
+      return { error };
+    }
+    return { error: null };
+  }
+
+  return { bulkUpdateQuantities, loading, error };
 }
 
 export interface BulkItemInput {

@@ -62,7 +62,7 @@ function SortableList<T extends { id: string; sort_order: number }>({
         items={items.map((i) => i.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {items.map((item) => (
             <SortableRow key={item.id} id={item.id} className={rowClassName}>
               {renderItem(item)}
