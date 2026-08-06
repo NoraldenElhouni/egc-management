@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   PackageOpen,
   Paperclip,
+  Settings,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
@@ -32,6 +33,13 @@ const OperationsLayout = () => {
       icon: Paperclip,
       path: "/operations/boq",
       description: "إدارة حصر الكميات",
+      role: [],
+    },
+    {
+      title: "الإعدادات",
+      icon: Settings,
+      path: "/operations/settings",
+      description: "إعدادات وحدة التشغيل",
       role: [],
     },
   ];

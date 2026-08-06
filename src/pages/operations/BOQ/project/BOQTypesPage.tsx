@@ -1,31 +1,34 @@
 import React, { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Pencil, Trash } from "lucide-react";
 import LoadingPage from "../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../components/ui/errorPage";
 import Button from "../../../../components/ui/Button";
-import GenericTable from "../../../../components/tables/table";
 import ConfirmDialog from "../../../../components/ui/ConfirmDialog";
+import SortableList from "../../../../components/operations/boq/SortableList";
 import TypeFormDialog from "../../../../components/operations/boq/TypeFormDialog";
-import { getTypeColumns } from "../../../../components/tables/columns/operations/boq/TypeColumns";
+import CreateTypeFromTemplateDialog from "../../../../components/operations/boq/CreateTypeFromTemplateDialog";
 import {
   BOQType,
-  useCreateType,
   useDeleteType,
   useTypes,
   useUpdateType,
 } from "../../../../hooks/operations/boq/useTypes";
+import { useReorder } from "../../../../hooks/operations/boq/useReorder";
 import { TypeFormValues } from "../../../../types/schema/boq/type.schema";
-
-type TypeDialogState = { mode: "create" } | { mode: "edit"; type: BOQType } | null;
 
 const BOQTypesPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const { types, loading, error, refetch } = useTypes(projectId ?? "");
-  const { createType, loading: creating } = useCreateType();
+  const navigate = useNavigate();
+  const { types, setTypes, loading, error, refetch } = useTypes(
+    projectId ?? "",
+  );
   const { updateType, loading: updating } = useUpdateType();
   const { deleteType, loading: deleting } = useDeleteType();
+  const { reorder } = useReorder("types");
 
-  const [dialogState, setDialogState] = useState<TypeDialogState>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingType, setEditingType] = useState<BOQType | null>(null);
   const [typeToDelete, setTypeToDelete] = useState<BOQType | null>(null);
 
   if (!projectId) {
@@ -48,14 +51,10 @@ const BOQTypesPage = () => {
     );
   }
 
-  const handleSubmit = async (values: TypeFormValues) => {
-    if (!dialogState) return;
-    if (dialogState.mode === "create") {
-      await createType(projectId, values, types);
-    } else {
-      await updateType(dialogState.type.id, values);
-    }
-    setDialogState(null);
+  const handleEditSubmit = async (values: TypeFormValues) => {
+    if (!editingType) return;
+    await updateType(editingType.id, values);
+    setEditingType(null);
     refetch();
   };
 
@@ -66,10 +65,26 @@ const BOQTypesPage = () => {
     refetch();
   };
 
-  const columns = getTypeColumns({
-    onEdit: (type) => setDialogState({ mode: "edit", type }),
-    onDelete: (type) => setTypeToDelete(type),
-  });
+  const handleCreated = (newTypeId: string) => {
+    setIsCreateOpen(false);
+    navigate(`/operations/boq/project/${projectId}/types/${newTypeId}`);
+  };
+
+  const handleReorder = (reordered: BOQType[]) => {
+    reorder(
+      reordered,
+      (t) => ({
+        id: t.id,
+        project_id: t.project_id,
+        name: t.name,
+        version: t.version,
+        sort_order: t.sort_order,
+        template_type_id: t.template_type_id,
+      }),
+      setTypes,
+      refetch,
+    );
+  };
 
   return (
     <div className="p-4">
@@ -79,28 +94,66 @@ const BOQTypesPage = () => {
           <Link to={`/operations/boq/project/${projectId}/zones`}>
             <Button variant="secondary">إدارة المناطق</Button>
           </Link>
-          <Button onClick={() => setDialogState({ mode: "create" })}>
-            + نوع جديد
-          </Button>
+          <Button onClick={() => setIsCreateOpen(true)}>+ نوع جديد</Button>
         </div>
       </div>
 
-      <GenericTable
-        data={types}
-        columns={columns}
-        enableSorting
-        enableFiltering
-        showGlobalFilter
+      <SortableList
+        items={types}
+        onReorder={handleReorder}
+        emptyMessage="لا توجد أنواع بعد"
+        renderItem={(type) => (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
+            <Link
+              to={`./${type.id}`}
+              className="font-bold hover:underline hover:text-blue-600 truncate"
+            >
+              {type.name}
+            </Link>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                v{type.version}
+              </span>
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(type.created_at).toLocaleDateString("ar-LY")}
+              </span>
+              <button
+                type="button"
+                className="p-1.5 text-gray-400 hover:text-primary"
+                aria-label="تعديل النوع"
+                onClick={() => setEditingType(type)}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                className="p-1.5 text-gray-400 hover:text-error"
+                aria-label="حذف النوع"
+                onClick={() => setTypeToDelete(type)}
+              >
+                <Trash className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      />
+
+      <CreateTypeFromTemplateDialog
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        projectId={projectId}
+        existingTypes={types}
+        onCreated={handleCreated}
       />
 
       <TypeFormDialog
-        isOpen={dialogState !== null}
-        onClose={() => setDialogState(null)}
-        onSubmit={handleSubmit}
-        loading={creating || updating}
+        isOpen={editingType !== null}
+        onClose={() => setEditingType(null)}
+        onSubmit={handleEditSubmit}
+        loading={updating}
         defaultValues={
-          dialogState?.mode === "edit"
-            ? { name: dialogState.type.name, version: dialogState.type.version }
+          editingType
+            ? { name: editingType.name, version: editingType.version }
             : undefined
         }
       />

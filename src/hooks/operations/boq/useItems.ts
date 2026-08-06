@@ -2,6 +2,7 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { useState } from "react";
 import { useAuth } from "../../useAuth";
 import { supabase } from "../../../lib/supabaseClient";
+import { computeNextSortOrder } from "./sortOrder";
 
 export interface Item {
   id: string;
@@ -35,9 +36,6 @@ export function useCreateItem() {
     setLoading(true);
     setError(null);
 
-    const nextSortOrder =
-      Math.max(0, ...siblings.map((s) => s.sort_order)) + 1;
-
     const { data, error } = await supabase
       .schema("boq")
       .from("items")
@@ -47,7 +45,7 @@ export function useCreateItem() {
         unit: values.unit,
         quantity: values.quantity,
         unit_price: values.unit_price,
-        sort_order: nextSortOrder,
+        sort_order: computeNextSortOrder(siblings),
         created_by: user?.id ?? "",
       })
       .select("*")
@@ -94,6 +92,53 @@ export function useUpdateItem() {
   }
 
   return { updateItem, loading, error };
+}
+
+export interface BulkItemInput {
+  name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number | null;
+  sort_order: number;
+}
+
+export function useBulkCreateItems() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+  const { user } = useAuth();
+
+  async function bulkCreateItems(workId: string, items: BulkItemInput[]) {
+    if (items.length === 0) return { data: [], error: null };
+
+    setLoading(true);
+    setError(null);
+
+    const { data, error } = await supabase
+      .schema("boq")
+      .from("items")
+      .insert(
+        items.map((item) => ({
+          work_id: workId,
+          name: item.name,
+          unit: item.unit,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          sort_order: item.sort_order,
+          created_by: user?.id ?? "",
+        })),
+      )
+      .select("*");
+
+    setLoading(false);
+    if (error) {
+      console.error("error bulk creating items", error);
+      setError(error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  }
+
+  return { bulkCreateItems, loading, error };
 }
 
 export function useDeleteItem() {

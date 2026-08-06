@@ -58,6 +58,100 @@ export type Database = {
           },
         ]
       }
+      template_items: {
+        Row: {
+          created_at: string
+          default_quantity: number
+          default_unit_price: number | null
+          id: string
+          name: string
+          sort_order: number
+          template_work_id: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          default_quantity?: number
+          default_unit_price?: number | null
+          id?: string
+          name: string
+          sort_order?: number
+          template_work_id: string
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          default_quantity?: number
+          default_unit_price?: number | null
+          id?: string
+          name?: string
+          sort_order?: number
+          template_work_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_items_template_work_id_fkey"
+            columns: ["template_work_id"]
+            isOneToOne: false
+            referencedRelation: "template_works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      template_works: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          template_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          template_type_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          template_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_works_template_type_id_fkey"
+            columns: ["template_type_id"]
+            isOneToOne: false
+            referencedRelation: "template_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       types: {
         Row: {
           created_at: string
@@ -65,6 +159,7 @@ export type Database = {
           name: string
           project_id: string
           sort_order: number
+          template_type_id: string | null
           version: number
         }
         Insert: {
@@ -73,6 +168,7 @@ export type Database = {
           name: string
           project_id: string
           sort_order?: number
+          template_type_id?: string | null
           version?: number
         }
         Update: {
@@ -81,9 +177,18 @@ export type Database = {
           name?: string
           project_id?: string
           sort_order?: number
+          template_type_id?: string | null
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "types_template_type_id_fkey"
+            columns: ["template_type_id"]
+            isOneToOne: false
+            referencedRelation: "template_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       works: {
         Row: {
@@ -91,6 +196,7 @@ export type Database = {
           id: string
           name: string
           sort_order: number
+          template_work_id: string | null
           type_id: string
           zone_id: string
         }
@@ -99,6 +205,7 @@ export type Database = {
           id?: string
           name: string
           sort_order?: number
+          template_work_id?: string | null
           type_id: string
           zone_id: string
         }
@@ -107,10 +214,18 @@ export type Database = {
           id?: string
           name?: string
           sort_order?: number
+          template_work_id?: string | null
           type_id?: string
           zone_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "works_template_work_id_fkey"
+            columns: ["template_work_id"]
+            isOneToOne: false
+            referencedRelation: "template_works"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "works_type_id_fkey"
             columns: ["type_id"]
@@ -156,7 +271,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_type_from_template: {
+        Args: {
+          p_created_by: string
+          p_project_id: string
+          p_template_type_id: string
+          p_use_template: boolean
+          p_version: number
+          p_zone_ids: string[]
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -2,21 +2,18 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronLeft, Pencil, Plus, Trash } from "lucide-react";
 import Button from "../../ui/Button";
 import SortableList from "./SortableList";
-import { WorkFull, ItemRow } from "../../../hooks/operations/boq/types";
-import { Zone } from "../../../hooks/operations/boq/useZones";
+import { TemplateItemRow, TemplateWorkFull } from "../../../hooks/operations/boq/types";
 import { formatCurrency } from "../../../utils/helpper";
 
-type BOQTreeProps = {
-  zones: Zone[];
-  works: WorkFull[];
-  onAddWork: (zone: Zone) => void;
-  onEditWork: (work: WorkFull) => void;
-  onDeleteWork: (work: WorkFull) => void;
-  onReorderWorks: (zone: Zone, reordered: WorkFull[]) => void;
-  onAddItem: (work: WorkFull) => void;
-  onEditItem: (work: WorkFull, item: ItemRow) => void;
-  onDeleteItem: (work: WorkFull, item: ItemRow) => void;
-  onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
+type TemplateTreeProps = {
+  works: TemplateWorkFull[];
+  onEditWork: (work: TemplateWorkFull) => void;
+  onDeleteWork: (work: TemplateWorkFull) => void;
+  onReorderWorks: (reordered: TemplateWorkFull[]) => void;
+  onAddItem: (work: TemplateWorkFull) => void;
+  onEditItem: (work: TemplateWorkFull, item: TemplateItemRow) => void;
+  onDeleteItem: (work: TemplateWorkFull, item: TemplateItemRow) => void;
+  onReorderItems: (work: TemplateWorkFull, reordered: TemplateItemRow[]) => void;
 };
 
 function useExpanded() {
@@ -32,10 +29,8 @@ function useExpanded() {
   return { expanded, toggle };
 }
 
-const BOQTree: React.FC<BOQTreeProps> = ({
-  zones,
+const TemplateTree: React.FC<TemplateTreeProps> = ({
   works,
-  onAddWork,
   onEditWork,
   onDeleteWork,
   onReorderWorks,
@@ -46,138 +41,38 @@ const BOQTree: React.FC<BOQTreeProps> = ({
 }) => {
   const { expanded, toggle } = useExpanded();
 
-  if (zones.length === 0) {
-    return (
-      <div className="border border-dashed rounded-xl py-12 text-center text-sm text-gray-400">
-        لا توجد مناطق بعد
-      </div>
-    );
-  }
-
   return (
-    <div className="border rounded-xl shadow-sm overflow-hidden divide-y">
-      {zones.map((zone) => (
-        <ZoneRow
-          key={zone.id}
-          zone={zone}
-          works={works.filter((w) => w.zone_id === zone.id)}
+    <SortableList
+      items={works}
+      onReorder={onReorderWorks}
+      emptyMessage="لا توجد أعمال بعد"
+      renderItem={(work) => (
+        <WorkRow
+          work={work}
           expanded={expanded}
           toggle={toggle}
-          onAddWork={onAddWork}
           onEditWork={onEditWork}
           onDeleteWork={onDeleteWork}
-          onReorderWorks={onReorderWorks}
           onAddItem={onAddItem}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
           onReorderItems={onReorderItems}
         />
-      ))}
-    </div>
-  );
-};
-
-type ZoneRowProps = {
-  zone: Zone;
-  works: WorkFull[];
-  expanded: Set<string>;
-  toggle: (key: string) => void;
-  onAddWork: (zone: Zone) => void;
-  onEditWork: (work: WorkFull) => void;
-  onDeleteWork: (work: WorkFull) => void;
-  onReorderWorks: (zone: Zone, reordered: WorkFull[]) => void;
-  onAddItem: (work: WorkFull) => void;
-  onEditItem: (work: WorkFull, item: ItemRow) => void;
-  onDeleteItem: (work: WorkFull, item: ItemRow) => void;
-  onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
-};
-
-const ZoneRow: React.FC<ZoneRowProps> = ({
-  zone,
-  works,
-  expanded,
-  toggle,
-  onAddWork,
-  onEditWork,
-  onDeleteWork,
-  onReorderWorks,
-  onAddItem,
-  onEditItem,
-  onDeleteItem,
-  onReorderItems,
-}) => {
-  const key = `zone:${zone.id}`;
-  const isOpen = expanded.has(key);
-
-  return (
-    <div className="bg-white">
-      <div className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50/70 transition-colors">
-        <button
-          type="button"
-          className="flex items-center gap-2.5 text-[15px] font-semibold text-gray-900 min-w-0"
-          onClick={() => toggle(key)}
-        >
-          {isOpen ? (
-            <ChevronDown className="w-4 h-4 shrink-0 text-gray-400" />
-          ) : (
-            <ChevronLeft className="w-4 h-4 shrink-0 text-gray-400" />
-          )}
-          <span className="truncate">{zone.name}</span>
-          <span className="text-xs text-gray-400 font-normal shrink-0">
-            {works.length} عمل
-          </span>
-        </button>
-        <div className="flex items-center gap-1 shrink-0">
-          <Button
-            size="xs"
-            variant="ghost"
-            className="gap-1"
-            onClick={() => onAddWork(zone)}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            عمل جديد
-          </Button>
-        </div>
-      </div>
-
-      {isOpen && (
-        <div className="pb-4 pr-9 pl-5">
-          <div className="border-r-2 border-gray-100 pr-4">
-            <SortableList
-              items={works}
-              onReorder={(reordered) => onReorderWorks(zone, reordered)}
-              emptyMessage="لا توجد أعمال بعد"
-              renderItem={(work) => (
-                <WorkRow
-                  work={work}
-                  expanded={expanded}
-                  toggle={toggle}
-                  onEditWork={onEditWork}
-                  onDeleteWork={onDeleteWork}
-                  onAddItem={onAddItem}
-                  onEditItem={onEditItem}
-                  onDeleteItem={onDeleteItem}
-                  onReorderItems={onReorderItems}
-                />
-              )}
-            />
-          </div>
-        </div>
       )}
-    </div>
+    />
   );
 };
 
 type WorkRowProps = {
-  work: WorkFull;
+  work: TemplateWorkFull;
   expanded: Set<string>;
   toggle: (key: string) => void;
-  onEditWork: (work: WorkFull) => void;
-  onDeleteWork: (work: WorkFull) => void;
-  onAddItem: (work: WorkFull) => void;
-  onEditItem: (work: WorkFull, item: ItemRow) => void;
-  onDeleteItem: (work: WorkFull, item: ItemRow) => void;
-  onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
+  onEditWork: (work: TemplateWorkFull) => void;
+  onDeleteWork: (work: TemplateWorkFull) => void;
+  onAddItem: (work: TemplateWorkFull) => void;
+  onEditItem: (work: TemplateWorkFull, item: TemplateItemRow) => void;
+  onDeleteItem: (work: TemplateWorkFull, item: TemplateItemRow) => void;
+  onReorderItems: (work: TemplateWorkFull, reordered: TemplateItemRow[]) => void;
 };
 
 const WorkRow: React.FC<WorkRowProps> = ({
@@ -254,16 +149,11 @@ const WorkRow: React.FC<WorkRowProps> = ({
                     {item.name}
                   </span>
                   <span className="text-gray-400 text-xs shrink-0">
-                    {item.unit} {item.quantity}
+                    {item.unit} {item.default_quantity}
                   </span>
-                  {item.unit_price !== null && (
+                  {item.default_unit_price !== null && (
                     <span className="text-gray-400 text-xs shrink-0">
-                      السعر: {formatCurrency(item.unit_price)}
-                    </span>
-                  )}
-                  {item.unit_price !== null && (
-                    <span className="text-gray-400 text-xs shrink-0">
-                      الاجمالي: {formatCurrency(item.unit_price * item.quantity)}
+                      السعر: {formatCurrency(item.default_unit_price)}
                     </span>
                   )}
                 </div>
@@ -294,4 +184,4 @@ const WorkRow: React.FC<WorkRowProps> = ({
   );
 };
 
-export default BOQTree;
+export default TemplateTree;

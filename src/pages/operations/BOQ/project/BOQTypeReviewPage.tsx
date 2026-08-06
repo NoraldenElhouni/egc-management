@@ -6,24 +6,34 @@ import ConfirmDialog from "../../../../components/ui/ConfirmDialog";
 import BOQPDFDialogButton from "../../../../components/operations/boq/BOQPDFDialogButton";
 import { useBookProject } from "../../../../hooks/projects/useBookProjects";
 
-import { ItemRow, WorkFull } from "../../../../hooks/operations/boq/types";
+import {
+  ItemRow,
+  TemplateWorkFull,
+  WorkFull,
+} from "../../../../hooks/operations/boq/types";
 import {
   useCreateWork,
+  useCreateWorkFromTemplate,
   useDeleteWork,
   useTypeWorks,
   useUpdateWork,
 } from "../../../../hooks/operations/boq/useWorks";
 import {
+  useBulkCreateItems,
   useCreateItem,
   useDeleteItem,
   useUpdateItem,
 } from "../../../../hooks/operations/boq/useItems";
 import { useZones, Zone } from "../../../../hooks/operations/boq/useZones";
 import { useTypes } from "../../../../hooks/operations/boq/useTypes";
+import { useReorder } from "../../../../hooks/operations/boq/useReorder";
+import { computeNextSortOrder } from "../../../../hooks/operations/boq/sortOrder";
 
 import BOQTree from "../../../../components/operations/boq/BOQTree";
 import WorkFormDialog from "../../../../components/operations/boq/WorkFormDialog";
-import ItemFormDialog from "../../../../components/operations/boq/ItemFormDialog";
+import ItemFormDialog, {
+  TemplateItemSelection,
+} from "../../../../components/operations/boq/ItemFormDialog";
 import { WorkFormValues } from "../../../../types/schema/boq/work.schema";
 import { ItemFormValues } from "../../../../types/schema/boq/item.schema";
 
@@ -48,18 +58,26 @@ const BOQTypeReviewPage = () => {
     typeId: string;
   }>();
 
-  const { works, loading, error, refetch } = useTypeWorks(typeId ?? "");
+  const { works, setWorks, loading, error, refetch } = useTypeWorks(
+    typeId ?? "",
+  );
   const { types } = useTypes(projectId ?? "");
   const { zones } = useZones(projectId ?? "");
   const { project } = useBookProject(projectId ?? "");
 
   const { createWork, loading: savingWork } = useCreateWork();
+  const { createWorkFromTemplate, loading: savingWorkFromTemplate } =
+    useCreateWorkFromTemplate();
   const { updateWork } = useUpdateWork();
   const { deleteWork, loading: deletingWork } = useDeleteWork();
+  const { reorder: reorderWorks } = useReorder("works");
 
   const { createItem, loading: savingItem } = useCreateItem();
+  const { bulkCreateItems, loading: savingItemsFromTemplate } =
+    useBulkCreateItems();
   const { updateItem } = useUpdateItem();
   const { deleteItem, loading: deletingItem } = useDeleteItem();
+  const { reorder: reorderItems } = useReorder("items");
 
   const [workDialog, setWorkDialog] = useState<WorkDialogState>(null);
   const [itemDialog, setItemDialog] = useState<ItemDialogState>(null);
@@ -109,6 +127,77 @@ const BOQTypeReviewPage = () => {
     }
     setItemDialog(null);
     refetch();
+  };
+
+  const handleWorkSubmitFromTemplate = async (
+    templateWork: TemplateWorkFull,
+  ) => {
+    if (!workDialog || workDialog.mode !== "create") return;
+    const siblings = works.filter((w) => w.zone_id === workDialog.zone.id);
+    await createWorkFromTemplate(
+      typeId,
+      workDialog.zone.id,
+      templateWork,
+      siblings,
+    );
+    setWorkDialog(null);
+    refetch();
+  };
+
+  const handleItemSubmitFromTemplate = async (
+    items: TemplateItemSelection[],
+  ) => {
+    if (!itemDialog || itemDialog.mode !== "create") return;
+    let nextSortOrder = computeNextSortOrder(itemDialog.work.items);
+    await bulkCreateItems(
+      itemDialog.work.id,
+      items.map((item) => ({ ...item, sort_order: nextSortOrder++ })),
+    );
+    setItemDialog(null);
+    refetch();
+  };
+
+  const handleReorderWorks = (zone: Zone, reordered: WorkFull[]) => {
+    reorderWorks(
+      reordered,
+      (w) => ({
+        id: w.id,
+        type_id: w.type_id,
+        zone_id: w.zone_id,
+        name: w.name,
+        sort_order: w.sort_order,
+        template_work_id: w.template_work_id,
+      }),
+      (withNewOrder) => {
+        setWorks((prev) => [
+          ...prev.filter((w) => w.zone_id !== zone.id),
+          ...withNewOrder,
+        ]);
+      },
+      refetch,
+    );
+  };
+
+  const handleReorderItems = (work: WorkFull, reordered: ItemRow[]) => {
+    reorderItems(
+      reordered,
+      (i) => ({
+        id: i.id,
+        work_id: work.id,
+        name: i.name,
+        unit: i.unit,
+        sort_order: i.sort_order,
+        created_by: i.created_by,
+      }),
+      (withNewOrder) => {
+        setWorks((prev) =>
+          prev.map((w) =>
+            w.id === work.id ? { ...w, items: withNewOrder } : w,
+          ),
+        );
+      },
+      refetch,
+    );
   };
 
   const deleteMessage = (): string | undefined => {
@@ -171,16 +260,20 @@ const BOQTypeReviewPage = () => {
         onAddWork={(zone) => setWorkDialog({ mode: "create", zone })}
         onEditWork={(work) => setWorkDialog({ mode: "edit", work })}
         onDeleteWork={(work) => setDeleteState({ kind: "work", work })}
+        onReorderWorks={handleReorderWorks}
         onAddItem={(work) => setItemDialog({ mode: "create", work })}
         onEditItem={(work, item) => setItemDialog({ mode: "edit", work, item })}
         onDeleteItem={(work, item) => setDeleteState({ kind: "item", work, item })}
+        onReorderItems={handleReorderItems}
       />
 
       <WorkFormDialog
         isOpen={workDialog !== null}
         onClose={() => setWorkDialog(null)}
         onSubmit={handleWorkSubmit}
-        loading={savingWork}
+        onSubmitFromTemplate={handleWorkSubmitFromTemplate}
+        loading={savingWork || savingWorkFromTemplate}
+        templateTypeId={currentType?.template_type_id}
         defaultValues={
           workDialog?.mode === "edit"
             ? { name: workDialog.work.name }
@@ -192,7 +285,13 @@ const BOQTypeReviewPage = () => {
         isOpen={itemDialog !== null}
         onClose={() => setItemDialog(null)}
         onSubmit={handleItemSubmit}
-        loading={savingItem}
+        onSubmitFromTemplate={handleItemSubmitFromTemplate}
+        loading={savingItem || savingItemsFromTemplate}
+        templateWorkId={
+          itemDialog?.mode === "create"
+            ? itemDialog.work.template_work_id
+            : null
+        }
         defaultValues={
           itemDialog?.mode === "edit"
             ? {

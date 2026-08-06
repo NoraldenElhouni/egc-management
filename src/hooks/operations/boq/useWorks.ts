@@ -1,7 +1,9 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
-import { WorkFull } from "./types";
+import { TemplateWorkFull, WorkFull } from "./types";
+import { useBulkCreateItems } from "./useItems";
+import { computeNextSortOrder } from "./sortOrder";
 
 export interface Work {
   id: string;
@@ -9,6 +11,7 @@ export interface Work {
   zone_id: string;
   name: string;
   sort_order: number;
+  template_work_id: string | null;
   created_at: string;
 }
 
@@ -21,11 +24,12 @@ export async function fetchWorksForType(typeId: string): Promise<WorkFull[]> {
     .schema("boq")
     .from("works")
     .select(
-      `id, type_id, zone_id, name, sort_order,
-      items ( id, name, unit, quantity, unit_price, sort_order )`,
+      `id, type_id, zone_id, name, sort_order, template_work_id,
+      items ( id, name, unit, quantity, unit_price, sort_order, created_by )`,
     )
     .eq("type_id", typeId)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("sort_order", { ascending: true, referencedTable: "items" });
 
   if (error) {
     console.error("error fetching works", error);
@@ -56,7 +60,7 @@ export function useTypeWorks(typeId: string) {
     fetchWorks();
   }, [fetchWorks]);
 
-  return { works, loading, error, refetch: fetchWorks };
+  return { works, setWorks, loading, error, refetch: fetchWorks };
 }
 
 export function useCreateWork() {
@@ -72,9 +76,6 @@ export function useCreateWork() {
     setLoading(true);
     setError(null);
 
-    const nextSortOrder =
-      Math.max(0, ...siblings.map((s) => s.sort_order)) + 1;
-
     const { data, error } = await supabase
       .schema("boq")
       .from("works")
@@ -82,7 +83,7 @@ export function useCreateWork() {
         type_id: typeId,
         zone_id: zoneId,
         name: values.name,
-        sort_order: nextSortOrder,
+        sort_order: computeNextSortOrder(siblings),
       })
       .select("*")
       .single();
@@ -97,6 +98,62 @@ export function useCreateWork() {
   }
 
   return { createWork, loading, error };
+}
+
+export function useCreateWorkFromTemplate() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+  const { bulkCreateItems } = useBulkCreateItems();
+
+  async function createWorkFromTemplate(
+    typeId: string,
+    zoneId: string,
+    templateWork: TemplateWorkFull,
+    siblings: { sort_order: number }[],
+  ) {
+    setLoading(true);
+    setError(null);
+
+    const { data: work, error: workError } = await supabase
+      .schema("boq")
+      .from("works")
+      .insert({
+        type_id: typeId,
+        zone_id: zoneId,
+        name: templateWork.name,
+        template_work_id: templateWork.id,
+        sort_order: computeNextSortOrder(siblings),
+      })
+      .select("*")
+      .single();
+
+    if (workError || !work) {
+      console.error("error creating work from template", workError);
+      setError(workError);
+      setLoading(false);
+      return { data: null, error: workError };
+    }
+
+    const { error: itemsError } = await bulkCreateItems(
+      work.id,
+      templateWork.items.map((item) => ({
+        name: item.name,
+        unit: item.unit,
+        quantity: item.default_quantity,
+        unit_price: item.default_unit_price,
+        sort_order: item.sort_order,
+      })),
+    );
+
+    setLoading(false);
+    if (itemsError) {
+      setError(itemsError);
+      return { data: work, error: itemsError };
+    }
+    return { data: work, error: null };
+  }
+
+  return { createWorkFromTemplate, loading, error };
 }
 
 export function useUpdateWork() {

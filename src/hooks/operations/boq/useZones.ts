@@ -1,6 +1,7 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import { computeNextSortOrder } from "./sortOrder";
 
 export interface Zone {
   id: string;
@@ -43,7 +44,7 @@ export function useZones(projectId: string) {
     fetchZones();
   }, [fetchZones]);
 
-  return { zones, loading, error, refetch: fetchZones };
+  return { zones, setZones, loading, error, refetch: fetchZones };
 }
 
 export function useCreateZone() {
@@ -58,16 +59,13 @@ export function useCreateZone() {
     setLoading(true);
     setError(null);
 
-    const nextSortOrder =
-      Math.max(0, ...siblings.map((s) => s.sort_order)) + 1;
-
     const { data, error } = await supabase
       .schema("boq")
       .from("zones")
       .insert({
         project_id: projectId,
         name: values.name,
-        sort_order: nextSortOrder,
+        sort_order: computeNextSortOrder(siblings),
       })
       .select("*")
       .single();

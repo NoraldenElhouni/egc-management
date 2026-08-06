@@ -3,82 +3,59 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { computeNextSortOrder } from "./sortOrder";
 
-export interface BOQType {
+export interface TemplateType {
   id: string;
-  project_id: string;
   name: string;
-  version: number;
   sort_order: number;
   created_at: string;
-  template_type_id: string | null;
 }
 
-/**
- * Plain (non-hook) fetch for every version of a type name within a project,
- * callable on-demand (e.g. from a report dialog's submit handler).
- */
-export async function fetchTypesByName(
-  projectId: string,
-  name: string,
-): Promise<BOQType[]> {
-  const { data, error } = await supabase
-    .schema("boq")
-    .from("types")
-    .select("*")
-    .eq("project_id", projectId)
-    .eq("name", name)
-    .order("version", { ascending: true });
-
-  if (error) {
-    console.error("error fetching type versions", error);
-    throw error;
-  }
-  return data ?? [];
-}
-
-export function useTypes(projectId: string) {
-  const [types, setTypes] = useState<BOQType[]>([]);
+export function useTemplateTypes() {
+  const [templateTypes, setTemplateTypes] = useState<TemplateType[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  const fetchTypes = useCallback(async () => {
-    if (!projectId) return;
+  const fetchTemplateTypes = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .schema("boq")
-        .from("types")
+        .from("template_types")
         .select("*")
-        .eq("project_id", projectId)
         .order("sort_order", { ascending: true });
 
       if (error) {
-        console.error("error fetching types", error);
+        console.error("error fetching template types", error);
         setError(error);
       } else {
-        setTypes(data ?? []);
+        setTemplateTypes(data ?? []);
       }
     } catch (err) {
-      console.error("unexpected error fetching types", err);
+      console.error("unexpected error fetching template types", err);
       setError(err as PostgrestError);
     }
     setLoading(false);
-  }, [projectId]);
+  }, []);
 
   useEffect(() => {
-    fetchTypes();
-  }, [fetchTypes]);
+    fetchTemplateTypes();
+  }, [fetchTemplateTypes]);
 
-  return { types, setTypes, loading, error, refetch: fetchTypes };
+  return {
+    templateTypes,
+    setTemplateTypes,
+    loading,
+    error,
+    refetch: fetchTemplateTypes,
+  };
 }
 
-export function useCreateType() {
+export function useCreateTemplateType() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  async function createType(
-    projectId: string,
-    values: { name: string; version: number },
+  async function createTemplateType(
+    values: { name: string },
     siblings: { sort_order: number }[],
   ) {
     setLoading(true);
@@ -86,11 +63,9 @@ export function useCreateType() {
 
     const { data, error } = await supabase
       .schema("boq")
-      .from("types")
+      .from("template_types")
       .insert({
-        project_id: projectId,
         name: values.name,
-        version: values.version,
         sort_order: computeNextSortOrder(siblings),
       })
       .select("*")
@@ -98,58 +73,58 @@ export function useCreateType() {
 
     setLoading(false);
     if (error) {
-      console.error("error creating type", error);
+      console.error("error creating template type", error);
       setError(error);
       return { data: null, error };
     }
     return { data, error: null };
   }
 
-  return { createType, loading, error };
+  return { createTemplateType, loading, error };
 }
 
-export function useUpdateType() {
+export function useUpdateTemplateType() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  async function updateType(
-    typeId: string,
-    values: { name: string; version: number },
+  async function updateTemplateType(
+    templateTypeId: string,
+    values: { name: string },
   ) {
     setLoading(true);
     setError(null);
 
     const { error } = await supabase
       .schema("boq")
-      .from("types")
-      .update({ name: values.name, version: values.version })
-      .eq("id", typeId);
+      .from("template_types")
+      .update({ name: values.name })
+      .eq("id", templateTypeId);
 
     setLoading(false);
     if (error) {
-      console.error("error updating type", error);
+      console.error("error updating template type", error);
       setError(error);
       return { error };
     }
     return { error: null };
   }
 
-  return { updateType, loading, error };
+  return { updateTemplateType, loading, error };
 }
 
-export function useDeleteType() {
+export function useDeleteTemplateType() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  async function deleteType(typeId: string) {
+  async function deleteTemplateType(templateTypeId: string) {
     setLoading(true);
     setError(null);
 
     const { data: works, error: fetchError } = await supabase
       .schema("boq")
-      .from("works")
-      .select("id, items ( id )")
-      .eq("type_id", typeId);
+      .from("template_works")
+      .select("id, template_items ( id )")
+      .eq("template_type_id", templateTypeId);
 
     if (fetchError) {
       setError(fetchError);
@@ -158,13 +133,13 @@ export function useDeleteType() {
     }
 
     const rows = works ?? [];
-    const itemIds = rows.flatMap((w) => w.items.map((i) => i.id));
+    const itemIds = rows.flatMap((w) => w.template_items.map((i) => i.id));
     const workIds = rows.map((w) => w.id);
 
     if (itemIds.length > 0) {
       const { error } = await supabase
         .schema("boq")
-        .from("items")
+        .from("template_items")
         .delete()
         .in("id", itemIds);
       if (error) {
@@ -177,7 +152,7 @@ export function useDeleteType() {
     if (workIds.length > 0) {
       const { error } = await supabase
         .schema("boq")
-        .from("works")
+        .from("template_works")
         .delete()
         .in("id", workIds);
       if (error) {
@@ -189,9 +164,9 @@ export function useDeleteType() {
 
     const { error } = await supabase
       .schema("boq")
-      .from("types")
+      .from("template_types")
       .delete()
-      .eq("id", typeId);
+      .eq("id", templateTypeId);
 
     setLoading(false);
     if (error) {
@@ -201,5 +176,5 @@ export function useDeleteType() {
     return { error: null };
   }
 
-  return { deleteType, loading, error };
+  return { deleteTemplateType, loading, error };
 }

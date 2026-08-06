@@ -4,6 +4,7 @@ import OperationsLayout from "../sidebar/OperationsLayout";
 import MapsRoutes from "./operateions/maps/MapsRoutes";
 import ContractsRoutes from "./operateions/contracts/ContractsRoutes";
 import BOQRoutes from "./operateions/BOQ/BOQRoutes";
+import OperationsSettingsRoutes from "./operateions/settings/OperationsSettingsRoutes";
 
 export default function OperationsRoutes() {
   return (
@@ -13,6 +14,7 @@ export default function OperationsRoutes() {
         <Route path="maps/*" element={<MapsRoutes />} />
         <Route path="contracts/*" element={<ContractsRoutes />} />
         <Route path="boq/*" element={<BOQRoutes />} />
+        <Route path="settings/*" element={<OperationsSettingsRoutes />} />
       </Route>
     </Routes>
   );

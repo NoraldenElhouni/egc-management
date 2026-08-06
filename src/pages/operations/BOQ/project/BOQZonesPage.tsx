@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
+import { Pencil, Trash } from "lucide-react";
 import LoadingPage from "../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../components/ui/errorPage";
 import BackButton from "../../../../components/ui/BackButton";
 import Button from "../../../../components/ui/Button";
-import GenericTable from "../../../../components/tables/table";
 import ConfirmDialog from "../../../../components/ui/ConfirmDialog";
+import SortableList from "../../../../components/operations/boq/SortableList";
 import ZoneFormDialog from "../../../../components/operations/boq/ZoneFormDialog";
-import { getZoneColumns } from "../../../../components/tables/columns/operations/boq/ZoneColumns";
 import {
   Zone,
   useCreateZone,
@@ -15,16 +15,20 @@ import {
   useUpdateZone,
   useZones,
 } from "../../../../hooks/operations/boq/useZones";
+import { useReorder } from "../../../../hooks/operations/boq/useReorder";
 import { ZoneFormValues } from "../../../../types/schema/boq/zone.schema";
 
 type ZoneDialogState = { mode: "create" } | { mode: "edit"; zone: Zone } | null;
 
 const BOQZonesPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const { zones, loading, error, refetch } = useZones(projectId ?? "");
+  const { zones, setZones, loading, error, refetch } = useZones(
+    projectId ?? "",
+  );
   const { createZone, loading: creating } = useCreateZone();
   const { updateZone, loading: updating } = useUpdateZone();
   const { deleteZone, loading: deleting } = useDeleteZone();
+  const { reorder } = useReorder("zones");
 
   const [dialogState, setDialogState] = useState<ZoneDialogState>(null);
   const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
@@ -68,10 +72,19 @@ const BOQZonesPage = () => {
     refetch();
   };
 
-  const columns = getZoneColumns({
-    onEdit: (zone) => setDialogState({ mode: "edit", zone }),
-    onDelete: (zone) => setZoneToDelete(zone),
-  });
+  const handleReorder = (reordered: Zone[]) => {
+    reorder(
+      reordered,
+      (z) => ({
+        id: z.id,
+        project_id: z.project_id,
+        name: z.name,
+        sort_order: z.sort_order,
+      }),
+      setZones,
+      refetch,
+    );
+  };
 
   return (
     <div className="p-4">
@@ -85,12 +98,36 @@ const BOQZonesPage = () => {
         </Button>
       </div>
 
-      <GenericTable
-        data={zones}
-        columns={columns}
-        enableSorting
-        enableFiltering
-        showGlobalFilter
+      <SortableList
+        items={zones}
+        onReorder={handleReorder}
+        emptyMessage="لا توجد مناطق بعد"
+        renderItem={(zone) => (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
+            <span className="font-medium truncate">{zone.name}</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(zone.created_at).toLocaleDateString("ar-LY")}
+              </span>
+              <button
+                type="button"
+                className="p-1.5 text-gray-400 hover:text-primary"
+                aria-label="تعديل المنطقة"
+                onClick={() => setDialogState({ mode: "edit", zone })}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                className="p-1.5 text-gray-400 hover:text-error"
+                aria-label="حذف المنطقة"
+                onClick={() => setZoneToDelete(zone)}
+              >
+                <Trash className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       />
 
       <ZoneFormDialog

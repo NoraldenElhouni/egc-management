@@ -1,4 +1,4 @@
-import { PackageOpen, Paperclip } from "lucide-react";
+import { PackageOpen, Paperclip, Settings } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -25,6 +25,13 @@ const OperationsPage = () => {
       icon: Paperclip,
       path: "/operations/boq",
       description: "إدارة حصر الكميات",
+      role: [],
+    },
+    {
+      label: "الإعدادات",
+      icon: Settings,
+      path: "/operations/settings",
+      description: "إعدادات وحدة التشغيل",
       role: [],
     },
   ];
