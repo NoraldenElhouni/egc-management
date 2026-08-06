@@ -9,6 +9,7 @@ import {
   Building,
   PackageOpen,
   Store,
+  Logs,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -53,12 +54,6 @@ const MainMenu = () => {
       role: ["Manager"],
     },
     {
-      label: "الإعدادات",
-      icon: Settings,
-      path: "/settings",
-      role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
-    },
-    {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
@@ -69,6 +64,18 @@ const MainMenu = () => {
       icon: Store,
       path: "/shops",
       role: ["Admin", "Manager"],
+    },
+    {
+      label: "الإعدادات",
+      icon: Settings,
+      path: "/settings",
+      role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
+    },
+    {
+      label: "السجلات",
+      icon: Logs,
+      path: "/logs",
+      role: ["Admin"],
     },
   ];
 

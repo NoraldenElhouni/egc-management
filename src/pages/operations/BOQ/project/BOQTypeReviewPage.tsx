@@ -157,6 +157,7 @@ const BOQTypeReviewPage = () => {
             <BOQPDFDialogButton
               project={project}
               currentType={currentType}
+              allTypes={types}
               works={works}
               zones={zones}
             />

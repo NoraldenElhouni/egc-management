@@ -1,12 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import {
-  Users,
-  DollarSign,
-  UserPlus,
-  ChevronRight,
-  ChevronLeft,
-} from "lucide-react";
+import { Users, UserPlus, ChevronRight, ChevronLeft } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
 const HRLayout = () => {

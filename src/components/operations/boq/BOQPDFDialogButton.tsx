@@ -11,6 +11,7 @@ import { ProjectWithDetailsForBook } from "../../../types/projects.type";
 type BOQPDFDialogButtonProps = {
   project: ProjectWithDetailsForBook;
   currentType: BOQType;
+  allTypes: BOQType[];
   works: WorkFull[];
   zones: Zone[];
 };
@@ -18,6 +19,7 @@ type BOQPDFDialogButtonProps = {
 const BOQPDFDialogButton: React.FC<BOQPDFDialogButtonProps> = ({
   project,
   currentType,
+  allTypes,
   works,
   zones,
 }) => {
@@ -45,6 +47,7 @@ const BOQPDFDialogButton: React.FC<BOQPDFDialogButtonProps> = ({
         onClose={() => setIsOpen(false)}
         onConfirm={handleConfirm}
         currentType={currentType}
+        allTypes={allTypes}
         works={works}
         zones={zones}
         projectName={project.name}

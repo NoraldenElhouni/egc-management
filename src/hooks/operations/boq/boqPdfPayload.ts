@@ -118,3 +118,34 @@ export function buildSummaryItems(works: WorkFull[]): BOQReportItem[] {
     unit_price: g.pricesMatch ? g.firstPrice : null,
   }));
 }
+
+/**
+ * Merges `works` across zones/types/versions by work NAME (not id), then
+ * aggregates each group's items with buildSummaryItems. Used both for the
+ * standalone "work summary" scope and for multi-version reports, where the
+ * same physical work (e.g. "لياسة") reappears once per zone or version and
+ * needs to collapse into a single section rather than one per occurrence.
+ *
+ * NOTE: emits bare top-level nodes with kind "work" (no zone/type wrapper),
+ * since this scope explicitly discards that structure. This depends on the
+ * PDF backend template's top-level loop tolerating a bare "work" node —
+ * verify against the backend before relying on this in production.
+ */
+export function buildWorkSummaryNodes(works: WorkFull[]): BOQReportNode[] {
+  const groups = new Map<string, WorkFull[]>();
+
+  works.forEach((work) => {
+    const existing = groups.get(work.name);
+    if (existing) {
+      existing.push(work);
+    } else {
+      groups.set(work.name, [work]);
+    }
+  });
+
+  return Array.from(groups.entries()).map(([name, groupWorks]) => ({
+    label: name,
+    kind: "work",
+    items: buildSummaryItems(groupWorks),
+  }));
+}

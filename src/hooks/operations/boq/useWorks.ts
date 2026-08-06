@@ -12,6 +12,28 @@ export interface Work {
   created_at: string;
 }
 
+/**
+ * Plain (non-hook) fetch for a single type's works + items, callable
+ * on-demand outside of render (e.g. in parallel for several types/versions).
+ */
+export async function fetchWorksForType(typeId: string): Promise<WorkFull[]> {
+  const { data, error } = await supabase
+    .schema("boq")
+    .from("works")
+    .select(
+      `id, type_id, zone_id, name, sort_order,
+      items ( id, name, unit, quantity, unit_price, sort_order )`,
+    )
+    .eq("type_id", typeId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("error fetching works", error);
+    throw error;
+  }
+  return (data ?? []) as unknown as WorkFull[];
+}
+
 export function useTypeWorks(typeId: string) {
   const [works, setWorks] = useState<WorkFull[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,24 +43,10 @@ export function useTypeWorks(typeId: string) {
     if (!typeId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .schema("boq")
-        .from("works")
-        .select(
-          `id, type_id, zone_id, name, sort_order,
-          items ( id, name, unit, quantity, unit_price, sort_order )`,
-        )
-        .eq("type_id", typeId)
-        .order("sort_order", { ascending: true });
-
-      if (error) {
-        console.error("error fetching works", error);
-        setError(error);
-      } else {
-        setWorks((data ?? []) as unknown as WorkFull[]);
-      }
+      const data = await fetchWorksForType(typeId);
+      setWorks(data);
+      setError(null);
     } catch (err) {
-      console.error("unexpected error fetching works", err);
       setError(err as PostgrestError);
     }
     setLoading(false);

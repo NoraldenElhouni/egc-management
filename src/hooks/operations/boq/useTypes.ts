@@ -11,6 +11,29 @@ export interface BOQType {
   created_at: string;
 }
 
+/**
+ * Plain (non-hook) fetch for every version of a type name within a project,
+ * callable on-demand (e.g. from a report dialog's submit handler).
+ */
+export async function fetchTypesByName(
+  projectId: string,
+  name: string,
+): Promise<BOQType[]> {
+  const { data, error } = await supabase
+    .schema("boq")
+    .from("types")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("name", name)
+    .order("version", { ascending: true });
+
+  if (error) {
+    console.error("error fetching type versions", error);
+    throw error;
+  }
+  return data ?? [];
+}
+
 export function useTypes(projectId: string) {
   const [types, setTypes] = useState<BOQType[]>([]);
   const [loading, setLoading] = useState(false);
