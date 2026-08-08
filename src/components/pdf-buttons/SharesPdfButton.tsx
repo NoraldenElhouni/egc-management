@@ -4,6 +4,7 @@ import {
   calcEmployeeEarnings,
   Currency,
 } from "../../hooks/projects/useProjectsDistribute";
+import { fetchManagementApi } from "../../lib/managementApiClient";
 
 interface ShareHolder {
   name: string;
@@ -118,8 +119,8 @@ const SharesPdfButton = ({ projects }: Props) => {
     try {
       const payload = buildPayload(projects);
 
-      const res = await fetch(
-        "http://102.203.200.52/api/v1/egc/management/shares/pdf",
+      const res = await fetchManagementApi(
+        "/api/v1/egc/management/shares/pdf",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

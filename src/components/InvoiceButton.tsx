@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "./ui/Button";
 import { ProjectWithDetailsForBook } from "../types/projects.type";
 import ErrorPage from "./ui/errorPage";
+import { fetchManagementApi } from "../lib/managementApiClient";
 
 interface InvoiceButtonProps {
   project: ProjectWithDetailsForBook | null;
@@ -136,8 +137,8 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
     setError(null);
     try {
       if (!project) throw new Error("لا يوجد مشروع");
-      const response = await fetch(
-        "http://102.203.200.52/api/v1/egc/management/invoice/pdf",
+      const response = await fetchManagementApi(
+        "/api/v1/egc/management/invoice/pdf",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { fetchManagementApi } from "../../lib/managementApiClient";
 import { DistributionBatch } from "../../hooks/company/useDistributionBatches";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -119,8 +120,8 @@ const BatchSharesPdfButton = ({ batch }: Props) => {
     try {
       const payload = await fetchBatchPayload(batch);
 
-      const res = await fetch(
-        "http://102.203.200.52/api/v1/egc/management/shares/pdf",
+      const res = await fetchManagementApi(
+        "/api/v1/egc/management/shares/pdf",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -30,7 +30,6 @@ const LOGS_ENDPOINT_PATH = "/api/v1/logs/";
 
 export interface LogsPage {
   logs: LogEntry[];
-  /** Whether the raw (pre-filter) response filled a full page — used for "next" pagination. */
   hasMore: boolean;
 }
 
@@ -51,12 +50,11 @@ const fetchLogs = async (filters: LogsFilters): Promise<LogsPage> => {
     throw new Error(`Request failed: ${response.status}`);
   }
 
-  const raw: LogEntry[] = await response.json();
+  const logs: LogEntry[] = await response.json();
 
   return {
-    // Hide requests to the logs endpoint itself so viewing this page doesn't spam its own feed.
-    logs: raw.filter((entry) => entry.path !== LOGS_ENDPOINT_PATH),
-    hasMore: raw.length === filters.limit,
+    logs,
+    hasMore: logs.length === filters.limit,
   };
 };
 

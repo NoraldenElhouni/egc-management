@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { fetchManagementApi } from "../../lib/managementApiClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,8 +81,8 @@ const IncomesListPdfButton = ({ projectId }: Props) => {
     try {
       const payload = await fetchPayload(projectId);
 
-      const res = await fetch(
-        "http://102.203.200.52/api/v1/egc/management/incomes-list/pdf",
+      const res = await fetchManagementApi(
+        "/api/v1/egc/management/incomes-list/pdf",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

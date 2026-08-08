@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BOQReportRequest } from "./boqPdfPayload";
+import { fetchManagementApi } from "../../../lib/managementApiClient";
 
 export function useBOQPDFGenerate() {
   const [loading, setLoading] = useState(false);
@@ -9,8 +10,8 @@ export function useBOQPDFGenerate() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        "http://102.203.200.52/api/v1/egc/management/boq/pdf",
+      const response = await fetchManagementApi(
+        "/api/v1/egc/management/boq/pdf",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

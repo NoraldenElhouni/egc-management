@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Button from "./ui/Button";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
+import { fetchManagementApi } from "../lib/managementApiClient";
 
 interface PrintDepositButtonProps {
   incomeId: string;
@@ -114,8 +115,8 @@ const PrintDepositButton = ({ incomeId }: PrintDepositButtonProps) => {
       console.log("PDF Payload:", income);
 
       // Call API
-      const response = await fetch(
-        "http://102.203.200.52/api/v1/egc/management/income/pdf",
+      const response = await fetchManagementApi(
+        "/api/v1/egc/management/income/pdf",
         {
           method: "POST",
           headers: {

@@ -115,7 +115,6 @@ const LogsPage = () => {
       <GenericTable
         data={logs}
         columns={LogsColumns}
-        enableSorting={false}
         emptyMessage="لا توجد سجلات مطابقة."
         pageSize={LIMIT}
       />
