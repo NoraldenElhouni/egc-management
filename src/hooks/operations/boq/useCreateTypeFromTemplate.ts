@@ -14,6 +14,8 @@ export function useCreateTypeFromTemplate() {
     version: number;
     useTemplate: boolean;
     zoneIds: string[];
+    templateWorkIds?: string[] | null;
+    templateItemIds?: string[] | null;
   }) {
     setLoading(true);
     setError(null);
@@ -27,6 +29,8 @@ export function useCreateTypeFromTemplate() {
         p_use_template: params.useTemplate,
         p_zone_ids: params.zoneIds,
         p_created_by: user?.id ?? "",
+        p_template_work_ids: params.templateWorkIds ?? null,
+        p_template_item_ids: params.templateItemIds ?? null,
       });
 
     setLoading(false);

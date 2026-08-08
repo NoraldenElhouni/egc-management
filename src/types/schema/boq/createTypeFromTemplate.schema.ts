@@ -9,6 +9,8 @@ export const CreateTypeFromTemplateSchema = z
       .min(0, "النسخة يجب أن تكون 0 أو أكثر"),
     use_template: z.boolean(),
     zone_ids: z.array(z.string()),
+    template_work_ids: z.array(z.string()),
+    template_item_ids: z.array(z.string()),
   })
   .superRefine((data, ctx) => {
     if (data.use_template && data.zone_ids.length === 0) {

@@ -7,8 +7,13 @@ import { SelectField } from "../../ui/inputs/SelectField";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { BOQType } from "../../../hooks/operations/boq/useTypes";
 import { useTemplateTypes } from "../../../hooks/operations/boq/useTemplateTypes";
+import { useTemplateTypeWorks } from "../../../hooks/operations/boq/useTemplateWorks";
 import { useZones } from "../../../hooks/operations/boq/useZones";
 import { useCreateTypeFromTemplate } from "../../../hooks/operations/boq/useCreateTypeFromTemplate";
+import {
+  TemplateItemRow,
+  TemplateWorkFull,
+} from "../../../hooks/operations/boq/types";
 import {
   CreateTypeFromTemplateFormValues,
   CreateTypeFromTemplateSchema,
@@ -19,6 +24,8 @@ const DEFAULT_VALUES: CreateTypeFromTemplateFormValues = {
   version: 0,
   use_template: true,
   zone_ids: [],
+  template_work_ids: [],
+  template_item_ids: [],
 };
 
 type CreateTypeFromTemplateDialogProps = {
@@ -52,6 +59,13 @@ const CreateTypeFromTemplateDialog: React.FC<
   const [rpcError, setRpcError] = React.useState<string | null>(null);
 
   const useTemplate = watch("use_template");
+  const templateTypeId = watch("template_type_id");
+
+  const {
+    works,
+    loading: worksLoading,
+    error: worksError,
+  } = useTemplateTypeWorks(templateTypeId);
 
   const { field: useTemplateField } = useController({
     control,
@@ -60,11 +74,56 @@ const CreateTypeFromTemplateDialog: React.FC<
   const { field: zoneIdsField } = useController({ control, name: "zone_ids" });
   const selectedZoneIds: string[] = zoneIdsField.value ?? [];
 
+  const { field: workIdsField } = useController({
+    control,
+    name: "template_work_ids",
+  });
+  const { field: itemIdsField } = useController({
+    control,
+    name: "template_item_ids",
+  });
+  const selectedWorkIds: string[] = workIdsField.value ?? [];
+  const selectedItemIds: string[] = itemIdsField.value ?? [];
+
   const toggleZoneId = (id: string) => {
     const next = selectedZoneIds.includes(id)
       ? selectedZoneIds.filter((x) => x !== id)
       : [...selectedZoneIds, id];
     zoneIdsField.onChange(next);
+  };
+
+  const toggleWork = (work: TemplateWorkFull) => {
+    const workItemIds = work.items.map((i) => i.id);
+    if (selectedWorkIds.includes(work.id)) {
+      workIdsField.onChange(selectedWorkIds.filter((id) => id !== work.id));
+      itemIdsField.onChange(
+        selectedItemIds.filter((id) => !workItemIds.includes(id)),
+      );
+    } else {
+      workIdsField.onChange([...selectedWorkIds, work.id]);
+      itemIdsField.onChange(
+        Array.from(new Set([...selectedItemIds, ...workItemIds])),
+      );
+    }
+  };
+
+  const toggleItem = (work: TemplateWorkFull, item: TemplateItemRow) => {
+    const wasChecked = selectedItemIds.includes(item.id);
+    const nextItemIds = wasChecked
+      ? selectedItemIds.filter((id) => id !== item.id)
+      : [...selectedItemIds, item.id];
+    itemIdsField.onChange(nextItemIds);
+
+    if (wasChecked) {
+      const stillHasCheckedItems = work.items.some((i) =>
+        nextItemIds.includes(i.id),
+      );
+      if (!stillHasCheckedItems) {
+        workIdsField.onChange(
+          selectedWorkIds.filter((id) => id !== work.id),
+        );
+      }
+    }
   };
 
   useEffect(() => {
@@ -73,6 +132,11 @@ const CreateTypeFromTemplateDialog: React.FC<
       setRpcError(null);
     }
   }, [isOpen, reset]);
+
+  useEffect(() => {
+    workIdsField.onChange(works.map((w) => w.id));
+    itemIdsField.onChange(works.flatMap((w) => w.items.map((i) => i.id)));
+  }, [works]);
 
   const onSubmit = async (values: CreateTypeFromTemplateFormValues) => {
     setRpcError(null);
@@ -93,12 +157,29 @@ const CreateTypeFromTemplateDialog: React.FC<
       return;
     }
 
+    if (values.use_template && values.template_work_ids.length === 0) {
+      setError("template_work_ids", {
+        type: "manual",
+        message: "اختر عملاً واحداً على الأقل",
+      });
+      return;
+    }
+
+    const allSelectedItemsComplete = works
+      .filter((w) => values.template_work_ids.includes(w.id))
+      .every((w) => w.items.every((i) => values.template_item_ids.includes(i.id)));
+
     const { data, error } = await createTypeFromTemplate({
       projectId,
       templateTypeId: values.template_type_id,
       version: values.version,
       useTemplate: values.use_template,
       zoneIds: values.use_template ? values.zone_ids : [],
+      templateWorkIds: values.use_template ? values.template_work_ids : null,
+      templateItemIds:
+        values.use_template && !allSelectedItemsComplete
+          ? values.template_item_ids
+          : null,
     });
 
     if (error || !data) {
@@ -184,6 +265,71 @@ const CreateTypeFromTemplateDialog: React.FC<
             {errors.zone_ids && (
               <p className="text-sm text-error mt-1">
                 {errors.zone_ids.message}
+              </p>
+            )}
+          </div>
+        )}
+
+        {useTemplate && templateTypeId && (
+          <div>
+            <div className="mb-2 text-sm font-medium">الأعمال والبنود</div>
+
+            {worksLoading && (
+              <p className="text-sm text-gray-500">جاري تحميل الأعمال...</p>
+            )}
+            {worksError && (
+              <p className="text-sm text-error">
+                حدث خطأ أثناء تحميل أعمال القالب
+              </p>
+            )}
+            {!worksLoading && works.length === 0 && (
+              <p className="text-sm text-gray-500">لا توجد أعمال في هذا القالب</p>
+            )}
+
+            {works.length > 0 && (
+              <div className="flex flex-col gap-3 rounded border p-3 max-h-64 overflow-y-auto">
+                {works.map((work) => {
+                  const workChecked = selectedWorkIds.includes(work.id);
+                  return (
+                    <div key={work.id} className="flex flex-col gap-1">
+                      <label className="flex items-center gap-2 text-sm font-medium">
+                        <input
+                          type="checkbox"
+                          checked={workChecked}
+                          onChange={() => toggleWork(work)}
+                        />
+                        <span>{work.name}</span>
+                      </label>
+
+                      {work.items.length > 0 && (
+                        <div className="flex flex-col gap-1 pr-4 border-r-2 border-gray-100">
+                          {work.items.map((item) => (
+                            <label
+                              key={item.id}
+                              className={`flex items-center gap-2 text-xs ${
+                                workChecked ? "text-foreground" : "text-gray-400"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedItemIds.includes(item.id)}
+                                disabled={!workChecked}
+                                onChange={() => toggleItem(work, item)}
+                              />
+                              <span>{item.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {errors.template_work_ids && (
+              <p className="text-sm text-error mt-1">
+                {errors.template_work_ids.message}
               </p>
             )}
           </div>
