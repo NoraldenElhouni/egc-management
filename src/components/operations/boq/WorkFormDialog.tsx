@@ -7,17 +7,25 @@ import { TextField } from "../../ui/inputs/TextField";
 import { WorkFormValues, WorkSchema } from "../../../types/schema/boq/work.schema";
 import { TemplateWorkFull } from "../../../hooks/operations/boq/types";
 import { useTemplateTypeWorks } from "../../../hooks/operations/boq/useTemplateWorks";
+import { Zone } from "../../../hooks/operations/boq/useZones";
 
 const DEFAULT_VALUES: WorkFormValues = { name: "" };
 
 type WorkFormDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (values: WorkFormValues) => void | Promise<void>;
-  onSubmitFromTemplate?: (templateWork: TemplateWorkFull) => void | Promise<void>;
+  onSubmit: (values: WorkFormValues, zoneId: string) => void | Promise<void>;
+  onSubmitFromTemplate?: (
+    templateWork: TemplateWorkFull,
+    zoneId: string,
+  ) => void | Promise<void>;
   defaultValues?: WorkFormValues;
   loading?: boolean;
   templateTypeId?: string | null;
+  /** Full, unfiltered project zone list — lets a work be added to a zone the type doesn't use yet. */
+  zones: Zone[];
+  /** Preset zone (e.g. clicked from a zone's own "add work" button). When set, the zone picker is skipped. */
+  zone?: Zone | null;
 };
 
 const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
@@ -28,6 +36,8 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
   defaultValues,
   loading = false,
   templateTypeId,
+  zones,
+  zone,
 }) => {
   const {
     register,
@@ -40,9 +50,11 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
   });
 
   const offerTemplate = !defaultValues && !!templateTypeId;
+  const needsZonePicker = !defaultValues && !zone;
 
   const [source, setSource] = useState<"manual" | "template">("manual");
   const [selectedTemplateWorkId, setSelectedTemplateWorkId] = useState("");
+  const [selectedZoneId, setSelectedZoneId] = useState(zone?.id ?? "");
 
   const { works: templateWorks } = useTemplateTypeWorks(
     offerTemplate && source === "template" ? (templateTypeId as string) : "",
@@ -53,15 +65,24 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
       reset(defaultValues ?? DEFAULT_VALUES);
       setSource("manual");
       setSelectedTemplateWorkId("");
+      setSelectedZoneId(zone?.id ?? "");
     }
-  }, [isOpen, defaultValues, reset]);
+  }, [isOpen, defaultValues, zone, reset]);
+
+  const zoneId = zone?.id ?? selectedZoneId;
+
+  const handleManualSubmit = async (values: WorkFormValues) => {
+    if (!zoneId) return;
+    await onSubmit(values, zoneId);
+  };
 
   const handleTemplateSubmit = async () => {
+    if (!zoneId) return;
     const templateWork = templateWorks.find(
       (w) => w.id === selectedTemplateWorkId,
     );
     if (!templateWork) return;
-    await onSubmitFromTemplate?.(templateWork);
+    await onSubmitFromTemplate?.(templateWork, zoneId);
   };
 
   return (
@@ -70,6 +91,30 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
         <h2 className="text-lg font-bold">
           {defaultValues ? "تعديل عمل" : "عمل جديد"}
         </h2>
+
+        {needsZonePicker && (
+          <div className="flex flex-col">
+            <label
+              htmlFor="work-zone-select"
+              className="mb-1 text-sm text-foreground"
+            >
+              المنطقة
+            </label>
+            <select
+              id="work-zone-select"
+              value={selectedZoneId}
+              onChange={(e) => setSelectedZoneId(e.target.value)}
+              className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">-- اختر --</option>
+              {zones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {offerTemplate && (
           <div className="flex gap-2">
@@ -101,7 +146,7 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
         {source === "manual" ? (
           <form
             className="flex flex-col gap-4"
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(handleManualSubmit)}
             noValidate
           >
             <TextField
@@ -114,7 +159,7 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
               <Button type="button" variant="ghost" onClick={onClose}>
                 إلغاء
               </Button>
-              <Button type="submit" loading={loading}>
+              <Button type="submit" loading={loading} disabled={!zoneId}>
                 {defaultValues ? "حفظ" : "إنشاء"}
               </Button>
             </div>
@@ -149,7 +194,7 @@ const WorkFormDialog: React.FC<WorkFormDialogProps> = ({
               <Button
                 type="button"
                 loading={loading}
-                disabled={!selectedTemplateWorkId}
+                disabled={!selectedTemplateWorkId || !zoneId}
                 onClick={handleTemplateSubmit}
               >
                 إنشاء

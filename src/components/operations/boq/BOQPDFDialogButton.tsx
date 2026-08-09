@@ -34,7 +34,9 @@ const BOQPDFDialogButton: React.FC<BOQPDFDialogButtonProps> = ({
   return (
     <div>
       <Button
+        size="sm"
         variant="primary-light"
+        className="gap-1"
         onClick={() => setIsOpen(true)}
         disabled={loading}
       >

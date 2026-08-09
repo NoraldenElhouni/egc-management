@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { Plus } from "lucide-react";
 import { useParams } from "react-router-dom";
 import LoadingPage from "../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../components/ui/errorPage";
 import ConfirmDialog from "../../../../components/ui/ConfirmDialog";
+import Button from "../../../../components/ui/Button";
 import BOQPDFDialogButton from "../../../../components/operations/boq/BOQPDFDialogButton";
 import { useBookProject } from "../../../../hooks/projects/useBookProjects";
 
@@ -41,7 +43,7 @@ import { WorkFormValues } from "../../../../types/schema/boq/work.schema";
 import { ItemFormValues } from "../../../../types/schema/boq/item.schema";
 
 type WorkDialogState =
-  | { mode: "create"; zone: Zone }
+  | { mode: "create"; zone: Zone | null }
   | { mode: "edit"; work: WorkFull }
   | null;
 
@@ -111,11 +113,15 @@ const BOQTypeReviewPage = () => {
   const currentType = types.find((t) => t.id === typeId);
   const typeName = currentType?.name ?? "";
 
-  const handleWorkSubmit = async (values: WorkFormValues) => {
+  const zonesInUse = zones.filter((zone) =>
+    works.some((w) => w.zone_id === zone.id),
+  );
+
+  const handleWorkSubmit = async (values: WorkFormValues, zoneId: string) => {
     if (!workDialog) return;
     if (workDialog.mode === "create") {
-      const siblings = works.filter((w) => w.zone_id === workDialog.zone.id);
-      await createWork(typeId, workDialog.zone.id, values, siblings);
+      const siblings = works.filter((w) => w.zone_id === zoneId);
+      await createWork(typeId, zoneId, values, siblings);
     } else {
       await updateWork(workDialog.work.id, values);
     }
@@ -136,15 +142,11 @@ const BOQTypeReviewPage = () => {
 
   const handleWorkSubmitFromTemplate = async (
     templateWork: TemplateWorkFull,
+    zoneId: string,
   ) => {
     if (!workDialog || workDialog.mode !== "create") return;
-    const siblings = works.filter((w) => w.zone_id === workDialog.zone.id);
-    await createWorkFromTemplate(
-      typeId,
-      workDialog.zone.id,
-      templateWork,
-      siblings,
-    );
+    const siblings = works.filter((w) => w.zone_id === zoneId);
+    await createWorkFromTemplate(typeId, zoneId, templateWork, siblings);
     setWorkDialog(null);
     refetch();
   };
@@ -269,6 +271,15 @@ const BOQTypeReviewPage = () => {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="primary-light"
+            className="gap-1"
+            onClick={() => setWorkDialog({ mode: "create", zone: null })}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            عمل جديد
+          </Button>
           {project && currentType && (
             <BOQPDFDialogButton
               project={project}
@@ -282,7 +293,7 @@ const BOQTypeReviewPage = () => {
       </div>
 
       <BOQTree
-        zones={zones}
+        zones={zonesInUse}
         works={works}
         onAddWork={(zone) => setWorkDialog({ mode: "create", zone })}
         onEditWork={(work) => setWorkDialog({ mode: "edit", work })}
@@ -303,6 +314,8 @@ const BOQTypeReviewPage = () => {
         onSubmitFromTemplate={handleWorkSubmitFromTemplate}
         loading={savingWork || savingWorkFromTemplate}
         templateTypeId={currentType?.template_type_id}
+        zones={zones}
+        zone={workDialog?.mode === "create" ? workDialog.zone : null}
         defaultValues={
           workDialog?.mode === "edit"
             ? { name: workDialog.work.name }

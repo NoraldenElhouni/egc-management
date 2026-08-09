@@ -28,7 +28,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron-forge/plugin-vite": "^7.10.2",
-    "@electron-forge/publisher-github": "^7.11.1",
+    "@electron-forge/publisher-github": "^7.11.2",
     "@electron/fuses": "^1.8.0",
     "@tailwindcss/vite": "^4.1.16",
     "@types/electron-squirrel-startup": "^1.0.2",
@@ -67,6 +67,7 @@
     "react-hook-form": "^7.66.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.9.5",
+    "update-electron-app": "^3.3.0",
     "zod": "^4.1.12"
   }
 }
