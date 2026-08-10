@@ -33,7 +33,7 @@ import { useReorder } from "../../../../hooks/operations/boq/useReorder";
 import { computeNextSortOrder } from "../../../../hooks/operations/boq/sortOrder";
 
 import BOQTree, {
-  QuantityUpdate,
+  ItemEditUpdate,
 } from "../../../../components/operations/boq/BOQTree";
 import WorkFormDialog from "../../../../components/operations/boq/WorkFormDialog";
 import ItemFormDialog, {
@@ -209,22 +209,25 @@ const BOQTypeReviewPage = () => {
 
   const handleSaveQuantities = async (
     work: WorkFull,
-    updates: QuantityUpdate[],
+    updates: ItemEditUpdate[],
   ) => {
-    const updatedQuantityById = new Map(
-      updates.map((u) => [u.id, u.quantity]),
-    );
+    const updateById = new Map(updates.map((u) => [u.id, u]));
     const nextItems = work.items.map((item) => {
-      const quantity = updatedQuantityById.get(item.id);
-      return quantity === undefined ? item : { ...item, quantity };
+      const update = updateById.get(item.id);
+      if (!update) return item;
+      return {
+        ...item,
+        ...(update.quantity !== undefined ? { quantity: update.quantity } : {}),
+        ...(update.unit_price !== undefined
+          ? { unit_price: update.unit_price }
+          : {}),
+      };
     });
     setWorks((prev) =>
       prev.map((w) => (w.id === work.id ? { ...w, items: nextItems } : w)),
     );
 
-    const changedItems = nextItems.filter((item) =>
-      updatedQuantityById.has(item.id),
-    );
+    const changedItems = nextItems.filter((item) => updateById.has(item.id));
     const { error } = await bulkUpdateQuantities(work.id, changedItems);
     if (error) refetch();
   };

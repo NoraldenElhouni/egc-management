@@ -6,7 +6,11 @@ import { WorkFull, ItemRow } from "../../../hooks/operations/boq/types";
 import { Zone } from "../../../hooks/operations/boq/useZones";
 import { formatCurrency } from "../../../utils/helpper";
 
-export type QuantityUpdate = { id: string; quantity: number };
+export type ItemEditUpdate = {
+  id: string;
+  quantity?: number;
+  unit_price?: number | null;
+};
 
 type BOQTreeProps = {
   zones: Zone[];
@@ -19,7 +23,7 @@ type BOQTreeProps = {
   onEditItem: (work: WorkFull, item: ItemRow) => void;
   onDeleteItem: (work: WorkFull, item: ItemRow) => void;
   onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
-  onSaveQuantities: (work: WorkFull, updates: QuantityUpdate[]) => void;
+  onSaveQuantities: (work: WorkFull, updates: ItemEditUpdate[]) => void;
   savingQuantities?: boolean;
 };
 
@@ -98,7 +102,7 @@ type ZoneRowProps = {
   onEditItem: (work: WorkFull, item: ItemRow) => void;
   onDeleteItem: (work: WorkFull, item: ItemRow) => void;
   onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
-  onSaveQuantities: (work: WorkFull, updates: QuantityUpdate[]) => void;
+  onSaveQuantities: (work: WorkFull, updates: ItemEditUpdate[]) => void;
   savingQuantities?: boolean;
 };
 
@@ -192,7 +196,7 @@ type WorkRowProps = {
   onEditItem: (work: WorkFull, item: ItemRow) => void;
   onDeleteItem: (work: WorkFull, item: ItemRow) => void;
   onReorderItems: (work: WorkFull, reordered: ItemRow[]) => void;
-  onSaveQuantities: (work: WorkFull, updates: QuantityUpdate[]) => void;
+  onSaveQuantities: (work: WorkFull, updates: ItemEditUpdate[]) => void;
   savingQuantities?: boolean;
 };
 
@@ -214,25 +218,47 @@ const WorkRow: React.FC<WorkRowProps> = ({
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>(
     {},
   );
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
 
   const handleQuantityDraftChange = (itemId: string, value: string) => {
     setQuantityDrafts((prev) => ({ ...prev, [itemId]: value }));
   };
 
-  const pendingUpdates: QuantityUpdate[] = Object.entries(quantityDrafts)
-    .map(([id, value]) => {
-      const item = work.items.find((i) => i.id === id);
-      if (!item || value === "") return null;
-      const quantity = Number(value);
-      if (Number.isNaN(quantity) || quantity === item.quantity) return null;
-      return { id, quantity };
+  const handlePriceDraftChange = (itemId: string, value: string) => {
+    setPriceDrafts((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const pendingUpdates = work.items
+    .map((item): ItemEditUpdate | null => {
+      const quantityDraft = quantityDrafts[item.id];
+      const priceDraft = priceDrafts[item.id];
+
+      let quantity: number | undefined;
+      if (quantityDraft !== undefined && quantityDraft !== "") {
+        const parsed = Number(quantityDraft);
+        if (!Number.isNaN(parsed) && parsed !== item.quantity) {
+          quantity = parsed;
+        }
+      }
+
+      let unit_price: number | undefined;
+      if (priceDraft !== undefined && priceDraft !== "") {
+        const parsed = Number(priceDraft);
+        if (!Number.isNaN(parsed) && parsed !== item.unit_price) {
+          unit_price = parsed;
+        }
+      }
+
+      if (quantity === undefined && unit_price === undefined) return null;
+      return { id: item.id, quantity, unit_price };
     })
-    .filter((u): u is QuantityUpdate => u !== null);
+    .filter((u): u is ItemEditUpdate => u !== null);
 
   const handleSaveQuantities = () => {
     if (pendingUpdates.length === 0) return;
     onSaveQuantities(work, pendingUpdates);
     setQuantityDrafts({});
+    setPriceDrafts({});
   };
 
   return (
@@ -260,7 +286,7 @@ const WorkRow: React.FC<WorkRowProps> = ({
               onClick={handleSaveQuantities}
               loading={savingQuantities}
             >
-              حفظ الكميات ({pendingUpdates.length})
+              حفظ التعديلات ({pendingUpdates.length})
             </Button>
           )}
           <Button
@@ -297,53 +323,92 @@ const WorkRow: React.FC<WorkRowProps> = ({
             items={work.items}
             onReorder={(reordered) => onReorderItems(work, reordered)}
             emptyMessage="لا توجد بنود بعد"
-            renderItem={(item) => (
-              <div className="flex items-center gap-3 text-sm bg-white border rounded-md px-3.5 py-3 hover:border-gray-300 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-gray-900 break-words">
-                    {item.name}
+            renderItem={(item) => {
+              const quantityDraft = quantityDrafts[item.id];
+              const parsedQuantity =
+                quantityDraft === undefined || quantityDraft === ""
+                  ? NaN
+                  : Number(quantityDraft);
+              const effectiveQuantity = Number.isNaN(parsedQuantity)
+                ? item.quantity
+                : parsedQuantity;
+
+              const priceDraft = priceDrafts[item.id];
+              const parsedPrice =
+                priceDraft === undefined || priceDraft === ""
+                  ? NaN
+                  : Number(priceDraft);
+              const effectivePrice = Number.isNaN(parsedPrice)
+                ? item.unit_price
+                : parsedPrice;
+
+              return (
+                <div className="flex items-center gap-3 text-sm bg-white border rounded-md px-3.5 py-3 hover:border-gray-300 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 break-words">
+                      {item.name}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-400 text-xs mt-1">
+                      <span>{item.unit}</span>
+                      {effectivePrice !== null && (
+                        <span>
+                          الاجمالي:{" "}
+                          {formatCurrency(effectivePrice * effectiveQuantity)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-400 text-xs mt-1">
-                    <span>{item.unit}</span>
-                    {item.unit_price !== null && (
-                      <span>السعر: {formatCurrency(item.unit_price)}</span>
-                    )}
-                    {item.unit_price !== null && (
-                      <span>
-                        الاجمالي: {formatCurrency(item.unit_price * item.quantity)}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className="text-[10px] text-gray-400 leading-none">
+                        الكمية
                       </span>
-                    )}
+                      <input
+                        aria-label="الكمية"
+                        type="number"
+                        className="w-20 shrink-0 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                        value={quantityDrafts[item.id] ?? item.quantity}
+                        onChange={(e) =>
+                          handleQuantityDraftChange(item.id, e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className="text-[10px] text-gray-400 leading-none">
+                        السعر
+                      </span>
+                      <input
+                        aria-label="السعر"
+                        type="number"
+                        className="w-24 shrink-0 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                        value={priceDrafts[item.id] ?? item.unit_price ?? ""}
+                        onChange={(e) =>
+                          handlePriceDraftChange(item.id, e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      className="p-1 rounded text-gray-400 hover:text-primary hover:bg-gray-100"
+                      aria-label="تعديل البند"
+                      onClick={() => onEditItem(work, item)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-1 rounded text-gray-400 hover:text-error hover:bg-gray-100"
+                      aria-label="حذف البند"
+                      onClick={() => onDeleteItem(work, item)}
+                    >
+                      <Trash className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-                <input
-                  aria-label="الكمية"
-                  type="number"
-                  className="w-20 shrink-0 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                  value={quantityDrafts[item.id] ?? item.quantity}
-                  onChange={(e) =>
-                    handleQuantityDraftChange(item.id, e.target.value)
-                  }
-                />
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    className="p-1 rounded text-gray-400 hover:text-primary hover:bg-gray-100"
-                    aria-label="تعديل البند"
-                    onClick={() => onEditItem(work, item)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="p-1 rounded text-gray-400 hover:text-error hover:bg-gray-100"
-                    aria-label="حذف البند"
-                    onClick={() => onDeleteItem(work, item)}
-                  >
-                    <Trash className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
+              );
+            }}
           />
           {pendingUpdates.length > 0 && (
             <div className="flex justify-end mt-3">
@@ -352,7 +417,7 @@ const WorkRow: React.FC<WorkRowProps> = ({
                 onClick={handleSaveQuantities}
                 loading={savingQuantities}
               >
-                حفظ الكميات ({pendingUpdates.length})
+                حفظ التعديلات ({pendingUpdates.length})
               </Button>
             </div>
           )}
