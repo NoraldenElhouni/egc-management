@@ -48,12 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (refreshedUser) {
               // Got fresh data — update the user
               setUser(refreshedUser);
+            } else {
+              // refreshUserData returned null — session is truly gone (expired,
+              // or account was deactivated) — safe to clear the local user
+              setUser(null);
+              authService.logout();
             }
-            // else {
-            //   // refreshUserData returned null — session is truly gone, safe to logout
-            //   setUser(null);
-            //   authService.logout();
-            // }
           })
           .catch((err) => {
             // Network error, timeout, or Supabase hiccup — keep the local session

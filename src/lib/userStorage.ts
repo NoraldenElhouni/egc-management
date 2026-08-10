@@ -12,6 +12,7 @@ export interface UserData {
   email?: string;
   lastSync?: number;
   first_login: boolean;
+  status: string;
 }
 
 export const saveUserData = async (userData: UserData): Promise<void> => {

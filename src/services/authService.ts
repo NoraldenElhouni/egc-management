@@ -21,12 +21,18 @@ export const authService = {
     // 2. Fetch user profile with role from your profiles table
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("first_name, last_name, first_login")
+      .select("first_name, last_name, first_login, status")
       .eq("id", data.user.id)
       .single();
 
     if (profileError) {
       console.error("Profile fetch error:", profileError);
+    }
+
+    // Block login for any non-active account (inactive, on leave, on holiday, ...)
+    if (profile?.status && profile.status !== "active") {
+      await supabase.auth.signOut();
+      throw new Error("هذا الحساب غير مفعل حالياً. يرجى التواصل مع الإدارة.");
     }
 
     const { data: roleData, error: roleError } = await supabase
@@ -62,6 +68,7 @@ export const authService = {
       role: userRole?.name || "user",
       email: data.user.email,
       first_login: profile?.first_login || false,
+      status: profile?.status || "active",
     };
 
     // 4. Save to localForage for fast access next time
@@ -100,12 +107,18 @@ export const authService = {
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("first_name, last_name, role_id, first_login")
+      .select("first_name, last_name, role_id, first_login, status")
       .eq("id", user.id)
       .single();
 
     if (profileError) {
       console.error("Profile fetch error:", profileError);
+    }
+
+    // Status was changed to non-active (e.g. by an admin) since the user logged in — force logout
+    if (profile?.status && profile.status !== "active") {
+      await this.logout();
+      return null;
     }
 
     const { data: userRole, error: userRoleError } = await supabase
@@ -128,6 +141,7 @@ export const authService = {
       role: userRole?.name || "user",
       email: user.email,
       first_login: profile?.first_login || false,
+      status: profile?.status || "active",
     };
 
     await saveUserData(userData);
