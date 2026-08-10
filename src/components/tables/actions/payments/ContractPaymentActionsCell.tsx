@@ -31,6 +31,28 @@ const ContractPaymentActionsCell = ({
         })
         .eq("id", payment.id);
       if (error) throw error;
+
+      if (payment.method === "bank") {
+        const contractorBankUpdate: { bank_name?: string; bank_number?: string } =
+          {};
+        if (payment.bank_name) contractorBankUpdate.bank_name = payment.bank_name;
+        if (payment.bank_number)
+          contractorBankUpdate.bank_number = payment.bank_number;
+
+        if (Object.keys(contractorBankUpdate).length > 0) {
+          const { error: contractorError } = await supabase
+            .from("contractors")
+            .update(contractorBankUpdate)
+            .eq("id", payment.contractor_id);
+          if (contractorError) {
+            console.error(
+              "Error updating contractor bank info:",
+              contractorError,
+            );
+          }
+        }
+      }
+
       onRefresh?.();
     } catch (err) {
       console.error("Error approving payment:", err);

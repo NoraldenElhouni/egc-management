@@ -299,6 +299,8 @@ export type Database = {
           amount: number
           approved_at: string | null
           approved_by: string | null
+          bank_name: string | null
+          bank_number: string | null
           contractor_id: string
           created_at: string
           created_by: string
@@ -320,6 +322,8 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          bank_name?: string | null
+          bank_number?: string | null
           contractor_id: string
           created_at?: string
           created_by: string
@@ -341,6 +345,8 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          bank_name?: string | null
+          bank_number?: string | null
           contractor_id?: string
           created_at?: string
           created_by?: string
@@ -1136,6 +1142,8 @@ export type Database = {
       }
       contractors: {
         Row: {
+          bank_name: string | null
+          bank_number: string | null
           created_at: string
           email: string | null
           first_name: string
@@ -1146,6 +1154,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bank_name?: string | null
+          bank_number?: string | null
           created_at?: string
           email?: string | null
           first_name: string
@@ -1156,6 +1166,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bank_name?: string | null
+          bank_number?: string | null
           created_at?: string
           email?: string | null
           first_name?: string
