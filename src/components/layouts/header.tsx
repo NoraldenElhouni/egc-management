@@ -95,6 +95,7 @@ const Header = () => {
     boqtypes: "أنواع جدول الكميات",
     boqreview: "مراجعة جدول الكميات",
     zones: "المناطق",
+    "contractor-payments": "مدفوعات المقاولين",
   };
 
   return (

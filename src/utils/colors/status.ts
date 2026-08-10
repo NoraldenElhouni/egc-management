@@ -32,6 +32,8 @@ export const statusColor = (s: string) => {
       return "bg-green-100 text-green-800";
     case "rejected":
       return "bg-red-100 text-red-800";
+    case "declined":
+      return "bg-red-100 text-red-800";
     default:
       return "bg-slate-100 text-slate-800";
   }

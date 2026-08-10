@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronRight,
   ChevronLeft,
+  HandCoins,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSidebar } from "../../contexts/SidebarContext";
@@ -48,6 +49,13 @@ const FinanceLayout = () => {
       icon: Building2,
       path: "/finance/company",
       description: "بيانات الشركة المالية",
+      role: ["Admin", "Finance", "Bookkeeper"],
+    },
+    {
+      title: "مدفوعات المقاولين",
+      icon: HandCoins,
+      path: "/finance/contractor-payments",
+      description: "مراجعة دفعات وجزاءات المقاولين",
       role: ["Admin", "Finance", "Bookkeeper"],
     },
   ];

@@ -275,13 +275,156 @@ export type Database = {
         Args: {
           p_created_by: string
           p_project_id: string
+          p_template_item_ids?: string[]
           p_template_type_id: string
+          p_template_work_ids?: string[]
           p_use_template: boolean
           p_version: number
           p_zone_ids: string[]
         }
         Returns: string
       }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  contracts: {
+    Tables: {
+      payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          contractor_id: string
+          created_at: string
+          created_by: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          expense_id: string | null
+          grand_total: number | null
+          id: string
+          insurance_percentage: number
+          method: Database["public"]["Enums"]["payment_method"]
+          payments_number: string
+          penalty_amount: number
+          penalty_reason: string | null
+          prev_amount: number
+          project_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id: string
+          created_at?: string
+          created_by: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          expense_id?: string | null
+          grand_total?: number | null
+          id?: string
+          insurance_percentage?: number
+          method: Database["public"]["Enums"]["payment_method"]
+          payments_number: string
+          penalty_amount?: number
+          penalty_reason?: string | null
+          prev_amount?: number
+          project_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id?: string
+          created_at?: string
+          created_by?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          expense_id?: string | null
+          grand_total?: number | null
+          id?: string
+          insurance_percentage?: number
+          method?: Database["public"]["Enums"]["payment_method"]
+          payments_number?: string
+          penalty_amount?: number
+          penalty_reason?: string | null
+          prev_amount?: number
+          project_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      payments_penalties: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          contractor_id: string
+          created_at: string
+          created_by: string
+          expense_id: string | null
+          id: string
+          image_path: string | null
+          payment_id: string | null
+          project_id: string
+          reason: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id: string
+          created_at?: string
+          created_by: string
+          expense_id?: string | null
+          id?: string
+          image_path?: string | null
+          payment_id?: string | null
+          project_id: string
+          reason: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id?: string
+          created_at?: string
+          created_by?: string
+          expense_id?: string | null
+          id?: string
+          image_path?: string | null
+          payment_id?: string | null
+          project_id?: string
+          reason?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_penalties_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
@@ -4343,6 +4486,9 @@ export type CompositeTypes<
 
 export const Constants = {
   boq: {
+    Enums: {},
+  },
+  contracts: {
     Enums: {},
   },
   graphql_public: {

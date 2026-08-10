@@ -86,6 +86,7 @@ export const translateStatus = (status: string): string => {
     pending: "قيد الانتظار",
     approved: "موافق عليه",
     rejected: "مرفوض",
+    declined: "مرفوض",
     completed: "مكتمل",
     cancelled: "ملغي",
     paid: "مدفوع",
