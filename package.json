@@ -1,8 +1,12 @@
 {
   "name": "egc-management",
   "productName": "egc-management",
-  "version": "1.0.62",
+  "version": "1.0.63",
   "description": "Finance and management Application for EGC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NoraldenElhouni/egc-management"
+  },
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
