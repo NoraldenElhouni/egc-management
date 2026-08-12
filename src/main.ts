@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import started from "electron-squirrel-startup";
 import { updateElectronApp } from "update-electron-app";
@@ -6,6 +6,8 @@ import { updateElectronApp } from "update-electron-app";
 if (app.isPackaged) {
   updateElectronApp();
 }
+
+ipcMain.handle("get-app-version", () => app.getVersion());
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();

@@ -2,9 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { getCurrentVersion } from "../../contexts/Updateprovider";
 
 const ProfileDropdown = () => {
   const { user, logout } = useAuth();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCurrentVersion().then(setAppVersion);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -74,6 +80,12 @@ const ProfileDropdown = () => {
             >
               تسجيل الخروج
             </button>
+
+            {appVersion && (
+              <div className="border-t mt-1 pt-1 px-3 py-1 text-xs text-slate-400 text-center">
+                v{appVersion}
+              </div>
+            )}
           </div>
         )}
       </div>

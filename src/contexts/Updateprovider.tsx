@@ -47,7 +47,7 @@ function isBelowRequired(current: string, required: string): boolean {
  * - In Electron: uses the version exposed via preload (window.electronAPI.getVersion)
  * - In browser dev mode: falls back to import.meta.env.VITE_APP_VERSION or "0.0.0"
  */
-async function getCurrentVersion(): Promise<string> {
+export async function getCurrentVersion(): Promise<string> {
   // Electron exposes this via contextBridge in preload.ts:
   //   contextBridge.exposeInMainWorld("electronAPI", {
   //     getVersion: () => ipcRenderer.invoke("get-app-version"),
