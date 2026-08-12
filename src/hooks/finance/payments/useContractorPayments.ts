@@ -38,7 +38,7 @@ export function useContractorPayments() {
       const createdByIds = new Set<string>();
 
       (paymentsData ?? []).forEach((p) => {
-        contractorIds.add(p.contractor_id);
+        if (p.contractor_id) contractorIds.add(p.contractor_id);
         projectIds.add(p.project_id);
         createdByIds.add(p.created_by);
       });
@@ -89,7 +89,9 @@ export function useContractorPayments() {
       setPayments(
         (paymentsData ?? []).map((p) => ({
           ...p,
-          contractor: contractorsMap.get(p.contractor_id) ?? null,
+          contractor: p.contractor_id
+            ? (contractorsMap.get(p.contractor_id) ?? null)
+            : null,
           project: projectsMap.get(p.project_id) ?? null,
           created_by_employee: employeesMap.get(p.created_by) ?? null,
         })),

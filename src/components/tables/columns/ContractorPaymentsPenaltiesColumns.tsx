@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { ContractPaymentPenalty } from "../../../types/contracts.type";
-import { formatDate } from "../../../utils/helpper";
+import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { translateStatus } from "../../../utils/translations";
 import { statusColor } from "../../../utils/colors/status";
 import ContractPaymentPenaltyActionsCell from "../actions/payments/ContractPaymentPenaltyActionsCell";
@@ -39,7 +39,7 @@ export function getContractorPenaltiesColumns(
       header: "المبلغ",
       cell: ({ getValue }) => (
         <span className="font-medium whitespace-nowrap">
-          {toNum(getValue()).toLocaleString()}
+          {formatCurrency(toNum(getValue()))}
         </span>
       ),
     },

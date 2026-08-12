@@ -11,6 +11,7 @@ import {
   ColumnFiltersState,
   RowSelectionState,
   Table,
+  Row,
   FilterFn,
 } from "@tanstack/react-table";
 import Button from "../ui/Button";
@@ -74,12 +75,14 @@ type GenericTableProps<TData> = {
   enableSorting?: boolean;
   enablePagination?: boolean;
   enableFiltering?: boolean;
-  enableRowSelection?: boolean;
+  enableRowSelection?: boolean | ((row: Row<TData>) => boolean);
   showGlobalFilter?: boolean;
   onRowClick?: (row: TData) => void;
   onRowSelectionChange?: (selectedRows: TData[]) => void;
   className?: string;
   emptyMessage?: string;
+  /** Bump this value (e.g. increment a counter) to clear the current row selection without resetting sorting/filters. */
+  clearSelectionSignal?: number;
 
   /** Legacy: arbitrary node shown on the left of the top bar */
   header?: React.ReactNode;
@@ -117,6 +120,7 @@ export default function GenericTable<TData extends object>({
   link,
   linkLabel,
   linkVariant,
+  clearSelectionSignal,
 }: GenericTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -124,6 +128,12 @@ export default function GenericTable<TData extends object>({
   );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
+  React.useEffect(() => {
+    if (clearSelectionSignal !== undefined) {
+      setRowSelection({});
+    }
+  }, [clearSelectionSignal]);
 
   const table = useReactTable({
     data,

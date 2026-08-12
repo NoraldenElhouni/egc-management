@@ -299,18 +299,20 @@ export type Database = {
           amount: number
           approved_at: string | null
           approved_by: string | null
+          bank_holder_name: string | null
           bank_name: string | null
           bank_number: string | null
-          contractor_id: string
+          contractor_id: string | null
           created_at: string
           created_by: string
           currency: Database["public"]["Enums"]["currency_type"]
           expense_id: string | null
           grand_total: number | null
           id: string
-          insurance_percentage: number
           method: Database["public"]["Enums"]["payment_method"]
+          new_contractor_name: string | null
           payments_number: string
+          payments_reason: string | null
           penalty_amount: number
           penalty_reason: string | null
           prev_amount: number
@@ -322,18 +324,20 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          bank_holder_name?: string | null
           bank_name?: string | null
           bank_number?: string | null
-          contractor_id: string
+          contractor_id?: string | null
           created_at?: string
           created_by: string
           currency: Database["public"]["Enums"]["currency_type"]
           expense_id?: string | null
           grand_total?: number | null
           id?: string
-          insurance_percentage?: number
           method: Database["public"]["Enums"]["payment_method"]
+          new_contractor_name?: string | null
           payments_number: string
+          payments_reason?: string | null
           penalty_amount?: number
           penalty_reason?: string | null
           prev_amount?: number
@@ -345,18 +349,20 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          bank_holder_name?: string | null
           bank_name?: string | null
           bank_number?: string | null
-          contractor_id?: string
+          contractor_id?: string | null
           created_at?: string
           created_by?: string
           currency?: Database["public"]["Enums"]["currency_type"]
           expense_id?: string | null
           grand_total?: number | null
           id?: string
-          insurance_percentage?: number
           method?: Database["public"]["Enums"]["payment_method"]
+          new_contractor_name?: string | null
           payments_number?: string
+          payments_reason?: string | null
           penalty_amount?: number
           penalty_reason?: string | null
           prev_amount?: number
@@ -1142,6 +1148,8 @@ export type Database = {
       }
       contractors: {
         Row: {
+          bank_account_aproved: boolean | null
+          bank_holder_name: string | null
           bank_name: string | null
           bank_number: string | null
           created_at: string
@@ -1154,6 +1162,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bank_account_aproved?: boolean | null
+          bank_holder_name?: string | null
           bank_name?: string | null
           bank_number?: string | null
           created_at?: string
@@ -1166,6 +1176,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bank_account_aproved?: boolean | null
+          bank_holder_name?: string | null
           bank_name?: string | null
           bank_number?: string | null
           created_at?: string

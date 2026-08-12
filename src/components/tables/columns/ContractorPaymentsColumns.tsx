@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { ContractPayment } from "../../../types/contracts.type";
-import { formatDate } from "../../../utils/helpper";
+import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { translatePaymentMethod, translateStatus } from "../../../utils/translations";
 import { statusColor } from "../../../utils/colors/status";
 import ContractPaymentActionsCell from "../actions/payments/ContractPaymentActionsCell";
@@ -12,15 +12,46 @@ export function getContractorPaymentsColumns(
 ): ColumnDef<ContractPayment>[] {
   return [
     {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            aria-label="تحديد كل الدفعات المعتمدة الظاهرة"
+            onChange={table.getToggleAllPageRowsSelectedHandler()}
+            checked={table.getIsAllPageRowsSelected()}
+            className="w-4 h-4 rounded border-gray-300"
+          />
+        </div>
+      ),
+      cell: ({ row }) =>
+        row.getCanSelect() ? (
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              aria-label={`تحديد الدفعة ${row.original.payments_number}`}
+              onChange={row.getToggleSelectedHandler()}
+              checked={row.getIsSelected()}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+          </div>
+        ) : null,
+      size: 32,
+      enableSorting: false,
+      enableColumnFilter: false,
+    },
+    {
       id: "contractor",
       header: "المقاول",
       accessorFn: (row) =>
-        `${row.contractor?.first_name ?? ""} ${row.contractor?.last_name ?? ""}`.trim(),
+        row.contractor
+          ? `${row.contractor.first_name ?? ""} ${row.contractor.last_name ?? ""}`.trim()
+          : (row.new_contractor_name ?? ""),
       cell: ({ row }) => (
         <span className="font-medium whitespace-nowrap">
           {row.original.contractor
             ? `${row.original.contractor.first_name} ${row.original.contractor.last_name ?? ""}`
-            : "—"}
+            : (row.original.new_contractor_name ?? "—")}
         </span>
       ),
     },
@@ -44,50 +75,35 @@ export function getContractorPaymentsColumns(
     {
       accessorKey: "amount",
       header: "المبلغ",
-      cell: ({ getValue }) => (
+      cell: ({ row }) => (
         <span className="font-medium whitespace-nowrap">
-          {toNum(getValue()).toLocaleString()}
+          {formatCurrency(toNum(row.original.amount), row.original.currency)}
         </span>
       ),
     },
     {
       accessorKey: "penalty_amount",
       header: "مبلغ الجزاء",
-      cell: ({ getValue }) => (
+      cell: ({ row }) => (
         <span className="whitespace-nowrap">
-          {toNum(getValue()).toLocaleString()}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "insurance_percentage",
-      header: "نسبة التأمين",
-      cell: ({ getValue }) => <span>{toNum(getValue())}%</span>,
-    },
-    {
-      id: "insurance_amount",
-      header: "مبلغ التأمين",
-      accessorFn: (row) =>
-        (toNum(row.amount) * toNum(row.insurance_percentage)) / 100,
-      cell: ({ getValue }) => (
-        <span className="whitespace-nowrap">
-          {getValue<number>().toLocaleString()}
+          {formatCurrency(
+            toNum(row.original.penalty_amount),
+            row.original.currency,
+          )}
         </span>
       ),
     },
     {
       accessorKey: "grand_total",
       header: "الإجمالي الكلي",
-      cell: ({ getValue }) => (
+      cell: ({ row }) => (
         <span className="font-semibold whitespace-nowrap">
-          {toNum(getValue()).toLocaleString()}
+          {formatCurrency(
+            toNum(row.original.grand_total),
+            row.original.currency,
+          )}
         </span>
       ),
-    },
-    {
-      accessorKey: "currency",
-      header: "العملة",
-      cell: ({ getValue }) => <span>{getValue<string>()}</span>,
     },
     {
       accessorKey: "method",
