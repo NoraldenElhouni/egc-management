@@ -24,14 +24,14 @@ const FinancePage = () => {
       icon: BookOpen,
       path: "/finance/bookkeeping",
       description: "تسجيل القيود المالية",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
     {
       label: "الخزينة",
       icon: Vault,
       path: "/finance/treasury",
       description: "إدارة الخزينة",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
 
     // {
@@ -46,7 +46,7 @@ const FinancePage = () => {
       icon: Building2,
       path: "/finance/company",
       description: "بيانات الشركة المالية",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
     // {
     //   label: "الرواتب",
@@ -60,21 +60,21 @@ const FinancePage = () => {
       icon: Building2,
       path: "/finance/projects/add",
       description: "إضافة مشاريع جديدة",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
     {
       label: "المدفوعات",
       icon: CreditCard,
       path: "/finance/payments",
       description: "متابعة المدفوعات",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
     {
       label: "مدفوعات المقاولين",
       icon: HandCoins,
       path: "/finance/contractor-payments",
       description: "مراجعة دفعات وجزاءات المقاولين",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
   ];
 

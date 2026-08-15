@@ -45,7 +45,7 @@ const MainMenu = () => {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      role: ["Admin", "Finance", "Bookkeeper", "Manager"],
+      role: ["Admin", "Finance", "Bookkeeper", "Manager", "Head Finance"],
     },
     {
       label: "الشركة",

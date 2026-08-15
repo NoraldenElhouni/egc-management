@@ -28,7 +28,7 @@ const FinanceLayout = () => {
       icon: BookOpen,
       path: "/finance/bookkeeping",
       description: "تسجيل القيود المالية",
-      role: ["Admin", "Finance", "Bookkeeper"],
+      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
     },
     {
       title: "الخزينة",
@@ -49,14 +49,14 @@ const FinanceLayout = () => {
       icon: Building2,
       path: "/finance/company",
       description: "بيانات الشركة المالية",
-      role: ["Admin", "Finance", "Bookkeeper"],
+      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
     },
     {
       title: "مدفوعات المقاولين",
       icon: HandCoins,
       path: "/finance/contractor-payments",
       description: "مراجعة دفعات وجزاءات المقاولين",
-      role: ["Admin", "Finance", "Bookkeeper"],
+      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
     },
   ];
   const visibleItems = menuItems.filter((item) => {
