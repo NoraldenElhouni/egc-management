@@ -11,6 +11,7 @@ interface ContractorPaymentPdfItem {
   amount: number;
   penalty_amount: number;
   penalty_reason: string | null;
+  payments_reason: string | null;
   grand_total: number;
   currency: string;
   method: string;
@@ -20,6 +21,7 @@ interface ContractorPaymentPdfItem {
   bank_name: string | null;
   bank_number: string | null;
   bank_holder_name: string | null;
+  contractor_whatsapp_number: string | null;
 }
 
 function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
@@ -33,6 +35,7 @@ function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
     amount: payment.amount,
     penalty_amount: payment.penalty_amount,
     penalty_reason: payment.penalty_reason,
+    payments_reason: payment.payments_reason,
     grand_total: payment.grand_total ?? 0,
     currency: payment.currency,
     method:
@@ -49,6 +52,7 @@ function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
     bank_name: payment.bank_name,
     bank_number: payment.bank_number,
     bank_holder_name: payment.bank_holder_name,
+    contractor_whatsapp_number: payment.contractor?.whatsapp_number ?? null,
   };
 }
 

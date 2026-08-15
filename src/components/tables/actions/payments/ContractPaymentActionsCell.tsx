@@ -32,7 +32,7 @@ const ContractPaymentActionsCell = ({
         .eq("id", payment.id);
       if (error) throw error;
 
-      if (payment.method === "bank") {
+      if (payment.method === "bank" && !payment.contractor?.bank_account_aproved) {
         const contractorBankUpdate: { bank_name?: string; bank_number?: string } =
           {};
         if (payment.bank_name) contractorBankUpdate.bank_name = payment.bank_name;

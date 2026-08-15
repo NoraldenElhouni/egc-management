@@ -56,7 +56,9 @@ export function useContractorPayments() {
         contractorIds.size
           ? supabase
               .from("contractors")
-              .select("id, first_name, last_name")
+              .select(
+                "id, first_name, last_name, whatsapp_number, bank_account_aproved",
+              )
               .in("id", Array.from(contractorIds))
           : Promise.resolve({ data: [], error: null }),
         projectIds.size

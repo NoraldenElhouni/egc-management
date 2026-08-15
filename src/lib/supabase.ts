@@ -1160,6 +1160,7 @@ export type Database = {
           phone_number: string | null
           updated_at: string
           user_id: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           bank_account_aproved?: boolean | null
@@ -1174,6 +1175,7 @@ export type Database = {
           phone_number?: string | null
           updated_at?: string
           user_id?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           bank_account_aproved?: boolean | null
@@ -1188,6 +1190,7 @@ export type Database = {
           phone_number?: string | null
           updated_at?: string
           user_id?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: [
           {

@@ -9,6 +9,8 @@ type ContractorSummary = {
   id: string;
   first_name: string;
   last_name: string | null;
+  whatsapp_number: string | null;
+  bank_account_aproved: boolean | null;
 };
 
 type ProjectSummary = {
