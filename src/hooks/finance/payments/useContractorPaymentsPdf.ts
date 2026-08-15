@@ -21,7 +21,7 @@ interface ContractorPaymentPdfItem {
   bank_name: string | null;
   bank_number: string | null;
   bank_holder_name: string | null;
-  contractor_whatsapp_number: string | null;
+  whatsapp_number: string | null;
 }
 
 function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
@@ -52,7 +52,7 @@ function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
     bank_name: payment.bank_name,
     bank_number: payment.bank_number,
     bank_holder_name: payment.bank_holder_name,
-    contractor_whatsapp_number: payment.contractor?.whatsapp_number ?? null,
+    whatsapp_number: payment.contractor?.whatsapp_number ?? null,
   };
 }
 

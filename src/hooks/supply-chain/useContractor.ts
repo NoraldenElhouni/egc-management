@@ -1,5 +1,5 @@
 import { PostgrestError } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Contractors } from "../../types/global.type";
 import { ContractorBid } from "../../types/contracts.type";
@@ -13,8 +13,7 @@ export function useContractor(contractorId: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  useEffect(() => {
-    async function fetchcontractor() {
+  const fetchcontractor = useCallback(async () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -68,11 +67,19 @@ export function useContractor(contractorId: string) {
         setError(err as PostgrestError);
       }
       setLoading(false);
-    }
-    fetchcontractor();
   }, [contractorId]);
 
-  return { contractor, groupedExpenses, loading, error };
+  useEffect(() => {
+    fetchcontractor();
+  }, [fetchcontractor]);
+
+  return {
+    contractor,
+    groupedExpenses,
+    loading,
+    error,
+    refetch: fetchcontractor,
+  };
 }
 
 // useContractorBids()               // contractor's own submitted bids (all statuses)

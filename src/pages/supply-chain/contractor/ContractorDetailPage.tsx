@@ -22,10 +22,13 @@ import {
 
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
+import ConfirmDialog from "../../../components/ui/ConfirmDialog";
 import GenericTable from "../../../components/tables/table";
 import { BidsColumns } from "../../../components/tables/columns/contractors/BidsColumns";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import VendorContractorPdfButton from "../../../components/pdf-buttons/VendorContractorPdfButton";
+import EditContractorDialog from "../../../components/supply-chain/contractor/EditContractorDialog";
+import EditContractorBankInfoDialog from "../../../components/supply-chain/contractor/EditContractorBankInfoDialog";
 import { ProjectExpenses } from "../../../types/global.type";
 import { ProjectExpenseGroup } from "../../../hooks/supply-chain/vendors/useVendors";
 import {
@@ -141,14 +144,26 @@ const ProjectGroupRow = ({ group }: { group: ProjectExpenseGroup }) => {
 const ContractorDetailPage = () => {
   const { contractorId } = useParams<{ contractorId: string }>();
 
-  const { contractor, groupedExpenses, loading, error } = useContractor(
-    contractorId || "",
-  );
+  const { contractor, groupedExpenses, loading, error, refetch } =
+    useContractor(contractorId || "");
   const {
     bids,
     loading: bidsLoading,
     error: bidsError,
   } = useContractorBids(contractorId || "");
+
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showBankEditDialog, setShowBankEditDialog] = useState(false);
+  const [showBankApprovedWarning, setShowBankApprovedWarning] =
+    useState(false);
+
+  function handleOpenBankEdit() {
+    if (contractor?.bank_account_aproved) {
+      setShowBankApprovedWarning(true);
+    } else {
+      setShowBankEditDialog(true);
+    }
+  }
 
   const stats = useMemo(() => {
     const totalBids = bids?.length || 0;
@@ -239,8 +254,17 @@ const ContractorDetailPage = () => {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition">
+              <button
+                onClick={() => setShowEditDialog(true)}
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
                 تعديل بيانات المقاول
+              </button>
+              <button
+                onClick={handleOpenBankEdit}
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition"
+              >
+                تعديل معلومات البنك
               </button>
               <button className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 transition">
                 عرض العقود
@@ -430,6 +454,40 @@ const ContractorDetailPage = () => {
           </div>
         )}
       </div>
+
+      <EditContractorDialog
+        open={showEditDialog}
+        contractor={contractor}
+        onClose={() => setShowEditDialog(false)}
+        onSuccess={() => {
+          setShowEditDialog(false);
+          refetch();
+        }}
+      />
+
+      <EditContractorBankInfoDialog
+        open={showBankEditDialog}
+        contractor={contractor}
+        onClose={() => setShowBankEditDialog(false)}
+        onSuccess={() => {
+          setShowBankEditDialog(false);
+          refetch();
+        }}
+      />
+
+      <ConfirmDialog
+        open={showBankApprovedWarning}
+        title="معلومات البنك معتمدة بالفعل"
+        message="تم اعتماد معلومات هذا الحساب البنكي مسبقاً. هل أنت متأكد أنك تريد تعديلها؟"
+        confirmLabel="تعديل"
+        cancelLabel="إلغاء"
+        confirmVariant="warning"
+        onConfirm={() => {
+          setShowBankApprovedWarning(false);
+          setShowBankEditDialog(true);
+        }}
+        onCancel={() => setShowBankApprovedWarning(false)}
+      />
     </div>
   );
 };
