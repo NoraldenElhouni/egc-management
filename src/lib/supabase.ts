@@ -470,6 +470,40 @@ export type Database = {
       [_ in never]: never
     }
   }
+  lookups: {
+    Tables: {
+      banks: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounts: {
@@ -1150,6 +1184,7 @@ export type Database = {
         Row: {
           bank_account_aproved: boolean | null
           bank_holder_name: string | null
+          bank_id: string | null
           bank_name: string | null
           bank_number: string | null
           created_at: string
@@ -1158,6 +1193,7 @@ export type Database = {
           id: string
           last_name: string | null
           phone_number: string | null
+          status: string
           updated_at: string
           user_id: string | null
           whatsapp_number: string | null
@@ -1165,6 +1201,7 @@ export type Database = {
         Insert: {
           bank_account_aproved?: boolean | null
           bank_holder_name?: string | null
+          bank_id?: string | null
           bank_name?: string | null
           bank_number?: string | null
           created_at?: string
@@ -1173,6 +1210,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone_number?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
           whatsapp_number?: string | null
@@ -1180,6 +1218,7 @@ export type Database = {
         Update: {
           bank_account_aproved?: boolean | null
           bank_holder_name?: string | null
+          bank_id?: string | null
           bank_name?: string | null
           bank_number?: string | null
           created_at?: string
@@ -1188,6 +1227,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone_number?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
           whatsapp_number?: string | null
@@ -4519,6 +4559,9 @@ export const Constants = {
     Enums: {},
   },
   graphql_public: {
+    Enums: {},
+  },
+  lookups: {
     Enums: {},
   },
   public: {

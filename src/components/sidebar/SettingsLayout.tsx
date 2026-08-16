@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   BookText,
   Map,
+  Landmark,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
@@ -42,6 +43,13 @@ const SettingsLayout = () => {
       icon: Map,
       path: "/settings/maps",
       description: "إدارة الخرائط",
+      role: ["Admin", "Manager", "Bookkeeper"],
+    },
+    {
+      title: "اداره البنوك",
+      icon: Landmark,
+      path: "/settings/banks",
+      description: "إدارة قائمة البنوك",
       role: ["Admin", "Manager", "Bookkeeper"],
     },
   ];

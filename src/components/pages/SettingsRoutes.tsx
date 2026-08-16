@@ -9,6 +9,7 @@ import SettingsSpecializationsPage from "../../pages/settings/specializations/Se
 import SpecializationsDetailsPage from "../../pages/settings/specializations/id/SpecializationDetailsPage";
 import MapsPage from "../../pages/settings/maps/MapsPage";
 import ExpenseDetailsPage from "../../pages/settings/expenses/ExpenseDetailsPage";
+import BanksPage from "../../pages/settings/banks/BanksPage";
 
 export default function SettingsRoutes() {
   return (
@@ -33,6 +34,7 @@ export default function SettingsRoutes() {
         />
 
         <Route path="maps" element={<MapsPage />} />
+        <Route path="banks" element={<BanksPage />} />
       </Route>
     </Routes>
   );

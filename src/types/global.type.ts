@@ -65,6 +65,7 @@ export type UserPermissions = Tables<"user_permissions">;
 export type UserRoles = Tables<"user_roles">;
 export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
+export type Bank = Database["lookups"]["Tables"]["banks"]["Row"];
 export type Attachments = Tables<"attachments">;
 export type RequestMilestones = Tables<"request_milestones">;
 export type MilestoneReports = Tables<"milestone_reports">;

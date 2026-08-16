@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { Contractors } from "../../../types/global.type";
 import Button from "../../ui/Button";
 import ConfirmDialog from "../../ui/ConfirmDialog";
+import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import { useBanks } from "../../../hooks/useBanks";
 
 interface EditContractorBankInfoDialogProps {
   open: boolean;
@@ -17,7 +19,7 @@ const EditContractorBankInfoDialog = ({
   onClose,
   onSuccess,
 }: EditContractorBankInfoDialogProps) => {
-  const [bankName, setBankName] = useState(contractor.bank_name ?? "");
+  const [bankId, setBankId] = useState(contractor.bank_id ?? "");
   const [bankNumber, setBankNumber] = useState(contractor.bank_number ?? "");
   const [bankHolderName, setBankHolderName] = useState(
     contractor.bank_holder_name ?? "",
@@ -26,9 +28,15 @@ const EditContractorBankInfoDialog = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { banks, loading: banksLoading } = useBanks();
+  const bankOptions = useMemo(
+    () => banks.map((b) => ({ value: b.id, label: b.name })),
+    [banks],
+  );
+
   useEffect(() => {
     if (!open) return;
-    setBankName(contractor.bank_name ?? "");
+    setBankId(contractor.bank_id ?? "");
     setBankNumber(contractor.bank_number ?? "");
     setBankHolderName(contractor.bank_holder_name ?? "");
     setError(null);
@@ -37,14 +45,31 @@ const EditContractorBankInfoDialog = ({
 
   if (!open) return null;
 
+  function handleRequestSave() {
+    if (!bankId) {
+      setError("يرجى اختيار البنك");
+      return;
+    }
+    setError(null);
+    setShowSaveConfirm(true);
+  }
+
   async function handleConfirmSave() {
+    const selectedBank = banks.find((b) => b.id === bankId);
+    if (!selectedBank) {
+      setError("البنك المختار غير صالح");
+      setShowSaveConfirm(false);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
       const { error: updateError } = await supabase
         .from("contractors")
         .update({
-          bank_name: bankName.trim() || null,
+          bank_id: selectedBank.id,
+          bank_name: selectedBank.name,
           bank_number: bankNumber.trim() || null,
           bank_holder_name: bankHolderName.trim() || null,
           bank_account_aproved: true,
@@ -73,16 +98,15 @@ const EditContractorBankInfoDialog = ({
           </h2>
 
           <div className="space-y-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">
-                اسم البنك
-              </label>
-              <input
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              />
-            </div>
+            <SearchableSelectField
+              id="bankId"
+              label="اسم البنك"
+              placeholder="-- ابحث واختر بنكاً --"
+              options={bankOptions}
+              loading={banksLoading}
+              value={bankId}
+              onChange={(val) => setBankId(val)}
+            />
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-gray-500">
                 رقم الحساب
@@ -125,7 +149,7 @@ const EditContractorBankInfoDialog = ({
               type="button"
               variant="primary"
               size="md"
-              onClick={() => setShowSaveConfirm(true)}
+              onClick={handleRequestSave}
               disabled={saving}
             >
               حفظ
