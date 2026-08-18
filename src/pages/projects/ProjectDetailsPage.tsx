@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import ProjectDetails from "./ProjectDetail";
 import { ProjectStatsTab } from "../../components/project/project-stats/ProjectStatsTab";
+import ProjectCountersList from "../../components/project/counters/ProjectCountersList";
 import Tabs from "../../components/ui/Tabs";
 
 const ProjectDetailsPage = () => {
@@ -17,6 +18,11 @@ const ProjectDetailsPage = () => {
       id: "stats",
       label: "الإحصائيات",
       content: <ProjectStatsTab projectId={projectId} />,
+    },
+    {
+      id: "counters",
+      label: "العدادات",
+      content: <ProjectCountersList projectId={projectId} />,
     },
   ];
   return (

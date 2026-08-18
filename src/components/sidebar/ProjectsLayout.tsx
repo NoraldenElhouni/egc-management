@@ -3,9 +3,8 @@ import { useAuth } from "../../hooks/useAuth";
 import {
   FolderKanban,
   FolderPlus,
-  BarChart3,
-  FileText,
   Users,
+  AlertTriangle,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
@@ -45,6 +44,12 @@ const ProjectsLayout = () => {
       icon: Users,
       path: "/projects/team",
       description: "إدارة فريق المشاريع",
+    },
+    {
+      title: "العدادات",
+      icon: AlertTriangle,
+      path: "/projects/counters",
+      description: "متابعة فترات الرصيد السالب",
     },
   ];
 

@@ -12,6 +12,81 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  app: {
+    Tables: {
+      project_negative_periods: {
+        Row: {
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          days_count: number
+          ended_on: string | null
+          id: string
+          min_balance: number | null
+          project_id: string
+          started_on: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          days_count?: number
+          ended_on?: string | null
+          id?: string
+          min_balance?: number | null
+          project_id: string
+          started_on: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          days_count?: number
+          ended_on?: string | null
+          id?: string
+          min_balance?: number | null
+          project_id?: string
+          started_on?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      v_projects_in_minus: {
+        Row: {
+          currency: Database["public"]["Enums"]["currency_type"] | null
+          days_in_minus: number | null
+          min_balance: number | null
+          project_id: string | null
+          started_on: string | null
+        }
+        Insert: {
+          currency?: Database["public"]["Enums"]["currency_type"] | null
+          days_in_minus?: never
+          min_balance?: number | null
+          project_id?: string | null
+          started_on?: string | null
+        }
+        Update: {
+          currency?: Database["public"]["Enums"]["currency_type"] | null
+          days_in_minus?: never
+          min_balance?: number | null
+          project_id?: string | null
+          started_on?: string | null
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      tick_negative_periods: { Args: never; Returns: undefined }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   boq: {
     Tables: {
       items: {
@@ -4562,6 +4637,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  app: {
+    Enums: {},
+  },
   boq: {
     Enums: {},
   },

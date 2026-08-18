@@ -53,5 +53,6 @@ jobs:
             dist/**/*.dmg
             dist/**/*.zip
             dist/**/*.nupkg
+            dist/**/RELEASES
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
