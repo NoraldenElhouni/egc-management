@@ -47,6 +47,7 @@ const ProjectsCountersPage = () => {
       (projects ?? []).map((project) => ({
         id: project.id,
         name: project.name,
+        serialNumber: project.serial_number,
         minusRow: minusByProjectId.get(project.id),
         accountMinusRows: accountMinusByProjectId.get(project.id) ?? [],
       })),
@@ -132,6 +133,7 @@ const ProjectsCountersPage = () => {
             enableSorting
             enableFiltering
             showGlobalFilter
+            initialSorting={[{ id: "serialNumber", desc: true }]}
           />
         </>
       )}

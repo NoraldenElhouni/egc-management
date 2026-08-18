@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { AlertTriangle, CalendarClock, Hash, Info } from "lucide-react";
 import {
   AccountNegativePeriod,
@@ -5,7 +6,8 @@ import {
   useAccountNegativePeriods,
   useProjectNegativePeriods,
 } from "../../../hooks/projects/useProjectCounters";
-import { projectCountersColumns } from "../../tables/columns/ProjectCountersColumns";
+import { useProject } from "../../../hooks/useProjects";
+import { createProjectCountersColumns } from "../../tables/columns/ProjectCountersColumns";
 import GenericTable from "../../tables/table";
 import KpiCard from "../../ui/KpiCard";
 
@@ -15,25 +17,36 @@ interface ProjectCountersListProps {
 
 interface CounterSectionProps {
   title: string;
+  note: string;
   periods: (NegativePeriod | AccountNegativePeriod)[];
   loading: boolean;
   error: { message: string } | null;
   refetch: () => void;
   emptyText: string;
+  projectSerialNumber: number | null;
 }
+
+const SectionHeader = ({ title, note }: { title: string; note: string }) => (
+  <div className="space-y-1.5">
+    <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+    <p className="text-xs text-gray-500 leading-relaxed">{note}</p>
+  </div>
+);
 
 const CounterSection = ({
   title,
+  note,
   periods,
   loading,
   error,
   refetch,
   emptyText,
+  projectSerialNumber,
 }: CounterSectionProps) => {
   if (loading)
     return (
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+        <SectionHeader title={title} note={note} />
         <div className="flex items-center justify-center gap-2 h-40 text-gray-400 text-sm">
           <i
             className="ti ti-loader-2 animate-spin text-lg"
@@ -47,7 +60,7 @@ const CounterSection = ({
   if (error)
     return (
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+        <SectionHeader title={title} note={note} />
         <div className="flex flex-col items-center justify-center gap-3 h-40 text-sm">
           <p className="text-red-500">{error.message}</p>
           <button
@@ -65,7 +78,7 @@ const CounterSection = ({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+      <SectionHeader title={title} note={note} />
 
       {periods.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-12 bg-white rounded-xl border border-dashed border-gray-300 text-center">
@@ -100,7 +113,7 @@ const CounterSection = ({
 
           <GenericTable
             data={periods}
-            columns={projectCountersColumns}
+            columns={createProjectCountersColumns(projectSerialNumber)}
             enableSorting
             initialSorting={[{ id: "started_on", desc: true }]}
           />
@@ -111,8 +124,13 @@ const CounterSection = ({
 };
 
 const ProjectCountersList = ({ projectId }: ProjectCountersListProps) => {
+  const { project } = useProject(projectId);
   const projectCounters = useProjectNegativePeriods(projectId);
   const accountCounters = useAccountNegativePeriods(projectId);
+  const projectSerialNumber = useMemo(
+    () => project?.serial_number ?? null,
+    [project],
+  );
 
   return (
     <div className="space-y-6">
@@ -126,20 +144,24 @@ const ProjectCountersList = ({ projectId }: ProjectCountersListProps) => {
 
       <CounterSection
         title="عداد رصيد المشروع"
+        note="يحتسب هذا العداد جميع المصاريف المدفوعة وغير المدفوعة، نقدي وبنكي معاً، حتى لو لم يُدفع المصروف بالكامل يتم احتسابه هنا."
         periods={projectCounters.periods}
         loading={projectCounters.loading}
         error={projectCounters.error}
         refetch={projectCounters.refetch}
         emptyText="لم يدخل هذا المشروع في رصيد سالب حتى الآن."
+        projectSerialNumber={projectSerialNumber}
       />
 
       <CounterSection
         title="عداد رصيد الحساب"
+        note="يحتسب هذا العداد الحساب النقدي والبنكي فقط للمصاريف المدفوعة فقط، وبالتالي فهو يمثل الرصيد الفعلي المتوفر لدى العميل."
         periods={accountCounters.periods}
         loading={accountCounters.loading}
         error={accountCounters.error}
         refetch={accountCounters.refetch}
         emptyText="لم يدخل حساب هذا المشروع في رصيد سالب حتى الآن."
+        projectSerialNumber={projectSerialNumber}
       />
     </div>
   );

@@ -10,11 +10,17 @@ import Badge from "../../ui/Badge";
 export interface ProjectCounterSummaryRow {
   id: string;
   name: string;
+  serialNumber: number | null;
   minusRow?: ProjectInMinus;
   accountMinusRows: AccountInMinus[];
 }
 
 export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
+  {
+    accessorKey: "serialNumber",
+    header: "الرقم",
+    size: 32,
+  },
   {
     accessorKey: "name",
     header: "المشروع",

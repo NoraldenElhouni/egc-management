@@ -12,7 +12,15 @@ import Badge from "../../ui/Badge";
  */
 type NegativePeriodRow = NegativePeriod | AccountNegativePeriod;
 
-export const projectCountersColumns: ColumnDef<NegativePeriodRow>[] = [
+export const createProjectCountersColumns = (
+  projectSerialNumber: number | null,
+): ColumnDef<NegativePeriodRow>[] => [
+  {
+    id: "serial_number",
+    header: "الرقم",
+    cell: () => projectSerialNumber ?? "—",
+    size: 32,
+  },
   {
     accessorKey: "started_on",
     header: "تاريخ البداية",
