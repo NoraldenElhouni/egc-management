@@ -106,6 +106,11 @@ export interface CompanyPaymentsWithUser extends CompanyExpensePayments {
 }
 
 export interface contractorWithSpecializations extends Contractors {
+  specializations: {
+    id: string;
+    name: string;
+    role_id: string;
+  } | null;
   users: {
     user_specializations: {
       specialization_id: string;

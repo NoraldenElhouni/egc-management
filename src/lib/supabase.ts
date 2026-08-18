@@ -1193,6 +1193,7 @@ export type Database = {
           id: string
           last_name: string | null
           phone_number: string | null
+          specialization_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -1210,6 +1211,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone_number?: string | null
+          specialization_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -1227,12 +1229,20 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone_number?: string | null
+          specialization_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
           whatsapp_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contractors_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contractors_user_id_fkey"
             columns: ["user_id"]

@@ -1,12 +1,13 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { Contractors } from "../../types/global.type";
+import { contractorWithSpecializations } from "../../types/extended.type";
 import { ContractorBid } from "../../types/contracts.type";
 import { ProjectExpenseGroup } from "./vendors/useVendors";
 
 export function useContractor(contractorId: string) {
-  const [contractor, setContractor] = useState<Contractors | null>(null);
+  const [contractor, setContractor] =
+    useState<contractorWithSpecializations | null>(null);
   const [groupedExpenses, setGroupedExpenses] = useState<ProjectExpenseGroup[]>(
     [],
   );
@@ -18,7 +19,17 @@ export function useContractor(contractorId: string) {
       try {
         const { data, error } = await supabase
           .from("contractors")
-          .select("*")
+          .select(
+            `*,
+            specializations (id, name, role_id),
+            users (
+              user_specializations (
+                specialization_id,
+                specializations (id, name, role_id)
+              )
+            )
+          `,
+          )
           .eq("id", contractorId)
           .single();
 
@@ -26,7 +37,9 @@ export function useContractor(contractorId: string) {
           console.error("error fetching contractor", error);
           setError(error);
         } else {
-          setContractor(data);
+          setContractor(
+            data as unknown as contractorWithSpecializations | null,
+          );
         }
 
         const { data: expensesData, error: expensesError } = await supabase

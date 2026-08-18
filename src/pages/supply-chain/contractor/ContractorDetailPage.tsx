@@ -154,8 +154,7 @@ const ContractorDetailPage = () => {
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showBankEditDialog, setShowBankEditDialog] = useState(false);
-  const [showBankApprovedWarning, setShowBankApprovedWarning] =
-    useState(false);
+  const [showBankApprovedWarning, setShowBankApprovedWarning] = useState(false);
 
   function handleOpenBankEdit() {
     if (contractor?.bank_account_aproved) {
@@ -164,6 +163,14 @@ const ContractorDetailPage = () => {
       setShowBankEditDialog(true);
     }
   }
+
+  const additionalSpecializationNames = useMemo(
+    () =>
+      (contractor?.users?.user_specializations ?? [])
+        .map((us) => us.specializations?.name)
+        .filter((name): name is string => Boolean(name)),
+    [contractor],
+  );
 
   const stats = useMemo(() => {
     const totalBids = bids?.length || 0;
@@ -266,9 +273,6 @@ const ContractorDetailPage = () => {
               >
                 تعديل معلومات البنك
               </button>
-              <button className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-100 transition">
-                عرض العقود
-              </button>
               <VendorContractorPdfButton id={contractorId} type="contractor" />
             </div>
           </div>
@@ -325,7 +329,49 @@ const ContractorDetailPage = () => {
                 label="رقم الهاتف"
                 value={contractor.phone_number || "غير متوفر"}
               />
-              <InfoItem label="معرف المقاول" value={contractor.id} />
+              <InfoItem
+                label="التخصص الرئيسي"
+                value={contractor.specializations?.name || "غير محدد"}
+              />
+              {additionalSpecializationNames.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">
+                    تخصصات إضافية
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {additionalSpecializationNames.map((name) => (
+                      <span
+                        key={name}
+                        className="px-2 py-1 text-xs bg-purple-50 text-purple-700 rounded"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {contractor.bank_account_aproved && (
+                <>
+                  <InfoItem
+                    label="البنك"
+                    value={contractor.bank_name || "غير متوفر"}
+                  />
+                  <InfoItem
+                    label="رقم الحساب"
+                    value={contractor.bank_number || "غير متوفر"}
+                  />
+                  <InfoItem
+                    label="اسم صاحب الحساب"
+                    value={contractor.bank_holder_name || "غير متوفر"}
+                  />
+                  <InfoItem
+                    label="حالة اعتماد الحساب البنكي"
+                    value={
+                      contractor.bank_account_aproved ? "معتمد" : "غير معتمد"
+                    }
+                  />
+                </>
+              )}
               <InfoItem
                 label="تاريخ الإنشاء"
                 value={formatDate(contractor.created_at)}
@@ -355,7 +401,7 @@ const ContractorDetailPage = () => {
                 value={
                   stats.totalBids > 0
                     ? formatCurrency(stats.totalValue / stats.totalBids)
-                    : "$0"
+                    : "0 LYD"
                 }
                 description="متوسط قيمة كل عطاء مقدم"
               />

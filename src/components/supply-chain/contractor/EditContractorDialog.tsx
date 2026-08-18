@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
-import { Contractors } from "../../../types/global.type";
+import { contractorWithSpecializations } from "../../../types/extended.type";
+import { useSpecializations } from "../../../hooks/useSpecializations";
 import Button from "../../ui/Button";
+import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import { Search } from "lucide-react";
 
 interface EditContractorDialogProps {
   open: boolean;
-  contractor: Contractors;
+  contractor: contractorWithSpecializations;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -16,6 +19,9 @@ const EditContractorDialog = ({
   onClose,
   onSuccess,
 }: EditContractorDialogProps) => {
+  const { data: specializations, loading: specializationsLoading } =
+    useSpecializations("Contractor");
+
   const [firstName, setFirstName] = useState(contractor.first_name);
   const [lastName, setLastName] = useState(contractor.last_name ?? "");
   const [email, setEmail] = useState(contractor.email ?? "");
@@ -23,6 +29,12 @@ const EditContractorDialog = ({
   const [whatsappNumber, setWhatsappNumber] = useState(
     contractor.whatsapp_number ?? "",
   );
+  const [mainSpecializationId, setMainSpecializationId] = useState(
+    contractor.specialization_id ?? "",
+  );
+  const [additionalSpecializationIds, setAdditionalSpecializationIds] =
+    useState<string[]>([]);
+  const [specializationSearch, setSpecializationSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,10 +45,31 @@ const EditContractorDialog = ({
     setEmail(contractor.email ?? "");
     setPhoneNumber(contractor.phone_number ?? "");
     setWhatsappNumber(contractor.whatsapp_number ?? "");
+    setMainSpecializationId(contractor.specialization_id ?? "");
+    setAdditionalSpecializationIds(
+      (contractor.users?.user_specializations ?? []).map(
+        (us) => us.specialization_id,
+      ),
+    );
+    setSpecializationSearch("");
     setError(null);
   }, [open, contractor]);
 
+  const filteredSpecializations = useMemo(() => {
+    const trimmed = specializationSearch.trim().toLowerCase();
+    if (!trimmed) return specializations;
+    return specializations.filter((s) =>
+      s.name.toLowerCase().includes(trimmed),
+    );
+  }, [specializations, specializationSearch]);
+
   if (!open) return null;
+
+  function toggleAdditional(id: string) {
+    setAdditionalSpecializationIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
 
   async function handleSave() {
     if (!firstName.trim()) {
@@ -55,10 +88,33 @@ const EditContractorDialog = ({
           email: email.trim() || null,
           phone_number: phoneNumber.trim() || null,
           whatsapp_number: whatsappNumber.trim() || null,
+          specialization_id: mainSpecializationId || null,
         })
         .eq("id", contractor.id);
 
       if (updateError) throw updateError;
+
+      if (contractor.user_id) {
+        const { error: deleteError } = await supabase
+          .from("user_specializations")
+          .delete()
+          .eq("user_id", contractor.user_id);
+
+        if (deleteError) throw deleteError;
+
+        if (additionalSpecializationIds.length > 0) {
+          const { error: insertError } = await supabase
+            .from("user_specializations")
+            .insert(
+              additionalSpecializationIds.map((specialization_id) => ({
+                user_id: contractor.user_id as string,
+                specialization_id,
+              })),
+            );
+
+          if (insertError) throw insertError;
+        }
+      }
 
       onSuccess();
     } catch (err) {
@@ -103,6 +159,7 @@ const EditContractorDialog = ({
             </label>
             <input
               type="email"
+              disabled={contractor.user_id !== null}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -128,6 +185,69 @@ const EditContractorDialog = ({
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
           </div>
+        </div>
+
+        <SearchableSelectField
+          id="mainSpecializationId"
+          label="التخصص الرئيسي"
+          placeholder="-- ابحث واختر تخصصاً --"
+          options={specializations.map((s) => ({
+            value: s.id,
+            label: s.name,
+          }))}
+          loading={specializationsLoading}
+          value={mainSpecializationId}
+          onChange={(val) => setMainSpecializationId(val)}
+        />
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm text-gray-700">تخصصات إضافية</label>
+
+          {!contractor.user_id ? (
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              يجب أن يكون للمقاول حساب مستخدم لإضافة أكثر من تخصص.
+            </p>
+          ) : (
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <div className="relative border-b border-gray-200">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  value={specializationSearch}
+                  onChange={(e) => setSpecializationSearch(e.target.value)}
+                  placeholder="ابحث في التخصصات..."
+                  className="w-full pr-9 pl-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  disabled={specializationsLoading}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 max-h-48 overflow-y-auto">
+                {specializationsLoading ? (
+                  <p className="text-xs text-gray-500 col-span-full text-center py-2">
+                    جاري تحميل التخصصات...
+                  </p>
+                ) : filteredSpecializations.length === 0 ? (
+                  <p className="text-xs text-gray-500 col-span-full text-center py-2">
+                    لا توجد نتائج
+                  </p>
+                ) : (
+                  filteredSpecializations.map((s) => (
+                    <label
+                      key={s.id}
+                      className="flex items-center gap-2 text-sm text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={additionalSpecializationIds.includes(s.id)}
+                        onChange={() => toggleAdditional(s.id)}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span>{s.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (

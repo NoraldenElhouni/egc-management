@@ -52,6 +52,7 @@ export async function AddContractors(form: ContractorFormValues) {
     email: email || null,
     phone_number: (form.phone ?? "").trim(), // NOTE: table says NOT NULL (see note below)
     user_id: authUserId, // null if no auth user created
+    specialization_id: form.specializationId || null,
   };
 
   const { data: contractor, error: contractorErr } = await supabaseAdmin
