@@ -14,6 +14,42 @@ export type Database = {
   }
   app: {
     Tables: {
+      account_negative_periods: {
+        Row: {
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          days_count: number
+          ended_on: string | null
+          id: string
+          min_balance: number | null
+          project_id: string
+          started_on: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          days_count?: number
+          ended_on?: string | null
+          id?: string
+          min_balance?: number | null
+          project_id: string
+          started_on: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          days_count?: number
+          ended_on?: string | null
+          id?: string
+          min_balance?: number | null
+          project_id?: string
+          started_on?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_negative_periods: {
         Row: {
           created_at: string
@@ -52,6 +88,38 @@ export type Database = {
       }
     }
     Views: {
+      v_account_sums: {
+        Row: {
+          balance: number | null
+          currency: Database["public"]["Enums"]["currency_type"] | null
+          project_id: string | null
+        }
+        Relationships: []
+      }
+      v_accounts_in_minus: {
+        Row: {
+          currency: Database["public"]["Enums"]["currency_type"] | null
+          days_in_minus: number | null
+          min_balance: number | null
+          project_id: string | null
+          started_on: string | null
+        }
+        Insert: {
+          currency?: Database["public"]["Enums"]["currency_type"] | null
+          days_in_minus?: never
+          min_balance?: number | null
+          project_id?: string | null
+          started_on?: string | null
+        }
+        Update: {
+          currency?: Database["public"]["Enums"]["currency_type"] | null
+          days_in_minus?: never
+          min_balance?: number | null
+          project_id?: string | null
+          started_on?: string | null
+        }
+        Relationships: []
+      }
       v_projects_in_minus: {
         Row: {
           currency: Database["public"]["Enums"]["currency_type"] | null
@@ -78,6 +146,7 @@ export type Database = {
       }
     }
     Functions: {
+      tick_account_negative_periods: { Args: never; Returns: undefined }
       tick_negative_periods: { Args: never; Returns: undefined }
     }
     Enums: {
