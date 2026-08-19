@@ -43,11 +43,6 @@ const BidActionsCell = ({ bid, onRefresh }: BidActionsCellProps) => {
         >
           قبول
         </button>
-        {/* <Link to={`./${bid.id}/counter/new`}>
-          <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-100 transition-colors">
-            عرض مضاد
-          </button>
-        </Link> */}
         <button
           onClick={handleDecline}
           disabled={declining}

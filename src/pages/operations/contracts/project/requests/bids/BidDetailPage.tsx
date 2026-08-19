@@ -75,12 +75,6 @@ const BidDetailPage = () => {
               <Ban className="w-4 h-4 ml-2" />
               {declining ? "جاري الرفض..." : "رفض العرض"}
             </Button>
-            {/* <Link to={`./counter/new`}>
-              <Button size="sm" variant="warning">
-                <Info className="w-4 h-4 ml-2" />
-                عرض مضاد
-              </Button>
-            </Link> */}
             <Button
               size="sm"
               variant="success"
