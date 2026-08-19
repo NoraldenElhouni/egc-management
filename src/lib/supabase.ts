@@ -654,7 +654,10 @@ export type Database = {
           amount: number
           created_at: string
           created_by: string
+          description: string | null
           id: string
+          image_path: string | null
+          milestone_id: string | null
           payment_id: string
           reason: string
         }
@@ -662,7 +665,10 @@ export type Database = {
           amount: number
           created_at?: string
           created_by: string
+          description?: string | null
           id?: string
+          image_path?: string | null
+          milestone_id?: string | null
           payment_id: string
           reason: string
         }
@@ -670,11 +676,21 @@ export type Database = {
           amount?: number
           created_at?: string
           created_by?: string
+          description?: string | null
           id?: string
+          image_path?: string | null
+          milestone_id?: string | null
           payment_id?: string
           reason?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_penalties_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_penalties_payment_id_fkey"
             columns: ["payment_id"]
@@ -2211,61 +2227,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      milestone_reports: {
-        Row: {
-          amount_done: number | null
-          contract_id: string
-          created_at: string
-          description: string | null
-          id: string
-          img_path: string | null
-          milestone_id: string
-          submitted_by: string
-        }
-        Insert: {
-          amount_done?: number | null
-          contract_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          img_path?: string | null
-          milestone_id: string
-          submitted_by: string
-        }
-        Update: {
-          amount_done?: number | null
-          contract_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          img_path?: string | null
-          milestone_id?: string
-          submitted_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "milestone_reports_contract_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "milestone_reports_milestone_fkey"
-            columns: ["milestone_id"]
-            isOneToOne: false
-            referencedRelation: "contract_milestones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "milestone_reports_submitted_by_fkey"
-            columns: ["submitted_by"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       payment_requests: {
         Row: {
