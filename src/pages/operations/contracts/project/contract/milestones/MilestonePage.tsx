@@ -31,7 +31,7 @@ const MilestonePage = () => {
     projectId: string;
   }>();
 
-  const { milestone, loading, error, amountPaid } = useMilestone(
+  const { milestone, loading, error, paid, remaining } = useMilestone(
     milestoneId ?? "",
   );
 
@@ -40,10 +40,9 @@ const MilestonePage = () => {
   if (error) return <ErrorPage label="حدث خطأ" error={error.message} />;
   if (!milestone) return null;
 
-  const remaining = milestone.amount - amountPaid;
   const progressPercent =
     milestone.amount > 0
-      ? Math.min(Math.round((amountPaid / milestone.amount) * 100), 100)
+      ? Math.min(Math.round((paid / milestone.amount) * 100), 100)
       : 0;
   const isPending = milestone.status === "pending";
   const contractorName = milestone.contracts.contractor
@@ -115,7 +114,7 @@ const MilestonePage = () => {
           },
           {
             label: "المدفوع حتى الآن",
-            value: formatCurrency(amountPaid),
+            value: formatCurrency(paid),
             secondaryLabel: "نسبة الإنجاز",
             secondaryValue: `${progressPercent}%`,
           },
@@ -167,7 +166,7 @@ const MilestonePage = () => {
           />
         </div>
         <div className="flex justify-between text-xs text-gray-400 mt-2">
-          <span>{formatCurrency(amountPaid)} مدفوع</span>
+          <span>{formatCurrency(paid)} مدفوع</span>
           <span>{formatCurrency(remaining)} متبقي</span>
         </div>
       </div>

@@ -180,26 +180,9 @@ export interface QuoteItemInput {
   note: string | null;
 }
 
-async function recomputeQuoteTotal(quoteId: string) {
-  const { data: items } = await supabase
-    .schema("contracts")
-    .from("quote_items")
-    .select("quantity, unit_price")
-    .eq("quote_id", quoteId);
-
-  const total = (items ?? []).reduce(
-    (sum, i) => sum + i.quantity * i.unit_price,
-    0,
-  );
-
-  await supabase
-    .schema("contracts")
-    .from("quotes")
-    .update({ total })
-    .eq("id", quoteId);
-
-  return total;
-}
+// quotes.total is kept in sync by the contracts.sync_quote_total trigger
+// (fires on quote_items insert/update/delete) — no client-side recompute
+// needed after inserting/replacing items below.
 
 export function useCreateQuote() {
   const [loading, setLoading] = useState(false);
@@ -257,8 +240,6 @@ export function useCreateQuote() {
         return { error: itemsError };
       }
     }
-
-    await recomputeQuoteTotal(quote.id);
 
     setLoading(false);
     return { error: null, quoteId: quote.id as string };
@@ -329,8 +310,6 @@ export function useUpdateQuote() {
         return { error: itemsError };
       }
     }
-
-    await recomputeQuoteTotal(quoteId);
 
     setLoading(false);
     return { error: null };

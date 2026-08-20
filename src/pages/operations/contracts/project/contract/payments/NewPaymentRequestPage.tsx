@@ -65,6 +65,21 @@ const NewPaymentRequestPage = () => {
     return map;
   }, [contract]);
 
+  // What the DB's over-claim guard actually counts against a milestone:
+  // every non-rejected payment (pending + approved + paid), not just
+  // paid/approved. Must match contracts.tg_sync_payment_amount's own rule
+  // or a submission that looks fine here can still get rejected by the DB.
+  const claimedByMilestone = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const p of contract?.request_payments ?? []) {
+      if (p.status === "rejected") continue;
+      for (const pm of p.payment_milestones) {
+        map[pm.milestone_id] = (map[pm.milestone_id] ?? 0) + pm.amount;
+      }
+    }
+    return map;
+  }, [contract]);
+
   const totalPaidSoFar = useMemo(
     () =>
       contract?.request_payments
@@ -87,7 +102,7 @@ const NewPaymentRequestPage = () => {
   function milestoneRemaining(milestoneId: string): number {
     const m = contract!.milestones.find((m) => m.id === milestoneId);
     if (!m) return 0;
-    return Math.max(m.amount - (paidByMilestone[milestoneId] ?? 0), 0);
+    return Math.max(m.amount - (claimedByMilestone[milestoneId] ?? 0), 0);
   }
 
   const availableMilestones = contract.milestones.filter(

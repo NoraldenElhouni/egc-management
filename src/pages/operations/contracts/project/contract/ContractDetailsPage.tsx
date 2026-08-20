@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "../../../../../components/ui/Button";
-import { FileText, Plus, Wallet } from "lucide-react";
+import { FileText, Plus, Printer, Wallet } from "lucide-react";
 import { StatusBadge } from "../../../../../components/ui/Badge";
 import OverviewStatus from "../../../../../components/ui/OverviewStatus";
 import { formatCurrency, formatDate } from "../../../../../utils/helpper";
@@ -18,6 +18,8 @@ import {
   ContractDetail,
   useContractDetails,
 } from "../../../../../hooks/operations/contracts/useContracts";
+import { useBOQPDFGenerate } from "../../../../../hooks/operations/boq/useBOQPDFGenerate";
+import { buildContractAsBoqPayload } from "../../../../../hooks/operations/contracts/contractPdfPayload";
 
 const contractStatusBadge = (status: ContractDetail["status"]) => {
   switch (status) {
@@ -46,6 +48,12 @@ const ContractDetailsPage = () => {
     completedMilestones,
     daysRemaining,
   } = useContractDetails(contractId ?? "");
+
+  const {
+    generate: generateContractPdf,
+    loading: generatingPdf,
+    error: pdfError,
+  } = useBOQPDFGenerate();
 
   if (!contractId) {
     return (
@@ -86,6 +94,15 @@ const ContractDetailsPage = () => {
           </h4>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="primary-outline"
+            disabled={generatingPdf}
+            onClick={() => generateContractPdf(buildContractAsBoqPayload(contract))}
+          >
+            <Printer className="w-4 h-4 ml-2" />
+            {generatingPdf ? "جاري الطباعة..." : "طباعة العقد"}
+          </Button>
           <Link to={`../rounds/${contract.round_id}`} relative="path">
             <Button size="sm" variant="primary-outline">
               <FileText className="w-4 h-4 ml-2" />
@@ -106,6 +123,11 @@ const ContractDetailsPage = () => {
           </Link>
         </div>
       </div>
+      {pdfError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {pdfError}
+        </p>
+      )}
 
       {/* overview bar */}
       <div className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center">

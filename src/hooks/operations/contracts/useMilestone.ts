@@ -26,14 +26,26 @@ export interface MilestoneDetail {
     project: { name: string } | null;
     contractor: { first_name: string; last_name: string | null } | null;
   };
-  payment_milestones: {
-    amount: number;
-    request_payments: { status: "pending" | "approved" | "rejected" | "paid" };
-  }[];
 }
+
+// Row shape of contracts.v_milestone_progress — not in the generated
+// Database types since it's a plain view, hand-typed to match the SQL.
+interface MilestoneProgressRow {
+  milestone_id: string;
+  contract_id: string;
+  title: string;
+  amount: number;
+  status: string;
+  claimed: number;
+  paid: number;
+  remaining: number;
+}
+
+const emptyProgress = { claimed: 0, paid: 0, remaining: 0 };
 
 export function useMilestone(milestoneId: string) {
   const [milestone, setMilestone] = useState<MilestoneDetail | null>(null);
+  const [progress, setProgress] = useState(emptyProgress);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -49,8 +61,7 @@ export function useMilestone(milestoneId: string) {
           contracts(
             id, total_amount, project_id, contractor_id,
             rounds(title)
-          ),
-          payment_milestones(amount, request_payments(status))`,
+          )`,
         )
         .eq("id", milestoneId)
         .single();
@@ -71,16 +82,33 @@ export function useMilestone(milestoneId: string) {
         };
       } & Record<string, unknown>;
 
-      const [projectsById, contractorsById] = await Promise.all([
-        fetchByIds<{ id: string; name: string }>("projects", "id, name", [
-          row.contracts.project_id,
-        ]),
-        fetchByIds<{ id: string; first_name: string; last_name: string | null }>(
-          "contractors",
-          "id, first_name, last_name",
-          [row.contracts.contractor_id],
-        ),
-      ]);
+      const [projectsById, contractorsById, progressResult] =
+        await Promise.all([
+          fetchByIds<{ id: string; name: string }>("projects", "id, name", [
+            row.contracts.project_id,
+          ]),
+          fetchByIds<{
+            id: string;
+            first_name: string;
+            last_name: string | null;
+          }>("contractors", "id, first_name, last_name", [
+            row.contracts.contractor_id,
+          ]),
+          // v_milestone_progress is a plain view, not yet in the generated
+          // Database types (added after the last `npm run types`).
+          supabase
+            .schema("contracts")
+            .from("v_milestone_progress" as never)
+            .select("claimed, paid, remaining")
+            .eq("milestone_id", milestoneId)
+            .maybeSingle(),
+        ]);
+
+      const progressRow = progressResult.data as Pick<
+        MilestoneProgressRow,
+        "claimed" | "paid" | "remaining"
+      > | null;
+      setProgress(progressRow ?? emptyProgress);
 
       setMilestone({
         ...row,
@@ -100,12 +128,19 @@ export function useMilestone(milestoneId: string) {
     fetchMilestone();
   }, [milestoneId]);
 
-  const amountPaid =
-    milestone?.payment_milestones
-      .filter((pm) => ["approved", "paid"].includes(pm.request_payments.status))
-      .reduce((sum, pm) => sum + pm.amount, 0) ?? 0;
-
-  return { milestone, loading, error, refetch: fetchMilestone, amountPaid };
+  return {
+    milestone,
+    loading,
+    error,
+    refetch: fetchMilestone,
+    // paid: status = 'paid' only — what to show as "paid so far".
+    // remaining/claimed: mirrors contracts.tg_sync_payment_amount's guard
+    // (claimed = every non-rejected payment) — use `remaining` for "how much
+    // can a new payment request still claim against this milestone".
+    paid: progress.paid,
+    claimed: progress.claimed,
+    remaining: progress.remaining,
+  };
 }
 
 export function useCreateMilestone() {

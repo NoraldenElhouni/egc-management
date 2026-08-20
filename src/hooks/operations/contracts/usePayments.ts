@@ -133,9 +133,13 @@ export function useCreateRequestPayment() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const amount = input.milestones.reduce((sum, m) => sum + m.amount, 0);
-    const penaltyAmount = input.penalties.reduce((sum, p) => sum + p.amount, 0);
-
+    // `amount`/`penalty_amount`/`grand_total` are all DB-owned now:
+    // amount/penalty_amount are kept in sync by triggers
+    // (contracts.tg_sync_payment_amount / tg_sync_penalty_amount) once the
+    // payment_milestones/payment_penalties rows below are inserted, and
+    // grand_total is a generated column computed from them — the DB
+    // rejects an explicit value for it. Nothing to set here; both settle
+    // to the right values once the child rows land.
     const { data: payment, error: paymentError } = await supabase
       .schema("contracts")
       .from("request_payments")
@@ -144,9 +148,6 @@ export function useCreateRequestPayment() {
         contract_id: input.contract_id,
         contractor_id: input.contractor_id,
         requested_by: user?.id ?? "",
-        amount,
-        penalty_amount: penaltyAmount,
-        grand_total: amount - penaltyAmount,
         description: input.description,
         payment_method: input.payment_method,
         expense_id: null,
