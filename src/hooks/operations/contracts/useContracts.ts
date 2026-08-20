@@ -262,7 +262,7 @@ export function useContractors(enabled: boolean) {
       const { data, error } = await supabase
         .from("contractors")
         .select(
-          `*,specializations(id,name,role_id),users(user_specializations(*, specializations(*)))`,
+          `*,specializations(id,name,role_id),users!contractors_user_id_fkey(user_specializations(*, specializations(*)))`,
         );
       if (error) setError(error);
       else setContractors(data ?? []);

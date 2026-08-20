@@ -377,6 +377,22 @@ const ContractorDetailPage = () => {
                       contractor.bank_account_aproved ? "معتمد" : "غير معتمد"
                     }
                   />
+                  <InfoItem
+                    label="تاريخ الاعتماد"
+                    value={
+                      contractor.bank_approved_at
+                        ? formatDate(contractor.bank_approved_at)
+                        : "غير متوفر"
+                    }
+                  />
+                  <InfoItem
+                    label="معتمد بواسطة"
+                    value={
+                      contractor.bank_approved_by_user
+                        ? `${contractor.bank_approved_by_user.first_name} ${contractor.bank_approved_by_user.last_name || ""}`.trim()
+                        : "غير متوفر"
+                    }
+                  />
                 </>
               )}
               <InfoItem

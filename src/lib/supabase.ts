@@ -483,6 +483,13 @@ export type Database = {
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contract_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "v_contract_summary"
+            referencedColumns: ["contract_id"]
+          },
         ]
       }
       contracts: {
@@ -552,6 +559,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: true
+            referencedRelation: "v_quote_comparison"
+            referencedColumns: ["quote_id"]
+          },
+          {
             foreignKeyName: "contracts_round_id_fkey"
             columns: ["round_id"]
             isOneToOne: false
@@ -611,6 +625,13 @@ export type Database = {
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "milestones_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "v_contract_summary"
+            referencedColumns: ["contract_id"]
+          },
         ]
       }
       payment_milestones: {
@@ -639,6 +660,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "milestones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_milestones_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "v_milestone_progress"
+            referencedColumns: ["milestone_id"]
           },
           {
             foreignKeyName: "payment_milestones_payment_id_fkey"
@@ -690,6 +718,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "milestones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_penalties_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "v_milestone_progress"
+            referencedColumns: ["milestone_id"]
           },
           {
             foreignKeyName: "payment_penalties_payment_id_fkey"
@@ -883,11 +918,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "v_quote_comparison"
+            referencedColumns: ["quote_id"]
+          },
+          {
             foreignKeyName: "quote_items_round_item_id_fkey"
             columns: ["round_item_id"]
             isOneToOne: false
             referencedRelation: "round_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_round_item_id_fkey"
+            columns: ["round_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_quote_comparison"
+            referencedColumns: ["round_item_id"]
           },
         ]
       }
@@ -998,6 +1047,13 @@ export type Database = {
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "request_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "v_contract_summary"
+            referencedColumns: ["contract_id"]
+          },
         ]
       }
       round_items: {
@@ -1076,7 +1132,110 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_contract_summary: {
+        Row: {
+          contract_id: string | null
+          contractor_id: string | null
+          insurance_percentage: number | null
+          paid_total: number | null
+          penalties_total: number | null
+          pending_total: number | null
+          project_id: string | null
+          total_amount: number | null
+          uncommitted: number | null
+        }
+        Relationships: []
+      }
+      v_milestone_progress: {
+        Row: {
+          amount: number | null
+          claimed: number | null
+          contract_id: string | null
+          milestone_id: string | null
+          paid: number | null
+          remaining: number | null
+          status: Database["contracts"]["Enums"]["milestone_status"] | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestones_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "v_contract_summary"
+            referencedColumns: ["contract_id"]
+          },
+        ]
+      }
+      v_quote_comparison: {
+        Row: {
+          contractor_id: string | null
+          item_name: string | null
+          quantity: number | null
+          quote_id: string | null
+          round_id: string | null
+          round_item_id: string | null
+          sort_order: number | null
+          total_price: number | null
+          unit: string | null
+          unit_price: number | null
+          work_name: string | null
+          zone_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_items_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_quote_extras: {
+        Row: {
+          contractor_id: string | null
+          item_name: string | null
+          note: string | null
+          quantity: number | null
+          quote_id: string | null
+          round_id: string | null
+          total_price: number | null
+          unit: string | null
+          unit_price: number | null
+          work_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "v_quote_comparison"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quotes_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       award_quote: {
@@ -1718,6 +1877,8 @@ export type Database = {
       contractors: {
         Row: {
           bank_account_aproved: boolean | null
+          bank_approved_at: string | null
+          bank_approved_by: string | null
           bank_holder_name: string | null
           bank_id: string | null
           bank_name: string | null
@@ -1736,6 +1897,8 @@ export type Database = {
         }
         Insert: {
           bank_account_aproved?: boolean | null
+          bank_approved_at?: string | null
+          bank_approved_by?: string | null
           bank_holder_name?: string | null
           bank_id?: string | null
           bank_name?: string | null
@@ -1754,6 +1917,8 @@ export type Database = {
         }
         Update: {
           bank_account_aproved?: boolean | null
+          bank_approved_at?: string | null
+          bank_approved_by?: string | null
           bank_holder_name?: string | null
           bank_id?: string | null
           bank_name?: string | null
@@ -1771,6 +1936,13 @@ export type Database = {
           whatsapp_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contractors_bank_approved_by_fkey"
+            columns: ["bank_approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contractors_specialization_id_fkey"
             columns: ["specialization_id"]
@@ -4311,6 +4483,13 @@ export type Database = {
         Row: {
           address: string | null
           alt_phone_number: string | null
+          bank_account_approved: boolean
+          bank_approved_at: string | null
+          bank_approved_by: string | null
+          bank_holder_name: string | null
+          bank_id: string | null
+          bank_name: string | null
+          bank_number: string | null
           city: string | null
           contact_name: string | null
           country: string | null
@@ -4325,10 +4504,18 @@ export type Database = {
           updated_at: string
           user_id: string | null
           vendor_name: string
+          whatsapp_number: string | null
         }
         Insert: {
           address?: string | null
           alt_phone_number?: string | null
+          bank_account_approved?: boolean
+          bank_approved_at?: string | null
+          bank_approved_by?: string | null
+          bank_holder_name?: string | null
+          bank_id?: string | null
+          bank_name?: string | null
+          bank_number?: string | null
           city?: string | null
           contact_name?: string | null
           country?: string | null
@@ -4343,10 +4530,18 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vendor_name: string
+          whatsapp_number?: string | null
         }
         Update: {
           address?: string | null
           alt_phone_number?: string | null
+          bank_account_approved?: boolean
+          bank_approved_at?: string | null
+          bank_approved_by?: string | null
+          bank_holder_name?: string | null
+          bank_id?: string | null
+          bank_name?: string | null
+          bank_number?: string | null
           city?: string | null
           contact_name?: string | null
           country?: string | null
@@ -4361,8 +4556,16 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vendor_name?: string
+          whatsapp_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vendors_bank_approved_by_fkey"
+            columns: ["bank_approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vendors_specialization_id_fkey"
             columns: ["specialization_id"]

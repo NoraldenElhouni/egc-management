@@ -14,7 +14,7 @@ export function useVendors() {
       setLoading(true);
       const { data, error } = await supabase.from("vendors").select(`*,
             specializations(*),
-            users (
+            users!vendors_user_id_fkey (
               user_specializations (
                 specialization_id,
                 specializations (*)

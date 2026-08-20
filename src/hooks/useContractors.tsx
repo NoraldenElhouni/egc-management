@@ -1,8 +1,34 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Contractors } from "../types/global.type";
 import { contractorWithSpecializations } from "../types/extended.type";
 import { supabase } from "../lib/supabaseClient";
 import { PostgrestError } from "@supabase/supabase-js";
+
+const fetchContractors = async (): Promise<
+  contractorWithSpecializations[]
+> => {
+  const { data, error } = await supabase.from("contractors").select(`
+      *,
+      specializations (*),
+      users!contractors_user_id_fkey (
+        user_specializations (
+          specialization_id,
+          specializations (*)
+        )
+      )
+    `);
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as unknown as contractorWithSpecializations[];
+};
+
+export const useContractorsQuery = () =>
+  useQuery({
+    queryKey: ["contractors"],
+    queryFn: fetchContractors,
+  });
 
 export function useContractors() {
   const [contractors, setContractors] = useState<
@@ -17,7 +43,7 @@ export function useContractors() {
       const { data, error } = await supabase.from("contractors").select(`
         *,
         specializations (*),
-        users (
+        users!contractors_user_id_fkey (
           user_specializations (
             specialization_id,
             specializations (*)

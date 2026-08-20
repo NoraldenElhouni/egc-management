@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { Award, Landmark, Users, Wrench } from "lucide-react";
-import { useContractors } from "../../../hooks/useContractors";
+import { useContractorsQuery } from "../../../hooks/useContractors";
 import { ContractorsColumns } from "../../tables/columns/ContractorsColumns";
 import GenericTable from "../../tables/table";
 import KpiCard from "../../ui/KpiCard";
 
 const ContractorsList = () => {
-  const { contractors } = useContractors();
+  const { data: contractors = [] } = useContractorsQuery();
 
   const stats = useMemo(() => {
     const total = contractors.length;

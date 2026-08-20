@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProjectExpenses, Vendor } from "../../../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
@@ -17,8 +17,7 @@ export function useVendor(vendorId: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  useEffect(() => {
-    async function fetchVendor() {
+  const fetchVendor = useCallback(async () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -74,9 +73,18 @@ export function useVendor(vendorId: string) {
         setError(err as PostgrestError);
       }
       setLoading(false);
-    }
-    fetchVendor();
   }, [vendorId]);
 
-  return { vendor, expenses, groupedExpenses, loading, error };
+  useEffect(() => {
+    fetchVendor();
+  }, [fetchVendor]);
+
+  return {
+    vendor,
+    expenses,
+    groupedExpenses,
+    loading,
+    error,
+    refetch: fetchVendor,
+  };
 }

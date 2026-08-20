@@ -1,22 +1,35 @@
 import { useParams } from "react-router-dom";
-import VendorContractorPdfButton from "../../components/pdf-buttons/VendorContractorPdfButton";
 import { useState } from "react";
+import {
+  Building2,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  DollarSign,
+  FolderKanban,
+  Mail,
+  MapPin,
+  Phone,
+  User,
+  Wallet,
+} from "lucide-react";
+
 import { useVendor } from "../../hooks/supply-chain/vendors/useVendors";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
-import VendorInfoView from "../../components/supply-chain/VendorInfoView";
-import VendorInfoEdit, {
-  VendorFormValues,
-} from "../../components/supply-chain/VendorInfoEdit";
-import { supabase } from "../../lib/supabaseClient";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import VendorContractorPdfButton from "../../components/pdf-buttons/VendorContractorPdfButton";
+import EditVendorDialog from "../../components/supply-chain/vendor/EditVendorDialog";
 import { ProjectExpenses } from "../../types/global.type";
-import { formatCurrency } from "../../utils/helpper";
+import { formatCurrency, formatDate } from "../../utils/helpper";
 import {
   translateExpenseStatus,
   translateExpenseType,
   translatePhase,
 } from "../../utils/translations";
+
+/* -------------------------------------------------------------------------- */
+/*                           Expense sub-components                           */
+/* -------------------------------------------------------------------------- */
 
 const ExpenseRow = ({ expense }: { expense: ProjectExpenses }) => (
   <tr className="border-t border-gray-100 bg-gray-50 text-sm">
@@ -96,83 +109,68 @@ const ProjectGroupRow = ({
       </tr>
 
       {open && (
-        <>
-          <tr className="bg-gray-50">
-            <td colSpan={6} className="px-4 pt-2 pb-1">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-500 text-xs border-b border-gray-200">
-                    <th className="px-4 py-1 text-right font-medium">رقم</th>
-                    <th className="px-4 py-1 text-right font-medium">الوصف</th>
-                    <th className="px-4 py-1 text-right font-medium">النوع</th>
-                    <th className="px-4 py-1 text-right font-medium">
-                      المرحلة
-                    </th>
-                    <th className="px-4 py-1 text-right font-medium">
-                      الإجمالي
-                    </th>
-                    <th className="px-4 py-1 text-right font-medium">
-                      المدفوع
-                    </th>
-                    <th className="px-4 py-1 text-right font-medium">الحالة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.expenses.map((expense) => (
-                    <ExpenseRow key={expense.id} expense={expense} />
-                  ))}
-                </tbody>
-              </table>
-            </td>
-          </tr>
-        </>
+        <tr className="bg-gray-50">
+          <td colSpan={6} className="px-4 pt-2 pb-3">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-500 text-xs border-b border-gray-200">
+                  <th className="px-4 py-1 text-right font-medium">رقم</th>
+                  <th className="px-4 py-1 text-right font-medium">الوصف</th>
+                  <th className="px-4 py-1 text-right font-medium">النوع</th>
+                  <th className="px-4 py-1 text-right font-medium">المرحلة</th>
+                  <th className="px-4 py-1 text-right font-medium">الإجمالي</th>
+                  <th className="px-4 py-1 text-right font-medium">المدفوع</th>
+                  <th className="px-4 py-1 text-right font-medium">الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.expenses.map((expense) => (
+                  <ExpenseRow key={expense.id} expense={expense} />
+                ))}
+              </tbody>
+            </table>
+          </td>
+        </tr>
       )}
     </>
   );
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                 Main page                                  */
+/* -------------------------------------------------------------------------- */
+
 const VendorDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [edit, setEdit] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
-  const handleSave = async (values: VendorFormValues) => {
-    if (!id) return;
-    setSaving(true);
+  const { vendor, groupedExpenses, loading, error, refetch } = useVendor(
+    id || "",
+  );
 
-    const { error } = await supabase
-      .from("vendors")
-      .update({
-        vendor_name: values.vendor_name,
-        contact_name: values.contact_name || null,
-        email: values.email || null,
-        phone_number: values.phone_number || null,
-        alt_phone_number: values.alt_phone_number || null,
-        country: values.country || null,
-        city: values.city || null,
-        address: values.address || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+  if (!id) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">لم يتم العثور على معرف المورد</p>
+      </div>
+    );
+  }
 
-    setSaving(false);
+  if (loading) return <LoadingPage label="جاري تحميل بيانات المورد..." />;
 
-    if (error) {
-      alert("حدث خطأ أثناء حفظ بيانات المورد");
-      return;
-    }
+  if (error) {
+    return (
+      <ErrorPage label="حدث خطأ أثناء تحميل بيانات المورد" error={error.message} />
+    );
+  }
 
-    alert("تم تحديث بيانات المورد بنجاح");
-    setEdit(false);
-    window.location.reload();
-  };
-
-  if (!id) return null;
-
-  const { error, loading, vendor, groupedExpenses } = useVendor(id);
-
-  if (loading) return <LoadingPage />;
-  if (error || !vendor) return <ErrorPage error={error?.message} />;
+  if (!vendor) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">لم يتم العثور على المورد</p>
+      </div>
+    );
+  }
 
   const grandTotal = groupedExpenses.reduce(
     (sum, g) =>
@@ -183,79 +181,270 @@ const VendorDetailPage = () => {
     (sum, g) => sum + g.expenses.reduce((s, e) => s + Number(e.amount_paid), 0),
     0,
   );
-  const currency = groupedExpenses[0]?.expenses[0]?.currency ?? "";
+  const expenseCurrency = groupedExpenses[0]?.expenses[0]?.currency ?? "";
 
   return (
-    <div dir="rtl" className="space-y-6 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">تفاصيل المورد</h1>
-        <VendorContractorPdfButton id={id} type="vendor" />
-      </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Header */}
+        <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
+          <div className="flex lg:items-center lg:justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="h-20 w-20 rounded-2xl bg-blue-100 flex items-center justify-center">
+                <Building2 className="h-10 w-10 text-blue-600" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {vendor.vendor_name}
+                </h1>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  {vendor.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      <span>{vendor.email}</span>
+                    </div>
+                  )}
+                  {vendor.phone_number && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      <span>{vendor.phone_number}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>تاريخ الانضمام {formatDate(vendor.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowEditDialog(true)}
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
+                تعديل بيانات المورد
+              </button>
+              <VendorContractorPdfButton id={id} type="vendor" />
+            </div>
+          </div>
+        </div>
 
-      {edit ? (
-        <VendorInfoEdit
-          vendor={vendor}
-          saving={saving}
-          onCancel={() => setEdit(false)}
-          onSave={handleSave}
-        />
-      ) : (
-        <VendorInfoView vendor={vendor} onEdit={() => setEdit(true)} />
-      )}
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatCard
+            title="عدد المشاريع"
+            value={groupedExpenses.length}
+            icon={<FolderKanban className="h-5 w-5" />}
+          />
+          <StatCard
+            title="إجمالي المصروفات"
+            value={formatCurrency(grandTotal, expenseCurrency)}
+            icon={<DollarSign className="h-5 w-5" />}
+          />
+          <StatCard
+            title="إجمالي المدفوع"
+            value={formatCurrency(grandPaid, expenseCurrency)}
+            icon={<Wallet className="h-5 w-5" />}
+          />
+          <StatCard
+            title="المتبقي"
+            value={formatCurrency(grandTotal - grandPaid, expenseCurrency)}
+            icon={<DollarSign className="h-5 w-5" />}
+          />
+        </div>
 
-      {groupedExpenses.length > 0 && (
-        <div className="rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-700">
-              المصروفات حسب المشروع
-            </h2>
-            <div className="flex gap-6 text-sm">
-              <span className="text-gray-500">
-                الإجمالي:{" "}
-                <span className="text-red-600 font-semibold">
-                  {formatCurrency(grandTotal, currency)}
-                </span>
-              </span>
-              <span className="text-gray-500">
-                المدفوع:{" "}
-                <span className="text-green-600 font-semibold">
-                  {formatCurrency(grandPaid, currency)}
-                </span>
-              </span>
-              <span className="text-gray-500">
-                المتبقي:{" "}
-                <span className="text-orange-500 font-semibold">
-                  {formatCurrency(grandTotal - grandPaid, currency)}
-                </span>
-              </span>
+        {/* Vendor Info + Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                معلومات المورد
+              </h2>
+            </div>
+            <div className="space-y-5">
+              <InfoItem label="اسم المورد" value={vendor.vendor_name} />
+              <InfoItem
+                label="الشخص المسؤول"
+                value={vendor.contact_name || "غير متوفر"}
+              />
+              <InfoItem
+                label="البريد الإلكتروني"
+                value={vendor.email || "غير متوفر"}
+              />
+              <InfoItem
+                label="رقم الهاتف"
+                value={vendor.phone_number || "غير متوفر"}
+              />
+              <InfoItem
+                label="رقم هاتف بديل"
+                value={vendor.alt_phone_number || "غير متوفر"}
+              />
+              <InfoItem label="الدولة" value={vendor.country || "غير متوفر"} />
+              <InfoItem label="المدينة" value={vendor.city || "غير متوفر"} />
+              <InfoItem label="العنوان" value={vendor.address || "غير متوفر"} />
+              <InfoItem
+                label="تاريخ الإنشاء"
+                value={formatDate(vendor.created_at)}
+              />
             </div>
           </div>
 
-          <table className="w-full text-sm">
-            <thead className="bg-white text-gray-500 text-xs">
-              <tr>
-                <th className="px-4 py-3 text-right font-medium">المشروع</th>
-                <th className="px-4 py-3 text-center font-medium">
-                  عدد المصروفات
-                </th>
-                <th className="px-4 py-3 text-right font-medium">
-                  إجمالي المصروفات
-                </th>
-                <th className="px-4 py-3 text-right font-medium">المدفوع</th>
-                <th className="px-4 py-3 text-right font-medium">المتبقي</th>
-                <th className="px-4 py-3 text-center font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedExpenses.map((group) => (
-                <ProjectGroupRow key={group.projectId} group={group} />
-              ))}
-            </tbody>
-          </table>
+          <div className="lg:col-span-2 rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <MapPin className="h-5 w-5 text-green-600" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                ملخص الأداء
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <SummaryCard
+                title="نسبة السداد"
+                value={
+                  grandTotal > 0
+                    ? `${Math.round((grandPaid / grandTotal) * 100)}%`
+                    : "0%"
+                }
+                description="نسبة المصروفات المدفوعة من إجمالي المصروفات"
+              />
+              <SummaryCard
+                title="متوسط قيمة المصروف"
+                value={
+                  groupedExpenses.reduce((s, g) => s + g.expenses.length, 0) > 0
+                    ? formatCurrency(
+                        grandTotal /
+                          groupedExpenses.reduce(
+                            (s, g) => s + g.expenses.length,
+                            0,
+                          ),
+                        expenseCurrency,
+                      )
+                    : formatCurrency(0, expenseCurrency)
+                }
+                description="متوسط قيمة كل مصروف"
+              />
+              <SummaryCard
+                title="عدد المصروفات"
+                value={`${groupedExpenses.reduce((s, g) => s + g.expenses.length, 0)} مصروف`}
+                description="إجمالي عدد المصروفات المسجلة"
+              />
+              <SummaryCard
+                title="حالة المورد"
+                value="نشط"
+                description="الحالة الحالية لحساب المورد"
+              />
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Expenses grouped by project */}
+        {groupedExpenses.length > 0 && (
+          <div className="rounded-3xl bg-white shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  المصروفات حسب المشروع
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  جميع المصروفات المرتبطة بهذا المورد
+                </p>
+              </div>
+              <div className="flex gap-6 text-sm">
+                <span className="text-gray-500">
+                  الإجمالي:{" "}
+                  <span className="text-red-600 font-semibold">
+                    {formatCurrency(grandTotal, expenseCurrency)}
+                  </span>
+                </span>
+                <span className="text-gray-500">
+                  المدفوع:{" "}
+                  <span className="text-green-600 font-semibold">
+                    {formatCurrency(grandPaid, expenseCurrency)}
+                  </span>
+                </span>
+                <span className="text-gray-500">
+                  المتبقي:{" "}
+                  <span className="text-orange-500 font-semibold">
+                    {formatCurrency(grandTotal - grandPaid, expenseCurrency)}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs">
+                <tr>
+                  <th className="px-4 py-3 text-right font-medium">المشروع</th>
+                  <th className="px-4 py-3 text-center font-medium">
+                    عدد المصروفات
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    إجمالي المصروفات
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium">المدفوع</th>
+                  <th className="px-4 py-3 text-right font-medium">المتبقي</th>
+                  <th className="px-4 py-3 text-center font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedExpenses.map((group) => (
+                  <ProjectGroupRow key={group.projectId} group={group} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <EditVendorDialog
+        open={showEditDialog}
+        vendor={vendor}
+        onClose={() => setShowEditDialog(false)}
+        onSuccess={() => {
+          setShowEditDialog(false);
+          refetch();
+        }}
+      />
     </div>
   );
 };
 
 export default VendorDetailPage;
+
+/* -------------------------------------------------------------------------- */
+/*                                    UI                                      */
+/* -------------------------------------------------------------------------- */
+
+type StatCardProps = {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+};
+const StatCard = ({ title, value, icon }: StatCardProps) => (
+  <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+    <div className="flex items-center justify-between mb-4">
+      <div className="text-gray-500">{icon}</div>
+    </div>
+    <div>
+      <p className="text-sm text-gray-500">{title}</p>
+      <h3 className="text-2xl font-bold text-gray-900 mt-1">{value}</h3>
+    </div>
+  </div>
+);
+
+type InfoItemProps = { label: string; value: string };
+const InfoItem = ({ label, value }: InfoItemProps) => (
+  <div>
+    <p className="text-sm text-gray-500 mb-1">{label}</p>
+    <p className="text-sm font-medium text-gray-900 break-all">{value}</p>
+  </div>
+);
+
+type SummaryCardProps = { title: string; value: string; description: string };
+const SummaryCard = ({ title, value, description }: SummaryCardProps) => (
+  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+    <p className="text-sm text-gray-500">{title}</p>
+    <h3 className="text-2xl font-bold text-gray-900 mt-2">{value}</h3>
+    <p className="text-sm text-gray-500 mt-2">{description}</p>
+  </div>
+);

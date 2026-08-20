@@ -5,6 +5,7 @@ import Button from "../../ui/Button";
 import ConfirmDialog from "../../ui/ConfirmDialog";
 import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
 import { useBanks } from "../../../hooks/useBanks";
+import { useAuth } from "../../../hooks/useAuth";
 
 interface EditContractorBankInfoDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ const EditContractorBankInfoDialog = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { user } = useAuth();
   const { banks, loading: banksLoading } = useBanks();
   const bankOptions = useMemo(
     () => banks.map((b) => ({ value: b.id, label: b.name })),
@@ -73,6 +75,8 @@ const EditContractorBankInfoDialog = ({
           bank_number: bankNumber.trim() || null,
           bank_holder_name: bankHolderName.trim() || null,
           bank_account_aproved: true,
+          bank_approved_by: user?.id ?? null,
+          bank_approved_at: new Date().toISOString(),
         })
         .eq("id", contractor.id);
 
