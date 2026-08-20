@@ -94,6 +94,13 @@ type GenericTableProps<TData> = {
    */
   headerActions?: (table: Table<TData>) => React.ReactNode;
 
+  /**
+   * Render prop – receives the live TanStack `table` instance. Rendered
+   * inline right next to the global search input (e.g. a "Filters" button
+   * that opens a dialog).
+   */
+  searchAdornment?: (table: Table<TData>) => React.ReactNode;
+
   link?: string;
   linkLabel?: string;
   linkVariant?: ButtonVariant;
@@ -117,6 +124,7 @@ export default function GenericTable<TData extends object>({
   emptyMessage = "لا توجد بيانات لعرضها.",
   header,
   headerActions,
+  searchAdornment,
   link,
   linkLabel,
   linkVariant,
@@ -195,14 +203,15 @@ export default function GenericTable<TData extends object>({
 
       {/* ── Global Filter ── */}
       {showGlobalFilter && enableFiltering && (
-        <div className="mb-3">
+        <div className="mb-3 flex items-center gap-2">
           <input
             type="text"
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder="بحث في كل الأعمدة..."
-            className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {searchAdornment && searchAdornment(table as unknown as Table<TData>)}
         </div>
       )}
 

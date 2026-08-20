@@ -14,6 +14,7 @@ export function getContractorPenaltiesColumns(
     {
       id: "contractor",
       header: "المقاول",
+      filterFn: "equalsString",
       accessorFn: (row) =>
         `${row.contractor?.first_name ?? ""} ${row.contractor?.last_name ?? ""}`.trim(),
       cell: ({ row }) => (
@@ -27,6 +28,7 @@ export function getContractorPenaltiesColumns(
     {
       id: "project",
       header: "المشروع",
+      filterFn: "equalsString",
       accessorFn: (row) => row.project?.name ?? "",
       cell: ({ row }) => (
         <span className="whitespace-nowrap">
@@ -83,6 +85,7 @@ export function getContractorPenaltiesColumns(
     {
       accessorKey: "created_at",
       header: "تاريخ الإنشاء",
+      filterFn: "dateRangeFilter",
       cell: ({ getValue }) => (
         <span className="text-sm text-gray-600 whitespace-nowrap">
           {formatDate(getValue<string>())}
@@ -92,6 +95,7 @@ export function getContractorPenaltiesColumns(
     {
       id: "created_by",
       header: "أنشئ بواسطة",
+      filterFn: "equalsString",
       accessorFn: (row) =>
         `${row.created_by_employee?.first_name ?? ""} ${row.created_by_employee?.last_name ?? ""}`.trim(),
       cell: ({ row }) => (

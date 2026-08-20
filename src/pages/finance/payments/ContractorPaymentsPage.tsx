@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Tabs from "../../../components/ui/Tabs";
 import GenericTable from "../../../components/tables/table";
 import ErrorPage from "../../../components/ui/errorPage";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import Button from "../../../components/ui/Button";
+import ContractorPaymentsFiltersDialog from "../../../components/tables/filters/ContractorPaymentsFiltersDialog";
 import { useContractorPayments } from "../../../hooks/finance/payments/useContractorPayments";
 import { useContractorPaymentsPdf } from "../../../hooks/finance/payments/useContractorPaymentsPdf";
 import { getContractorPaymentsColumns } from "../../../components/tables/columns/ContractorPaymentsColumns";
@@ -12,6 +13,12 @@ import {
   ContractPayment,
   ContractPaymentPenalty,
 } from "../../../types/contracts.type";
+
+function uniqueSorted(values: (string | undefined | null)[]): string[] {
+  return Array.from(
+    new Set(values.filter((v): v is string => Boolean(v))),
+  ).sort((a, b) => a.localeCompare(b, "ar"));
+}
 
 const ContractorPaymentsPage = () => {
   const { payments, penalties, loading, error, refetch } =
@@ -26,6 +33,50 @@ const ContractorPaymentsPage = () => {
     [],
   );
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0);
+
+  const paymentsFilterOptions = useMemo(
+    () => ({
+      statuses: uniqueSorted(payments.map((p) => p.status)),
+      projects: uniqueSorted(payments.map((p) => p.project?.name)),
+      contractors: uniqueSorted(
+        payments.map((p) =>
+          p.contractor
+            ? `${p.contractor.first_name} ${p.contractor.last_name ?? ""}`.trim()
+            : p.new_contractor_name,
+        ),
+      ),
+      employees: uniqueSorted(
+        payments.map((p) =>
+          p.created_by_employee
+            ? `${p.created_by_employee.first_name} ${p.created_by_employee.last_name ?? ""}`.trim()
+            : undefined,
+        ),
+      ),
+    }),
+    [payments],
+  );
+
+  const penaltiesFilterOptions = useMemo(
+    () => ({
+      statuses: uniqueSorted(penalties.map((p) => p.status)),
+      projects: uniqueSorted(penalties.map((p) => p.project?.name)),
+      contractors: uniqueSorted(
+        penalties.map((p) =>
+          p.contractor
+            ? `${p.contractor.first_name} ${p.contractor.last_name ?? ""}`.trim()
+            : undefined,
+        ),
+      ),
+      employees: uniqueSorted(
+        penalties.map((p) =>
+          p.created_by_employee
+            ? `${p.created_by_employee.first_name} ${p.created_by_employee.last_name ?? ""}`.trim()
+            : undefined,
+        ),
+      ),
+    }),
+    [penalties],
+  );
 
   if (loading) return <LoadingPage />;
   if (error) return <ErrorPage error={error.message} />;
@@ -101,6 +152,15 @@ const ContractorPaymentsPage = () => {
                   onRowSelectionChange={setSelectedPayments}
                   clearSelectionSignal={clearSelectionSignal}
                   emptyMessage="لا توجد دفعات لعرضها."
+                  searchAdornment={(table) => (
+                    <ContractorPaymentsFiltersDialog
+                      table={table}
+                      statusOptions={paymentsFilterOptions.statuses}
+                      projectOptions={paymentsFilterOptions.projects}
+                      contractorOptions={paymentsFilterOptions.contractors}
+                      employeeOptions={paymentsFilterOptions.employees}
+                    />
+                  )}
                 />
               </>
             ),
@@ -127,6 +187,15 @@ const ContractorPaymentsPage = () => {
                   enablePagination
                   showGlobalFilter
                   emptyMessage="لا توجد جزاءات لعرضها."
+                  searchAdornment={(table) => (
+                    <ContractorPaymentsFiltersDialog
+                      table={table}
+                      statusOptions={penaltiesFilterOptions.statuses}
+                      projectOptions={penaltiesFilterOptions.projects}
+                      contractorOptions={penaltiesFilterOptions.contractors}
+                      employeeOptions={penaltiesFilterOptions.employees}
+                    />
+                  )}
                 />
               </>
             ),
