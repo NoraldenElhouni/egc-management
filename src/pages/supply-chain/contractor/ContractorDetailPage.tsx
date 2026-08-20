@@ -328,17 +328,11 @@ const ContractorDetailPage = () => {
                 label="الاسم الكامل"
                 value={`${contractor.first_name} ${contractor.last_name || ""}`}
               />
-              <InfoItem
-                label="البريد الإلكتروني"
-                value={contractor.email || "غير متوفر"}
-              />
-              <InfoItem
-                label="رقم الهاتف"
-                value={contractor.phone_number || "غير متوفر"}
-              />
+              <InfoItem label="البريد الإلكتروني" value={contractor.email} />
+              <InfoItem label="رقم الهاتف" value={contractor.phone_number} />
               <InfoItem
                 label="التخصص الرئيسي"
-                value={contractor.specializations?.name || "غير محدد"}
+                value={contractor.specializations?.name}
               />
               {additionalSpecializationNames.length > 0 && (
                 <div>
@@ -359,30 +353,22 @@ const ContractorDetailPage = () => {
               )}
               {contractor.bank_account_aproved && (
                 <>
-                  <InfoItem
-                    label="البنك"
-                    value={contractor.bank_name || "غير متوفر"}
-                  />
+                  <InfoItem label="البنك" value={contractor.bank_name} />
                   <InfoItem
                     label="رقم الحساب"
-                    value={contractor.bank_number || "غير متوفر"}
+                    value={contractor.bank_number}
                   />
                   <InfoItem
                     label="اسم صاحب الحساب"
-                    value={contractor.bank_holder_name || "غير متوفر"}
+                    value={contractor.bank_holder_name}
                   />
-                  <InfoItem
-                    label="حالة اعتماد الحساب البنكي"
-                    value={
-                      contractor.bank_account_aproved ? "معتمد" : "غير معتمد"
-                    }
-                  />
+                  <InfoItem label="حالة اعتماد الحساب البنكي" value="معتمد" />
                   <InfoItem
                     label="تاريخ الاعتماد"
                     value={
                       contractor.bank_approved_at
                         ? formatDate(contractor.bank_approved_at)
-                        : "غير متوفر"
+                        : null
                     }
                   />
                   <InfoItem
@@ -390,7 +376,7 @@ const ContractorDetailPage = () => {
                     value={
                       contractor.bank_approved_by_user
                         ? `${contractor.bank_approved_by_user.first_name} ${contractor.bank_approved_by_user.last_name || ""}`.trim()
-                        : "غير متوفر"
+                        : null
                     }
                   />
                 </>
@@ -584,13 +570,16 @@ const StatCard = ({ title, value, icon }: StatCardProps) => (
   </div>
 );
 
-type InfoItemProps = { label: string; value: string };
-const InfoItem = ({ label, value }: InfoItemProps) => (
-  <div>
-    <p className="text-sm text-gray-500 mb-1">{label}</p>
-    <p className="text-sm font-medium text-gray-900 break-all">{value}</p>
-  </div>
-);
+type InfoItemProps = { label: string; value: string | null | undefined };
+const InfoItem = ({ label, value }: InfoItemProps) => {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-1">{label}</p>
+      <p className="text-sm font-medium text-gray-900 break-all">{value}</p>
+    </div>
+  );
+};
 
 type SummaryCardProps = { title: string; value: string; description: string };
 const SummaryCard = ({ title, value, description }: SummaryCardProps) => (

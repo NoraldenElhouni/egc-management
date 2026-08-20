@@ -10,15 +10,16 @@ import {
   Mail,
   MapPin,
   Phone,
-  User,
   Wallet,
 } from "lucide-react";
 
 import { useVendor } from "../../hooks/supply-chain/vendors/useVendors";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import VendorContractorPdfButton from "../../components/pdf-buttons/VendorContractorPdfButton";
 import EditVendorDialog from "../../components/supply-chain/vendor/EditVendorDialog";
+import EditVendorBankInfoDialog from "../../components/supply-chain/vendor/EditVendorBankInfoDialog";
 import { ProjectExpenses } from "../../types/global.type";
 import { formatCurrency, formatDate } from "../../utils/helpper";
 import {
@@ -143,10 +144,20 @@ const ProjectGroupRow = ({
 const VendorDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showBankEditDialog, setShowBankEditDialog] = useState(false);
+  const [showBankApprovedWarning, setShowBankApprovedWarning] = useState(false);
 
   const { vendor, groupedExpenses, loading, error, refetch } = useVendor(
     id || "",
   );
+
+  function handleOpenBankEdit() {
+    if (vendor?.bank_account_approved) {
+      setShowBankApprovedWarning(true);
+    } else {
+      setShowBankEditDialog(true);
+    }
+  }
 
   if (!id) {
     return (
@@ -224,6 +235,12 @@ const VendorDetailPage = () => {
               >
                 تعديل بيانات المورد
               </button>
+              <button
+                onClick={handleOpenBankEdit}
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition"
+              >
+                تعديل معلومات البنك
+              </button>
               <VendorContractorPdfButton id={id} type="vendor" />
             </div>
           </div>
@@ -264,25 +281,43 @@ const VendorDetailPage = () => {
             </div>
             <div className="space-y-5">
               <InfoItem label="اسم المورد" value={vendor.vendor_name} />
-              <InfoItem
-                label="الشخص المسؤول"
-                value={vendor.contact_name || "غير متوفر"}
-              />
-              <InfoItem
-                label="البريد الإلكتروني"
-                value={vendor.email || "غير متوفر"}
-              />
-              <InfoItem
-                label="رقم الهاتف"
-                value={vendor.phone_number || "غير متوفر"}
-              />
+              <InfoItem label="الشخص المسؤول" value={vendor.contact_name} />
+              <InfoItem label="البريد الإلكتروني" value={vendor.email} />
+              <InfoItem label="رقم الهاتف" value={vendor.phone_number} />
               <InfoItem
                 label="رقم هاتف بديل"
-                value={vendor.alt_phone_number || "غير متوفر"}
+                value={vendor.alt_phone_number}
               />
-              <InfoItem label="الدولة" value={vendor.country || "غير متوفر"} />
-              <InfoItem label="المدينة" value={vendor.city || "غير متوفر"} />
-              <InfoItem label="العنوان" value={vendor.address || "غير متوفر"} />
+              <InfoItem label="الدولة" value={vendor.country} />
+              <InfoItem label="المدينة" value={vendor.city} />
+              <InfoItem label="العنوان" value={vendor.address} />
+              {vendor.bank_account_approved && (
+                <>
+                  <InfoItem label="البنك" value={vendor.bank_name} />
+                  <InfoItem label="رقم الحساب" value={vendor.bank_number} />
+                  <InfoItem
+                    label="اسم صاحب الحساب"
+                    value={vendor.bank_holder_name}
+                  />
+                  <InfoItem label="حالة اعتماد الحساب البنكي" value="معتمد" />
+                  <InfoItem
+                    label="تاريخ الاعتماد"
+                    value={
+                      vendor.bank_approved_at
+                        ? formatDate(vendor.bank_approved_at)
+                        : null
+                    }
+                  />
+                  <InfoItem
+                    label="معتمد بواسطة"
+                    value={
+                      vendor.bank_approved_by_user
+                        ? `${vendor.bank_approved_by_user.first_name} ${vendor.bank_approved_by_user.last_name || ""}`.trim()
+                        : null
+                    }
+                  />
+                </>
+              )}
               <InfoItem
                 label="تاريخ الإنشاء"
                 value={formatDate(vendor.created_at)}
@@ -405,6 +440,30 @@ const VendorDetailPage = () => {
           refetch();
         }}
       />
+
+      <EditVendorBankInfoDialog
+        open={showBankEditDialog}
+        vendor={vendor}
+        onClose={() => setShowBankEditDialog(false)}
+        onSuccess={() => {
+          setShowBankEditDialog(false);
+          refetch();
+        }}
+      />
+
+      <ConfirmDialog
+        open={showBankApprovedWarning}
+        title="معلومات البنك معتمدة بالفعل"
+        message="تم اعتماد معلومات هذا الحساب البنكي مسبقاً. هل أنت متأكد أنك تريد تعديلها؟"
+        confirmLabel="تعديل"
+        cancelLabel="إلغاء"
+        confirmVariant="warning"
+        onConfirm={() => {
+          setShowBankApprovedWarning(false);
+          setShowBankEditDialog(true);
+        }}
+        onCancel={() => setShowBankApprovedWarning(false)}
+      />
     </div>
   );
 };
@@ -432,13 +491,16 @@ const StatCard = ({ title, value, icon }: StatCardProps) => (
   </div>
 );
 
-type InfoItemProps = { label: string; value: string };
-const InfoItem = ({ label, value }: InfoItemProps) => (
-  <div>
-    <p className="text-sm text-gray-500 mb-1">{label}</p>
-    <p className="text-sm font-medium text-gray-900 break-all">{value}</p>
-  </div>
-);
+type InfoItemProps = { label: string; value: string | null | undefined };
+const InfoItem = ({ label, value }: InfoItemProps) => {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-1">{label}</p>
+      <p className="text-sm font-medium text-gray-900 break-all">{value}</p>
+    </div>
+  );
+};
 
 type SummaryCardProps = { title: string; value: string; description: string };
 const SummaryCard = ({ title, value, description }: SummaryCardProps) => (

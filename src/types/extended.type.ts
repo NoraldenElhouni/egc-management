@@ -144,6 +144,13 @@ export interface VendorsWithSpecializations extends Vendor {
   } | null;
 }
 
+export interface VendorWithBankApprover extends Vendor {
+  bank_approved_by_user: {
+    first_name: string;
+    last_name: string | null;
+  } | null;
+}
+
 export interface OrdersWithVendors extends Orders {
   vendors: {
     id: string;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ProjectExpenses, Vendor } from "../../../types/global.type";
+import { ProjectExpenses } from "../../../types/global.type";
+import { VendorWithBankApprover } from "../../../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
 
@@ -11,7 +12,7 @@ export interface ProjectExpenseGroup {
 }
 
 export function useVendor(vendorId: string) {
-  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [vendor, setVendor] = useState<VendorWithBankApprover | null>(null);
   const [expenses, setExpenses] = useState<ProjectExpenses[]>([]);
   const [groupedExpenses, setGroupedExpenses] = useState<ProjectExpenseGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,14 @@ export function useVendor(vendorId: string) {
       try {
         const { data, error } = await supabase
           .from("vendors")
-          .select("*")
+          .select(
+            `*,
+            bank_approved_by_user:users!vendors_bank_approved_by_fkey (
+              first_name,
+              last_name
+            )
+          `,
+          )
           .eq("id", vendorId)
           .single();
 
@@ -30,7 +38,7 @@ export function useVendor(vendorId: string) {
           console.error("error fetching vendor", error);
           setError(error);
         } else {
-          setVendor(data);
+          setVendor(data as unknown as VendorWithBankApprover);
         }
 
         const { data: expensesData, error: expensesError } = await supabase

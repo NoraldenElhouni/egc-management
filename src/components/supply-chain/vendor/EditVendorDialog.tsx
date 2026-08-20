@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { Vendor } from "../../../types/global.type";
 import Button from "../../ui/Button";
+import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import { useSpecializations } from "../../../hooks/useSpecializations";
 
 interface EditVendorDialogProps {
   open: boolean;
@@ -26,8 +28,14 @@ const EditVendorDialog = ({
   const [country, setCountry] = useState(vendor.country ?? "");
   const [city, setCity] = useState(vendor.city ?? "");
   const [address, setAddress] = useState(vendor.address ?? "");
+  const [specializationId, setSpecializationId] = useState(
+    vendor.specialization_id ?? "",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: specializations, loading: specializationsLoading } =
+    useSpecializations("Vendor");
 
   useEffect(() => {
     if (!open) return;
@@ -39,6 +47,7 @@ const EditVendorDialog = ({
     setCountry(vendor.country ?? "");
     setCity(vendor.city ?? "");
     setAddress(vendor.address ?? "");
+    setSpecializationId(vendor.specialization_id ?? "");
     setError(null);
   }, [open, vendor]);
 
@@ -68,6 +77,7 @@ const EditVendorDialog = ({
           country: country.trim() || null,
           city: city.trim() || null,
           address: address.trim() || null,
+          specialization_id: specializationId || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", vendor.id);
@@ -171,6 +181,20 @@ const EditVendorDialog = ({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <SearchableSelectField
+              id="specializationId"
+              label="التخصص"
+              placeholder="-- ابحث واختر تخصصاً --"
+              options={specializations.map((s) => ({
+                value: s.id,
+                label: s.name,
+              }))}
+              loading={specializationsLoading}
+              value={specializationId}
+              onChange={(val) => setSpecializationId(val)}
             />
           </div>
         </div>

@@ -1,7 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { VendorsWithSpecializations } from "../../../types/extended.type";
-import { formatDate } from "../../../utils/helpper";
 
 export const VendorsColumns: ColumnDef<VendorsWithSpecializations>[] = [
   // Selection column
@@ -106,11 +105,18 @@ export const VendorsColumns: ColumnDef<VendorsWithSpecializations>[] = [
   },
 
   {
-    accessorKey: "created_at",
-    header: "تاريخ الإنشاء",
-    cell: ({ row }) => {
-      const date = row.original.created_at;
-      return formatDate(date);
-    },
+    id: "bank_account_approved",
+    header: "معتمد بنكياً",
+    accessorFn: (row) =>
+      row.bank_account_approved ? "approved" : "not_approved",
+    cell: ({ row }) => (
+      <span
+        title={row.original.bank_account_approved ? "معتمد" : "غير معتمد"}
+        className={`inline-block w-3 h-3 rounded-full ${
+          row.original.bank_account_approved ? "bg-green-500" : "bg-red-500"
+        }`}
+      />
+    ),
+    size: 32,
   },
 ];
