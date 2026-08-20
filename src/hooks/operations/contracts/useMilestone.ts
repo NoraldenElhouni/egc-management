@@ -2,21 +2,7 @@
 import { useState, useEffect } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
-import { MilestoneReportsWithEmployee } from "../../../types/extended.type";
-
-export interface MilestoneReport {
-  id: string;
-  milestone_id: string;
-  contract_id: string;
-  description: string | null;
-  img_path: string | null;
-  amount_done: number | null;
-  created_at: string;
-  employees: {
-    first_name: string;
-    last_name: string | null;
-  };
-}
+import { fetchByIds } from "./crossSchemaLookup";
 
 export interface MilestoneDetail {
   id: string;
@@ -24,20 +10,26 @@ export interface MilestoneDetail {
   title: string;
   description: string | null;
   amount: number;
+  percentage: number;
   due_date: string | null;
-  status: "pending" | "in_progress" | "approved" | "completed";
+  status: "pending" | "in_progress" | "done";
   order_index: number;
   completed_at: string | null;
+  completed_by: string | null;
   created_at: string;
   contracts: {
     id: string;
     total_amount: number;
     project_id: string;
-    projects: { name: string };
-    contractors: { first_name: string; last_name: string | null };
-    work_requests: { title: string };
+    contractor_id: string;
+    rounds: { title: string } | null;
+    project: { name: string } | null;
+    contractor: { first_name: string; last_name: string | null } | null;
   };
-  milestone_reports: MilestoneReportsWithEmployee[];
+  payment_milestones: {
+    amount: number;
+    request_payments: { status: "pending" | "approved" | "rejected" | "paid" };
+  }[];
 }
 
 export function useMilestone(milestoneId: string) {
@@ -45,38 +37,151 @@ export function useMilestone(milestoneId: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
-  useEffect(() => {
+  const fetchMilestone = async () => {
     if (!milestoneId) return;
-    async function fetch() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("contract_milestones")
-          .select(
-            `*,
-            contracts(
-              id, total_amount, project_id,
-              projects(name),
-              contractors(first_name, last_name),
-              work_requests(title)
-            ),
-            milestone_reports(
-              *,
-              employees!milestone_reports_submitted_by_fkey(id, first_name, last_name)
-            )`,
-          )
-          .eq("id", milestoneId)
-          .single();
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .schema("contracts")
+        .from("milestones")
+        .select(
+          `*,
+          contracts(
+            id, total_amount, project_id, contractor_id,
+            rounds(title)
+          ),
+          payment_milestones(amount, request_payments(status))`,
+        )
+        .eq("id", milestoneId)
+        .single();
 
-        if (error) setError(error);
-        else setMilestone(data);
-      } catch (err) {
-        setError(err as PostgrestError);
+      if (error) {
+        setError(error);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      const row = data as unknown as {
+        contracts: {
+          id: string;
+          total_amount: number;
+          project_id: string;
+          contractor_id: string;
+          rounds: { title: string } | null;
+        };
+      } & Record<string, unknown>;
+
+      const [projectsById, contractorsById] = await Promise.all([
+        fetchByIds<{ id: string; name: string }>("projects", "id, name", [
+          row.contracts.project_id,
+        ]),
+        fetchByIds<{ id: string; first_name: string; last_name: string | null }>(
+          "contractors",
+          "id, first_name, last_name",
+          [row.contracts.contractor_id],
+        ),
+      ]);
+
+      setMilestone({
+        ...row,
+        contracts: {
+          ...row.contracts,
+          project: projectsById[row.contracts.project_id] ?? null,
+          contractor: contractorsById[row.contracts.contractor_id] ?? null,
+        },
+      } as unknown as MilestoneDetail);
+    } catch (err) {
+      setError(err as PostgrestError);
     }
-    fetch();
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMilestone();
   }, [milestoneId]);
 
-  return { milestone, loading, error };
+  const amountPaid =
+    milestone?.payment_milestones
+      .filter((pm) => ["approved", "paid"].includes(pm.request_payments.status))
+      .reduce((sum, pm) => sum + pm.amount, 0) ?? 0;
+
+  return { milestone, loading, error, refetch: fetchMilestone, amountPaid };
+}
+
+export function useCreateMilestone() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  async function createMilestone(input: {
+    contract_id: string;
+    title: string;
+    description: string | null;
+    amount: number;
+    percentage: number;
+    due_date: string | null;
+    order_index: number;
+  }) {
+    setLoading(true);
+    setError(null);
+
+    const { data, error: insertError } = await supabase
+      .schema("contracts")
+      .from("milestones")
+      .insert({
+        contract_id: input.contract_id,
+        title: input.title,
+        description: input.description,
+        amount: input.amount,
+        percentage: input.percentage,
+        due_date: input.due_date,
+        order_index: input.order_index,
+      })
+      .select("id")
+      .single();
+
+    setLoading(false);
+
+    if (insertError) {
+      setError(insertError);
+      return { error: insertError };
+    }
+
+    return { error: null, milestoneId: data.id };
+  }
+
+  return { createMilestone, loading, error };
+}
+
+export function useUpdateMilestoneDetails() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  async function updateMilestoneDetails(
+    milestoneId: string,
+    input: { title: string; description: string | null; due_date: string | null },
+  ) {
+    setLoading(true);
+    setError(null);
+
+    const { error: updateError } = await supabase
+      .schema("contracts")
+      .from("milestones")
+      .update({
+        title: input.title,
+        description: input.description,
+        due_date: input.due_date,
+      })
+      .eq("id", milestoneId);
+
+    setLoading(false);
+
+    if (updateError) {
+      setError(updateError);
+      return { error: updateError };
+    }
+
+    return { error: null };
+  }
+
+  return { updateMilestoneDetails, loading, error };
 }

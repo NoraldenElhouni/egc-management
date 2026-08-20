@@ -1,10 +1,11 @@
 import { supabase } from "./supabaseClient";
 
 type UploadEntity =
-  | "work_request"
+  | "round"
+  | "quote"
   | "contract"
-  | "milestone_report"
   | "payment_request"
+  | "payment_penalty"
   | "employee"
   | "project";
 

@@ -1,5 +1,5 @@
-import { ContractorBids, WorkRequests, WorkRequestsItems } from "./global.type";
 import { Database } from "../lib/supabase";
+import { ContractorBids } from "./global.type";
 
 type ContractPaymentRow = Database["contracts"]["Tables"]["payments"]["Row"];
 type ContractPaymentPenaltyRow =
@@ -37,34 +37,10 @@ export interface ContractPaymentPenalty extends ContractPaymentPenaltyRow {
   created_by_employee: EmployeeSummary | null;
 }
 
-export type RequestPage = WorkRequests & {
-  projects: { name: string };
-  work_request_items: WorkRequestsItems[];
-  bids_count: number;
-  specializations: {
-    name: string;
-  };
-};
-
-export interface RequestBids extends ContractorBids {
-  contractors: {
-    id: string;
-    first_name: string;
-    last_name: string | null;
-  };
-  work_requests: {
-    id: string;
-    title: string;
-    project_id: string;
-    projects: {
-      id: string;
-      name: string;
-      expense_counter: number;
-      invoice_counter: number; // add this
-    };
-  };
-}
-
+// Kept for src/hooks/supply-chain/useContractor.ts and
+// src/components/tables/columns/contractors/BidsColumns.tsx — out of scope
+// for the operations/contracts rewrite, still reads the legacy
+// public.contractor_bids/work_requests tables directly.
 export interface ContractorBid extends ContractorBids {
   work_requests: {
     id: string;

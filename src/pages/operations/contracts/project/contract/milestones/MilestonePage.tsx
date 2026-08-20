@@ -10,20 +10,13 @@ import { formatCurrency, formatDate } from "../../../../../../utils/helpper";
 import { StatusBadge } from "../../../../../../components/ui/Badge";
 import Button from "../../../../../../components/ui/Button";
 import OverviewStatus from "../../../../../../components/ui/OverviewStatus";
-import {
-  CheckCircle,
-  FileText,
-  Newspaper,
-  TrendingDown,
-  Wallet,
-} from "lucide-react";
+import { CheckCircle, Pencil } from "lucide-react";
+import { MilestoneDetail } from "../../../../../../hooks/operations/contracts/useMilestone";
 
-const milestoneStatusBadge = (status: string) => {
+const milestoneStatusBadge = (status: MilestoneDetail["status"]) => {
   switch (status) {
-    case "completed":
+    case "done":
       return <StatusBadge.Completed />;
-    case "approved":
-      return <StatusBadge.Awarded />;
     case "in_progress":
       return <StatusBadge.Active />;
     default:
@@ -32,29 +25,30 @@ const milestoneStatusBadge = (status: string) => {
 };
 
 const MilestonePage = () => {
-  const { milestoneId, contractId, projectId } = useParams<{
+  const { milestoneId } = useParams<{
     milestoneId: string;
     contractId: string;
     projectId: string;
   }>();
 
-  const { milestone, loading, error } = useMilestone(milestoneId ?? "");
+  const { milestone, loading, error, amountPaid } = useMilestone(
+    milestoneId ?? "",
+  );
 
   if (!milestoneId) return null;
   if (loading) return <LoadingPage label="جاري تحميل تفاصيل المرحلة..." />;
   if (error) return <ErrorPage label="حدث خطأ" error={error.message} />;
   if (!milestone) return null;
 
-  const totalReported = milestone.milestone_reports.reduce(
-    (sum, r) => sum + (r.amount_done ?? 0),
-    0,
-  );
-  const remaining = milestone.amount - totalReported;
-  const progressPercent = Math.min(
-    Math.round((totalReported / milestone.amount) * 100),
-    100,
-  );
+  const remaining = milestone.amount - amountPaid;
+  const progressPercent =
+    milestone.amount > 0
+      ? Math.min(Math.round((amountPaid / milestone.amount) * 100), 100)
+      : 0;
   const isPending = milestone.status === "pending";
+  const contractorName = milestone.contracts.contractor
+    ? `${milestone.contracts.contractor.first_name} ${milestone.contracts.contractor.last_name ?? ""}`
+    : "—";
 
   return (
     <div className="p-6 space-y-4">
@@ -63,23 +57,17 @@ const MilestonePage = () => {
         <div>
           <h1 className="text-2xl font-semibold">{milestone.title}</h1>
           <h4 className="text-sm text-gray-500 mt-1">
-            {milestone.contracts.work_requests.title} ·{" "}
-            {milestone.contracts.contractors.first_name}{" "}
-            {milestone.contracts.contractors.last_name ?? ""} ·{" "}
-            {milestone.contracts.projects.name}
+            {milestone.contracts.rounds?.title ?? "—"} · {contractorName} ·{" "}
+            {milestone.contracts.project?.name ?? "—"}
           </h4>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="reports">
+          <Link to="edit">
             <Button size="sm" variant="primary-outline">
-              <Newspaper className="w-4 h-4 ml-2" />
-              التقارير ({milestone.milestone_reports.length})
+              <Pencil className="w-4 h-4 ml-2" />
+              تعديل
             </Button>
           </Link>
-          <Button size="sm">
-            <FileText className="w-4 h-4 ml-2" />
-            طباعة فاتورة
-          </Button>
           {isPending && (
             <Button size="sm" variant="success">
               <CheckCircle className="w-4 h-4 ml-2" />
@@ -110,6 +98,10 @@ const MilestonePage = () => {
         )}
         <span className="text-gray-300">·</span>
         <span className="text-sm text-gray-500">
+          النسبة: {milestone.percentage}%
+        </span>
+        <span className="text-gray-300">·</span>
+        <span className="text-sm text-gray-500">
           الترتيب: {milestone.order_index}
         </span>
       </div>
@@ -120,32 +112,16 @@ const MilestonePage = () => {
           {
             label: "قيمة المرحلة",
             value: formatCurrency(milestone.amount),
-            icon: Wallet,
-            iconBgColor: "bg-blue-100",
-            iconColor: "text-blue-600",
           },
           {
-            label: "المنجز حتى الآن",
-            value: formatCurrency(totalReported),
-            icon: CheckCircle,
-            iconBgColor: "bg-green-100",
-            iconColor: "text-green-600",
+            label: "المدفوع حتى الآن",
+            value: formatCurrency(amountPaid),
             secondaryLabel: "نسبة الإنجاز",
             secondaryValue: `${progressPercent}%`,
           },
           {
             label: "المتبقي",
             value: formatCurrency(remaining),
-            icon: TrendingDown,
-            iconBgColor: "bg-orange-100",
-            iconColor: "text-orange-600",
-          },
-          {
-            label: "عدد التقارير",
-            value: milestone.milestone_reports.length,
-            icon: Newspaper,
-            iconBgColor: "bg-purple-100",
-            iconColor: "text-purple-600",
           },
         ]}
       />
@@ -160,6 +136,7 @@ const MilestonePage = () => {
           value={milestoneStatusBadge(milestone.status)}
         />
         <InfoRow label="القيمة" value={formatCurrency(milestone.amount)} />
+        <InfoRow label="النسبة" value={`${milestone.percentage}%`} />
         <InfoRow
           label="تاريخ الاستحقاق"
           value={milestone.due_date ? formatDate(milestone.due_date) : "—"}
@@ -190,7 +167,7 @@ const MilestonePage = () => {
           />
         </div>
         <div className="flex justify-between text-xs text-gray-400 mt-2">
-          <span>{formatCurrency(totalReported)} منجز</span>
+          <span>{formatCurrency(amountPaid)} مدفوع</span>
           <span>{formatCurrency(remaining)} متبقي</span>
         </div>
       </div>

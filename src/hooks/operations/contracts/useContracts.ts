@@ -1,99 +1,160 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
-import { Contracts, Specializations } from "../../../types/global.type";
+import { PaymentMethod, Specializations } from "../../../types/global.type";
 import { supabase } from "../../../lib/supabaseClient";
-import { RequestForm } from "../../../types/schema/contracts.schema";
-import {
-  contractorWithSpecializations,
-  MilestoneReportsWithEmployee,
-} from "../../../types/extended.type";
+import { contractorWithSpecializations } from "../../../types/extended.type";
+import { fetchByIds } from "./crossSchemaLookup";
 
-export type Service = {
+interface ContractorNameRow {
   id: string;
-  name: string;
-  unit: string | null;
-  category_id: string | null;
-  specialization_id: string | null;
-  specialization_categories: {
-    // ✅ joined from schema
-    name: string;
-  } | null;
-};
+  first_name: string;
+  last_name: string | null;
+}
 
-export interface ContractMilestone {
+export interface ContractListRow {
+  id: string;
+  project_id: string;
+  round_id: string;
+  quote_id: string;
+  contractor_id: string;
+  status: "draft" | "active" | "completed" | "cancelled";
+  total_amount: number;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  rounds: { title: string } | null;
+  contractor: ContractorNameRow | null;
+}
+
+export interface ContractItemRow {
+  id: string;
+  contract_id: string;
+  boq_item_id: string | null;
+  work_id: string | null;
+  name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number | null;
+  sort_order: number;
+}
+
+export interface ContractMilestoneRow {
   id: string;
   contract_id: string;
   title: string;
   description: string | null;
   amount: number;
-  due_date: string | null;
-  status: "pending" | "in_progress" | "completed" | "approved";
+  percentage: number;
   order_index: number;
+  due_date: string | null;
+  status: "pending" | "in_progress" | "done";
   completed_at: string | null;
+  completed_by: string | null;
   created_at: string;
-  milestone_reports: { amount_done: number | null }[]; // ← add
 }
 
-export interface PaymentRequest {
+export interface ContractPaymentRow {
   id: string;
-  milestone_id: string; // ← add this
+  project_id: string;
+  contract_id: string;
+  contractor_id: string;
+  requested_by: string;
   amount: number;
+  penalty_amount: number;
+  grand_total: number | null;
   description: string | null;
-  status: "pending" | "approved" | "declined" | "paid";
-  payment_method: string | null;
+  decline_reason: string | null;
+  expense_id: string | null;
+  payment_method: PaymentMethod | null;
+  status: "pending" | "approved" | "rejected" | "paid";
+  serial_number: number | null;
+  paid_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
   created_at: string;
-  contract_milestones: { title: string };
-  employees: { first_name: string; last_name: string | null };
+  payment_milestones: {
+    id: string;
+    amount: number;
+    milestone_id: string;
+    milestones: { title: string } | null;
+  }[];
+  payment_penalties: {
+    id: string;
+    amount: number;
+    reason: string;
+    description: string | null;
+    image_path: string | null;
+    milestone_id: string | null;
+  }[];
 }
 
 export interface ContractDetail {
   id: string;
+  project_id: string;
+  round_id: string;
+  quote_id: string;
+  contractor_id: string;
+  status: "draft" | "active" | "completed" | "cancelled";
   total_amount: number;
-  days_allocated: number;
+  advance_percentage: number;
+  insurance_percentage: number;
+  delay_penalty_per_day: number | null;
+  duration_days: number | null;
   start_date: string | null;
   end_date: string | null;
-  status: "active" | "completed" | "on_hold" | "terminated";
-  notes: string | null;
+  terms: string | null;
   created_at: string;
-  projects: { name: string; code: string };
-  work_requests: {
-    id: string;
-    title: string;
-    specializations: { name: string };
-  };
-  contractors: {
+  updated_at: string;
+  project: { name: string } | null;
+  round: { title: string; specialization: { name: string } | null } | null;
+  contractor: {
     id: string;
     first_name: string;
     last_name: string | null;
     phone_number: string | null;
     email: string | null;
-  };
-  employees: { id: string; first_name: string; last_name: string | null };
-  contract_milestones: ContractMilestone[];
-  payment_requests: PaymentRequest[];
-  milestone_reports: MilestoneReportsWithEmployee[];
+  } | null;
+  contract_items: ContractItemRow[];
+  milestones: ContractMilestoneRow[];
+  request_payments: ContractPaymentRow[];
 }
 
 export function useContracts(projectId: string) {
-  const [contracts, setContracts] = useState<Contracts[]>([]);
+  const [contracts, setContracts] = useState<ContractListRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
+    if (!projectId) return;
     async function fetchContracts() {
       setLoading(true);
       try {
         const { data, error } = await supabase
+          .schema("contracts")
           .from("contracts")
-          .select("*")
+          .select("*, rounds(title)")
           .eq("project_id", projectId);
 
         if (error) {
           console.error("error fetching contracts", error);
           setError(error);
-        } else {
-          setContracts(data ?? []);
+          setLoading(false);
+          return;
         }
+
+        const contractorsById = await fetchByIds<ContractorNameRow>(
+          "contractors",
+          "id, first_name, last_name",
+          (data ?? []).map((c) => c.contractor_id),
+        );
+
+        setContracts(
+          (data ?? []).map((c) => ({
+            ...c,
+            contractor: contractorsById[c.contractor_id] ?? null,
+          })),
+        );
       } catch (err) {
         console.error("unexpected error fetching contracts", err);
         setError(err as PostgrestError);
@@ -101,13 +162,15 @@ export function useContracts(projectId: string) {
       setLoading(false);
     }
     fetchContracts();
-  }, []);
+  }, [projectId]);
 
   return { contracts, loading, error };
 }
 
 export function useSpecializations() {
-  const [specializations, setSpecializations] = useState<Specializations[]>([]);
+  const [specializations, setSpecializations] = useState<Specializations[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -138,44 +201,6 @@ export function useSpecializations() {
   return { specializations, loading, error };
 }
 
-export function useServicesBySpecialization(specId: string) {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PostgrestError | null>(null);
-
-  useEffect(() => {
-    if (!specId) return; // 👈 skip if no spec selected yet
-
-    async function fetchServices() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("services")
-          .select(
-            `
-            id, name, unit, category_id, specialization_id,
-            specialization_categories ( name )
-          `,
-          )
-          .eq("specialization_id", specId);
-
-        if (error) {
-          setError(error);
-        } else {
-          setServices(data ?? []);
-        }
-      } catch (err) {
-        setError(err as PostgrestError);
-      }
-      setLoading(false);
-    }
-
-    fetchServices();
-  }, [specId]); // ✅ re-runs whenever specId changes
-
-  return { services, loading, error };
-}
-
 export function useContractors(enabled: boolean) {
   const [contractors, setContractors] = useState<
     contractorWithSpecializations[]
@@ -184,14 +209,16 @@ export function useContractors(enabled: boolean) {
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
-    if (!enabled) return; // 👈 skip fetch if mode is not direct
+    if (!enabled) return;
 
     async function fetchContractors() {
       setLoading(true);
 
       const { data, error } = await supabase
         .from("contractors")
-        .select(`*,users(user_specializations(*, specializations(*)))`);
+        .select(
+          `*,specializations(id,name,role_id),users(user_specializations(*, specializations(*)))`,
+        );
       if (error) setError(error);
       else setContractors(data ?? []);
 
@@ -199,379 +226,9 @@ export function useContractors(enabled: boolean) {
     }
 
     fetchContractors();
-  }, [enabled]); // 👈 re-runs when enabled changes
+  }, [enabled]);
 
   return { contractors, loading, error };
-}
-
-export function useCreateRequest() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PostgrestError | null>(null);
-
-  async function sendPushNotifications(
-    tokens: string[],
-    title: string,
-    body: string,
-    data?: Record<string, string>,
-  ) {
-    await supabase.functions.invoke("send-push", {
-      body: { tokens, title, body, data: data ?? { type: "work_request" } },
-    });
-  }
-
-  async function stopRequest(requestId: string) {
-    setLoading(true);
-    setError(null);
-
-    const { error: updateError } = await supabase
-      .from("work_requests")
-      .update({
-        status: "draft",
-      })
-      .eq("id", requestId);
-
-    if (updateError) {
-      setError(updateError);
-      setLoading(false);
-
-      return { error: updateError };
-    }
-
-    setLoading(false);
-
-    return { error: null };
-  }
-  async function cancelRequest(requestId: string) {
-    setLoading(true);
-    setError(null);
-
-    const { error: updateError } = await supabase
-      .from("work_requests")
-      .update({
-        status: "cancelled",
-      })
-      .eq("id", requestId);
-
-    if (updateError) {
-      setError(updateError);
-      setLoading(false);
-
-      return { error: updateError };
-    }
-
-    setLoading(false);
-
-    return { error: null };
-  }
-
-  async function createRequest(values: RequestForm, projectId: string) {
-    setLoading(true);
-    setError(null);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // الخطوة 1: إنشاء طلب العمل
-    const { data: request, error: requestError } = await supabase
-      .from("work_requests")
-      .insert({
-        project_id: projectId,
-        specialization_id: values.specialization_id,
-        title: values.title,
-        description: values.description,
-        bid_deadline: values.bid_deadline,
-        mode: values.bid_mode,
-        created_by: user?.id ?? "",
-        work_start_at: values.work_start_at,
-        contact_name: values.contact_name,
-        contact_phone: values.contact_phone,
-        contractor_provides_materials: values.contractor_provides_materials,
-        delay_penalty_terms: values.delay_penalty_terms,
-        retention_terms: values.retention_terms,
-        status: values.status,
-        direct_contractor_id:
-          values.bid_mode === "direct" ? values.direct_contractor_id : null,
-      })
-      .select("id")
-      .single();
-
-    if (requestError) {
-      setError(requestError);
-      setLoading(false);
-      return { error: requestError };
-    }
-
-    // الخطوة 2: إضافة عناصر الطلب (خدمات من الكتالوج أو بنود مخصصة)
-    if (values.items.length > 0) {
-      const { error: itemsError } = await supabase
-        .from("work_request_items")
-        .insert(
-          values.items.map((item) => ({
-            request_id: request.id,
-            service_id: item.is_custom ? null : item.id, // null for custom items
-            custom_name: item.is_custom ? item.custom_name : null,
-            quantity: item.quantity,
-            unit: item.unit,
-          })),
-        );
-
-      if (itemsError) {
-        setError(itemsError);
-        setLoading(false);
-        return { error: itemsError };
-      }
-    }
-
-    // الخطوة 3: إضافة المراحل (إن وجدت)
-    if (values.milestones.length > 0) {
-      const { error: milestonesError } = await supabase
-        .from("request_milestones")
-        .insert(
-          values.milestones.map((milestone) => ({
-            request_id: request.id,
-            title: milestone.title,
-            description: milestone.description ?? null,
-            percentage: milestone.percentage,
-          })),
-        );
-
-      if (milestonesError) {
-        setError(milestonesError);
-        setLoading(false);
-        return { error: milestonesError };
-      }
-    }
-
-    // الخطوة 4: إرسال الإشعارات
-    if (values.status !== "draft") {
-      try {
-        let pushTokens: string[] = [];
-
-        if (values.bid_mode === "direct" && values.direct_contractor_id) {
-          const { data: contractor } = await supabase
-            .from("contractors")
-            .select("user_id")
-            .eq("id", values.direct_contractor_id)
-            .single();
-
-          if (contractor?.user_id) {
-            const { data: tokenData } = await supabase
-              .from("user_push_tokens")
-              .select("push_token")
-              .eq("user_id", contractor.user_id)
-              .single();
-
-            if (tokenData?.push_token) pushTokens = [tokenData.push_token];
-          }
-        } else {
-          const { data: contractors } = await supabase
-            .from("contractors")
-            .select(
-              `user_id,
-             users!contractors_user_id_fkey (
-               user_specializations!user_specializations_user_id_fkey (
-                 specialization_id
-               )
-             )`,
-            )
-            .not("user_id", "is", null);
-
-          if (contractors) {
-            const matchingUserIds = contractors
-              .filter((contractor) => {
-                const specializations = contractor.users
-                  ?.user_specializations as
-                  | { specialization_id: string }[]
-                  | undefined;
-                return specializations?.some(
-                  (s) => s.specialization_id === values.specialization_id,
-                );
-              })
-              .map((c) => c.user_id)
-              .filter(Boolean) as string[];
-
-            if (matchingUserIds.length > 0) {
-              const { data: tokens } = await supabase
-                .from("user_push_tokens")
-                .select("push_token")
-                .in("user_id", matchingUserIds);
-
-              pushTokens =
-                (tokens
-                  ?.map((t) => t.push_token)
-                  .filter(Boolean) as string[]) ?? [];
-            }
-          }
-        }
-
-        if (pushTokens.length > 0) {
-          await sendPushNotifications(
-            pushTokens,
-            "طلب عمل جديد",
-            values.bid_mode === "direct"
-              ? `تم تكليفك مباشرةً بطلب عمل جديد: ${values.title}`
-              : `يوجد طلب عمل جديد في تخصصك: ${values.title}`,
-          );
-        }
-      } catch (notifError) {
-        console.error("❌ خطأ في إرسال الإشعار:", notifError);
-      }
-    }
-
-    setLoading(false);
-    return { error: null, requestId: request.id };
-  }
-
-  async function notifyRequestUsers(request: {
-    id: string;
-    title: string;
-    mode: "open" | "direct";
-    specialization_id: string;
-    direct_contractor_id?: string | null;
-  }) {
-    let pushTokens: string[] = [];
-
-    if (request.mode === "direct" && request.direct_contractor_id) {
-      // direct contractor
-      const { data: contractor } = await supabase
-        .from("contractors")
-        .select("user_id")
-        .eq("id", request.direct_contractor_id)
-        .single();
-
-      if (contractor?.user_id) {
-        const { data: tokenData } = await supabase
-          .from("user_push_tokens")
-          .select("push_token")
-          .eq("user_id", contractor.user_id)
-          .single();
-
-        if (tokenData?.push_token) {
-          pushTokens = [tokenData.push_token];
-        }
-      }
-    } else {
-      // contractors with same specialization
-      const { data: contractors } = await supabase
-        .from("contractors")
-        .select(
-          `
-        user_id,
-        users!contractors_user_id_fkey (
-          user_specializations!user_specializations_user_id_fkey (
-            specialization_id
-          )
-        )
-      `,
-        )
-        .not("user_id", "is", null);
-
-      if (contractors) {
-        const matchingUserIds = contractors
-          .filter((contractor) => {
-            const specializations = contractor.users?.user_specializations as
-              | { specialization_id: string }[]
-              | undefined;
-
-            return specializations?.some(
-              (s) => s.specialization_id === request.specialization_id,
-            );
-          })
-          .map((c) => c.user_id)
-          .filter(Boolean) as string[];
-
-        if (matchingUserIds.length > 0) {
-          const { data: tokens } = await supabase
-            .from("user_push_tokens")
-            .select("push_token")
-            .in("user_id", matchingUserIds);
-
-          pushTokens =
-            (tokens?.map((t) => t.push_token).filter(Boolean) as string[]) ??
-            [];
-        }
-      }
-    }
-
-    if (pushTokens.length > 0) {
-      await sendPushNotifications(
-        pushTokens,
-        "طلب عمل جديد",
-        request.mode === "direct"
-          ? `تم تكليفك مباشرةً بطلب عمل جديد: ${request.title}`
-          : `يوجد طلب عمل جديد في تخصصك: ${request.title}`,
-      );
-    }
-  }
-
-  async function publishRequest(requestId: string) {
-    setLoading(true);
-    setError(null);
-
-    // get request info
-    const { data: request, error: fetchError } = await supabase
-      .from("work_requests")
-      .select(
-        `
-      id,
-      title,
-      mode,
-      specialization_id,
-      direct_contractor_id
-    `,
-      )
-      .eq("id", requestId)
-      .single();
-
-    if (fetchError || !request) {
-      setError(fetchError);
-      setLoading(false);
-
-      return { error: fetchError };
-    }
-
-    // update status
-    const { error: updateError } = await supabase
-      .from("work_requests")
-      .update({
-        status: "open",
-      })
-      .eq("id", requestId);
-
-    if (updateError) {
-      setError(updateError);
-      setLoading(false);
-
-      return { error: updateError };
-    }
-
-    // notify users
-    try {
-      await notifyRequestUsers({
-        id: request.id,
-        title: request.title,
-        mode: request.mode,
-        specialization_id: request.specialization_id,
-        direct_contractor_id: request.direct_contractor_id,
-      });
-    } catch (notifError) {
-      console.error("❌ خطأ في إرسال الإشعار:", notifError);
-    }
-
-    setLoading(false);
-
-    return { error: null };
-  }
-
-  return {
-    createRequest,
-    loading,
-    error,
-    publishRequest,
-    stopRequest,
-    cancelRequest,
-  };
 }
 
 export function useContractDetails(contractId: string) {
@@ -585,26 +242,71 @@ export function useContractDetails(contractId: string) {
       setLoading(true);
       try {
         const { data, error } = await supabase
+          .schema("contracts")
           .from("contracts")
           .select(
             `*,
-            projects(name, code),
-            work_requests(id, title, specializations(name)),
-            contractors(id, first_name, last_name, phone_number, email),
-            employees!contracts_created_by_fkey(id, first_name, last_name),
-            contract_milestones(*, milestone_reports(amount_done)),
-            milestone_reports(*, employees(id, first_name, last_name)),
-            payment_requests(
+            rounds(title, specialization_id),
+            contract_items(*),
+            milestones(*),
+            request_payments(
               *,
-              contract_milestones(title),
-              employees!payment_requests_requested_by_fkey(first_name, last_name)
+              payment_milestones(id, amount, milestone_id, milestones(title)),
+              payment_penalties(id, amount, reason, description, image_path, milestone_id)
             )`,
           )
           .eq("id", contractId)
           .single();
 
-        if (error) setError(error);
-        else setContract(data);
+        if (error) {
+          setError(error);
+          setLoading(false);
+          return;
+        }
+
+        const row = data as unknown as {
+          project_id: string;
+          contractor_id: string;
+          rounds: { title: string; specialization_id: string | null } | null;
+        } & Record<string, unknown>;
+
+        const [projectsById, contractorsById, specsById] = await Promise.all([
+          fetchByIds<{ id: string; name: string }>(
+            "projects",
+            "id, name",
+            [row.project_id],
+          ),
+          fetchByIds<{
+            id: string;
+            first_name: string;
+            last_name: string | null;
+            phone_number: string | null;
+            email: string | null;
+          }>(
+            "contractors",
+            "id, first_name, last_name, phone_number, email",
+            [row.contractor_id],
+          ),
+          fetchByIds<{ id: string; name: string }>(
+            "specializations",
+            "id, name",
+            [row.rounds?.specialization_id],
+          ),
+        ]);
+
+        setContract({
+          ...row,
+          project: projectsById[row.project_id] ?? null,
+          contractor: contractorsById[row.contractor_id] ?? null,
+          round: row.rounds
+            ? {
+                title: row.rounds.title,
+                specialization: row.rounds.specialization_id
+                  ? (specsById[row.rounds.specialization_id] ?? null)
+                  : null,
+              }
+            : null,
+        } as unknown as ContractDetail);
       } catch (err) {
         setError(err as PostgrestError);
       }
@@ -615,9 +317,9 @@ export function useContractDetails(contractId: string) {
 
   const totalPaid = useMemo(
     () =>
-      contract?.payment_requests
+      contract?.request_payments
         .filter((p) => p.status === "approved" || p.status === "paid")
-        .reduce((sum, p) => sum + p.amount, 0) ?? 0,
+        .reduce((sum, p) => sum + (p.grand_total ?? p.amount), 0) ?? 0,
     [contract],
   );
 
@@ -627,9 +329,7 @@ export function useContractDetails(contractId: string) {
   );
 
   const completedMilestones = useMemo(
-    () =>
-      contract?.contract_milestones.filter((m) => m.status === "completed")
-        .length ?? 0,
+    () => contract?.milestones.filter((m) => m.status === "done").length ?? 0,
     [contract],
   );
 
