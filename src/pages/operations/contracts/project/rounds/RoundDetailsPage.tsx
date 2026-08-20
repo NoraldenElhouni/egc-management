@@ -104,7 +104,11 @@ const RoundDetailsPage = () => {
     refetch();
   };
 
-  const quotesColumns = getQuotesColumns((quote) => setAwardingQuote(quote));
+  const isRoundAwarded = round.status === "awarded";
+  const quotesColumns = getQuotesColumns(
+    (quote) => setAwardingQuote(quote),
+    isRoundAwarded,
+  );
 
   const extrasByQuote = quotes
     .map((q) => ({
@@ -244,13 +248,15 @@ const RoundDetailsPage = () => {
                           {q.contractor?.first_name}{" "}
                           {q.contractor?.last_name ?? ""}
                         </span>
-                        <Button
-                          size="xs"
-                          variant="success"
-                          onClick={() => setAwardingQuote(q)}
-                        >
-                          ترسية
-                        </Button>
+                        {!isRoundAwarded && (
+                          <Button
+                            size="xs"
+                            variant="success"
+                            onClick={() => setAwardingQuote(q)}
+                          >
+                            ترسية
+                          </Button>
+                        )}
                       </div>
                     </th>
                   ))}

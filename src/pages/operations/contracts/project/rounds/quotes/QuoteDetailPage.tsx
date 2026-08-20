@@ -82,10 +82,16 @@ const QuoteDetailPage = () => {
             {quote.round?.title ?? ""} · {contractorName}
           </h4>
         </div>
-        <Button size="sm" variant="success" onClick={() => setShowAward(true)}>
-          <AwardIcon className="w-4 h-4 ml-2" />
-          ترسية هذا العرض
-        </Button>
+        {round?.status !== "awarded" && (
+          <Button
+            size="sm"
+            variant="success"
+            onClick={() => setShowAward(true)}
+          >
+            <AwardIcon className="w-4 h-4 ml-2" />
+            ترسية هذا العرض
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

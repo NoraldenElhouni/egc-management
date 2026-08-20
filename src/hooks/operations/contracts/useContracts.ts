@@ -167,6 +167,51 @@ export function useContracts(projectId: string) {
   return { contracts, loading, error };
 }
 
+// One contract count per project, for the projects list page — `contracts`
+// is a different schema than `public.projects`, so this can't be embedded
+// into the projects query and has to be fetched/counted separately.
+export function useContractCountsByProject(enabled: boolean) {
+  const [countsByProject, setCountsByProject] = useState<
+    Record<string, number>
+  >({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    async function fetchCounts() {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .schema("contracts")
+          .from("contracts")
+          .select("project_id");
+
+        if (error) {
+          setError(error);
+          setLoading(false);
+          return;
+        }
+
+        const counts = (data ?? []).reduce<Record<string, number>>(
+          (acc, row) => {
+            acc[row.project_id] = (acc[row.project_id] ?? 0) + 1;
+            return acc;
+          },
+          {},
+        );
+        setCountsByProject(counts);
+      } catch (err) {
+        setError(err as PostgrestError);
+      }
+      setLoading(false);
+    }
+    fetchCounts();
+  }, [enabled]);
+
+  return { countsByProject, loading, error };
+}
+
 export function useSpecializations() {
   const [specializations, setSpecializations] = useState<Specializations[]>(
     [],

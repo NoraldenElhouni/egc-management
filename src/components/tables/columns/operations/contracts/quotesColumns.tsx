@@ -7,6 +7,7 @@ import Button from "../../../../ui/Button";
 
 export function getQuotesColumns(
   onAward: (quote: QuoteRow) => void,
+  isRoundAwarded = false,
 ): ColumnDef<QuoteRow>[] {
   return [
     {
@@ -65,17 +66,19 @@ export function getQuotesColumns(
         <div className="flex items-center gap-2">
           <Link to={`quotes/${row.original.id}`}>
             <Button size="xs" variant="primary-outline">
-              إدخال الأسعار
+              {isRoundAwarded ? "عرض" : "إدخال الأسعار"}
             </Button>
           </Link>
-          <Button
-            size="xs"
-            variant="success"
-            onClick={() => onAward(row.original)}
-          >
-            <AwardIcon className="w-3.5 h-3.5 ml-1" />
-            ترسية
-          </Button>
+          {!isRoundAwarded && (
+            <Button
+              size="xs"
+              variant="success"
+              onClick={() => onAward(row.original)}
+            >
+              <AwardIcon className="w-3.5 h-3.5 ml-1" />
+              ترسية
+            </Button>
+          )}
         </div>
       ),
     },

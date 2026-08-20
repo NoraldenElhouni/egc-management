@@ -41,20 +41,21 @@ const ContractsProjectPage = () => {
   return (
     <div className="p-4">
       <GenericTable
-        header="جميع العقود"
-        data={contracts ?? []}
-        columns={ContractsColumns}
-        enableSorting
-        enableFiltering
-        showGlobalFilter
-      />
-      <Separator />
-      <GenericTable
         header="جولات التسعير"
         linkLabel="+ جولة جديدة"
         link={`./rounds/new`}
         data={rounds ?? []}
         columns={RoundsColumns}
+        enableSorting
+        enableFiltering
+        showGlobalFilter
+      />
+      <Separator />
+
+      <GenericTable
+        header="جميع العقود"
+        data={contracts ?? []}
+        columns={ContractsColumns}
         enableSorting
         enableFiltering
         showGlobalFilter

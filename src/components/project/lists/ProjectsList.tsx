@@ -4,6 +4,7 @@ import { createProjectsColumns } from "../../tables/columns/ProjectsColumns";
 import GenericTable from "../../tables/table";
 import OverviewStatus from "../../ui/OverviewStatus";
 import { formatCurrency } from "../../../utils/helpper";
+import { useContractCountsByProject } from "../../../hooks/operations/contracts/useContracts";
 
 interface ProjectsListProps {
   basePath?: string;
@@ -16,9 +17,17 @@ const ProjectsList = ({
 }: ProjectsListProps) => {
   const { projects } = useProjects();
 
+  const { countsByProject: contractsCountByProject } =
+    useContractCountsByProject(version === "contracts");
+
   const columns = useMemo(
-    () => createProjectsColumns((id) => `${basePath}/${id}`, version),
-    [basePath, version],
+    () =>
+      createProjectsColumns(
+        (id) => `${basePath}/${id}`,
+        version,
+        contractsCountByProject,
+      ),
+    [basePath, version, contractsCountByProject],
   );
 
   // -----------------------------
@@ -77,6 +86,11 @@ const ProjectsList = ({
 
   const totalPercentages = allAccounts.reduce(
     (acc, a) => acc + (a.total_percentage || 0),
+    0,
+  );
+
+  const totalContracts = Object.values(contractsCountByProject).reduce(
+    (acc, count) => acc + count,
     0,
   );
 
