@@ -13,7 +13,7 @@ const CompanyExpensePayments = () => {
     return <ErrorPage label="رقم المصروف غير صالح" />;
   }
 
-  const { error, loading, expense, payments, addPayments, deletePayment } =
+  const { error, loading, expense, payments, addPayments } =
     useCompanyExpense(expenseId);
 
   const onDelete = async () => {

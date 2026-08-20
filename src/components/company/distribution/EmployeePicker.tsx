@@ -85,8 +85,6 @@ const EmployeePicker = ({
     return fullName.toLowerCase().includes(query.toLowerCase());
   });
 
-  const selectedRole = roles.find((r) => r.id === selectedRoleId);
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"

@@ -1,12 +1,6 @@
 import React, { ComponentType } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import {
-  Book,
-  HandCoins,
-  LayoutDashboard,
-  Percent,
-  WalletCards,
-} from "lucide-react";
+import { Book, HandCoins, LayoutDashboard, Percent } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CompanyPage = () => {

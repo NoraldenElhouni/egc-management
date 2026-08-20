@@ -1,10 +1,11 @@
 // src/renderer/components/Dashboard.tsx
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { signOutUser } from "../../lib/auth";
 import { supabase } from "../../lib/supabaseClient";
 
 const Dashboard = () => {
-  const [session, setSession] = useState<any>(); // State to hold the user session
+  const [session, setSession] = useState<Session | null>(null); // State to hold the user session
 
   // Listen for authentication state changes
   useEffect(() => {

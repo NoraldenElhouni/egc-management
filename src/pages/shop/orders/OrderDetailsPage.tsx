@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Button from "../../../components/ui/Button";
 import { CheckCircle2, Ban, StickyNote } from "lucide-react";
 import Badge, { StatusBadge } from "../../../components/ui/Badge";

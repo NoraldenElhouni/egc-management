@@ -89,11 +89,6 @@ const ProjectsList = ({
     0,
   );
 
-  const totalContracts = Object.values(contractsCountByProject).reduce(
-    (acc, count) => acc + count,
-    0,
-  );
-
   return (
     <div>
       {version === "finance" && (
