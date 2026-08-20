@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import Tabs from "../../../components/ui/Tabs";
 import { useUtils } from "../../../hooks/useUtils";
 import { supabase } from "../../../lib/supabaseClient";
@@ -7,7 +6,6 @@ import Button from "../../../components/ui/Button";
 import {
   Search,
   Plus,
-  ArrowRight,
   Briefcase,
   HardHat,
   Package,
@@ -232,10 +230,9 @@ function SpecTab({
           </div>
         ) : (
           items.map((spec) => (
-            <Link
+            <div
               key={spec.id}
-              to={`/settings/specializations/${spec.id}`}
-              className={`group flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 ${colors.hover} transition hover:border-gray-300 hover:shadow-sm`}
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3"
             >
               <div className="flex items-center gap-3">
                 <div
@@ -247,8 +244,7 @@ function SpecTab({
                   {spec.name}
                 </span>
               </div>
-              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" />
-            </Link>
+            </div>
           ))
         )}
       </div>

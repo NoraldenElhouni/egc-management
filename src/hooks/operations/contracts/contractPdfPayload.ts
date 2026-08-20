@@ -10,9 +10,10 @@ export function buildContractAsBoqPayload(
   const contractorName = contract.contractor
     ? `${contract.contractor.first_name} ${contract.contractor.last_name ?? ""}`.trim()
     : "—";
+  const title = contract.round?.title ?? "عقد مقاولة";
 
   return {
-    report_title: `عقد مقاولة - ${contractorName}`,
+    report_title: `عقد ${title} - ${contractorName}`,
     project_name: contract.project?.name ?? "—",
     generated_at: new Date().toISOString(),
     items: contract.contract_items

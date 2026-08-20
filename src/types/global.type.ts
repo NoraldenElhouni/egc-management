@@ -24,11 +24,6 @@ export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
 export type SpecializationCategories = Tables<"specialization_categories">;
 export type Contractors = Tables<"contractors">;
-// Kept for src/hooks/supply-chain/useContractor.ts and
-// src/components/tables/columns/contractors/BidsColumns.tsx (contractor-facing
-// "my bids" view) — out of scope for the operations/contracts rewrite, still
-// reads the legacy public.contractor_bids table directly.
-export type ContractorBids = Tables<"contractor_bids">;
 
 export type Projects = Tables<"projects">;
 export type Employees = Tables<"employees">;

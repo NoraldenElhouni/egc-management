@@ -2,8 +2,9 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { contractorWithSpecializations } from "../../types/extended.type";
-import { ContractorBid } from "../../types/contracts.type";
 import { ProjectExpenseGroup } from "./vendors/useVendors";
+import { ContractListRow } from "../operations/contracts/useContracts";
+import { fetchByIds } from "../operations/contracts/crossSchemaLookup";
 
 export function useContractor(contractorId: string) {
   const [contractor, setContractor] =
@@ -95,37 +96,51 @@ export function useContractor(contractorId: string) {
   };
 }
 
-// useContractorBids()               // contractor's own submitted bids (all statuses)
-export function useContractorBids(contractorId: string) {
-  const [bids, setBids] = useState<ContractorBid[]>([]);
+// useContractorContracts()          // contractor's contracts under the new contracts schema
+export function useContractorContracts(contractorId: string) {
+  const [contracts, setContracts] = useState<ContractListRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
   useEffect(() => {
-    async function fetchcontractor() {
+    if (!contractorId) return;
+    async function fetchContracts() {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from("contractor_bids")
-          .select("*, work_requests(id, title, projects(id, name))")
+          .schema("contracts")
+          .from("contracts")
+          .select("*, rounds(title)")
           .eq("contractor_id", contractorId);
 
         if (error) {
-          console.error("error fetching contractor", error);
+          console.error("error fetching contractor contracts", error);
           setError(error);
-        } else {
-          setBids(data ?? []);
+          setLoading(false);
+          return;
         }
+
+        const contractorsById = await fetchByIds<{
+          id: string;
+          first_name: string;
+          last_name: string | null;
+        }>("contractors", "id, first_name, last_name", [contractorId]);
+
+        setContracts(
+          (data ?? []).map((c) => ({
+            ...c,
+            contractor: contractorsById[contractorId] ?? null,
+          })),
+        );
       } catch (err) {
-        console.error("unexpected error fetching contractor", err);
+        console.error("unexpected error fetching contractor contracts", err);
         setError(err as PostgrestError);
       }
       setLoading(false);
     }
-    fetchcontractor();
+    fetchContracts();
   }, [contractorId]);
 
-  return { bids, loading, error };
+  return { contracts, loading, error };
 }
-// useContractorContracts()          // contractor's active/completed contracts
 // useContractorPayments()           // contractor's payment history

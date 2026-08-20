@@ -10,21 +10,21 @@ import {
   Phone,
   Mail,
   User,
-  Gavel,
+  FileSignature,
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
 
 import {
   useContractor,
-  useContractorBids,
+  useContractorContracts,
 } from "../../../hooks/supply-chain/useContractor";
 
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
 import ConfirmDialog from "../../../components/ui/ConfirmDialog";
 import GenericTable from "../../../components/tables/table";
-import { BidsColumns } from "../../../components/tables/columns/contractors/BidsColumns";
+import { ContractsColumns } from "../../../components/tables/columns/operations/contracts/ContractsColumns";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import VendorContractorPdfButton from "../../../components/pdf-buttons/VendorContractorPdfButton";
 import EditContractorDialog from "../../../components/supply-chain/contractor/EditContractorDialog";
@@ -147,10 +147,10 @@ const ContractorDetailPage = () => {
   const { contractor, groupedExpenses, loading, error, refetch } =
     useContractor(contractorId || "");
   const {
-    bids,
-    loading: bidsLoading,
-    error: bidsError,
-  } = useContractorBids(contractorId || "");
+    contracts,
+    loading: contractsLoading,
+    error: contractsError,
+  } = useContractorContracts(contractorId || "");
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showBankEditDialog, setShowBankEditDialog] = useState(false);
@@ -173,17 +173,24 @@ const ContractorDetailPage = () => {
   );
 
   const stats = useMemo(() => {
-    const totalBids = bids?.length || 0;
-    const acceptedBids =
-      bids?.filter((bid) => bid.status === "accepted").length || 0;
-    const pendingBids =
-      bids?.filter((bid) => bid.status === "pending").length || 0;
-    const rejectedBids =
-      bids?.filter((bid) => bid.status === "rejected").length || 0;
+    const totalContracts = contracts?.length || 0;
+    const activeContracts =
+      contracts?.filter((c) => c.status === "active").length || 0;
+    const completedContracts =
+      contracts?.filter((c) => c.status === "completed").length || 0;
+    const cancelledContracts =
+      contracts?.filter((c) => c.status === "cancelled").length || 0;
     const totalValue =
-      bids?.reduce((acc, bid) => acc + Number(bid.total_price || 0), 0) || 0;
-    return { totalBids, acceptedBids, pendingBids, rejectedBids, totalValue };
-  }, [bids]);
+      contracts?.reduce((acc, c) => acc + Number(c.total_amount || 0), 0) ||
+      0;
+    return {
+      totalContracts,
+      activeContracts,
+      completedContracts,
+      cancelledContracts,
+      totalValue,
+    };
+  }, [contracts]);
 
   const grandTotal = groupedExpenses.reduce(
     (sum, g) =>
@@ -204,14 +211,14 @@ const ContractorDetailPage = () => {
     );
   }
 
-  if (loading || bidsLoading)
+  if (loading || contractsLoading)
     return <LoadingPage label="جاري تحميل بيانات المقاول..." />;
 
-  if (error || bidsError) {
+  if (error || contractsError) {
     return (
       <ErrorPage
         label="حدث خطأ أثناء تحميل بيانات المقاول"
-        error={error?.message || bidsError?.message}
+        error={error?.message || contractsError?.message}
       />
     );
   }
@@ -281,23 +288,23 @@ const ContractorDetailPage = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           <StatCard
-            title="إجمالي العطاءات"
-            value={stats.totalBids}
-            icon={<Gavel className="h-5 w-5" />}
+            title="إجمالي العقود"
+            value={stats.totalContracts}
+            icon={<FileSignature className="h-5 w-5" />}
           />
           <StatCard
-            title="العطاءات المقبولة"
-            value={stats.acceptedBids}
-            icon={<CheckCircle2 className="h-5 w-5" />}
-          />
-          <StatCard
-            title="العطاءات المعلقة"
-            value={stats.pendingBids}
+            title="العقود النشطة"
+            value={stats.activeContracts}
             icon={<Clock className="h-5 w-5" />}
           />
           <StatCard
-            title="العطاءات المرفوضة"
-            value={stats.rejectedBids}
+            title="العقود المكتملة"
+            value={stats.completedContracts}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+          />
+          <StatCard
+            title="العقود الملغاة"
+            value={stats.cancelledContracts}
             icon={<FileText className="h-5 w-5" />}
           />
           <StatCard
@@ -388,27 +395,27 @@ const ContractorDetailPage = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <SummaryCard
-                title="نسبة نجاح العطاءات"
+                title="نسبة إتمام العقود"
                 value={
-                  stats.totalBids > 0
-                    ? `${Math.round((stats.acceptedBids / stats.totalBids) * 100)}%`
+                  stats.totalContracts > 0
+                    ? `${Math.round((stats.completedContracts / stats.totalContracts) * 100)}%`
                     : "0%"
                 }
-                description="نسبة العطاءات المقبولة من إجمالي العطاءات"
+                description="نسبة العقود المكتملة من إجمالي العقود"
               />
               <SummaryCard
-                title="متوسط قيمة العطاء"
+                title="متوسط قيمة العقد"
                 value={
-                  stats.totalBids > 0
-                    ? formatCurrency(stats.totalValue / stats.totalBids)
+                  stats.totalContracts > 0
+                    ? formatCurrency(stats.totalValue / stats.totalContracts)
                     : "0 LYD"
                 }
-                description="متوسط قيمة كل عطاء مقدم"
+                description="متوسط قيمة كل عقد"
               />
               <SummaryCard
-                title="العطاءات الحالية"
-                value={`${stats.pendingBids} مفتوح`}
-                description="عدد العطاءات قيد الانتظار"
+                title="العقود النشطة"
+                value={`${stats.activeContracts} نشط`}
+                description="عدد العقود قيد التنفيذ حالياً"
               />
               <SummaryCard
                 title="حالة المقاول"
@@ -419,26 +426,26 @@ const ContractorDetailPage = () => {
           </div>
         </div>
 
-        {/* Bids Table */}
+        {/* Contracts Table */}
         <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                العطاءات المقدمة
+                العقود
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                جميع العطاءات المقدمة من المقاول
+                جميع العقود المرساة على هذا المقاول
               </p>
             </div>
           </div>
           <GenericTable
-            data={bids ?? []}
-            columns={BidsColumns}
+            data={contracts ?? []}
+            columns={ContractsColumns}
             enableSorting
             enableFiltering
             showGlobalFilter
             pageSize={5}
-            initialSorting={[{ id: "submitted_at", desc: true }]}
+            initialSorting={[{ id: "created_at", desc: true }]}
           />
         </div>
 
