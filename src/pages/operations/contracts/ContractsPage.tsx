@@ -5,7 +5,7 @@ const ContractsPage = () => {
     <div className="p-4 ">
       <ProjectsList
         basePath="/operations/contracts/project"
-        version="compact"
+        version="contracts"
       />
     </div>
   );

@@ -1,36 +1,35 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { formatCurrency } from "../../../../../utils/helpper";
-import { Database } from "../../../../../lib/supabase";
-import { Contracts } from "../../../../../types/global.type";
-
-type ContractStatus = Database["public"]["Enums"]["contract_status"];
+import { formatCurrency, formatDate } from "../../../../../utils/helpper";
+import { ContractListRow } from "../../../../../hooks/operations/contracts/useContracts";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-const translateContractStatus = (status: ContractStatus): string => {
-  const map: Record<ContractStatus, string> = {
+const translateContractStatus = (
+  status: ContractListRow["status"],
+): string => {
+  const map: Record<ContractListRow["status"], string> = {
+    draft: "مسودة",
     active: "نشط",
     completed: "مكتمل",
-    on_hold: "قيد الانتظار",
-    terminated: "منتهي",
+    cancelled: "ملغى",
   };
   return map[status] ?? status;
 };
 
-const getContractStatusColor = (status: ContractStatus): string => {
-  const map: Record<ContractStatus, string> = {
+const getContractStatusColor = (status: ContractListRow["status"]): string => {
+  const map: Record<ContractListRow["status"], string> = {
+    draft: "bg-gray-100 text-gray-700",
     active: "bg-green-100 text-green-700",
     completed: "bg-blue-100 text-blue-700",
-    on_hold: "bg-yellow-100 text-yellow-700",
-    terminated: "bg-red-100 text-red-700",
+    cancelled: "bg-red-100 text-red-700",
   };
   return map[status] ?? "bg-gray-100 text-gray-700";
 };
 
 // ── columns ──────────────────────────────────────────────────────────────────
 
-export const ContractsColumns: ColumnDef<Contracts>[] = [
+export const ContractsColumns: ColumnDef<ContractListRow>[] = [
   // Selection
   {
     id: "select",
@@ -75,6 +74,33 @@ export const ContractsColumns: ColumnDef<Contracts>[] = [
     size: 130,
   },
 
+  // Round title
+  {
+    id: "round",
+    header: "الجولة",
+    cell: ({ row }) => (
+      <span className="text-gray-700 text-sm">
+        {row.original.rounds?.title ?? "—"}
+      </span>
+    ),
+  },
+
+  // Contractor
+  {
+    id: "contractor",
+    header: "المقاول",
+    cell: ({ row }) => {
+      const contractor = row.original.contractor;
+      return (
+        <span className="text-gray-700">
+          {contractor
+            ? `${contractor.first_name} ${contractor.last_name ?? ""}`
+            : "—"}
+        </span>
+      );
+    },
+  },
+
   // Status
   {
     accessorKey: "status",
@@ -99,25 +125,13 @@ export const ContractsColumns: ColumnDef<Contracts>[] = [
     size: 140,
   },
 
-  // Days allocated
-  {
-    accessorKey: "days_allocated",
-    header: "الأيام المخصصة",
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap">{row.original.days_allocated} يوم</div>
-    ),
-    size: 130,
-  },
-
   // Start date
   {
     accessorKey: "start_date",
     header: "تاريخ البداية",
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
-        {row.original.start_date
-          ? new Date(row.original.start_date).toLocaleDateString("ar-LY")
-          : "—"}
+        {row.original.start_date ? formatDate(row.original.start_date) : "—"}
       </div>
     ),
     size: 130,
@@ -129,24 +143,10 @@ export const ContractsColumns: ColumnDef<Contracts>[] = [
     header: "تاريخ الانتهاء",
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
-        {row.original.end_date
-          ? new Date(row.original.end_date).toLocaleDateString("ar-LY")
-          : "—"}
+        {row.original.end_date ? formatDate(row.original.end_date) : "—"}
       </div>
     ),
     size: 130,
-  },
-
-  // Notes
-  {
-    accessorKey: "notes",
-    header: "ملاحظات",
-    cell: ({ row }) => (
-      <div className="truncate max-w-[200px] text-gray-500 text-sm">
-        {row.original.notes ?? "—"}
-      </div>
-    ),
-    size: 200,
   },
 
   // Created at
@@ -155,7 +155,7 @@ export const ContractsColumns: ColumnDef<Contracts>[] = [
     header: "تاريخ الإنشاء",
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
-        {new Date(row.original.created_at).toLocaleDateString("ar-LY")}
+        {formatDate(row.original.created_at)}
       </div>
     ),
     size: 130,

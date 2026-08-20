@@ -8,7 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import LoadingPage from "../../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../../components/ui/errorPage";
 import { useContractDetails } from "../../../../../../hooks/operations/contracts/useContracts";
-import { supabase } from "../../../../../../lib/supabaseClient";
+import { useCreateMilestone } from "../../../../../../hooks/operations/contracts/useMilestone";
 
 const inputClass =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
@@ -20,13 +20,14 @@ const NewMilestonePage = () => {
   const { contractId } = useParams<{ contractId: string; projectId: string }>();
 
   const { contract, loading, error } = useContractDetails(contractId ?? "");
+  const { createMilestone, loading: saving } = useCreateMilestone();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number>(0);
+  const [percentage, setPercentage] = useState<number>(0);
   const [dueDate, setDueDate] = useState("");
   const [order, setOrder] = useState<number>(1);
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   if (!contractId) return null;
@@ -34,42 +35,46 @@ const NewMilestonePage = () => {
   if (error) return <ErrorPage label="حدث خطأ" error={error.message} />;
   if (!contract) return null;
 
-  const alreadyAllocated = contract.contract_milestones.reduce(
+  const alreadyAllocatedAmount = contract.milestones.reduce(
     (sum, m) => sum + m.amount,
     0,
   );
-  const remaining = contract.total_amount - alreadyAllocated - amount;
-  const isOverBudget = remaining < 0;
+  const alreadyAllocatedPercentage = contract.milestones.reduce(
+    (sum, m) => sum + m.percentage,
+    0,
+  );
 
-  const allocatedPercent = Math.min(
-    (alreadyAllocated / contract.total_amount) * 100,
-    100,
+  const remainingAmount =
+    contract.total_amount - alreadyAllocatedAmount - amount;
+  const remainingPercentage = 100 - alreadyAllocatedPercentage - percentage;
+  const isOverBudget = remainingAmount < 0 || remainingPercentage < 0;
+
+  const allocatedPercentBar = Math.min(alreadyAllocatedPercentage, 100);
+  const thisPercentBar = Math.min(
+    Math.max(percentage, 0),
+    100 - allocatedPercentBar,
   );
-  const thisPercent = Math.min(
-    (amount / contract.total_amount) * 100,
-    100 - allocatedPercent,
-  );
+
+  const canSave =
+    !!title && amount > 0 && percentage > 0 && !isOverBudget && !saving;
 
   async function handleSave() {
-    if (!title || amount <= 0 || isOverBudget) return;
-    setSaving(true);
+    if (!canSave || !contractId) return;
     setSaveError(null);
-    try {
-      const { error } = await supabase.from("contract_milestones").insert({
-        contract_id: contractId!,
-        title,
-        description: description || null,
-        amount,
-        due_date: dueDate || null,
-        order_index: order,
-        status: "pending" as const,
-      });
-      if (error) throw error;
-      navigate(-1);
-    } catch (err: any) {
-      setSaveError(err.message ?? "حدث خطأ أثناء الحفظ");
+    const { error } = await createMilestone({
+      contract_id: contractId,
+      title,
+      description: description || null,
+      amount,
+      percentage,
+      due_date: dueDate || null,
+      order_index: order,
+    });
+    if (error) {
+      setSaveError(error.message ?? "حدث خطأ أثناء الحفظ");
+      return;
     }
-    setSaving(false);
+    navigate(-1);
   }
 
   return (
@@ -79,8 +84,11 @@ const NewMilestonePage = () => {
         <div>
           <h1 className="text-2xl font-semibold">إضافة مرحلة جديدة</h1>
           <h4 className="text-sm text-gray-500 mt-1">
-            {contract.work_requests.title} · {contract.contractors.first_name}{" "}
-            {contract.contractors.last_name ?? ""} · {contract.projects.name}
+            {contract.round?.title ?? "—"} ·{" "}
+            {contract.contractor
+              ? `${contract.contractor.first_name} ${contract.contractor.last_name ?? ""}`
+              : "—"}{" "}
+            · {contract.project?.name ?? "—"}
           </h4>
         </div>
       </div>
@@ -134,22 +142,39 @@ const NewMilestonePage = () => {
                   value={amount || ""}
                   onChange={(e) => setAmount(Number(e.target.value))}
                 />
-                {isOverBudget && (
-                  <p className="text-xs text-red-500">
-                    المبلغ يتجاوز الميزانية المتبقية
-                  </p>
-                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className={labelClass}>تاريخ الاستحقاق</label>
+                <label className={labelClass}>
+                  النسبة % <span className="text-red-500">*</span>
+                </label>
                 <input
-                  type="date"
-                  className={inputClass}
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  type="number"
+                  placeholder="0"
+                  min={0}
+                  max={100}
+                  className={`${inputClass} ${isOverBudget ? "border-red-400 focus:ring-red-400" : ""}`}
+                  value={percentage || ""}
+                  onChange={(e) => setPercentage(Number(e.target.value))}
                 />
               </div>
+            </div>
+            {isOverBudget && (
+              <p className="text-xs text-red-500">
+                المبلغ أو النسبة تتجاوز ما تبقى من ميزانية العقد
+              </p>
+            )}
+
+            <Separator />
+
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>تاريخ الاستحقاق</label>
+              <input
+                type="date"
+                className={inputClass}
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
             </div>
 
             <Separator />
@@ -192,11 +217,7 @@ const NewMilestonePage = () => {
             )}
 
             <div className="flex gap-3">
-              <Button
-                variant="primary"
-                disabled={!title || amount <= 0 || isOverBudget || saving}
-                onClick={handleSave}
-              >
+              <Button variant="primary" disabled={!canSave} onClick={handleSave}>
                 {saving ? "جاري الحفظ..." : "حفظ المرحلة"}
               </Button>
               <Button variant="primary-outline" onClick={() => navigate(-1)}>
@@ -220,7 +241,8 @@ const NewMilestonePage = () => {
               label="موزّع على مراحل سابقة"
               value={
                 <span className="text-orange-600 font-semibold">
-                  {formatCurrency(alreadyAllocated)}
+                  {formatCurrency(alreadyAllocatedAmount)} (
+                  {alreadyAllocatedPercentage}%)
                 </span>
               }
             />
@@ -230,7 +252,7 @@ const NewMilestonePage = () => {
                 <span
                   className={`font-semibold ${isOverBudget ? "text-red-600" : "text-blue-600"}`}
                 >
-                  {formatCurrency(amount)}
+                  {formatCurrency(amount)} ({percentage}%)
                 </span>
               }
             />
@@ -240,7 +262,8 @@ const NewMilestonePage = () => {
                 <span
                   className={`font-semibold ${isOverBudget ? "text-red-600" : "text-green-600"}`}
                 >
-                  {formatCurrency(Math.max(remaining, 0))}
+                  {formatCurrency(Math.max(remainingAmount, 0))} (
+                  {Math.max(remainingPercentage, 0)}%)
                 </span>
               }
               bordered={false}
@@ -249,17 +272,19 @@ const NewMilestonePage = () => {
             {/* progress bar */}
             <div className="mt-4 space-y-1.5">
               <div className="flex justify-between text-xs text-gray-400">
-                <span>توزيع الميزانية</span>
-                <span>{Math.round(allocatedPercent + thisPercent)}%</span>
+                <span>توزيع الميزانية (بالنسبة)</span>
+                <span>
+                  {Math.round(allocatedPercentBar + thisPercentBar)}%
+                </span>
               </div>
               <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden flex">
                 <div
                   className="h-full bg-orange-400 transition-all duration-300"
-                  style={{ width: `${allocatedPercent}%` }}
+                  style={{ width: `${allocatedPercentBar}%` }}
                 />
                 <div
                   className={`h-full transition-all duration-300 ${isOverBudget ? "bg-red-500" : "bg-blue-500"}`}
-                  style={{ width: `${thisPercent}%` }}
+                  style={{ width: `${thisPercentBar}%` }}
                 />
               </div>
               <div className="flex gap-4 text-xs text-gray-400">
@@ -296,8 +321,8 @@ const NewMilestonePage = () => {
               className={`text-sm ${isOverBudget ? "text-red-700" : "text-blue-700"}`}
             >
               {isOverBudget
-                ? "المبلغ المدخل يتجاوز الميزانية المتبقية للعقد. يرجى تعديل المبلغ."
-                : "مجموع المراحل يجب أن يساوي إجمالي العقد تماماً"}
+                ? "المبلغ أو النسبة المدخلة تتجاوز ما تبقى من ميزانية العقد. يرجى التعديل."
+                : "مجموع نسب المراحل يجب أن يساوي 100% من إجمالي العقد"}
             </p>
           </div>
         </div>

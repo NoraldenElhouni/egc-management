@@ -24,11 +24,12 @@ export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
 export type SpecializationCategories = Tables<"specialization_categories">;
 export type Contractors = Tables<"contractors">;
-export type Contracts = Tables<"contracts">;
-export type WorkRequests = Tables<"work_requests">;
+// Kept for src/hooks/supply-chain/useContractor.ts and
+// src/components/tables/columns/contractors/BidsColumns.tsx (contractor-facing
+// "my bids" view) — out of scope for the operations/contracts rewrite, still
+// reads the legacy public.contractor_bids table directly.
 export type ContractorBids = Tables<"contractor_bids">;
 
-export type WorkRequestsItems = Tables<"work_request_items">;
 export type Projects = Tables<"projects">;
 export type Employees = Tables<"employees">;
 export type EmployeeCertifications = Tables<"employee_certifications">;
@@ -67,8 +68,6 @@ export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
 export type Bank = Database["lookups"]["Tables"]["banks"]["Row"];
 export type Attachments = Tables<"attachments">;
-export type RequestMilestones = Tables<"request_milestones">;
-export type MilestoneReports = Tables<"milestone_reports">;
 
 export type ProjectPercentagePeriods = Tables<"project_percentage_periods">;
 
@@ -81,6 +80,25 @@ export type ProductSizes = Tables<"shop_product_sizes">;
 export type Orders = Tables<"shop_orders">;
 
 //contracts
+export type Rounds = Tables<{ schema: "contracts" }, "rounds">;
+export type RoundItems = Tables<{ schema: "contracts" }, "round_items">;
+export type Quotes = Tables<{ schema: "contracts" }, "quotes">;
+export type QuoteItems = Tables<{ schema: "contracts" }, "quote_items">;
+export type Contracts = Tables<{ schema: "contracts" }, "contracts">;
+export type ContractItems = Tables<{ schema: "contracts" }, "contract_items">;
+export type Milestones = Tables<{ schema: "contracts" }, "milestones">;
+export type PaymentMilestones = Tables<
+  { schema: "contracts" },
+  "payment_milestones"
+>;
+export type PaymentPenalties = Tables<
+  { schema: "contracts" },
+  "payment_penalties"
+>;
+export type RequestPayments = Tables<
+  { schema: "contracts" },
+  "request_payments"
+>;
 
 // ------------------------------------------------------------
 // ✅ NEW: Types for PercentageDistribution periods

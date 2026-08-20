@@ -6,6 +6,7 @@ import {
   PackageOpen,
   Paperclip,
   Settings,
+  Sheet,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
@@ -19,28 +20,28 @@ const OperationsLayout = () => {
       icon: PackageOpen,
       path: "/operations/maps",
       description: "عرض وإدارة الخرائط",
-      role: [], // public
+      role: ["Admin", "Engineer", "Manager"],
     },
     {
       title: "العقود",
-      icon: Paperclip,
+      icon: Sheet,
       path: "/operations/contracts",
       description: "إدارة العقود والملفات",
-      role: ["Admin"],
+      role: ["Admin", "Engineer", "Manager"],
     },
     {
       title: "حصر الكميات",
       icon: Paperclip,
       path: "/operations/boq",
       description: "إدارة حصر الكميات",
-      role: [],
+      role: ["Admin", "Engineer", "Manager"],
     },
     {
       title: "الإعدادات",
       icon: Settings,
       path: "/operations/settings",
       description: "إعدادات وحدة التشغيل",
-      role: [],
+      role: ["Admin", "Engineer", "Manager"],
     },
   ];
 

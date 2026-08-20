@@ -20,7 +20,6 @@ import {
   ProjectPercentageLogs,
   CompanyExpensePayments,
   Contractors,
-  MilestoneReports,
   Vendor,
   Orders,
 } from "./global.type";
@@ -146,12 +145,4 @@ export interface OrdersWithVendors extends Orders {
     id: string;
     vendor_name: string;
   } | null;
-}
-
-export interface MilestoneReportsWithEmployee extends MilestoneReports {
-  employees: {
-    first_name: string;
-    id: string;
-    last_name: string | null;
-  };
 }

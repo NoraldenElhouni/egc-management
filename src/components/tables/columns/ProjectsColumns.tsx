@@ -9,6 +9,7 @@ import { FullProject } from "../../../types/extended.type";
 export const createProjectsColumns = (
   getLinkPath: (id: string | number) => string,
   version = "default",
+  contractsCountByProject: Record<string, number> = {},
 ): ColumnDef<FullProject>[] => {
   const allColumns: ColumnDef<FullProject>[] = [
     {
@@ -195,6 +196,15 @@ export const createProjectsColumns = (
     },
 
     {
+      id: "contracts_count",
+      header: "عدد العقود",
+      accessorFn: (row) => contractsCountByProject[row.id] ?? 0,
+      cell: ({ getValue }) => (
+        <span className="font-medium">{getValue<number>()}</span>
+      ),
+    },
+
+    {
       accessorKey: "status",
       header: "الحالة",
       accessorFn: (row) => row.status,
@@ -240,6 +250,21 @@ export const createProjectsColumns = (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const key = col.id || (col as any).accessorKey;
       return ["select", "serial_number", "name", "status"].includes(key);
+    });
+  }
+  if (version === "contracts") {
+    // Compact view + a contracts-count column, for the operations/contracts
+    // project list only.
+    return allColumns.filter((col) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const key = col.id || (col as any).accessorKey;
+      return [
+        "select",
+        "serial_number",
+        "name",
+        "contracts_count",
+        "status",
+      ].includes(key);
     });
   }
   if (version === "finance") {

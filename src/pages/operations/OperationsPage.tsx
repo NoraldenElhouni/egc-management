@@ -1,4 +1,4 @@
-import { PackageOpen, Paperclip, Settings } from "lucide-react";
+import { PackageOpen, Paperclip, Settings, Sheet } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -11,11 +11,11 @@ const OperationsPage = () => {
       icon: PackageOpen,
       path: "/operations/maps",
       description: "عرض وإدارة الخرائط",
-      role: ["Admin"], // public
+      role: ["Admin", "Engineer", "Manager"],
     },
     {
       label: "العقود",
-      icon: Paperclip,
+      icon: Sheet,
       path: "/operations/contracts",
       description: "إدارة العقود والملفات",
       role: ["Admin", "Engineer", "Manager"],
@@ -25,14 +25,14 @@ const OperationsPage = () => {
       icon: Paperclip,
       path: "/operations/boq",
       description: "إدارة حصر الكميات",
-      role: [],
+      role: ["Admin", "Engineer", "Manager"],
     },
     {
       label: "الإعدادات",
       icon: Settings,
       path: "/operations/settings",
       description: "إعدادات وحدة التشغيل",
-      role: [],
+      role: ["Admin", "Engineer", "Manager"],
     },
   ];
 

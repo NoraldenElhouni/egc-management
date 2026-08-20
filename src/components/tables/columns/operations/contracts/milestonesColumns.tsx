@@ -1,17 +1,15 @@
 import { ColumnDef } from "@tanstack/react-table";
+import { Link } from "react-router-dom";
 import { formatCurrency, formatDate } from "../../../../../utils/helpper";
 import { StatusBadge } from "../../../../ui/Badge";
 import Button from "../../../../ui/Button";
-import { FileText, Newspaper, Pencil, Trash } from "lucide-react";
-import { ContractMilestone } from "../../../../../hooks/operations/contracts/useContracts";
-import { Link } from "react-router-dom";
+import { Pencil } from "lucide-react";
+import { ContractMilestoneRow } from "../../../../../hooks/operations/contracts/useContracts";
 
-const milestoneStatusBadge = (status: ContractMilestone["status"]) => {
+const milestoneStatusBadge = (status: ContractMilestoneRow["status"]) => {
   switch (status) {
-    case "completed":
+    case "done":
       return <StatusBadge.Completed />;
-    case "approved":
-      return <StatusBadge.Awarded />;
     case "in_progress":
       return <StatusBadge.Active />;
     default:
@@ -19,7 +17,7 @@ const milestoneStatusBadge = (status: ContractMilestone["status"]) => {
   }
 };
 
-export const MilestonesColumns: ColumnDef<ContractMilestone>[] = [
+export const MilestonesColumns: ColumnDef<ContractMilestoneRow>[] = [
   {
     id: "index",
     header: "#",
@@ -48,6 +46,14 @@ export const MilestonesColumns: ColumnDef<ContractMilestone>[] = [
     ),
   },
   {
+    accessorKey: "percentage",
+    header: "النسبة",
+    cell: ({ getValue }) => (
+      <span className="text-gray-600 text-sm">{getValue<number>()}%</span>
+    ),
+    size: 90,
+  },
+  {
     accessorKey: "amount",
     header: "المبلغ",
     cell: ({ getValue }) => (
@@ -67,23 +73,20 @@ export const MilestonesColumns: ColumnDef<ContractMilestone>[] = [
     accessorKey: "status",
     header: "الحالة",
     cell: ({ getValue }) =>
-      milestoneStatusBadge(getValue<ContractMilestone["status"]>()),
+      milestoneStatusBadge(getValue<ContractMilestoneRow["status"]>()),
   },
   {
     id: "actions",
     header: "الإجراءات",
-    cell: ({ row }) => {
-      const isPending = row.original.status === "pending";
-      return (
-        <div className="flex items-center justify-center">
-          <Link to={`milestones/${row.original.id}/reports`}>
-            <Button size="sm" variant="primary-outline">
-              <Newspaper className="w-3 h-3 ml-1" />
-              تقارير
-            </Button>
-          </Link>
-        </div>
-      );
-    },
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        <Link to={`milestones/${row.original.id}/edit`}>
+          <Button size="sm" variant="primary-outline">
+            <Pencil className="w-3 h-3 ml-1" />
+            تعديل
+          </Button>
+        </Link>
+      </div>
+    ),
   },
 ];

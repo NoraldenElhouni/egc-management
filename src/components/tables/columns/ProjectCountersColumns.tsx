@@ -1,9 +1,26 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { NegativePeriod } from "../../../hooks/projects/useProjectCounters";
+import {
+  AccountNegativePeriod,
+  NegativePeriod,
+} from "../../../hooks/projects/useProjectCounters";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import Badge from "../../ui/Badge";
 
-export const projectCountersColumns: ColumnDef<NegativePeriod>[] = [
+/**
+ * project_negative_periods and account_negative_periods share the exact
+ * same row shape, so the same column definitions render both counters.
+ */
+type NegativePeriodRow = NegativePeriod | AccountNegativePeriod;
+
+export const createProjectCountersColumns = (
+  projectSerialNumber: number | null,
+): ColumnDef<NegativePeriodRow>[] => [
+  {
+    id: "serial_number",
+    header: "الرقم",
+    cell: () => projectSerialNumber ?? "—",
+    size: 32,
+  },
   {
     accessorKey: "started_on",
     header: "تاريخ البداية",

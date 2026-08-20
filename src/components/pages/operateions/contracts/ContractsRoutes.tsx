@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import ContractsPage from "../../../../pages/operations/contracts/ContractsPage";
 import ContractsProjectPage from "../../../../pages/operations/contracts/project/ContractsProjectPage";
 import ContractDetailsPage from "../../../../pages/operations/contracts/project/contract/ContractDetailsPage";
-import RequestsRoutes from "./RequestsRoutes";
+import RoundsRoutes from "./RoundsRoutes";
 import ContractDetailRoutes from "./ContractDetailRoutes";
 
 export default function ContractsRoutes() {
@@ -11,8 +11,8 @@ export default function ContractsRoutes() {
       <Route index element={<ContractsPage />} />
       <Route path="project/:projectId" element={<ContractsProjectPage />} />
       <Route
-        path="project/:projectId/requests/*"
-        element={<RequestsRoutes />}
+        path="project/:projectId/rounds/*"
+        element={<RoundsRoutes />}
       />
       {/* one route for the details page itself */}
       <Route

@@ -1,16 +1,26 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { ProjectInMinus } from "../../../hooks/projects/useProjectCounters";
+import {
+  AccountInMinus,
+  ProjectInMinus,
+} from "../../../hooks/projects/useProjectCounters";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import Badge from "../../ui/Badge";
 
 export interface ProjectCounterSummaryRow {
   id: string;
   name: string;
+  serialNumber: number | null;
   minusRow?: ProjectInMinus;
+  accountMinusRows: AccountInMinus[];
 }
 
 export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
+  {
+    accessorKey: "serialNumber",
+    header: "الرقم",
+    size: 32,
+  },
   {
     accessorKey: "name",
     header: "المشروع",
@@ -33,6 +43,19 @@ export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
       ) : (
         <Badge label="طبيعي" variant="success" dot />
       ),
+  },
+  {
+    id: "account_status",
+    header: "حالة الحساب",
+    accessorFn: (row) => row.accountMinusRows.length,
+    cell: ({ row }) => {
+      const count = row.original.accountMinusRows.length;
+      return count > 0 ? (
+        <Badge label={`رصيد سالب (${count})`} variant="danger" dot />
+      ) : (
+        <Badge label="طبيعي" variant="success" dot />
+      );
+    },
   },
   {
     id: "started_on",

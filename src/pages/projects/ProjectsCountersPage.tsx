@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { AlertTriangle, CalendarClock, FolderKanban, Info } from "lucide-react";
 import { useProjects } from "../../hooks/useProjects";
-import { useProjectsInMinus } from "../../hooks/projects/useProjectCounters";
+import {
+  useAccountsInMinus,
+  useProjectsInMinus,
+} from "../../hooks/projects/useProjectCounters";
 import {
   projectsCountersColumns,
   ProjectCounterSummaryRow,
@@ -13,6 +16,12 @@ import LoadingPage from "../../components/ui/LoadingPage";
 const ProjectsCountersPage = () => {
   const { projects, loading: projectsLoading } = useProjects();
   const { rows, loading: rowsLoading, error, refetch } = useProjectsInMinus();
+  const {
+    rows: accountRows,
+    loading: accountRowsLoading,
+    error: accountRowsError,
+    refetch: refetchAccountRows,
+  } = useAccountsInMinus();
 
   const minusByProjectId = useMemo(() => {
     const map = new Map<string, (typeof rows)[number]>();
@@ -22,17 +31,30 @@ const ProjectsCountersPage = () => {
     return map;
   }, [rows]);
 
+  const accountMinusByProjectId = useMemo(() => {
+    const map = new Map<string, typeof accountRows>();
+    accountRows.forEach((row) => {
+      if (!row.project_id) return;
+      const existing = map.get(row.project_id) ?? [];
+      existing.push(row);
+      map.set(row.project_id, existing);
+    });
+    return map;
+  }, [accountRows]);
+
   const summaryRows: ProjectCounterSummaryRow[] = useMemo(
     () =>
       (projects ?? []).map((project) => ({
         id: project.id,
         name: project.name,
+        serialNumber: project.serial_number,
         minusRow: minusByProjectId.get(project.id),
+        accountMinusRows: accountMinusByProjectId.get(project.id) ?? [],
       })),
-    [projects, minusByProjectId],
+    [projects, minusByProjectId, accountMinusByProjectId],
   );
 
-  if (projectsLoading || rowsLoading)
+  if (projectsLoading || rowsLoading || accountRowsLoading)
     return <LoadingPage label="جارٍ تحميل عدادات المشاريع..." />;
 
   const projectsInMinusCount = minusByProjectId.size;
@@ -42,6 +64,7 @@ const ProjectsCountersPage = () => {
   );
   const averageDaysInMinus =
     projectsInMinusCount > 0 ? totalDaysInMinus / projectsInMinusCount : 0;
+  const accountsInMinusCount = accountMinusByProjectId.size;
 
   return (
     <div className="p-6 space-y-4">
@@ -60,11 +83,16 @@ const ProjectsCountersPage = () => {
         </p>
       </div>
 
-      {error ? (
+      {error || accountRowsError ? (
         <div className="flex flex-col items-center justify-center gap-3 h-40 text-sm bg-white rounded-xl border border-gray-100">
-          <p className="text-red-500">{error.message}</p>
+          <p className="text-red-500">
+            {error?.message ?? accountRowsError?.message}
+          </p>
           <button
-            onClick={refetch}
+            onClick={() => {
+              refetch();
+              refetchAccountRows();
+            }}
             className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
           >
             حاول ثانية
@@ -72,7 +100,7 @@ const ProjectsCountersPage = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard
               label="إجمالي المشاريع"
               value={String(projects?.length ?? 0)}
@@ -82,6 +110,12 @@ const ProjectsCountersPage = () => {
             <KpiCard
               label="مشاريع برصيد سالب حالياً"
               value={String(projectsInMinusCount)}
+              icon={AlertTriangle}
+              tone="amber"
+            />
+            <KpiCard
+              label="حسابات برصيد سالب حالياً"
+              value={String(accountsInMinusCount)}
               icon={AlertTriangle}
               tone="amber"
             />
@@ -99,6 +133,7 @@ const ProjectsCountersPage = () => {
             enableSorting
             enableFiltering
             showGlobalFilter
+            initialSorting={[{ id: "serialNumber", desc: true }]}
           />
         </>
       )}

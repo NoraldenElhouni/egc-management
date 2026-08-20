@@ -1,13 +1,12 @@
-import React from "react";
-import { useContracts } from "../../../../hooks/operations/contracts/useContracts";
 import { useParams } from "react-router-dom";
+import { useContracts } from "../../../../hooks/operations/contracts/useContracts";
+import { useRounds } from "../../../../hooks/operations/contracts/rounds/useRounds";
 import LoadingPage from "../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../components/ui/errorPage";
 import GenericTable from "../../../../components/tables/table";
 import { ContractsColumns } from "../../../../components/tables/columns/operations/contracts/ContractsColumns";
+import { RoundsColumns } from "../../../../components/tables/columns/operations/contracts/RoundsColumns";
 import Separator from "../../../../components/ui/separator";
-import { WorkRequestsColumns } from "../../../../components/tables/columns/operations/contracts/WorkRequestsColumns";
-import { useWorkRequests } from "../../../../hooks/operations/contracts/requests/useRequests";
 
 const ContractsProjectPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -22,19 +21,19 @@ const ContractsProjectPage = () => {
 
   const { contracts, error, loading } = useContracts(projectId);
   const {
-    workRequests,
-    error: workError,
-    loading: workLoading,
-  } = useWorkRequests(projectId);
+    rounds,
+    error: roundsError,
+    loading: roundsLoading,
+  } = useRounds(projectId);
 
-  if (loading || workLoading) {
+  if (loading || roundsLoading) {
     return <LoadingPage label="Loading project details..." />;
   }
-  if (error || workError) {
+  if (error || roundsError) {
     return (
       <ErrorPage
         label="حدث خطأ أثناء تحميل بيانات المشروع"
-        error={error?.message || workError?.message}
+        error={error?.message || roundsError?.message}
       />
     );
   }
@@ -42,20 +41,21 @@ const ContractsProjectPage = () => {
   return (
     <div className="p-4">
       <GenericTable
-        header="جميع العقود"
-        linkLabel="+ عقد جديد"
-        link={`./requests/new`}
-        data={contracts ?? []}
-        columns={ContractsColumns}
+        header="جولات التسعير"
+        linkLabel="+ جولة جديدة"
+        link={`./rounds/new`}
+        data={rounds ?? []}
+        columns={RoundsColumns}
         enableSorting
         enableFiltering
         showGlobalFilter
       />
       <Separator />
+
       <GenericTable
-        header="جميع الطلبات"
-        data={workRequests ?? []}
-        columns={WorkRequestsColumns}
+        header="جميع العقود"
+        data={contracts ?? []}
+        columns={ContractsColumns}
         enableSorting
         enableFiltering
         showGlobalFilter
