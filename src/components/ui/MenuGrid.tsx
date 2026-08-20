@@ -9,6 +9,8 @@ export interface MenuItem {
   role?: string[];
   description?: string;
   disabled?: boolean;
+  /** Small red corner badge — a number (e.g. 3) or text (e.g. "جديد", "1 مراجعة"). Falsy values render nothing. */
+  badge?: number | string;
 }
 
 export interface MenuGridProps {
@@ -84,12 +86,17 @@ const MenuGrid = ({
 
           const cardContent = (
             <div
-              className={`flex flex-col items-center justify-center ${cardClassName} ${
+              className={`relative flex flex-col items-center justify-center ${cardClassName} ${
                 item.disabled
                   ? "opacity-50 cursor-not-allowed hover:bg-gray-100"
                   : "cursor-pointer"
               }`}
             >
+              {item.badge && (
+                <span className="absolute -top-2 -end-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white shadow-sm ring-2 ring-white">
+                  {item.badge}
+                </span>
+              )}
               <div
                 className={`mb-3 ${item.disabled ? "text-gray-400" : "text-primary"}`}
               >

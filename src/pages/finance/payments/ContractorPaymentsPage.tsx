@@ -30,6 +30,13 @@ const ContractorPaymentsPage = () => {
   if (loading) return <LoadingPage />;
   if (error) return <ErrorPage error={error.message} />;
 
+  const pendingPaymentsCount = payments.filter(
+    (p) => p.status === "pending",
+  ).length;
+  const pendingPenaltiesCount = penalties.filter(
+    (p) => p.status === "pending",
+  ).length;
+
   async function handlePrintSelected() {
     if (selectedPayments.length === 0) return;
     const success = await generatePdf(selectedPayments);
@@ -46,6 +53,7 @@ const ContractorPaymentsPage = () => {
           {
             id: "payments",
             label: "الدفعات",
+            badge: pendingPaymentsCount,
             content: (
               <>
                 <div className="px-6 pt-6">
@@ -100,6 +108,7 @@ const ContractorPaymentsPage = () => {
           {
             id: "penalties",
             label: "الجزاءات",
+            badge: pendingPenaltiesCount,
             content: (
               <>
                 <div className="px-6 pt-6">

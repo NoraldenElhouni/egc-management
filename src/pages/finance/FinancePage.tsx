@@ -7,9 +7,12 @@ import {
 } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
+import { usePendingContractorPaymentsCount } from "../../hooks/finance/payments/usePendingContractorPaymentsCount";
 
 const FinancePage = () => {
   const { user, loading } = useAuth();
+  const { count: pendingContractorPaymentsCount } =
+    usePendingContractorPaymentsCount();
 
   const menuItems: MenuItem[] = [
     // {
@@ -75,6 +78,10 @@ const FinancePage = () => {
       path: "/finance/contractor-payments",
       description: "مراجعة دفعات وجزاءات المقاولين",
       role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      badge:
+        pendingContractorPaymentsCount === 0
+          ? undefined
+          : pendingContractorPaymentsCount,
     },
   ];
 

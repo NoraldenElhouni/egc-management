@@ -4,6 +4,8 @@ interface Tab {
   id: string;
   label: string;
   content: React.ReactNode;
+  /** Small red badge next to the tab label — a number or text. Falsy values render nothing. */
+  badge?: number | string;
 }
 
 interface TabsProps {
@@ -40,7 +42,7 @@ export default function Tabs({
           {tabs.map((tab) => (
             <li key={tab.id}>
               <button
-                className={`pb-2 transition-colors ${tabClassName} ${
+                className={`flex items-center gap-1.5 pb-2 transition-colors ${tabClassName} ${
                   activeTab === tab.id
                     ? `border-b-2 border-primary text-primary font-medium ${activeTabClassName}`
                     : "hover:text-gray-800"
@@ -48,6 +50,11 @@ export default function Tabs({
                 onClick={() => handleTabClick(tab.id)}
               >
                 {tab.label}
+                {tab.badge ? (
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                    {tab.badge}
+                  </span>
+                ) : null}
               </button>
             </li>
           ))}

@@ -84,14 +84,16 @@ export function getContractorPaymentsColumns(
     {
       accessorKey: "penalty_amount",
       header: "مبلغ الجزاء",
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap">
-          {formatCurrency(
-            toNum(row.original.penalty_amount),
-            row.original.currency,
-          )}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const amount = toNum(row.original.penalty_amount);
+        return (
+          <span className="whitespace-nowrap">
+            {amount === 0
+              ? "-"
+              : formatCurrency(amount, row.original.currency)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "grand_total",
