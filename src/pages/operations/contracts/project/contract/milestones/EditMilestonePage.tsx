@@ -41,6 +41,15 @@ const EditMilestonePage = () => {
   if (error) return <ErrorPage label="حدث خطأ" error={error.message} />;
   if (!milestone) return null;
 
+  if (milestone.status === "done") {
+    return (
+      <ErrorPage
+        label="لا يمكن تعديل مرحلة مكتملة"
+        error="تم تعليم هذه المرحلة كمكتملة بالفعل."
+      />
+    );
+  }
+
   const canSave = !!title && !saving;
 
   async function handleSave() {

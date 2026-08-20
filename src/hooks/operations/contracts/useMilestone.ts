@@ -187,6 +187,41 @@ export function useCreateMilestone() {
   return { createMilestone, loading, error };
 }
 
+export function useCompleteMilestone() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  async function completeMilestone(milestoneId: string) {
+    setLoading(true);
+    setError(null);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { error: updateError } = await supabase
+      .schema("contracts")
+      .from("milestones")
+      .update({
+        status: "done",
+        completed_at: new Date().toISOString(),
+        completed_by: user?.id ?? null,
+      })
+      .eq("id", milestoneId);
+
+    setLoading(false);
+
+    if (updateError) {
+      setError(updateError);
+      return { error: updateError };
+    }
+
+    return { error: null };
+  }
+
+  return { completeMilestone, loading, error };
+}
+
 export function useUpdateMilestoneDetails() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);

@@ -1,7 +1,11 @@
 // MilestonePage.tsx
-import React from "react";
+import React, { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMilestone } from "../../../../../../hooks/operations/contracts/useMilestone";
+import {
+  useMilestone,
+  useCompleteMilestone,
+  MilestoneDetail,
+} from "../../../../../../hooks/operations/contracts/useMilestone";
 import LoadingPage from "../../../../../../components/ui/LoadingPage";
 import ErrorPage from "../../../../../../components/ui/errorPage";
 import Separator from "../../../../../../components/ui/separator";
@@ -10,8 +14,8 @@ import { formatCurrency, formatDate } from "../../../../../../utils/helpper";
 import { StatusBadge } from "../../../../../../components/ui/Badge";
 import Button from "../../../../../../components/ui/Button";
 import OverviewStatus from "../../../../../../components/ui/OverviewStatus";
+import ConfirmDialog from "../../../../../../components/ui/ConfirmDialog";
 import { CheckCircle, Pencil } from "lucide-react";
-import { MilestoneDetail } from "../../../../../../hooks/operations/contracts/useMilestone";
 
 const milestoneStatusBadge = (status: MilestoneDetail["status"]) => {
   switch (status) {
@@ -31,9 +35,11 @@ const MilestonePage = () => {
     projectId: string;
   }>();
 
-  const { milestone, loading, error, paid, remaining } = useMilestone(
+  const { milestone, loading, error, refetch, paid, remaining } = useMilestone(
     milestoneId ?? "",
   );
+  const { completeMilestone, loading: completing } = useCompleteMilestone();
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   if (!milestoneId) return null;
   if (loading) return <LoadingPage label="جاري تحميل تفاصيل المرحلة..." />;
@@ -45,6 +51,7 @@ const MilestonePage = () => {
       ? Math.min(Math.round((paid / milestone.amount) * 100), 100)
       : 0;
   const isPending = milestone.status === "pending";
+  const isDone = milestone.status === "done";
   const contractorName = milestone.contracts.contractor
     ? `${milestone.contracts.contractor.first_name} ${milestone.contracts.contractor.last_name ?? ""}`
     : "—";
@@ -61,14 +68,20 @@ const MilestonePage = () => {
           </h4>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="edit">
-            <Button size="sm" variant="primary-outline">
-              <Pencil className="w-4 h-4 ml-2" />
-              تعديل
-            </Button>
-          </Link>
+          {!isDone && (
+            <Link to="edit">
+              <Button size="sm" variant="primary-outline">
+                <Pencil className="w-4 h-4 ml-2" />
+                تعديل
+              </Button>
+            </Link>
+          )}
           {isPending && (
-            <Button size="sm" variant="success">
+            <Button
+              size="sm"
+              variant="success"
+              onClick={() => setShowCompleteConfirm(true)}
+            >
               <CheckCircle className="w-4 h-4 ml-2" />
               تأكيد الإنجاز
             </Button>
@@ -170,6 +183,22 @@ const MilestonePage = () => {
           <span>{formatCurrency(remaining)} متبقي</span>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showCompleteConfirm}
+        title="تأكيد إنجاز المرحلة"
+        message="سيتم تعليم هذه المرحلة كمكتملة. هل أنت متأكد؟"
+        confirmLabel={completing ? "جارٍ التأكيد..." : "تأكيد"}
+        cancelLabel="إلغاء"
+        onConfirm={async () => {
+          const { error: completeError } = await completeMilestone(milestoneId);
+          if (!completeError) {
+            setShowCompleteConfirm(false);
+            refetch();
+          }
+        }}
+        onCancel={() => setShowCompleteConfirm(false)}
+      />
     </div>
   );
 };
