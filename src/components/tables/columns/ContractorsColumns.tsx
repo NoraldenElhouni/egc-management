@@ -93,13 +93,19 @@ export const ContractorsColumns: ColumnDef<contractorWithSpecializations>[] = [
     accessorKey: "phone_number",
     header: "رقم الهاتف",
   },
-
   {
-    accessorKey: "created_at",
-    header: "تاريخ الإنشاء",
-    cell: ({ row }) => {
-      const date = new Date(row.original.created_at);
-      return date.toLocaleDateString("ar-LY");
-    },
+    id: "bank_account_aproved",
+    header: "معتمد بنكياً",
+    accessorFn: (row) =>
+      row.bank_account_aproved ? "approved" : "not_approved",
+    cell: ({ row }) => (
+      <span
+        title={row.original.bank_account_aproved ? "معتمد" : "غير معتمد"}
+        className={`inline-block w-3 h-3 rounded-full ${
+          row.original.bank_account_aproved ? "bg-green-500" : "bg-red-500"
+        }`}
+      />
+    ),
+    size: 32,
   },
 ];

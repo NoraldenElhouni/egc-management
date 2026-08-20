@@ -55,16 +55,11 @@ export const EmployeesColumns: ColumnDef<employeesWithRole>[] = [
   },
 
   {
-    accessorKey: "role",
+    id: "role",
     header: "الدور",
-    cell: ({ row }) => {
-      const emp = row.original;
-
-      const code = emp.users?.roles?.code;
-
-      return (
-        <div>{roleTranslations[code] || emp.users?.roles?.name || "-"}</div>
-      );
+    accessorFn: (row) => {
+      const code = row.users?.roles?.code;
+      return roleTranslations[code] || row.users?.roles?.name || "-";
     },
   },
 

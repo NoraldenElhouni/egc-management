@@ -1,8 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import {
-  AccountInMinus,
-  ProjectInMinus,
+  AccountNegativePeriod,
+  NegativePeriod,
 } from "../../../hooks/projects/useProjectCounters";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import Badge from "../../ui/Badge";
@@ -11,8 +11,8 @@ export interface ProjectCounterSummaryRow {
   id: string;
   name: string;
   serialNumber: number | null;
-  minusRow?: ProjectInMinus;
-  accountMinusRows: AccountInMinus[];
+  minusRow?: NegativePeriod;
+  accountMinusRows: AccountNegativePeriod[];
 }
 
 export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
@@ -49,12 +49,15 @@ export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
     header: "حالة الحساب",
     accessorFn: (row) => row.accountMinusRows.length,
     cell: ({ row }) => {
-      const count = row.original.accountMinusRows.length;
-      return count > 0 ? (
-        <Badge label={`رصيد سالب (${count})`} variant="danger" dot />
-      ) : (
-        <Badge label="طبيعي" variant="success" dot />
+      const accountMinusRows = row.original.accountMinusRows;
+      const count = accountMinusRows.length;
+      if (count === 0) return <Badge label="طبيعي" variant="success" dot />;
+
+      const days = accountMinusRows.reduce(
+        (max, r) => Math.max(max, r.days_count ?? 0),
+        0,
       );
+      return <Badge label={`رصيد سالب  ${days} يوم`} variant="danger" dot />;
     },
   },
   {
@@ -69,8 +72,8 @@ export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
   {
     id: "days_in_minus",
     header: "عدد الأيام",
-    accessorFn: (row) => row.minusRow?.days_in_minus ?? 0,
-    cell: ({ row }) => row.original.minusRow?.days_in_minus ?? "—",
+    accessorFn: (row) => row.minusRow?.days_count ?? 0,
+    cell: ({ row }) => row.original.minusRow?.days_count ?? "—",
   },
   {
     id: "min_balance",

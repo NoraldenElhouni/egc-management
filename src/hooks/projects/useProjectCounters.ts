@@ -7,41 +7,6 @@ export type NegativePeriod =
   Database["app"]["Tables"]["project_negative_periods"]["Row"];
 export type AccountNegativePeriod =
   Database["app"]["Tables"]["account_negative_periods"]["Row"];
-export type ProjectInMinus =
-  Database["app"]["Views"]["v_projects_in_minus"]["Row"];
-export type AccountInMinus =
-  Database["app"]["Views"]["v_accounts_in_minus"]["Row"];
-
-/** Current negative-balance status for every project (app.v_projects_in_minus). */
-export function useProjectsInMinus() {
-  const [rows, setRows] = useState<ProjectInMinus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<PostgrestError | null>(null);
-
-  const fetchRows = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .schema("app")
-      .from("v_projects_in_minus")
-      .select("*")
-      .order("days_in_minus", { ascending: false });
-
-    if (error) {
-      console.error("error fetching projects in minus", error);
-      setError(error);
-    } else {
-      setRows(data ?? []);
-      setError(null);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchRows();
-  }, [fetchRows]);
-
-  return { rows, loading, error, refetch: fetchRows };
-}
 
 /** Full history of negative-balance counters (periods) for a single project. */
 export function useProjectNegativePeriods(projectId: string) {
@@ -76,9 +41,14 @@ export function useProjectNegativePeriods(projectId: string) {
   return { periods, loading, error, refetch: fetchPeriods };
 }
 
-/** Current negative-balance status for every project account (app.v_accounts_in_minus). */
-export function useAccountsInMinus() {
-  const [rows, setRows] = useState<AccountInMinus[]>([]);
+/**
+ * Currently open (not yet ended) negative-balance periods for every project,
+ * read straight from app.project_negative_periods — the same source of truth
+ * used by the per-project counters page — so days/min-balance figures always
+ * match between the summary table and the project details page.
+ */
+export function useOpenProjectNegativePeriods() {
+  const [rows, setRows] = useState<NegativePeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -86,12 +56,49 @@ export function useAccountsInMinus() {
     setLoading(true);
     const { data, error } = await supabase
       .schema("app")
-      .from("v_accounts_in_minus")
+      .from("project_negative_periods")
       .select("*")
-      .order("days_in_minus", { ascending: false });
+      .is("ended_on", null)
+      .order("days_count", { ascending: false });
 
     if (error) {
-      console.error("error fetching accounts in minus", error);
+      console.error("error fetching open project negative periods", error);
+      setError(error);
+    } else {
+      setRows(data ?? []);
+      setError(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchRows();
+  }, [fetchRows]);
+
+  return { rows, loading, error, refetch: fetchRows };
+}
+
+/**
+ * Currently open (not yet ended) negative-balance periods for every
+ * project's account, read straight from app.account_negative_periods — see
+ * useOpenProjectNegativePeriods for why this replaces the snapshot view.
+ */
+export function useOpenAccountNegativePeriods() {
+  const [rows, setRows] = useState<AccountNegativePeriod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  const fetchRows = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("app")
+      .from("account_negative_periods")
+      .select("*")
+      .is("ended_on", null)
+      .order("days_count", { ascending: false });
+
+    if (error) {
+      console.error("error fetching open account negative periods", error);
       setError(error);
     } else {
       setRows(data ?? []);

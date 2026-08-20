@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { AlertTriangle, CalendarClock, FolderKanban, Info } from "lucide-react";
 import { useProjects } from "../../hooks/useProjects";
 import {
-  useAccountsInMinus,
-  useProjectsInMinus,
+  useOpenAccountNegativePeriods,
+  useOpenProjectNegativePeriods,
 } from "../../hooks/projects/useProjectCounters";
 import {
   projectsCountersColumns,
@@ -15,13 +15,18 @@ import LoadingPage from "../../components/ui/LoadingPage";
 
 const ProjectsCountersPage = () => {
   const { projects, loading: projectsLoading } = useProjects();
-  const { rows, loading: rowsLoading, error, refetch } = useProjectsInMinus();
+  const {
+    rows,
+    loading: rowsLoading,
+    error,
+    refetch,
+  } = useOpenProjectNegativePeriods();
   const {
     rows: accountRows,
     loading: accountRowsLoading,
     error: accountRowsError,
     refetch: refetchAccountRows,
-  } = useAccountsInMinus();
+  } = useOpenAccountNegativePeriods();
 
   const minusByProjectId = useMemo(() => {
     const map = new Map<string, (typeof rows)[number]>();
@@ -59,7 +64,7 @@ const ProjectsCountersPage = () => {
 
   const projectsInMinusCount = minusByProjectId.size;
   const totalDaysInMinus = rows.reduce(
-    (sum, row) => sum + (row.days_in_minus ?? 0),
+    (sum, row) => sum + (row.days_count ?? 0),
     0,
   );
   const averageDaysInMinus =
