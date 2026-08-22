@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
-import ProjectDetails from "./ProjectDetail";
 import { ProjectStatsTab } from "../../components/project/project-stats/ProjectStatsTab";
 import ProjectCountersList from "../../components/project/counters/ProjectCountersList";
+import ProjectDetails from "../../components/project/ProjectDetails";
 import Tabs from "../../components/ui/Tabs";
 
 const ProjectDetailsPage = () => {
@@ -10,8 +10,8 @@ const ProjectDetailsPage = () => {
 
   const tabs = [
     {
-      id: "overview",
-      label: "نظرة عامة",
+      id: "details",
+      label: "تفاصيل المشروع",
       content: <ProjectDetails projectId={projectId} />,
     },
     {
@@ -28,7 +28,7 @@ const ProjectDetailsPage = () => {
   return (
     <div>
       <div>
-        <Tabs tabs={tabs} defaultTab="overview" />
+        <Tabs tabs={tabs} defaultTab="details" />
       </div>
     </div>
   );
