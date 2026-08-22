@@ -22,11 +22,14 @@ const ProjectsList = ({
 
   const columns = useMemo(
     () =>
-      createProjectsColumns(
-        (id) => `${basePath}/${id}`,
-        version,
-        contractsCountByProject,
-      ),
+      createProjectsColumns((id) => `${basePath}/${id}`, version, [
+        {
+          id: "contracts_count",
+          header: "عدد العقود",
+          countMap: contractsCountByProject,
+          show: version === "contracts",
+        },
+      ]),
     [basePath, version, contractsCountByProject],
   );
 

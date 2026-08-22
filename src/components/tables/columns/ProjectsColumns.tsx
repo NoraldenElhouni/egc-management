@@ -4,12 +4,16 @@ import { Projects } from "../../../types/global.type";
 import { statusColor } from "../../../utils/colors/status";
 import { formatCurrency } from "../../../utils/helpper";
 import { FullProject } from "../../../types/extended.type";
+import {
+  createCountColumns,
+  DynamicCountColumnConfig,
+} from "./createCountColumn";
 
 // Convert to a function that accepts the link path builder and version
 export const createProjectsColumns = (
   getLinkPath: (id: string | number) => string,
   version = "default",
-  contractsCountByProject: Record<string, number> = {},
+  countColumns: DynamicCountColumnConfig[] = [],
 ): ColumnDef<FullProject>[] => {
   const allColumns: ColumnDef<FullProject>[] = [
     {
@@ -195,14 +199,7 @@ export const createProjectsColumns = (
       },
     },
 
-    {
-      id: "contracts_count",
-      header: "عدد العقود",
-      accessorFn: (row) => contractsCountByProject[row.id] ?? 0,
-      cell: ({ getValue }) => (
-        <span className="font-medium">{getValue<number>()}</span>
-      ),
-    },
+    ...createCountColumns<FullProject>(countColumns),
 
     {
       accessorKey: "status",
@@ -243,17 +240,26 @@ export const createProjectsColumns = (
     // },
   ];
 
+  // Dynamic count columns (e.g. contracts_count) opt themselves into a
+  // version via their own `show` flag, so every preset below allows them
+  // through instead of hardcoding specific count-column ids.
+  const shownCountColumnIds = countColumns
+    .filter((c) => c.show !== false)
+    .map((c) => c.id);
+
   // Filter columns based on version
   if (version === "compact") {
     // Show only essential columns for compact view
     return allColumns.filter((col) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const key = col.id || (col as any).accessorKey;
-      return ["select", "serial_number", "name", "status"].includes(key);
+      return ["select", "serial_number", "name", "status", ...shownCountColumnIds].includes(
+        key,
+      );
     });
   }
   if (version === "contracts") {
-    // Compact view + a contracts-count column, for the operations/contracts
+    // Compact view + any shown count columns, for the operations/contracts
     // project list only.
     return allColumns.filter((col) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -262,8 +268,8 @@ export const createProjectsColumns = (
         "select",
         "serial_number",
         "name",
-        "contracts_count",
         "status",
+        ...shownCountColumnIds,
       ].includes(key);
     });
   }
@@ -281,6 +287,7 @@ export const createProjectsColumns = (
         "income",
         "balance",
         "status",
+        ...shownCountColumnIds,
       ].includes(key);
     });
   }
@@ -290,7 +297,7 @@ export const createProjectsColumns = (
     return allColumns.filter((col) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const key = col.id || (col as any).accessorKey;
-      return ["serial_number", "name"].includes(key);
+      return ["serial_number", "name", ...shownCountColumnIds].includes(key);
     });
   }
 
