@@ -271,36 +271,6 @@ export function useEditRound() {
   return { editRound, loading, error };
 }
 
-// Quotes are filled out internally by staff (contractor selected, prices
-// entered by us) — rounds never notify contractors, so this only flips
-// the status to unlock the "add quote" step.
-export function useSendRoundToPricing() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PostgrestError | null>(null);
-
-  async function sendToPricing(roundId: string) {
-    setLoading(true);
-    setError(null);
-
-    const { error: updateError } = await supabase
-      .schema("contracts")
-      .from("rounds")
-      .update({ status: "pricing" })
-      .eq("id", roundId);
-
-    setLoading(false);
-
-    if (updateError) {
-      setError(updateError);
-      return { error: updateError };
-    }
-
-    return { error: null };
-  }
-
-  return { sendToPricing, loading, error };
-}
-
 export function useCancelRound() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);

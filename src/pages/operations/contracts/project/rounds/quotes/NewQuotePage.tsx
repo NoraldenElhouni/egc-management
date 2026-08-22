@@ -23,18 +23,30 @@ const NewQuotePage = () => {
   const { createQuote, loading: saving } = useCreateQuote();
   const [contractorId, setContractorId] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showAllContractors, setShowAllContractors] = useState(false);
 
   if (!roundId || !projectId) return null;
   if (loading) return <LoadingPage label="جاري تحميل بيانات الجولة..." />;
   if (error) return <ErrorPage label="حدث خطأ" error={error.message} />;
   if (!round) return null;
 
-  const filteredContractors = round.specialization_id
-    ? contractors.filter((c) =>
-        c.users?.user_specializations?.some(
-          (s) => s.specialization_id === round.specialization_id,
-        ),
+  // Prefer contractors matching the round's specialty; if none match, fall
+  // back to the full contractor list rather than leaving the picker empty.
+  const sameSpecialtyContractors = round.specialization_id
+    ? contractors.filter(
+        (c) =>
+          c.specialization_id === round.specialization_id ||
+          c.users?.user_specializations?.some(
+            (s) => s.specialization_id === round.specialization_id,
+          ),
       )
+    : [];
+
+  const isFilteredBySpecialty =
+    sameSpecialtyContractors.length > 0 && !showAllContractors;
+
+  const filteredContractors = isFilteredBySpecialty
+    ? sameSpecialtyContractors
     : contractors;
 
   const contractorOptions = filteredContractors.map((c) => ({
@@ -82,6 +94,24 @@ const NewQuotePage = () => {
           onChange={setContractorId}
           placeholder="-- اختر المقاول --"
         />
+        {isFilteredBySpecialty && (
+          <button
+            type="button"
+            onClick={() => setShowAllContractors(true)}
+            className="mt-1.5 text-sm text-primary hover:underline"
+          >
+            لم تجد المقاول؟ عرض كل المقاولين
+          </button>
+        )}
+        {!isFilteredBySpecialty && sameSpecialtyContractors.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAllContractors(false)}
+            className="mt-1.5 text-sm text-primary hover:underline"
+          >
+            عرض مقاولي نفس التخصص فقط
+          </button>
+        )}
       </div>
 
       <Separator />

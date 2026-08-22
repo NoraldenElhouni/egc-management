@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Ban, Pencil, Plus, Send } from "lucide-react";
+import { Ban, Pencil, Plus } from "lucide-react";
 import Button from "../../../../../components/ui/Button";
 import Badge from "../../../../../components/ui/Badge";
 import Separator from "../../../../../components/ui/separator";
@@ -14,7 +14,6 @@ import AttachmentsPreview, {
 import { formatCurrency, formatDate } from "../../../../../utils/helpper";
 import {
   useRound,
-  useSendRoundToPricing,
   useCancelRound,
 } from "../../../../../hooks/operations/contracts/rounds/useRounds";
 import {
@@ -67,13 +66,10 @@ const RoundDetailsPage = () => {
     loading: quotesLoading,
     refetch: refetchQuotes,
   } = useQuotesByRound(roundId ?? "");
-  const { sendToPricing, loading: sendingToPricing } = useSendRoundToPricing();
   const { cancelRound, loading: cancelling } = useCancelRound();
   const attachments = useRoundAttachments(roundId ?? "");
 
-  const [confirmAction, setConfirmAction] = useState<
-    "pricing" | "cancel" | null
-  >(null);
+  const [confirmAction, setConfirmAction] = useState<"cancel" | null>(null);
   const [awardingQuote, setAwardingQuote] = useState<QuoteRow | null>(null);
 
   if (!roundId || !projectId) return null;
@@ -85,14 +81,7 @@ const RoundDetailsPage = () => {
   if (!round) return null;
 
   const handleConfirmAction = async () => {
-    if (confirmAction === "pricing") {
-      const { error } = await sendToPricing(round.id);
-      if (error) {
-        alert("حدث خطأ أثناء إرسال الجولة للتسعير");
-        setConfirmAction(null);
-        return;
-      }
-    } else if (confirmAction === "cancel") {
+    if (confirmAction === "cancel") {
       const { error } = await cancelRound(round.id);
       if (error) {
         alert("حدث خطأ أثناء إلغاء الجولة");
@@ -127,24 +116,14 @@ const RoundDetailsPage = () => {
         </div>
         <div className="flex items-center gap-3">
           {round.status === "draft" && (
-            <>
-              <Button
-                size="sm"
-                disabled={sendingToPricing}
-                onClick={() => setConfirmAction("pricing")}
-              >
-                <Send className="w-4 h-4 ml-2" />
-                إرسال للتسعير
+            <Link to="edit">
+              <Button size="sm" variant="primary-outline">
+                <Pencil className="w-4 h-4 ml-2" />
+                تعديل الجولة
               </Button>
-              <Link to="edit">
-                <Button size="sm" variant="primary-outline">
-                  <Pencil className="w-4 h-4 ml-2" />
-                  تعديل الجولة
-                </Button>
-              </Link>
-            </>
+            </Link>
           )}
-          {round.status === "pricing" && (
+          {(round.status === "draft" || round.status === "pricing") && (
             <Link to="quotes/new">
               <Button size="sm" variant="info">
                 <Plus className="w-4 h-4 ml-2" />
@@ -356,19 +335,11 @@ const RoundDetailsPage = () => {
         open={confirmAction !== null}
         onCancel={() => setConfirmAction(null)}
         onConfirm={handleConfirmAction}
-        title={
-          confirmAction === "pricing" ? "إرسال الجولة للتسعير" : "إلغاء الجولة"
-        }
-        message={
-          confirmAction === "pricing"
-            ? "ستُفتح الجولة لإدخال عروض أسعار المقاولين."
-            : "هل أنت متأكد من إلغاء هذه الجولة؟ لا يمكن التراجع عن هذا الإجراء."
-        }
-        confirmLabel={
-          confirmAction === "pricing" ? "نعم، أرسل للتسعير" : "نعم، ألغِ الجولة"
-        }
-        confirmVariant={confirmAction === "pricing" ? "success" : "error"}
-        loading={sendingToPricing || cancelling}
+        title="إلغاء الجولة"
+        message="هل أنت متأكد من إلغاء هذه الجولة؟ لا يمكن التراجع عن هذا الإجراء."
+        confirmLabel="نعم، ألغِ الجولة"
+        confirmVariant="error"
+        loading={cancelling}
       />
 
       {awardingQuote && (

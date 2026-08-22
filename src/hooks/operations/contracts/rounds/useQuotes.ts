@@ -241,6 +241,17 @@ export function useCreateQuote() {
       }
     }
 
+    // A round only needs an explicit "send to pricing" step in spirit — in
+    // practice, the first quote entered for it is what actually opens it up
+    // for pricing, so flip the status here instead of a separate action.
+    // No-ops if the round is already past "draft".
+    await supabase
+      .schema("contracts")
+      .from("rounds")
+      .update({ status: "pricing" })
+      .eq("id", input.round_id)
+      .eq("status", "draft");
+
     setLoading(false);
     return { error: null, quoteId: quote.id as string };
   }
