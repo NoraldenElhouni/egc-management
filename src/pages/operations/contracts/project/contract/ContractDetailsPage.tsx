@@ -18,8 +18,9 @@ import {
   ContractDetail,
   useContractDetails,
 } from "../../../../../hooks/operations/contracts/useContracts";
-import { useBOQPDFGenerate } from "../../../../../hooks/operations/boq/useBOQPDFGenerate";
-import { buildContractAsBoqPayload } from "../../../../../hooks/operations/contracts/contractPdfPayload";
+import { useContractPdfGenerate } from "../../../../../hooks/operations/contracts/useContractPdfGenerate";
+import { buildContractPdfPayload } from "../../../../../hooks/operations/contracts/contractPdfPayload";
+import { useAuth } from "../../../../../hooks/useAuth";
 
 const contractStatusBadge = (status: ContractDetail["status"]) => {
   switch (status) {
@@ -49,11 +50,13 @@ const ContractDetailsPage = () => {
     daysRemaining,
   } = useContractDetails(contractId ?? "");
 
+  const { user } = useAuth();
+
   const {
     generate: generateContractPdf,
     loading: generatingPdf,
     error: pdfError,
-  } = useBOQPDFGenerate();
+  } = useContractPdfGenerate();
 
   if (!contractId) {
     return (
@@ -98,7 +101,9 @@ const ContractDetailsPage = () => {
             size="sm"
             variant="primary-outline"
             disabled={generatingPdf}
-            onClick={() => generateContractPdf(buildContractAsBoqPayload(contract))}
+            onClick={() =>
+              generateContractPdf(buildContractPdfPayload(contract, user?.name))
+            }
           >
             <Printer className="w-4 h-4 ml-2" />
             {generatingPdf ? "جاري الطباعة..." : "طباعة العقد"}
