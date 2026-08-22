@@ -1,4 +1,5 @@
 import { formatDate } from "../../../utils/helpper";
+import { amountToArabicWords } from "../../../utils/arabicNumberToWords";
 import { ContractDetail } from "./useContracts";
 
 export interface ContractPdfItem {
@@ -23,9 +24,14 @@ export interface ContractorContractPdfRequest {
   generated_at: string;
 
   total_amount: number;
+  total_amount_words?: string | null;
   insurance_percentage?: number;
   advance_percentage?: number;
+  advance_amount?: number | null;
+  advance_amount_words?: string | null;
+  delay_penalty_percentage?: number | null;
   delay_penalty_per_day?: number | null;
+  delay_penalty_per_day_words?: string | null;
   start_date?: string | null;
   duration_days?: number | null;
   end_date?: string | null;
@@ -45,6 +51,8 @@ export function buildContractPdfPayload(
     ? `${contract.contractor.first_name} ${contract.contractor.last_name ?? ""}`.trim()
     : "—";
   const title = contract.round?.title ?? "عقد مقاولة";
+  const advanceAmount =
+    (contract.total_amount * contract.advance_percentage) / 100;
 
   return {
     report_title: `عقد ${title} - ${contractorName}`,
@@ -53,9 +61,16 @@ export function buildContractPdfPayload(
     generated_at: formatDate(new Date().toISOString()),
 
     total_amount: contract.total_amount,
+    total_amount_words: amountToArabicWords(contract.total_amount),
     insurance_percentage: contract.insurance_percentage,
     advance_percentage: contract.advance_percentage,
+    advance_amount: advanceAmount,
+    advance_amount_words: amountToArabicWords(advanceAmount),
     delay_penalty_per_day: contract.delay_penalty_per_day,
+    delay_penalty_per_day_words:
+      contract.delay_penalty_per_day !== null
+        ? amountToArabicWords(contract.delay_penalty_per_day)
+        : null,
     start_date: contract.start_date,
     duration_days: contract.duration_days,
     end_date: contract.end_date,
