@@ -26,6 +26,8 @@ export interface ContractorContractPdfRequest {
   total_amount: number;
   total_amount_words?: string | null;
   insurance_percentage?: number;
+  insurance_amount?: number | null;
+  insurance_amount_words?: string | null;
   advance_percentage?: number;
   advance_amount?: number | null;
   advance_amount_words?: string | null;
@@ -53,6 +55,8 @@ export function buildContractPdfPayload(
   const title = contract.round?.title ?? "عقد مقاولة";
   const advanceAmount =
     (contract.total_amount * contract.advance_percentage) / 100;
+  const insuranceAmount =
+    (contract.total_amount * contract.insurance_percentage) / 100;
 
   return {
     report_title: `عقد ${title} - ${contractorName}`,
@@ -63,6 +67,8 @@ export function buildContractPdfPayload(
     total_amount: contract.total_amount,
     total_amount_words: amountToArabicWords(contract.total_amount),
     insurance_percentage: contract.insurance_percentage,
+    insurance_amount: insuranceAmount,
+    insurance_amount_words: amountToArabicWords(insuranceAmount),
     advance_percentage: contract.advance_percentage,
     advance_amount: advanceAmount,
     advance_amount_words: amountToArabicWords(advanceAmount),
