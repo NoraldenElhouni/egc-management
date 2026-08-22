@@ -12,6 +12,7 @@ import { PasswordField } from "../../ui/inputs/PasswordField";
 import { addVendor } from "../../../services/vendors/setVendors";
 import { useSpecializations } from "../../../hooks/useSpecializations";
 import { SelectField } from "../../ui/inputs/SelectField";
+import { useBanks } from "../../../hooks/useBanks";
 
 const NewVendorForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
@@ -20,6 +21,7 @@ const NewVendorForm = () => {
 
   const { data: specializations, loading: spLoading } =
     useSpecializations("Vendor");
+  const { banks, loading: banksLoading } = useBanks();
 
   const {
     register,
@@ -139,9 +141,44 @@ const NewVendorForm = () => {
           register={register("address")}
           error={errors.address}
         />
+        <TextField
+          id="whatsapp_number"
+          label="رقم الواتساب"
+          type="text"
+          register={register("whatsapp_number")}
+          error={errors.whatsapp_number}
+        />
+
+        <div className="md:col-span-2 border-t pt-4 mt-1">
+          <h2 className="text-sm font-medium text-gray-500 mb-3">
+            معلومات البنك (اختياري)
+          </h2>
+        </div>
+
+        <SelectField
+          id="bank_id"
+          options={banks.map((b) => ({ value: b.id, label: b.name }))}
+          label="اسم البنك"
+          register={register("bank_id")}
+          error={errors.bank_id}
+        />
+        <TextField
+          id="bank_number"
+          label="رقم الحساب"
+          type="text"
+          register={register("bank_number")}
+          error={errors.bank_number}
+        />
+        <TextField
+          id="bank_holder_name"
+          label="اسم صاحب الحساب"
+          type="text"
+          register={register("bank_holder_name")}
+          error={errors.bank_holder_name}
+        />
 
         <div className="md:col-span-2 flex justify-end gap-2 mt-3">
-          <Button loading={isSubmitting || spLoading} type="submit">
+          <Button loading={isSubmitting || spLoading || banksLoading} type="submit">
             إضافة مقاول
           </Button>
         </div>

@@ -14,6 +14,7 @@ import {
 import { useSpecializations } from "../../../hooks/useSpecializations";
 import { SelectField } from "../../ui/inputs/SelectField";
 import { AddContractors } from "../../../services/contractors/setContractors";
+import { useBanks } from "../../../hooks/useBanks";
 
 const NewContractorForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
@@ -22,6 +23,7 @@ const NewContractorForm = () => {
 
   const { data: specializations, loading: spLoading } =
     useSpecializations("Contractor");
+  const { banks, loading: banksLoading } = useBanks();
 
   const {
     register,
@@ -116,8 +118,44 @@ const NewContractorForm = () => {
           error={errors.specializationId}
         />
 
+        <TextField
+          id="whatsappNumber"
+          label="رقم الواتساب"
+          type="text"
+          register={register("whatsappNumber")}
+          error={errors.whatsappNumber}
+        />
+
+        <div className="md:col-span-2 border-t pt-4 mt-1">
+          <h2 className="text-sm font-medium text-gray-500 mb-3">
+            معلومات البنك (اختياري)
+          </h2>
+        </div>
+
+        <SelectField
+          id="bankId"
+          options={banks.map((b) => ({ value: b.id, label: b.name }))}
+          label="اسم البنك"
+          register={register("bankId")}
+          error={errors.bankId}
+        />
+        <TextField
+          id="bankNumber"
+          label="رقم الحساب"
+          type="text"
+          register={register("bankNumber")}
+          error={errors.bankNumber}
+        />
+        <TextField
+          id="bankHolderName"
+          label="اسم صاحب الحساب"
+          type="text"
+          register={register("bankHolderName")}
+          error={errors.bankHolderName}
+        />
+
         <div className="md:col-span-2 flex justify-end gap-2 mt-3">
-          <Button loading={isSubmitting || spLoading} type="submit">
+          <Button loading={isSubmitting || spLoading || banksLoading} type="submit">
             إضافة مقاول
           </Button>
         </div>

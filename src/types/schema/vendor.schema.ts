@@ -19,6 +19,12 @@ export const vendorsSchema = z.object({
   country: z.string().optional().or(z.literal("")),
   city: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
+
+  whatsapp_number: z.string().optional().or(z.literal("")),
+
+  bank_id: z.string().optional().or(z.literal("")),
+  bank_number: z.string().optional().or(z.literal("")),
+  bank_holder_name: z.string().optional().or(z.literal("")),
 });
 
 export type VendorFormValues = z.infer<typeof vendorsSchema>;

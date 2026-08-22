@@ -24,6 +24,16 @@ export const ContractorSchema = z.object({
     .or(z.literal("")),
 
   nationality: z.string().optional().or(z.literal("")),
+
+  whatsappNumber: z
+    .string()
+    .min(10, "رقم الواتساب يجب أن يكون على الأقل 10 أرقام")
+    .optional()
+    .or(z.literal("")),
+
+  bankId: z.string().optional().or(z.literal("")),
+  bankNumber: z.string().optional().or(z.literal("")),
+  bankHolderName: z.string().optional().or(z.literal("")),
 });
 
 export type ContractorFormValues = z.infer<typeof ContractorSchema>;

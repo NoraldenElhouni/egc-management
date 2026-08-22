@@ -45,14 +45,43 @@ export async function AddContractors(form: ContractorFormValues) {
     }
   }
 
-  // 2) Insert contractor with its own id + optional user_id
+  // 2) Resolve bank name if a bank was selected
+  const bankId = (form.bankId ?? "").trim();
+  let bankName: string | null = null;
+
+  if (bankId) {
+    const { data: bank, error: bankErr } = await supabaseAdmin
+      .schema("lookups")
+      .from("banks")
+      .select("name")
+      .eq("id", bankId)
+      .single();
+
+    if (bankErr) {
+      console.error("Error fetching bank:", bankErr);
+      return {
+        success: false,
+        error: bankErr,
+        message: "فشل في جلب بيانات البنك",
+      };
+    }
+
+    bankName = bank?.name ?? null;
+  }
+
+  // 3) Insert contractor with its own id + optional user_id
   const contractorPayload = {
     first_name: form.firstName,
     last_name: (form.lastName ?? "").trim() || null,
     email: email || null,
     phone_number: (form.phone ?? "").trim(), // NOTE: table says NOT NULL (see note below)
+    whatsapp_number: (form.whatsappNumber ?? "").trim() || null,
     user_id: authUserId, // null if no auth user created
     specialization_id: form.specializationId || null,
+    bank_id: bankId || null,
+    bank_name: bankName,
+    bank_number: (form.bankNumber ?? "").trim() || null,
+    bank_holder_name: (form.bankHolderName ?? "").trim() || null,
   };
 
   const { data: contractor, error: contractorErr } = await supabaseAdmin
