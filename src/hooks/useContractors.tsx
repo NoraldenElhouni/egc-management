@@ -8,7 +8,10 @@ import { PostgrestError } from "@supabase/supabase-js";
 const fetchContractors = async (): Promise<
   contractorWithSpecializations[]
 > => {
-  const { data, error } = await supabase.from("contractors").select(`
+  const { data, error } = await supabase
+    .from("contractors")
+    .select(
+      `
       *,
       specializations (*),
       users!contractors_user_id_fkey (
@@ -17,7 +20,9 @@ const fetchContractors = async (): Promise<
           specializations (*)
         )
       )
-    `);
+    `,
+    )
+    .neq("status", "merged");
 
   if (error) throw new Error(error.message);
 
@@ -40,7 +45,10 @@ export function useContractors() {
   useEffect(() => {
     async function fetchContractors() {
       setLoading(true);
-      const { data, error } = await supabase.from("contractors").select(`
+      const { data, error } = await supabase
+        .from("contractors")
+        .select(
+          `
         *,
         specializations (*),
         users!contractors_user_id_fkey (
@@ -49,7 +57,9 @@ export function useContractors() {
             specializations (*)
           )
         )
-      `);
+      `,
+        )
+        .neq("status", "merged");
       if (error) {
         console.error("error fetching contractors", error);
         setError(error);
@@ -78,7 +88,8 @@ export function useContractorsNoUser() {
       const { data, error } = await supabase
         .from("contractors")
         .select("*")
-        .is("user_id", null);
+        .is("user_id", null)
+        .neq("status", "merged");
 
       if (error) {
         console.error("error fetching contractors", error);

@@ -10,7 +10,7 @@ import Button from "../../ui/Button";
 import { useNavigate } from "react-router-dom";
 import { AssignUserToContractor } from "../../../services/contractors/setContractors";
 
-const MergeContractorSchema = z.object({
+const LinkContractorUserSchema = z.object({
   contractorId: z.string().min(1, "يجب اختيار المقاول"),
   email: z
     .string()
@@ -19,9 +19,9 @@ const MergeContractorSchema = z.object({
   password: z.string().min(8, "كلمة المرور يجب أن تكون على الأقل 8 أحرف"),
 });
 
-type MergeContractorFormValues = z.infer<typeof MergeContractorSchema>;
+type LinkContractorUserFormValues = z.infer<typeof LinkContractorUserSchema>;
 
-const MergeContractorsForm = () => {
+const LinkContractorUserForm = () => {
   const { contractors, error, loading } = useContractorsNoUser();
   const [success, setSuccess] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -34,8 +34,8 @@ const MergeContractorsForm = () => {
     watch,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<MergeContractorFormValues>({
-    resolver: zodResolver(MergeContractorSchema),
+  } = useForm<LinkContractorUserFormValues>({
+    resolver: zodResolver(LinkContractorUserSchema),
     defaultValues: {
       contractorId: "",
       email: "",
@@ -50,7 +50,7 @@ const MergeContractorsForm = () => {
     label: `${c.first_name}${c.last_name ? " " + c.last_name : ""}${c.phone_number ? " — " + c.phone_number : ""}`,
   }));
 
-  const onSubmit = async (values: MergeContractorFormValues) => {
+  const onSubmit = async (values: LinkContractorUserFormValues) => {
     setSuccess(null);
     setServerError(null);
     try {
@@ -133,4 +133,4 @@ const MergeContractorsForm = () => {
   );
 };
 
-export default MergeContractorsForm;
+export default LinkContractorUserForm;

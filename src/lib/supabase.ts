@@ -1888,6 +1888,9 @@ export type Database = {
           first_name: string
           id: string
           last_name: string | null
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_id: string | null
           phone_number: string | null
           specialization_id: string | null
           status: string
@@ -1908,6 +1911,9 @@ export type Database = {
           first_name: string
           id?: string
           last_name?: string | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_id?: string | null
           phone_number?: string | null
           specialization_id?: string | null
           status?: string
@@ -1928,6 +1934,9 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_id?: string | null
           phone_number?: string | null
           specialization_id?: string | null
           status?: string
@@ -1941,6 +1950,20 @@ export type Database = {
             columns: ["bank_approved_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractors_merged_by_fkey"
+            columns: ["merged_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractors_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
             referencedColumns: ["id"]
           },
           {
@@ -4812,6 +4835,23 @@ export type Database = {
       map_payment_type_to_account_type: {
         Args: { p: Database["public"]["Enums"]["payment_type"] }
         Returns: Database["public"]["Enums"]["account_type"]
+      }
+      merge_contractors: {
+        Args: {
+          p_bank_holder_name: string
+          p_bank_id: string
+          p_bank_number: string
+          p_created_by: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_loser_id: string
+          p_phone_number: string
+          p_specialization_id: string
+          p_survivor_id: string
+          p_whatsapp_number: string
+        }
+        Returns: Json
       }
       process_expense_payment: {
         Args: {

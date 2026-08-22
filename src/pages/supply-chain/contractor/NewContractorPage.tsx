@@ -1,6 +1,7 @@
 import { useState } from "react";
 import NewContractorForm from "../../../components/supply-chain/form/NewContractorForm";
-import MergeContractorsForm from "../../../components/supply-chain/form/MergeContractorsForm";
+import LinkContractorUserForm from "../../../components/supply-chain/form/LinkContractorUserForm";
+import MergeContractorsWizard from "../../../components/supply-chain/contractor/merge/MergeContractorsWizard";
 
 const NewContractorPage = () => {
   const [activeTab, setActiveTab] = useState("new-contractor");
@@ -12,9 +13,14 @@ const NewContractorPage = () => {
       content: <NewContractorForm />,
     },
     {
-      id: "merge-contractor",
-      label: "دمج المقاول",
-      content: <MergeContractorsForm />,
+      id: "link-contractor",
+      label: "ربط مقاول بحساب",
+      content: <LinkContractorUserForm />,
+    },
+    {
+      id: "merge-contractors",
+      label: "دمج مقاولين",
+      content: <MergeContractorsWizard />,
     },
   ];
   return (
