@@ -35,35 +35,10 @@ function countImpactedRows(loserId: string) {
       .eq("contractor_id", loserId)
       .then(({ count, error }) => ({ label: "طلبات دفع", count, error })),
     supabase
-      .from("payments")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "دفعات", count, error })),
-    supabase
-      .from("payments_penalties")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "غرامات", count, error })),
-    supabase
       .from("project_expenses")
       .select("id", { count: "exact", head: true })
       .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "مستخلصات", count, error })),
-    supabase
-      .from("quotes")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "عروض", count, error })),
-    supabase
-      .from("request_payments")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "طلبات صرف", count, error })),
-    supabase
-      .from("work_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "طلبات عمل", count, error })),
+      .then(({ count, error }) => ({ label: "مصروفات", count, error })),
     supabase
       .from("work_requests")
       .select("id", { count: "exact", head: true })
@@ -149,7 +124,9 @@ const MergeStepConfirm = ({
     return (
       <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-sm text-center space-y-4">
         <div className="text-5xl">✅</div>
-        <h2 className="text-xl font-bold text-gray-800">تم دمج المقاولين بنجاح</h2>
+        <h2 className="text-xl font-bold text-gray-800">
+          تم دمج المقاولين بنجاح
+        </h2>
         <p className="text-sm text-gray-500">
           تم تعليم &quot;{contractorLabel(loser)}&quot; كمدمج، وتم نقل جميع
           سجلاته إلى &quot;{contractorLabel(survivor)}&quot;.
