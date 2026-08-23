@@ -1,6 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { contractorWithSpecializations } from "../../../types/extended.type";
+import { translateStatus } from "../../../utils/translations";
+import { statusColor } from "../../../utils/colors/status";
 
 export const ContractorsColumns: ColumnDef<contractorWithSpecializations>[] = [
   {
@@ -92,6 +94,17 @@ export const ContractorsColumns: ColumnDef<contractorWithSpecializations>[] = [
   {
     accessorKey: "phone_number",
     header: "رقم الهاتف",
+  },
+  {
+    accessorKey: "status",
+    header: "الحالة",
+    cell: ({ row }) => (
+      <span
+        className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor(row.original.status)}`}
+      >
+        {translateStatus(row.original.status)}
+      </span>
+    ),
   },
   {
     id: "bank_account_aproved",

@@ -4,7 +4,12 @@ import { contractorWithSpecializations } from "../../../types/extended.type";
 import { useSpecializations } from "../../../hooks/useSpecializations";
 import Button from "../../ui/Button";
 import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import ConfirmDialog from "../../ui/ConfirmDialog";
 import { Search, X } from "lucide-react";
+import { translateStatus } from "../../../utils/translations";
+
+const CONTRACTOR_STATUS_OPTIONS = ["active", "inactive", "blocked"] as const;
+type ContractorStatus = (typeof CONTRACTOR_STATUS_OPTIONS)[number];
 
 interface EditContractorDialogProps {
   open: boolean;
@@ -35,8 +40,12 @@ const EditContractorDialog = ({
   const [additionalSpecializationIds, setAdditionalSpecializationIds] =
     useState<string[]>([]);
   const [specializationSearch, setSpecializationSearch] = useState("");
+  const [status, setStatus] = useState<ContractorStatus>(
+    (contractor.status as ContractorStatus) ?? "active",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +61,9 @@ const EditContractorDialog = ({
       ),
     );
     setSpecializationSearch("");
+    setStatus((contractor.status as ContractorStatus) ?? "active");
     setError(null);
+    setShowStatusConfirm(false);
   }, [open, contractor]);
 
   const filteredSpecializations = useMemo(() => {
@@ -79,12 +90,22 @@ const EditContractorDialog = ({
     );
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!firstName.trim()) {
       setError("الاسم الأول مطلوب");
       return;
     }
+    setError(null);
 
+    if (status !== contractor.status) {
+      setShowStatusConfirm(true);
+      return;
+    }
+
+    performSave();
+  }
+
+  async function performSave() {
     setSaving(true);
     setError(null);
     try {
@@ -97,6 +118,7 @@ const EditContractorDialog = ({
           phone_number: phoneNumber.trim() || null,
           whatsapp_number: whatsappNumber.trim() || null,
           specialization_id: mainSpecializationId || null,
+          status,
         })
         .eq("id", contractor.id);
 
@@ -128,6 +150,7 @@ const EditContractorDialog = ({
     } catch (err) {
       console.error("Error updating contractor:", err);
       setError("فشل تحديث بيانات المقاول. حاول مرة أخرى.");
+      setShowStatusConfirm(false);
     } finally {
       setSaving(false);
     }
@@ -192,6 +215,22 @@ const EditContractorDialog = ({
               onChange={(e) => setWhatsappNumber(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className="text-xs font-medium text-gray-500">
+              الحالة
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ContractorStatus)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            >
+              {CONTRACTOR_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {translateStatus(s)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -308,6 +347,18 @@ const EditContractorDialog = ({
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showStatusConfirm}
+        title="تأكيد تغيير حالة المقاول"
+        message={`سيتم تغيير حالة المقاول من "${translateStatus(contractor.status)}" إلى "${translateStatus(status)}". هل أنت متأكد؟`}
+        confirmLabel="تأكيد وحفظ"
+        cancelLabel="إلغاء"
+        confirmVariant="warning"
+        loading={saving}
+        onConfirm={performSave}
+        onCancel={() => setShowStatusConfirm(false)}
+      />
     </div>
   );
 };

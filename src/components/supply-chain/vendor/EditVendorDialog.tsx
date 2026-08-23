@@ -3,7 +3,12 @@ import { supabase } from "../../../lib/supabaseClient";
 import { Vendor } from "../../../types/global.type";
 import Button from "../../ui/Button";
 import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import ConfirmDialog from "../../ui/ConfirmDialog";
 import { useSpecializations } from "../../../hooks/useSpecializations";
+import { translateStatus } from "../../../utils/translations";
+
+const VENDOR_STATUS_OPTIONS = ["active", "inactive", "blocked"] as const;
+type VendorStatus = (typeof VENDOR_STATUS_OPTIONS)[number];
 
 interface EditVendorDialogProps {
   open: boolean;

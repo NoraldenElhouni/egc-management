@@ -127,11 +127,18 @@ const ProjectDetails = ({ projectId }: Props) => {
           <p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
             <MapPin className="w-3 h-3" /> الموقع
           </p>
-          <p className="font-medium">
-            {typeof latitude === "number" && typeof longitude === "number"
-              ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-              : "—"}
-          </p>
+          {typeof latitude === "number" && typeof longitude === "number" ? (
+            <a
+              href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              {latitude.toFixed(6)}, {longitude.toFixed(6)}
+            </a>
+          ) : (
+            <p className="font-medium">—</p>
+          )}
         </div>
       </div>
 

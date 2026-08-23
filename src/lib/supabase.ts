@@ -4524,6 +4524,7 @@ export type Database = {
           phone_number: string | null
           price_limit: number | null
           specialization_id: string | null
+          status: string | null
           updated_at: string
           user_id: string | null
           vendor_name: string
@@ -4550,6 +4551,7 @@ export type Database = {
           phone_number?: string | null
           price_limit?: number | null
           specialization_id?: string | null
+          status?: string | null
           updated_at?: string
           user_id?: string | null
           vendor_name: string
@@ -4576,6 +4578,7 @@ export type Database = {
           phone_number?: string | null
           price_limit?: number | null
           specialization_id?: string | null
+          status?: string | null
           updated_at?: string
           user_id?: string | null
           vendor_name?: string

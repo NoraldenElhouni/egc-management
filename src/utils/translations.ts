@@ -83,6 +83,7 @@ export const translateStatus = (status: string): string => {
   const statusTranslations: Record<string, string> = {
     active: "نشط",
     inactive: "غير نشط",
+    blocked: "محظور",
     pending: "قيد الانتظار",
     approved: "موافق عليه",
     rejected: "مرفوض",
