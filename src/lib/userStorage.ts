@@ -16,16 +16,30 @@ export interface UserData {
 }
 
 export const saveUserData = async (userData: UserData): Promise<void> => {
-  await userStore.setItem("currentUser", {
-    ...userData,
-    lastSync: Date.now(),
-  });
+  try {
+    await userStore.setItem("currentUser", {
+      ...userData,
+      lastSync: Date.now(),
+    });
+  } catch (error) {
+    // Local cache is a convenience layer; Supabase remains the source of truth.
+    console.warn("Failed to save cached user data (local storage may be corrupted):", error);
+  }
 };
 
 export const getUserData = async (): Promise<UserData | null> => {
-  return await userStore.getItem<UserData>("currentUser");
+  try {
+    return await userStore.getItem<UserData>("currentUser");
+  } catch (error) {
+    console.warn("Failed to read cached user data (local storage may be corrupted):", error);
+    return null;
+  }
 };
 
 export const clearUserData = async (): Promise<void> => {
-  await userStore.removeItem("currentUser");
+  try {
+    await userStore.removeItem("currentUser");
+  } catch (error) {
+    console.warn("Failed to clear cached user data (local storage may be corrupted):", error);
+  }
 };
