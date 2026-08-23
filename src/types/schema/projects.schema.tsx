@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ProjectSchema = z.object({
   client_id: z.string().min(1, "Client is required"),
-  name: z.string().min(1, "Project name is required"),
+  name: z.string().trim().min(1, "Project name is required"),
   address: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   percentage: z
@@ -39,7 +39,7 @@ export const ProjectStatusValues = [
 
 export const ProjectEditSchema = z.object({
   client_id: z.string().min(1, "Client is required"),
-  name: z.string().min(1, "Project name is required"),
+  name: z.string().trim().min(1, "Project name is required"),
   address: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   status: z.enum(ProjectStatusValues),

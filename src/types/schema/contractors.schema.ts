@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const ContractorSchema = z.object({
   // required
-  firstName: z.string().min(1, "الاسم الأول مطلوب"),
-  lastName: z.string().min(1, "الاسم الأخير مطلوب"),
+  firstName: z.string().trim().min(1, "الاسم الأول مطلوب"),
+  lastName: z.string().trim().min(1, "الاسم الأخير مطلوب"),
   specializationId: z.string().min(1, "التخصص مطلوب"),
 
   // optional (validate only when not empty)
@@ -33,7 +33,7 @@ export const ContractorSchema = z.object({
 
   bankId: z.string().optional().or(z.literal("")),
   bankNumber: z.string().optional().or(z.literal("")),
-  bankHolderName: z.string().optional().or(z.literal("")),
+  bankHolderName: z.string().trim().optional().or(z.literal("")),
 });
 
 export type ContractorFormValues = z.infer<typeof ContractorSchema>;

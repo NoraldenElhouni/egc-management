@@ -11,8 +11,14 @@ export const userSchema = z
     password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
 
     // Personal Information
-    firstName: z.string().min(2, "الاسم الأول يجب أن يكون على الأقل حرفين"),
-    lastName: z.string().min(2, "اسم العائلة يجب أن يكون على الأقل حرفين"),
+    firstName: z
+      .string()
+      .trim()
+      .min(2, "الاسم الأول يجب أن يكون على الأقل حرفين"),
+    lastName: z
+      .string()
+      .trim()
+      .min(2, "اسم العائلة يجب أن يكون على الأقل حرفين"),
     dob: z.string().min(1, "تاريخ الميلاد مطلوب"),
     placeOfBirth: z.string().optional(),
     bloodType: z.preprocess(

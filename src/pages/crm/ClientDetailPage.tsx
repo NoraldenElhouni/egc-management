@@ -88,8 +88,8 @@ const ClientDetailPage = () => {
       const { error } = await supabase
         .from("clients")
         .update({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
+          first_name: formData.first_name.trim(),
+          last_name: formData.last_name.trim(),
           email: formData.email,
           phone_number: formData.phone_number,
         })

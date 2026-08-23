@@ -67,7 +67,11 @@ const BasicInfoCard = ({ employee, onSave }: BasicInfoCardProps) => {
     }
     try {
       setSaving(true);
-      await onSave(formData);
+      await onSave({
+        ...formData,
+        first_name: formData.first_name?.trim() ?? formData.first_name,
+        last_name: formData.last_name?.trim() ?? formData.last_name,
+      });
       setEditMode(false);
     } finally {
       setSaving(false);
