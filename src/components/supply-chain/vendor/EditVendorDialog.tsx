@@ -36,8 +36,12 @@ const EditVendorDialog = ({
   const [specializationId, setSpecializationId] = useState(
     vendor.specialization_id ?? "",
   );
+  const [status, setStatus] = useState<VendorStatus>(
+    (vendor.status as VendorStatus) ?? "active",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
 
   const { data: specializations, loading: specializationsLoading } =
     useSpecializations("Vendor");
@@ -53,12 +57,14 @@ const EditVendorDialog = ({
     setCity(vendor.city ?? "");
     setAddress(vendor.address ?? "");
     setSpecializationId(vendor.specialization_id ?? "");
+    setStatus((vendor.status as VendorStatus) ?? "active");
     setError(null);
+    setShowStatusConfirm(false);
   }, [open, vendor]);
 
   if (!open) return null;
 
-  async function handleSave() {
+  function handleSave() {
     if (!vendorName.trim()) {
       setError("اسم المورد مطلوب");
       return;
@@ -67,7 +73,17 @@ const EditVendorDialog = ({
       setError("بريد إلكتروني غير صالح");
       return;
     }
+    setError(null);
 
+    if (status !== (vendor.status ?? "active")) {
+      setShowStatusConfirm(true);
+      return;
+    }
+
+    performSave();
+  }
+
+  async function performSave() {
     setSaving(true);
     setError(null);
     try {
@@ -83,6 +99,7 @@ const EditVendorDialog = ({
           city: city.trim() || null,
           address: address.trim() || null,
           specialization_id: specializationId || null,
+          status,
           updated_at: new Date().toISOString(),
         })
         .eq("id", vendor.id);
@@ -93,6 +110,7 @@ const EditVendorDialog = ({
     } catch (err) {
       console.error("Error updating vendor:", err);
       setError("فشل تحديث بيانات المورد. حاول مرة أخرى.");
+      setShowStatusConfirm(false);
     } finally {
       setSaving(false);
     }
@@ -202,6 +220,22 @@ const EditVendorDialog = ({
               onChange={(val) => setSpecializationId(val)}
             />
           </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className="text-xs font-medium text-gray-500">
+              الحالة
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as VendorStatus)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            >
+              {VENDOR_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {translateStatus(s)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {error && (
@@ -231,6 +265,18 @@ const EditVendorDialog = ({
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showStatusConfirm}
+        title="تأكيد تغيير حالة المورد"
+        message={`سيتم تغيير حالة المورد من "${translateStatus(vendor.status ?? "active")}" إلى "${translateStatus(status)}". هل أنت متأكد؟`}
+        confirmLabel="تأكيد وحفظ"
+        cancelLabel="إلغاء"
+        confirmVariant="warning"
+        loading={saving}
+        onConfirm={performSave}
+        onCancel={() => setShowStatusConfirm(false)}
+      />
     </div>
   );
 };
