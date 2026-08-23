@@ -10,6 +10,8 @@ import CompanyPage from "../../pages/finance/company/CompanyPage";
 import ComapnyExpensePayments from "../../pages/finance/company/payments/ComapnyExpensePayments";
 import NotPiadExpensePage from "../../pages/finance/payments/NotPiadExpensePage";
 import ContractorPaymentsPage from "../../pages/finance/payments/ContractorPaymentsPage";
+import OrdersPage from "../../pages/finance/orders/OrdersPage";
+import ContractsPage from "../../pages/finance/contracts/ContractsPage";
 
 const FinanceRoutes = () => {
   return (
@@ -38,6 +40,8 @@ const FinanceRoutes = () => {
           path="contractor-payments"
           element={<ContractorPaymentsPage />}
         />
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="contracts" element={<ContractsPage />} />
       </Route>
     </Routes>
   );

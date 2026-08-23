@@ -2,7 +2,9 @@ import {
   BookOpen,
   Building2,
   CreditCard,
+  FileSignature,
   HandCoins,
+  ShoppingCart,
   Vault,
 } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
@@ -82,6 +84,22 @@ const FinancePage = () => {
         pendingContractorPaymentsCount === 0
           ? undefined
           : pendingContractorPaymentsCount,
+    },
+
+    {
+      label: "الطلبات",
+      icon: ShoppingCart,
+      path: "/finance/orders",
+      description: "متابعة الطلبات",
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+    },
+
+    {
+      label: "العقود",
+      icon: FileSignature,
+      path: "/finance/contracts",
+      description: "متابعة العقود",
+      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
   ];
 
