@@ -1,8 +1,37 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Vendor } from "../types/global.type";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
 import { VendorsWithSpecializations } from "../types/extended.type";
+
+const fetchVendorsList = async (): Promise<VendorsWithSpecializations[]> => {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select(
+      `
+      *,
+      specializations (*),
+      users!vendors_user_id_fkey (
+        user_specializations (
+          specialization_id,
+          specializations (*)
+        )
+      )
+    `,
+    )
+    .neq("status", "merged");
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as unknown as VendorsWithSpecializations[];
+};
+
+export const useVendorsQuery = () =>
+  useQuery({
+    queryKey: ["vendors"],
+    queryFn: fetchVendorsList,
+  });
 
 export function useVendors() {
   const [vendors, setVendors] = useState<VendorsWithSpecializations[]>([]);
@@ -12,7 +41,10 @@ export function useVendors() {
   useEffect(() => {
     async function fetchVendors() {
       setLoading(true);
-      const { data, error } = await supabase.from("vendors").select(`*,
+      const { data, error } = await supabase
+        .from("vendors")
+        .select(
+          `*,
             specializations(*),
             users!vendors_user_id_fkey (
               user_specializations (
@@ -20,7 +52,9 @@ export function useVendors() {
                 specializations (*)
               )
             )
-          `);
+          `,
+        )
+        .neq("status", "merged");
 
       if (error) {
         console.error("error fetching vendors", error);

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import NewVendorForm from "../../components/supply-chain/form/NewVendorForm";
 import MergeVendorsForm from "../../components/supply-chain/form/MergeVendorsForm";
+import MergeVendorsWizard from "../../components/supply-chain/vendor/merge/MergeVendorsWizard";
 
 const NewVendorPage = () => {
   const [activeTab, setActiveTab] = useState("new-vendor");
@@ -12,9 +13,14 @@ const NewVendorPage = () => {
       content: <NewVendorForm />,
     },
     {
+      id: "link-vendor",
+      label: "ربط مورد بحساب",
+      content: <MergeVendorsForm />,
+    },
+    {
       id: "merge-vendor",
       label: "دمج الموردين",
-      content: <MergeVendorsForm />,
+      content: <MergeVendorsWizard />,
     },
   ];
   return (

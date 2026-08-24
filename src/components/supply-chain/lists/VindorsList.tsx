@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Award, Landmark, Users, Wrench } from "lucide-react";
-import { useVendors } from "../../../hooks/useVendors";
+import { useVendorsQuery } from "../../../hooks/useVendors";
 import { VendorsColumns } from "../../tables/columns/VindorsColumns";
 import GenericTable from "../../tables/table";
 import ErrorPage from "../../ui/errorPage";
@@ -8,7 +8,8 @@ import LoadingPage from "../../ui/LoadingPage";
 import KpiCard from "../../ui/KpiCard";
 
 const VendorsList = () => {
-  const { vendors, loading, error } = useVendors();
+  const { data, isLoading: loading, error } = useVendorsQuery();
+  const vendors = useMemo(() => data ?? [], [data]);
 
   const stats = useMemo(() => {
     const total = vendors.length;

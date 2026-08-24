@@ -4521,10 +4521,13 @@ export type Database = {
           flow: number | null
           id: string
           is_shop: boolean
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_id: string | null
           phone_number: string | null
           price_limit: number | null
           specialization_id: string | null
-          status: string | null
+          status: string
           updated_at: string
           user_id: string | null
           vendor_name: string
@@ -4548,10 +4551,13 @@ export type Database = {
           flow?: number | null
           id?: string
           is_shop?: boolean
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_id?: string | null
           phone_number?: string | null
           price_limit?: number | null
           specialization_id?: string | null
-          status?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
           vendor_name: string
@@ -4575,10 +4581,13 @@ export type Database = {
           flow?: number | null
           id?: string
           is_shop?: boolean
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_id?: string | null
           phone_number?: string | null
           price_limit?: number | null
           specialization_id?: string | null
-          status?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
           vendor_name?: string
@@ -4590,6 +4599,20 @@ export type Database = {
             columns: ["bank_approved_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendors_merged_by_fkey"
+            columns: ["merged_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendors_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
           {
@@ -4852,6 +4875,27 @@ export type Database = {
           p_phone_number?: string
           p_specialization_id?: string
           p_survivor_id: string
+          p_whatsapp_number?: string
+        }
+        Returns: Json
+      }
+      merge_vendors: {
+        Args: {
+          p_address?: string
+          p_alt_phone_number?: string
+          p_bank_holder_name?: string
+          p_bank_id?: string
+          p_bank_number?: string
+          p_city?: string
+          p_contact_name?: string
+          p_country?: string
+          p_created_by: string
+          p_email?: string
+          p_loser_id: string
+          p_phone_number?: string
+          p_specialization_id?: string
+          p_survivor_id: string
+          p_vendor_name: string
           p_whatsapp_number?: string
         }
         Returns: Json

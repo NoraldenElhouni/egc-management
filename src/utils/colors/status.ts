@@ -24,6 +24,8 @@ export const statusColor = (s: string) => {
       return "bg-slate-100 text-slate-800";
     case "blocked":
       return "bg-rose-100 text-rose-800";
+    case "merged":
+      return "bg-violet-100 text-violet-800";
     case "paused":
       return "bg-amber-100 text-amber-800";
     case "completed":

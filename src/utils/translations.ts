@@ -84,6 +84,7 @@ export const translateStatus = (status: string): string => {
     active: "نشط",
     inactive: "غير نشط",
     blocked: "محظور",
+    merged: "مدمج",
     pending: "قيد الانتظار",
     approved: "موافق عليه",
     rejected: "مرفوض",
