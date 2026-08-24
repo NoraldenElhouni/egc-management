@@ -48,7 +48,11 @@ function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
     created_by_name: payment.created_by_employee
       ? `${payment.created_by_employee.first_name} ${payment.created_by_employee.last_name ?? ""}`.trim()
       : "",
-    expense_reference: payment.expense_id,
+    expense_reference: payment.expense
+      ? [payment.expense.serial_number, payment.expense.description]
+          .filter((part) => part !== null && part !== "")
+          .join(" - ") || null
+      : null,
     bank_name: payment.bank_name,
     bank_number: payment.bank_number,
     bank_holder_name: payment.bank_holder_name,

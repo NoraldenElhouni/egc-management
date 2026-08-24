@@ -23,10 +23,17 @@ type EmployeeSummary = {
   last_name: string | null;
 };
 
+type ExpenseSummary = {
+  id: string;
+  description: string | null;
+  serial_number: number | null;
+};
+
 export interface ContractPayment extends ContractPaymentRow {
   contractor: ContractorSummary | null;
   project: ProjectSummary | null;
   created_by_employee: EmployeeSummary | null;
+  expense: ExpenseSummary | null;
 }
 
 export interface ContractPaymentPenalty extends ContractPaymentPenaltyRow {
