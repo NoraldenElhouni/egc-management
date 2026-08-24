@@ -28,23 +28,20 @@ export function useMergeContractors() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { data, error: rpcError } = await supabase.rpc(
-      "merge_contractors",
-      {
-        p_survivor_id: input.survivorId,
-        p_loser_id: input.loserId,
-        p_first_name: input.firstName,
-        p_last_name: input.lastName,
-        p_email: input.email,
-        p_phone_number: input.phoneNumber,
-        p_whatsapp_number: input.whatsappNumber,
-        p_specialization_id: input.specializationId,
-        p_bank_id: input.bankId,
-        p_bank_number: input.bankNumber,
-        p_bank_holder_name: input.bankHolderName,
-        p_created_by: user?.id ?? "",
-      },
-    );
+    const { data, error: rpcError } = await supabase.rpc("merge_contractors", {
+      p_survivor_id: input.survivorId,
+      p_loser_id: input.loserId,
+      p_first_name: input.firstName,
+      p_last_name: input.lastName ?? "",
+      p_email: input.email ?? "",
+      p_phone_number: input.phoneNumber ?? "",
+      p_whatsapp_number: input.whatsappNumber ?? "",
+      p_specialization_id: input.specializationId ?? "",
+      p_bank_id: input.bankId ?? "",
+      p_bank_number: input.bankNumber ?? "",
+      p_bank_holder_name: input.bankHolderName ?? "",
+      p_created_by: user?.id ?? "",
+    });
 
     if (rpcError) {
       setError(rpcError);

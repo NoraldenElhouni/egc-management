@@ -4841,18 +4841,18 @@ export type Database = {
       }
       merge_contractors: {
         Args: {
-          p_bank_holder_name: string
-          p_bank_id: string
-          p_bank_number: string
+          p_bank_holder_name?: string
+          p_bank_id?: string
+          p_bank_number?: string
           p_created_by: string
-          p_email: string
+          p_email?: string
           p_first_name: string
-          p_last_name: string
+          p_last_name?: string
           p_loser_id: string
-          p_phone_number: string
-          p_specialization_id: string
+          p_phone_number?: string
+          p_specialization_id?: string
           p_survivor_id: string
-          p_whatsapp_number: string
+          p_whatsapp_number?: string
         }
         Returns: Json
       }

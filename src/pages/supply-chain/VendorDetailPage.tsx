@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Building2,
   Calendar,
@@ -159,6 +159,14 @@ const VendorDetailPage = () => {
     }
   }
 
+  const additionalSpecializationNames = useMemo(
+    () =>
+      (vendor?.users?.user_specializations ?? [])
+        .map((us) => us.specializations?.name)
+        .filter((name): name is string => Boolean(name)),
+    [vendor],
+  );
+
   if (!id) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -291,6 +299,27 @@ const VendorDetailPage = () => {
               <InfoItem label="الدولة" value={vendor.country} />
               <InfoItem label="المدينة" value={vendor.city} />
               <InfoItem label="العنوان" value={vendor.address} />
+              <InfoItem
+                label="التخصص الرئيسي"
+                value={vendor.specializations?.name}
+              />
+              {additionalSpecializationNames.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">
+                    تخصصات إضافية
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {additionalSpecializationNames.map((name) => (
+                      <span
+                        key={name}
+                        className="px-2 py-1 text-xs bg-purple-50 text-purple-700 rounded"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {vendor.bank_account_approved && (
                 <>
                   <InfoItem label="البنك" value={vendor.bank_name} />

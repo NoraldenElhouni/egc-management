@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useContractorsQuery } from "../../../../hooks/useContractors";
+import { contractorWithSpecializations } from "../../../../types/extended.type";
 import StepsHeader from "../../../ui/StepsHeader";
 import MergeStepSelect from "./MergeStepSelect";
 import MergeStepCompare from "./MergeStepCompare";
@@ -22,6 +23,13 @@ const MergeContractorsWizard = () => {
   const [contractorBId, setContractorBId] = useState("");
   const [survivorId, setSurvivorId] = useState("");
   const [values, setValues] = useState<MergeValues | null>(null);
+  // Snapshotted once the user leaves step 1, so steps 2 and 3 keep rendering
+  // the same pair even after `handleMerged` invalidates the contractors
+  // query and the now-merged loser drops out of the live list.
+  const [lockedPair, setLockedPair] = useState<{
+    survivor: contractorWithSpecializations;
+    loser: contractorWithSpecializations;
+  } | null>(null);
 
   const safeContractors = useMemo(() => contractors ?? [], [contractors]);
 
@@ -61,14 +69,18 @@ const MergeContractorsWizard = () => {
     }
   }, [contractorA?.id, contractorB?.id]);
 
-  // Reset field choices whenever the survivor/loser pair changes.
+  // Keep the pending defaults in sync with the picked pair while still on
+  // step 1 — once the pair is locked in (step >= 2) this must stop reacting,
+  // otherwise a background contractors refetch (e.g. right after the merge
+  // succeeds) would null these back out from under steps 2/3.
   useEffect(() => {
+    if (lockedPair) return;
     if (survivor && loser) {
       setValues(defaultMergeValues(survivor, loser));
     } else {
       setValues(null);
     }
-  }, [survivor?.id, loser?.id]);
+  }, [survivor?.id, loser?.id, lockedPair]);
 
   // Called right when the merge succeeds — only refreshes the contractor
   // list cache. It must NOT reset the wizard's own state here: that state
@@ -83,6 +95,7 @@ const MergeContractorsWizard = () => {
     setContractorBId("");
     setSurvivorId("");
     setValues(null);
+    setLockedPair(null);
     setStep(1);
   }
 
@@ -125,19 +138,19 @@ const MergeContractorsWizard = () => {
           />
         )}
 
-        {step === 2 && survivor && loser && values && (
+        {step === 2 && lockedPair && values && (
           <MergeStepCompare
-            survivor={survivor}
-            loser={loser}
+            survivor={lockedPair.survivor}
+            loser={lockedPair.loser}
             values={values}
             onChange={setValues}
           />
         )}
 
-        {step === 3 && survivor && loser && values && (
+        {step === 3 && lockedPair && values && (
           <MergeStepConfirm
-            survivor={survivor}
-            loser={loser}
+            survivor={lockedPair.survivor}
+            loser={lockedPair.loser}
             values={values}
             onMerged={handleMerged}
             onStartOver={handleStartOver}
@@ -163,6 +176,9 @@ const MergeContractorsWizard = () => {
           <button
             onClick={() => {
               if (step === 1 && !canProceedStep1) return;
+              if (step === 1 && survivor && loser) {
+                setLockedPair({ survivor, loser });
+              }
               setStep((p) => Math.min(p + 1, 3));
             }}
             disabled={step === 1 && !canProceedStep1}
