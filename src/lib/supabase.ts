@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.17"
   }
   app: {
     Tables: {
@@ -680,6 +680,8 @@ export type Database = {
       payment_penalties: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -688,9 +690,12 @@ export type Database = {
           milestone_id: string | null
           payment_id: string
           reason: string
+          status: string | null
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -699,9 +704,12 @@ export type Database = {
           milestone_id?: string | null
           payment_id: string
           reason: string
+          status?: string | null
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -710,6 +718,7 @@ export type Database = {
           milestone_id?: string | null
           payment_id?: string
           reason?: string
+          status?: string | null
         }
         Relationships: [
           {
@@ -981,63 +990,93 @@ export type Database = {
       request_payments: {
         Row: {
           amount: number
+          bank_holder_name: string | null
+          bank_name: string | null
+          bank_number: string | null
           contract_id: string
           contractor_id: string
           created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
           decline_reason: string | null
           description: string | null
           expense_id: string | null
+          finance_entered: boolean
+          finance_entered_at: string | null
+          finance_entered_by: string | null
           grand_total: number | null
           id: string
           paid_at: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           penalty_amount: number
+          penalty_reason: string | null
+          prev_amount: number
           project_id: string
           requested_by: string
           reviewed_at: string | null
           reviewed_by: string | null
           serial_number: number | null
           status: Database["contracts"]["Enums"]["payment_status"]
+          updated_at: string | null
         }
         Insert: {
           amount?: number
+          bank_holder_name?: string | null
+          bank_name?: string | null
+          bank_number?: string | null
           contract_id: string
           contractor_id: string
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           decline_reason?: string | null
           description?: string | null
           expense_id?: string | null
+          finance_entered?: boolean
+          finance_entered_at?: string | null
+          finance_entered_by?: string | null
           grand_total?: number | null
           id?: string
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           penalty_amount?: number
+          penalty_reason?: string | null
+          prev_amount?: number
           project_id: string
           requested_by: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           serial_number?: number | null
           status?: Database["contracts"]["Enums"]["payment_status"]
+          updated_at?: string | null
         }
         Update: {
           amount?: number
+          bank_holder_name?: string | null
+          bank_name?: string | null
+          bank_number?: string | null
           contract_id?: string
           contractor_id?: string
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           decline_reason?: string | null
           description?: string | null
           expense_id?: string | null
+          finance_entered?: boolean
+          finance_entered_at?: string | null
+          finance_entered_by?: string | null
           grand_total?: number | null
           id?: string
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           penalty_amount?: number
+          penalty_reason?: string | null
+          prev_amount?: number
           project_id?: string
           requested_by?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           serial_number?: number | null
           status?: Database["contracts"]["Enums"]["payment_status"]
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -3917,6 +3956,9 @@ export type Database = {
           created_at: string
           created_by: string
           expense_id: string | null
+          finance_entered: boolean
+          finance_entered_at: string | null
+          finance_entered_by: string | null
           id: string
           note: string | null
           project_id: string
@@ -3943,6 +3985,9 @@ export type Database = {
           created_at?: string
           created_by: string
           expense_id?: string | null
+          finance_entered?: boolean
+          finance_entered_at?: string | null
+          finance_entered_by?: string | null
           id?: string
           note?: string | null
           project_id: string
@@ -3969,6 +4014,9 @@ export type Database = {
           created_at?: string
           created_by?: string
           expense_id?: string | null
+          finance_entered?: boolean
+          finance_entered_at?: string | null
+          finance_entered_by?: string | null
           id?: string
           note?: string | null
           project_id?: string
@@ -4019,6 +4067,13 @@ export type Database = {
             columns: ["expense_id"]
             isOneToOne: false
             referencedRelation: "project_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_finance_entered_by_fkey"
+            columns: ["finance_entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {

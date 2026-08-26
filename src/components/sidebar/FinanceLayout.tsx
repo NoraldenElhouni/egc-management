@@ -6,6 +6,8 @@ import {
   ChevronRight,
   ChevronLeft,
   HandCoins,
+  ShoppingCart,
+  FileSignature,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSidebar } from "../../contexts/SidebarContext";
@@ -56,6 +58,20 @@ const FinanceLayout = () => {
       icon: HandCoins,
       path: "/finance/contractor-payments",
       description: "مراجعة دفعات وجزاءات المقاولين",
+      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+    },
+    {
+      title: "الطلبات",
+      icon: ShoppingCart,
+      path: "/finance/orders",
+      description: "طلبات الشراء وربطها بالدفعات المالية",
+      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+    },
+    {
+      title: "العقود",
+      icon: FileSignature,
+      path: "/finance/contracts",
+      description: "طلبات دفع العقود وربطها بالدفعات المالية",
       role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
     },
   ];

@@ -10,11 +10,16 @@ import {
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 import { usePendingContractorPaymentsCount } from "../../hooks/finance/payments/usePendingContractorPaymentsCount";
+import { usePendingOrdersCount } from "../../hooks/finance/orders/usePendingOrdersCount";
+import { usePendingRequestPaymentsCount } from "../../hooks/finance/contracts/usePendingRequestPaymentsCount";
 
 const FinancePage = () => {
   const { user, loading } = useAuth();
   const { count: pendingContractorPaymentsCount } =
     usePendingContractorPaymentsCount();
+  const { count: pendingOrdersCount } = usePendingOrdersCount();
+  const { count: pendingRequestPaymentsCount } =
+    usePendingRequestPaymentsCount();
 
   const menuItems: MenuItem[] = [
     // {
@@ -92,6 +97,7 @@ const FinancePage = () => {
       path: "/finance/orders",
       description: "متابعة الطلبات",
       role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      badge: pendingOrdersCount === 0 ? undefined : pendingOrdersCount,
     },
 
     {
@@ -100,6 +106,10 @@ const FinancePage = () => {
       path: "/finance/contracts",
       description: "متابعة العقود",
       role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      badge:
+        pendingRequestPaymentsCount === 0
+          ? undefined
+          : pendingRequestPaymentsCount,
     },
   ];
 

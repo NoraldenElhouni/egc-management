@@ -3,7 +3,7 @@ import { fetchManagementApi } from "../../../lib/managementApiClient";
 import { ContractPayment } from "../../../types/contracts.type";
 import { formatDate } from "../../../utils/helpper";
 
-interface ContractorPaymentPdfItem {
+export interface ContractorPaymentPdfItem {
   payments_number: string;
   project_name: string;
   contractor_name: string;
@@ -24,7 +24,9 @@ interface ContractorPaymentPdfItem {
   whatsapp_number: string | null;
 }
 
-function toPdfItem(payment: ContractPayment): ContractorPaymentPdfItem {
+export function contractPaymentToPdfItem(
+  payment: ContractPayment,
+): ContractorPaymentPdfItem {
   return {
     payments_number: payment.payments_number,
     project_name: payment.project?.name ?? "",
@@ -64,11 +66,11 @@ export function useContractorPaymentsPdf() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function generate(payments: ContractPayment[]) {
+  async function generate(items: ContractorPaymentPdfItem[]) {
     setLoading(true);
     setError(null);
     try {
-      const payload = { payments: payments.map(toPdfItem) };
+      const payload = { payments: items };
 
       const res = await fetchManagementApi(
         "/api/v1/egc/management/contractor-payment/pdf",
