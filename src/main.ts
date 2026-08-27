@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
+import os from "node:os";
 import started from "electron-squirrel-startup";
 import { updateElectronApp } from "update-electron-app";
 
@@ -11,6 +12,10 @@ ipcMain.handle("get-app-version", () => app.getVersion());
 ipcMain.handle("open-external", (_event, url: string) =>
   shell.openExternal(url),
 );
+ipcMain.handle("get-system-info", () => ({
+  platform: process.platform,
+  osVersion: os.release(),
+}));
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();

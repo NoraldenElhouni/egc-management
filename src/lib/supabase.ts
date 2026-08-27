@@ -86,6 +86,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          app_id: string
+          app_version: string
+          build_number: string | null
+          created_at: string
+          device_id: string | null
+          device_model: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          locale: string | null
+          os_version: string | null
+          platform: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          app_version: string
+          build_number?: string | null
+          created_at?: string
+          device_id?: string | null
+          device_model?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          locale?: string | null
+          os_version?: string | null
+          platform: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          app_version?: string
+          build_number?: string | null
+          created_at?: string
+          device_id?: string | null
+          device_model?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          locale?: string | null
+          os_version?: string | null
+          platform?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_account_sums: {

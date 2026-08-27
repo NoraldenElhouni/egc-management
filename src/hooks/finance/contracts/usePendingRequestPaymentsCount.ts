@@ -16,7 +16,7 @@ export function usePendingRequestPaymentsCount() {
         .from("request_payments")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending")
-        .eq("finance", false);
+        .eq("finance_entered", false);
 
       if (cancelled) return;
 

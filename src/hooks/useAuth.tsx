@@ -8,6 +8,7 @@ import {
 } from "react";
 import { authService } from "../services/authService";
 import { UserData } from "../lib/userStorage";
+import { trackSession } from "../lib/sessionTracking";
 
 interface AuthContextType {
   user: UserData | null;
@@ -116,6 +117,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsRefreshing(false);
     }
   }, [isRefreshing]);
+
+  // Record/update this device's session while a user is logged in.
+  useEffect(() => {
+    if (!user) return;
+
+    trackSession(user.id);
+    const interval = setInterval(
+      () => trackSession(user.id),
+      5 * 60 * 1000,
+    );
+
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   const logout = useCallback(async () => {
     await authService.logout();
