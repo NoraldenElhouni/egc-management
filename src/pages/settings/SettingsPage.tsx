@@ -1,6 +1,7 @@
 import {
   BookText,
   Box,
+  KeyRound,
   Landmark,
   Logs,
   Map,
@@ -63,11 +64,18 @@ const SettingsPage = () => {
       description: "سجلات النظام",
       role: ["Admin"],
     },
+    {
+      label: "إعادة تعيين كلمة مرور مستخدم",
+      icon: KeyRound,
+      path: "/settings/password-reset",
+      description: "إعادة تعيين كلمة مرور أي مستخدم",
+      role: ["Admin", "Manager"],
+    },
   ];
 
   return (
     <MenuGrid
-      title="المالية"
+      title="الإعدادات"
       items={menuItems}
       userRole={user?.role}
       loading={loading}

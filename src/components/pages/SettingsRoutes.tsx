@@ -11,6 +11,7 @@ import ExpenseDetailsPage from "../../pages/settings/expenses/ExpenseDetailsPage
 import BanksPage from "../../pages/settings/banks/BanksPage";
 import UserSessionsPage from "../../pages/settings/sessions/UserSessionsPage";
 import LogsPage from "../../pages/settings/logs/LogsPage";
+import UserPasswordResetPage from "../../pages/settings/passwordReset/UserPasswordResetPage";
 
 export default function SettingsRoutes() {
   return (
@@ -34,6 +35,10 @@ export default function SettingsRoutes() {
         <Route path="banks" element={<BanksPage />} />
         <Route path="sessions" element={<UserSessionsPage />} />
         <Route path="logs" element={<LogsPage />} />
+        <Route
+          path="password-reset"
+          element={<UserPasswordResetPage />}
+        />
       </Route>
     </Routes>
   );

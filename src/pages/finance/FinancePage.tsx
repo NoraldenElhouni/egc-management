@@ -96,7 +96,7 @@ const FinancePage = () => {
       icon: PieChart,
       path: "/finance/pending-distribution",
       description: "سجل مدفوعات المصاريف غير الموزعة لكل مشروع",
-      role: ["Admin", "Manager"],
+      role: ["Manager"],
     },
   ];
 

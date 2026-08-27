@@ -99,6 +99,9 @@ const Header = () => {
     tracking: "مدفوعات المقاولين والطلبات والعقود",
     sessions: "جلسات المستخدمين",
     logs: "السجلات",
+    "pending-distribution": "مدفوعات قيد التوزيع",
+    "password-reset": "إعادة تعيين كلمة مرور مستخدم",
+    "change-password": "تغيير كلمة المرور",
   };
 
   return (
