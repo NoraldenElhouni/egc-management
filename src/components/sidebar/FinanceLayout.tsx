@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   CreditCard,
   ClipboardList,
+  PieChart,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSidebar } from "../../contexts/SidebarContext";
@@ -58,6 +59,13 @@ const FinanceLayout = () => {
       path: "/finance/tracking",
       description: "مدفوعات المقاولين، الطلبات، والعقود",
       role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+    },
+    {
+      title: "مدفوعات قيد التوزيع",
+      icon: PieChart,
+      path: "/finance/pending-distribution",
+      description: "سجل مدفوعات المصاريف غير الموزعة لكل مشروع",
+      role: ["Admin", "Manager"],
     },
   ];
   const visibleItems = menuItems.filter((item) => {

@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   CreditCard,
+  PieChart,
   Vault,
 } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
@@ -89,6 +90,13 @@ const FinancePage = () => {
       description: "مدفوعات المقاولين، الطلبات، والعقود",
       role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
       badge: trackingBadgeCount === 0 ? undefined : trackingBadgeCount,
+    },
+    {
+      label: "مدفوعات قيد التوزيع",
+      icon: PieChart,
+      path: "/finance/pending-distribution",
+      description: "سجل مدفوعات المصاريف غير الموزعة لكل مشروع",
+      role: ["Admin", "Manager"],
     },
   ];
 
