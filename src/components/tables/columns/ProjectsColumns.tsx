@@ -273,6 +273,21 @@ export const createProjectsColumns = (
       ].includes(key);
     });
   }
+  if (version === "orders") {
+    // Compact view + any shown count columns, for the shop/orders project
+    // list only.
+    return allColumns.filter((col) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const key = col.id || (col as any).accessorKey;
+      return [
+        "select",
+        "serial_number",
+        "name",
+        "status",
+        ...shownCountColumnIds,
+      ].includes(key);
+    });
+  }
   if (version === "finance") {
     // Show only essential columns for finance view
     return allColumns.filter((col) => {

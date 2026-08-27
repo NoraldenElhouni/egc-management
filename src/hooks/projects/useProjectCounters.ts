@@ -114,6 +114,84 @@ export function useOpenAccountNegativePeriods() {
   return { rows, loading, error, refetch: fetchRows };
 }
 
+/** Total count of negative-balance counters (all history) per project, for the summary page. */
+export function useProjectNegativePeriodCountsByProject() {
+  const [countsByProject, setCountsByProject] = useState<
+    Record<string, number>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  const fetchCounts = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("app")
+      .from("project_negative_periods")
+      .select("project_id");
+
+    if (error) {
+      console.error("error fetching project negative period counts", error);
+      setError(error);
+    } else {
+      const counts = (data ?? []).reduce<Record<string, number>>(
+        (acc, row) => {
+          if (row.project_id) acc[row.project_id] = (acc[row.project_id] ?? 0) + 1;
+          return acc;
+        },
+        {},
+      );
+      setCountsByProject(counts);
+      setError(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  return { countsByProject, loading, error, refetch: fetchCounts };
+}
+
+/** Total count of account negative-balance counters (all history) per project, for the summary page. */
+export function useAccountNegativePeriodCountsByProject() {
+  const [countsByProject, setCountsByProject] = useState<
+    Record<string, number>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  const fetchCounts = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("app")
+      .from("account_negative_periods")
+      .select("project_id");
+
+    if (error) {
+      console.error("error fetching account negative period counts", error);
+      setError(error);
+    } else {
+      const counts = (data ?? []).reduce<Record<string, number>>(
+        (acc, row) => {
+          if (row.project_id) acc[row.project_id] = (acc[row.project_id] ?? 0) + 1;
+          return acc;
+        },
+        {},
+      );
+      setCountsByProject(counts);
+      setError(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  return { countsByProject, loading, error, refetch: fetchCounts };
+}
+
 /** Full history of negative-balance counters (periods) for a single project's account. */
 export function useAccountNegativePeriods(projectId: string) {
   const [periods, setPeriods] = useState<AccountNegativePeriod[]>([]);

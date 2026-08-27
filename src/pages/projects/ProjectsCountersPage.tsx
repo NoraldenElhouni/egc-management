@@ -2,8 +2,10 @@ import { useMemo } from "react";
 import { AlertTriangle, CalendarClock, FolderKanban, Info } from "lucide-react";
 import { useProjects } from "../../hooks/useProjects";
 import {
+  useAccountNegativePeriodCountsByProject,
   useOpenAccountNegativePeriods,
   useOpenProjectNegativePeriods,
+  useProjectNegativePeriodCountsByProject,
 } from "../../hooks/projects/useProjectCounters";
 import {
   projectsCountersColumns,
@@ -27,6 +29,10 @@ const ProjectsCountersPage = () => {
     error: accountRowsError,
     refetch: refetchAccountRows,
   } = useOpenAccountNegativePeriods();
+  const { countsByProject: financeCountersCountByProject } =
+    useProjectNegativePeriodCountsByProject();
+  const { countsByProject: accountCountersCountByProject } =
+    useAccountNegativePeriodCountsByProject();
 
   const minusByProjectId = useMemo(() => {
     const map = new Map<string, (typeof rows)[number]>();
@@ -55,8 +61,16 @@ const ProjectsCountersPage = () => {
         serialNumber: project.serial_number,
         minusRow: minusByProjectId.get(project.id),
         accountMinusRows: accountMinusByProjectId.get(project.id) ?? [],
+        financeCountersCount: financeCountersCountByProject[project.id] ?? 0,
+        accountCountersCount: accountCountersCountByProject[project.id] ?? 0,
       })),
-    [projects, minusByProjectId, accountMinusByProjectId],
+    [
+      projects,
+      minusByProjectId,
+      accountMinusByProjectId,
+      financeCountersCountByProject,
+      accountCountersCountByProject,
+    ],
   );
 
   if (projectsLoading || rowsLoading || accountRowsLoading)

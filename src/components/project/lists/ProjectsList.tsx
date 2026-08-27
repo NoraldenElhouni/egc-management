@@ -5,6 +5,7 @@ import GenericTable from "../../tables/table";
 import OverviewStatus from "../../ui/OverviewStatus";
 import { formatCurrency } from "../../../utils/helpper";
 import { useContractCountsByProject } from "../../../hooks/operations/contracts/useContracts";
+import { useOrderCountsByProject } from "../../../hooks/shop/orders/useOrders";
 
 interface ProjectsListProps {
   basePath?: string;
@@ -19,6 +20,9 @@ const ProjectsList = ({
 
   const { countsByProject: contractsCountByProject } =
     useContractCountsByProject(version === "contracts");
+  const { countsByProject: ordersCountByProject } = useOrderCountsByProject(
+    version === "orders",
+  );
 
   const columns = useMemo(
     () =>
@@ -29,8 +33,14 @@ const ProjectsList = ({
           countMap: contractsCountByProject,
           show: version === "contracts",
         },
+        {
+          id: "orders_count",
+          header: "عدد الطلبات",
+          countMap: ordersCountByProject,
+          show: version === "orders",
+        },
       ]),
-    [basePath, version, contractsCountByProject],
+    [basePath, version, contractsCountByProject, ordersCountByProject],
   );
 
   // -----------------------------

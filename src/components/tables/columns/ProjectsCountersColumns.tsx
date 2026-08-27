@@ -13,6 +13,8 @@ export interface ProjectCounterSummaryRow {
   serialNumber: number | null;
   minusRow?: NegativePeriod;
   accountMinusRows: AccountNegativePeriod[];
+  financeCountersCount: number;
+  accountCountersCount: number;
 }
 
 export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
@@ -87,15 +89,19 @@ export const projectsCountersColumns: ColumnDef<ProjectCounterSummaryRow>[] = [
     },
   },
   {
-    id: "actions",
-    header: "",
+    id: "finance_counters_count",
+    header: "عدد عدادات المالية",
+    accessorFn: (row) => row.financeCountersCount,
     cell: ({ row }) => (
-      <Link
-        to={`/projects/${row.original.id}/counters`}
-        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-      >
-        عرض العدادات
-      </Link>
+      <span className="font-medium">{row.original.financeCountersCount}</span>
+    ),
+  },
+  {
+    id: "account_counters_count",
+    header: "عدد عدادات الحساب",
+    accessorFn: (row) => row.accountCountersCount,
+    cell: ({ row }) => (
+      <span className="font-medium">{row.original.accountCountersCount}</span>
     ),
   },
 ];
