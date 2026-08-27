@@ -1,4 +1,4 @@
-import { BookText, Box, Landmark, Map, Users } from "lucide-react";
+import { BookText, Box, Landmark, Map, Monitor, Users } from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -40,6 +40,13 @@ const SettingsPage = () => {
       path: "/settings/banks",
       description: "إدارة قائمة البنوك",
       role: ["Admin", "Manager", "Bookkeeper"],
+    },
+    {
+      label: "جلسات المستخدمين",
+      icon: Monitor,
+      path: "/settings/sessions",
+      description: "متابعة الأجهزة والتطبيقات المستخدمة",
+      role: ["Admin"],
     },
   ];
 

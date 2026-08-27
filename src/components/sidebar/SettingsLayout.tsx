@@ -8,6 +8,7 @@ import {
   BookText,
   Map,
   Landmark,
+  Monitor,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
@@ -51,6 +52,13 @@ const SettingsLayout = () => {
       path: "/settings/banks",
       description: "إدارة قائمة البنوك",
       role: ["Admin", "Manager", "Bookkeeper"],
+    },
+    {
+      title: "جلسات المستخدمين",
+      icon: Monitor,
+      path: "/settings/sessions",
+      description: "متابعة الأجهزة والتطبيقات المستخدمة",
+      role: ["Admin"],
     },
   ];
 
