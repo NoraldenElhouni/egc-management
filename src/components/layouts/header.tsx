@@ -96,6 +96,9 @@ const Header = () => {
     boqreview: "مراجعة جدول الكميات",
     zones: "المناطق",
     "contractor-payments": "مدفوعات المقاولين",
+    tracking: "مدفوعات المقاولين والطلبات والعقود",
+    sessions: "جلسات المستخدمين",
+    logs: "السجلات",
   };
 
   return (
