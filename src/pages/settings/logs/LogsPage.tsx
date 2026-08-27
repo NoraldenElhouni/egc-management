@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useLogs } from "../../hooks/logs/useLogs";
-import { LogsColumns } from "../../components/tables/columns/LogsColumns";
-import GenericTable from "../../components/tables/table";
-import LoadingPage from "../../components/ui/LoadingPage";
-import ErrorPage from "../../components/ui/errorPage";
-import Button from "../../components/ui/Button";
+import { useLogs } from "../../../hooks/logs/useLogs";
+import { LogsColumns } from "../../../components/tables/columns/LogsColumns";
+import GenericTable from "../../../components/tables/table";
+import LoadingPage from "../../../components/ui/LoadingPage";
+import ErrorPage from "../../../components/ui/errorPage";
+import Button from "../../../components/ui/Button";
 
 const LIMIT = 50;
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];

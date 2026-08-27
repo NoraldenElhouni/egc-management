@@ -9,7 +9,6 @@ import {
   Building,
   PackageOpen,
   Store,
-  Logs,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -70,12 +69,6 @@ const MainMenu = () => {
       icon: Settings,
       path: "/settings",
       role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
-    },
-    {
-      label: "السجلات",
-      icon: Logs,
-      path: "/logs",
-      role: ["Admin"],
     },
   ];
 

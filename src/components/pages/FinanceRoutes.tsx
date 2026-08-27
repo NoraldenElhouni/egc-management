@@ -12,6 +12,7 @@ import NotPiadExpensePage from "../../pages/finance/payments/NotPiadExpensePage"
 import ContractorPaymentsPage from "../../pages/finance/payments/ContractorPaymentsPage";
 import OrdersPage from "../../pages/finance/orders/OrdersPage";
 import ContractsPage from "../../pages/finance/contracts/ContractsPage";
+import FinanceTrackingPage from "../../pages/finance/FinanceTrackingPage";
 
 const FinanceRoutes = () => {
   return (
@@ -40,6 +41,7 @@ const FinanceRoutes = () => {
           path="contractor-payments"
           element={<ContractorPaymentsPage />}
         />
+        <Route path="tracking" element={<FinanceTrackingPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="contracts" element={<ContractsPage />} />
       </Route>

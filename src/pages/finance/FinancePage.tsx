@@ -1,10 +1,8 @@
 import {
   BookOpen,
   Building2,
+  ClipboardList,
   CreditCard,
-  FileSignature,
-  HandCoins,
-  ShoppingCart,
   Vault,
 } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
@@ -20,6 +18,11 @@ const FinancePage = () => {
   const { count: pendingOrdersCount } = usePendingOrdersCount();
   const { count: pendingRequestPaymentsCount } =
     usePendingRequestPaymentsCount();
+
+  const trackingBadgeCount =
+    pendingContractorPaymentsCount +
+    pendingOrdersCount +
+    pendingRequestPaymentsCount;
 
   const menuItems: MenuItem[] = [
     // {
@@ -80,36 +83,12 @@ const FinancePage = () => {
       role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
     },
     {
-      label: "مدفوعات المقاولين",
-      icon: HandCoins,
-      path: "/finance/contractor-payments",
-      description: "مراجعة دفعات وجزاءات المقاولين",
+      label: "مدفوعات المقاولين والطلبات والعقود",
+      icon: ClipboardList,
+      path: "/finance/tracking",
+      description: "مدفوعات المقاولين، الطلبات، والعقود",
       role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
-      badge:
-        pendingContractorPaymentsCount === 0
-          ? undefined
-          : pendingContractorPaymentsCount,
-    },
-
-    {
-      label: "الطلبات",
-      icon: ShoppingCart,
-      path: "/finance/orders",
-      description: "متابعة الطلبات",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
-      badge: pendingOrdersCount === 0 ? undefined : pendingOrdersCount,
-    },
-
-    {
-      label: "العقود",
-      icon: FileSignature,
-      path: "/finance/contracts",
-      description: "متابعة العقود",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
-      badge:
-        pendingRequestPaymentsCount === 0
-          ? undefined
-          : pendingRequestPaymentsCount,
+      badge: trackingBadgeCount === 0 ? undefined : trackingBadgeCount,
     },
   ];
 

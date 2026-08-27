@@ -5,9 +5,8 @@ import {
   Building2,
   ChevronRight,
   ChevronLeft,
-  HandCoins,
-  ShoppingCart,
-  FileSignature,
+  CreditCard,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSidebar } from "../../contexts/SidebarContext";
@@ -39,13 +38,13 @@ const FinanceLayout = () => {
       description: "إدارة الخزينة",
       role: ["Admin", "Finance", "Treasurer"],
     },
-    // {
-    //   title: "المدفوعات",
-    //   icon: CreditCard,
-    //   path: "/finance/payments",
-    //   description: "متابعة المدفوعات",
-    //   role: ["Admin", "Finance", "Bookkeeper"],
-    // },
+    {
+      title: "المدفوعات",
+      icon: CreditCard,
+      path: "/finance/payments",
+      description: "متابعة المدفوعات",
+      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+    },
     {
       title: "الشركة",
       icon: Building2,
@@ -54,24 +53,10 @@ const FinanceLayout = () => {
       role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
     },
     {
-      title: "مدفوعات المقاولين",
-      icon: HandCoins,
-      path: "/finance/contractor-payments",
-      description: "مراجعة دفعات وجزاءات المقاولين",
-      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
-    },
-    {
-      title: "الطلبات",
-      icon: ShoppingCart,
-      path: "/finance/orders",
-      description: "طلبات الشراء وربطها بالدفعات المالية",
-      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
-    },
-    {
-      title: "العقود",
-      icon: FileSignature,
-      path: "/finance/contracts",
-      description: "طلبات دفع العقود وربطها بالدفعات المالية",
+      title: "مدفوعات المقاولين والطلبات والعقود",
+      icon: ClipboardList,
+      path: "/finance/tracking",
+      description: "مدفوعات المقاولين، الطلبات، والعقود",
       role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
     },
   ];

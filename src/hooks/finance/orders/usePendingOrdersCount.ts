@@ -15,7 +15,7 @@ export function usePendingOrdersCount() {
         .from("shop_orders")
         .select("id", { count: "exact", head: true })
         .in("status", ["approved", "arrived"])
-        .eq("finance", false);
+        .eq("finance_entered", false);
       if (cancelled) return;
 
       if (error) console.error(error);

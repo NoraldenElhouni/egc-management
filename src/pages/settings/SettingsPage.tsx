@@ -1,4 +1,12 @@
-import { BookText, Box, Landmark, Map, Monitor, Users } from "lucide-react";
+import {
+  BookText,
+  Box,
+  Landmark,
+  Logs,
+  Map,
+  Monitor,
+  Users,
+} from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -46,6 +54,13 @@ const SettingsPage = () => {
       icon: Monitor,
       path: "/settings/sessions",
       description: "متابعة الأجهزة والتطبيقات المستخدمة",
+      role: ["Admin"],
+    },
+    {
+      label: "السجلات",
+      icon: Logs,
+      path: "/settings/logs",
+      description: "سجلات النظام",
       role: ["Admin"],
     },
   ];
