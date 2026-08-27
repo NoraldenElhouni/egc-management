@@ -30,6 +30,82 @@ export function useEmployees() {
   return { employees, loading, error };
 }
 
+export interface EmployeeSummary {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string;
+}
+
+/** Employees having a given specialization, for the specialization detail page. */
+export function useEmployeesBySpecialization(
+  specializationId: string | undefined,
+) {
+  const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    if (!specializationId) return;
+    async function fetchEmployees() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, first_name, last_name, email")
+        .eq("specializations_id", specializationId);
+
+      if (error) {
+        console.error("error fetching employees by specialization", error);
+        setError(error);
+      } else {
+        setEmployees(data ?? []);
+      }
+      setLoading(false);
+    }
+    fetchEmployees();
+  }, [specializationId]);
+
+  return { employees, loading, error };
+}
+
+/** Employee count per specialization, for the specializations settings page. */
+export function useEmployeeCountsBySpecialization() {
+  const [countsBySpecialization, setCountsBySpecialization] = useState<
+    Record<string, number>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
+
+  useEffect(() => {
+    async function fetchCounts() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("employees")
+        .select("specializations_id");
+
+      if (error) {
+        console.error("error fetching employee specialization counts", error);
+        setError(error);
+      } else {
+        const counts = (data ?? []).reduce<Record<string, number>>(
+          (acc, row) => {
+            if (row.specializations_id)
+              acc[row.specializations_id] =
+                (acc[row.specializations_id] ?? 0) + 1;
+            return acc;
+          },
+          {},
+        );
+        setCountsBySpecialization(counts);
+      }
+      setLoading(false);
+    }
+    fetchCounts();
+  }, []);
+
+  return { countsBySpecialization, loading, error };
+}
+
 export function useEmployee(id: string) {
   const [employee, setEmployee] = useState<FullEmployee | null>(null);
   const [loading, setLoading] = useState(true);

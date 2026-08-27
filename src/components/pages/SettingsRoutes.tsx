@@ -6,6 +6,7 @@ import NewRolePage from "../../pages/settings/roles/NewRolePage";
 import RolesDetailsPage from "../../pages/settings/roles/RolesDetailsPage";
 import SettingsExpensesPage from "../../pages/settings/expenses/SettingsExpensesPage";
 import SettingsSpecializationsPage from "../../pages/settings/specializations/SettingsSpecializationsPage";
+import SpecializationDetailPage from "../../pages/settings/specializations/SpecializationDetailPage";
 import MapsPage from "../../pages/settings/maps/MapsPage";
 import ExpenseDetailsPage from "../../pages/settings/expenses/ExpenseDetailsPage";
 import BanksPage from "../../pages/settings/banks/BanksPage";
@@ -29,6 +30,10 @@ export default function SettingsRoutes() {
         <Route
           path="specializations"
           element={<SettingsSpecializationsPage />}
+        />
+        <Route
+          path="specializations/:id"
+          element={<SpecializationDetailPage />}
         />
 
         <Route path="maps" element={<MapsPage />} />

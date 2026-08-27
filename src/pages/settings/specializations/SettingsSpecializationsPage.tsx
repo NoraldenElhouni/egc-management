@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Tabs from "../../../components/ui/Tabs";
 import { useUtils } from "../../../hooks/useUtils";
+import { useVendorsQuery } from "../../../hooks/useVendors";
+import { useContractorsQuery } from "../../../hooks/useContractors";
+import { useEmployeeCountsBySpecialization } from "../../../hooks/useEmployees";
+import { countBySpecialization } from "../../../utils/specializations";
 import { supabase } from "../../../lib/supabaseClient";
 import Button from "../../../components/ui/Button";
 import {
@@ -61,11 +66,15 @@ function SpecTab({
   roleId,
   initialItems,
   roleType,
+  counts,
+  countLabel,
 }: {
   title: string;
   roleId: string;
   initialItems: Specialization[];
   roleType: keyof typeof roleColors;
+  counts: Record<string, number>;
+  countLabel: string;
 }) {
   const [items, setItems] = useState<Specialization[]>(initialItems);
   const [name, setName] = useState("");
@@ -229,23 +238,33 @@ function SpecTab({
             </p>
           </div>
         ) : (
-          items.map((spec) => (
-            <div
-              key={spec.id}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-8 h-8 ${colors.light} rounded-md flex items-center justify-center`}
-                >
-                  <Icon className={`w-4 h-4 ${colors.text}`} />
+          items.map((spec) => {
+            const count = counts[spec.id] ?? 0;
+            return (
+              <Link
+                key={spec.id}
+                to={`/settings/specializations/${spec.id}`}
+                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 ${colors.light} rounded-md flex items-center justify-center`}
+                  >
+                    <Icon className={`w-4 h-4 ${colors.text}`} />
+                  </div>
+                  <span className="font-medium text-gray-900 text-sm">
+                    {spec.name}
+                  </span>
                 </div>
-                <span className="font-medium text-gray-900 text-sm">
-                  {spec.name}
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.light} ${colors.text}`}
+                  title={`${count} ${countLabel}`}
+                >
+                  {count}
                 </span>
-              </div>
-            </div>
-          ))
+              </Link>
+            );
+          })
         )}
       </div>
     </div>
@@ -254,6 +273,19 @@ function SpecTab({
 
 const SettingsSpecializationsPage = () => {
   const { specializations } = useUtils();
+  const { data: vendorsData } = useVendorsQuery();
+  const { data: contractorsData } = useContractorsQuery();
+  const { countsBySpecialization: employeeCounts } =
+    useEmployeeCountsBySpecialization();
+
+  const vendorCounts = useMemo(
+    () => countBySpecialization(vendorsData ?? []),
+    [vendorsData],
+  );
+  const contractorCounts = useMemo(
+    () => countBySpecialization(contractorsData ?? []),
+    [contractorsData],
+  );
 
   const engineers = useMemo(
     () => specializations.filter((s) => s.role_id === roleIds.engineers),
@@ -278,6 +310,8 @@ const SettingsSpecializationsPage = () => {
           roleId={roleIds.engineers}
           initialItems={engineers}
           roleType="engineers"
+          counts={employeeCounts}
+          countLabel="مهندس"
         />
       ),
     },
@@ -290,6 +324,8 @@ const SettingsSpecializationsPage = () => {
           roleId={roleIds.contractors}
           initialItems={contractors}
           roleType="contractors"
+          counts={contractorCounts}
+          countLabel="مقاول"
         />
       ),
     },
@@ -302,6 +338,8 @@ const SettingsSpecializationsPage = () => {
           roleId={roleIds.vendors}
           initialItems={vendors}
           roleType="vendors"
+          counts={vendorCounts}
+          countLabel="مورد"
         />
       ),
     },
