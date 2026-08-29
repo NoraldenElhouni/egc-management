@@ -13,6 +13,7 @@ import { useClients } from "../../../hooks/useClients";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { useNavigate } from "react-router-dom";
 import { LocationPicker } from "../../ui/inputs/LocationPicker";
+import { DateField } from "../../ui/inputs/DateField";
 
 const NewProjectForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
@@ -111,6 +112,13 @@ const NewProjectForm: React.FC = () => {
           step="1"
           register={register("percentage", { valueAsNumber: true })}
           error={errors.percentage}
+        />
+
+        <DateField
+          id="start_date"
+          label="تاريخ البدء"
+          register={register("start_date")}
+          error={errors.start_date}
         />
 
         <LocationPicker

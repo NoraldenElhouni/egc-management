@@ -26,6 +26,7 @@ export const ProjectSchema = z.object({
     .refine((v) => v == null || (v >= -180 && v <= 180), {
       message: "longitude must be between -180 and 180",
     }),
+  start_date: z.date().nullable().optional(),
 });
 
 export type ProjectFormValues = z.infer<typeof ProjectSchema>;

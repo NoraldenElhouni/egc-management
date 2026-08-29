@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   app: {
     Tables: {
@@ -3489,6 +3489,8 @@ export type Database = {
           default_bank_percentage: number
           default_company_percentage: number
           description: string | null
+          end_date: string | null
+          estimated_due_date: string | null
           expense_counter: number
           id: string
           income_counter: number
@@ -3499,6 +3501,7 @@ export type Database = {
           name: string
           refund_counter: number
           serial_number: number | null
+          start_date: string | null
           status: Database["public"]["Enums"]["project_status_enum"]
         }
         Insert: {
@@ -3509,6 +3512,8 @@ export type Database = {
           default_bank_percentage?: number
           default_company_percentage?: number
           description?: string | null
+          end_date?: string | null
+          estimated_due_date?: string | null
           expense_counter?: number
           id?: string
           income_counter?: number
@@ -3519,6 +3524,7 @@ export type Database = {
           name: string
           refund_counter?: number
           serial_number?: number | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["project_status_enum"]
         }
         Update: {
@@ -3529,6 +3535,8 @@ export type Database = {
           default_bank_percentage?: number
           default_company_percentage?: number
           description?: string | null
+          end_date?: string | null
+          estimated_due_date?: string | null
           expense_counter?: number
           id?: string
           income_counter?: number
@@ -3539,6 +3547,7 @@ export type Database = {
           name?: string
           refund_counter?: number
           serial_number?: number | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["project_status_enum"]
         }
         Relationships: [

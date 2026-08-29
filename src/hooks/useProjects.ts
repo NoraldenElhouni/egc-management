@@ -55,6 +55,10 @@ export function useProjects() {
       status: "active",
       serial_number: companyData?.projects_counter ?? null,
       code: CODE,
+      created_at: new Date().toISOString(),
+      start_date: newProject.start_date?.toISOString() ?? null,
+      latitude: newProject.latitude ?? null,
+      longitude: newProject.longitude ?? null,
     };
 
     const { data, error } = await supabase
