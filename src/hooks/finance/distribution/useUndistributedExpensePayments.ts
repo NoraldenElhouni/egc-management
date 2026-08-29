@@ -55,7 +55,7 @@ export interface UndistributedExpensePaymentRow {
   createdAt: string;
 }
 
-export function useUndistributedExpensePayments() {
+export function useUndistributedExpensePayments(projectId?: string) {
   const [rows, setRows] = useState<UndistributedExpensePaymentRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
@@ -65,7 +65,7 @@ export function useUndistributedExpensePayments() {
     setError(null);
 
     try {
-      const { data: logsData, error: logsError } = await supabase
+      let logsQuery = supabase
         .from("project_percentage_logs")
         .select(
           "id, amount, percentage, project_id, payment_id, expense_id, created_at",
@@ -73,12 +73,22 @@ export function useUndistributedExpensePayments() {
         .eq("type", "expense")
         .eq("distributed", false)
         .gt("percentage", 0)
-        .not(
+        .not("payment_id", "is", null);
+
+      if (projectId) {
+        logsQuery = logsQuery.eq("project_id", projectId);
+      } else {
+        logsQuery = logsQuery.not(
           "project_id",
           "in",
           `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da,f2d38514-32e0-4eeb-b6cd-fcdbed6a93ab)`,
-        )
-        .order("created_at", { ascending: false });
+        );
+      }
+
+      const { data: logsData, error: logsError } = await logsQuery.order(
+        "created_at",
+        { ascending: false },
+      );
 
       if (logsError) throw logsError;
 
@@ -191,7 +201,7 @@ export function useUndistributedExpensePayments() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     fetchData();

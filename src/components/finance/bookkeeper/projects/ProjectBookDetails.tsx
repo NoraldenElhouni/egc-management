@@ -6,6 +6,7 @@ import BookProjectExpensePercentageTab from "../tabs/BookProjectExpensePercentag
 import BookProjectExpenseTab from "../tabs/BookProjectExpenseTab";
 import BookProjectMapsTab from "../tabs/BookProjectMapsTab";
 import BookRefundTab from "../tabs/BookRefundTab";
+import BookProjectUndistributedExpenseTab from "../tabs/BookProjectUndistributedExpenseTab";
 
 const ProjectBookDetails = ({ id }: { id: string }) => {
   const { project, loading, error, addExpense, addExpensePercentage } =
@@ -50,6 +51,11 @@ const ProjectBookDetails = ({ id }: { id: string }) => {
           addExpensePercentage={addExpensePercentage}
         />
       ),
+    },
+    {
+      id: "undistributed",
+      label: "غير موزع",
+      content: <BookProjectUndistributedExpenseTab projectId={id} />,
     },
   ];
 
