@@ -60,6 +60,13 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
         .reduce((acc, i) => acc + (i.amount ?? 0), 0),
     );
 
+    const projectMaps = (project.project_maps ?? [])
+      .filter((map) => map.amount != null && map.date != null)
+      .sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0));
+    const totalMaps = r(
+      projectMaps.reduce((acc, map) => acc + Number(map.amount ?? 0), 0),
+    );
+
     const remaingAmount = r(
       lydBalances.reduce((acc, a) => acc + (a.balance ?? 0), 0),
     );
@@ -79,6 +86,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       finance_invoice: {
         total_metrial: totalMetrials,
         total_labor: totalLabors,
+        total_maps: totalMaps,
         total_not_paid: totalNotPaid,
         total_refund: totalRefund,
         total_company_percentage: totalCompanyPercentage,
@@ -107,6 +115,13 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
           total_price: r(e.total_amount ?? 0),
           date: e.expense_date,
         })),
+
+      maps: projectMaps.map((map) => ({
+        name: map.description ?? "",
+        serial_number: map.serial_number ?? 0,
+        total_price: r(Number(map.amount ?? 0)),
+        date: map.date,
+      })),
 
       refund: project.project_refund
         .filter((rf) => rf.currency === "LYD")
