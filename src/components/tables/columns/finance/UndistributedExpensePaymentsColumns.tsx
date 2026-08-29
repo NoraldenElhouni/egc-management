@@ -87,7 +87,7 @@ export const undistributedExpensePaymentsColumns: ColumnDef<UndistributedExpense
       },
     },
     {
-      accessorKey: "paymentDate",
+      accessorKey: "expenseDate",
       header: "تاريخ الدفعة",
       filterFn: "dateRangeFilter",
       cell: ({ getValue }) => {

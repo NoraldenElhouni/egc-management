@@ -126,9 +126,21 @@ const UndistributedExpensePaymentsPage = () => {
     if (selectedProjects.length === 0) return;
     await generatePrint(
       selectedProjects.map((g) => ({
-        projectId: g.projectId,
-        projectName: g.projectName,
-        projectSerial: g.projectSerial,
+        project_name: g.projectName,
+        expenses: g.rows.map((row) => ({
+          serial_number:
+            row.expenseSerial != null
+              ? String(row.expenseSerial)
+              : row.paymentSerial != null
+                ? String(row.paymentSerial)
+                : "",
+          description: row.expenseDescription ?? "",
+          amount: row.paymentAmount ?? 0,
+          date: (row.expenseDate ?? row.paymentDate ?? row.createdAt).slice(
+            0,
+            10,
+          ),
+        })),
       })),
     );
   }
