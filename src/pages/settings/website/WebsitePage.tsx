@@ -1,4 +1,4 @@
-import { Tags, GalleryHorizontal, Building2 } from "lucide-react";
+import { Tags, GalleryHorizontal, Building2, Users } from "lucide-react";
 import MenuGrid from "../../../components/ui/MenuGrid";
 
 const WebsitePage = () => {
@@ -20,6 +20,12 @@ const WebsitePage = () => {
       icon: Building2,
       path: "/settings/website/projects",
       description: "إدارة المشاريع وصورها المعروضة في الموقع",
+    },
+    {
+      label: "الفريق",
+      icon: Users,
+      path: "/settings/website/team",
+      description: "إدارة أعضاء الفريق المعروضين في الموقع",
     },
   ];
 

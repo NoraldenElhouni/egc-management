@@ -20,6 +20,7 @@ import WebsiteProjectsPage from "../../pages/settings/website/WebsiteProjectsPag
 import WebsiteNewProjectPage from "../../pages/settings/website/WebsiteNewProjectPage";
 import WebsiteProjectDetailsPage from "../../pages/settings/website/WebsiteProjectDetailsPage";
 import WebsiteEditProjectPage from "../../pages/settings/website/WebsiteEditProjectPage";
+import WebsiteTeamPage from "../../pages/settings/website/WebsiteTeamPage";
 
 export default function SettingsRoutes() {
   return (
@@ -67,6 +68,7 @@ export default function SettingsRoutes() {
           path="website/projects/:id/edit"
           element={<WebsiteEditProjectPage />}
         />
+        <Route path="website/team" element={<WebsiteTeamPage />} />
       </Route>
     </Routes>
   );
