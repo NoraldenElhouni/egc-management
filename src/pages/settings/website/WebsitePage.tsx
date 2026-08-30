@@ -10,10 +10,10 @@ const WebsitePage = () => {
       description: "إدارة تصنيفات المشاريع المعروضة في الموقع",
     },
     {
-      label: "الشرائح الرئيسية",
+      label: "الصور الرئيسية",
       icon: GalleryHorizontal,
       path: "/settings/website/hero-slides",
-      description: "إدارة صور شرائح الصفحة الرئيسية للموقع",
+      description: "إدارة صور الصفحة الرئيسية للموقع",
     },
     {
       label: "المشاريع",
