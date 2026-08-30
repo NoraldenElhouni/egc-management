@@ -1,6 +1,7 @@
 import {
   BookText,
   Box,
+  Globe,
   KeyRound,
   Landmark,
   Logs,
@@ -69,6 +70,13 @@ const SettingsPage = () => {
       icon: KeyRound,
       path: "/settings/password-reset",
       description: "إعادة تعيين كلمة مرور أي مستخدم",
+      role: ["Admin", "Manager"],
+    },
+    {
+      label: "إعدادات الموقع",
+      icon: Globe,
+      path: "/settings/website",
+      description: "إعدادات الموقع",
       role: ["Admin", "Manager"],
     },
   ];

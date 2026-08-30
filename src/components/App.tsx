@@ -6,7 +6,6 @@ import LoginForm from "./auth/LoginForm";
 import MainMenu from "../pages/MainMenu";
 import ProfilePage from "../pages/profile/profile";
 import MainMenuLayout from "./layouts/MainMenuLayout";
-import WebsitePage from "../pages/website/WebsitePage";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 import RequirePasswordChange from "./auth/RequirePasswordChange";
 import ChangePasswordPage from "./auth/ChangePasswordPage";
@@ -125,8 +124,6 @@ const AppRouter = () => {
             <Route path="/shops/*" element={<ShopsRoutes />} />
 
             <Route path="/company/*" element={<CompanyRoutes />} />
-
-            <Route path="/website" element={<WebsitePage />} />
           </Route>
         </Route>
       )}
