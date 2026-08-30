@@ -5317,6 +5317,194 @@ export type Database = {
       [_ in never]: never
     }
   }
+  website: {
+    Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name_ar: string
+          name_en: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_ar: string
+          name_en: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_ar?: string
+          name_en?: string
+        }
+        Relationships: []
+      }
+      hero_slides: {
+        Row: {
+          alt_ar: string
+          alt_en: string
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          storage_path: string
+        }
+        Insert: {
+          alt_ar: string
+          alt_en: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          storage_path: string
+        }
+        Update: {
+          alt_ar?: string
+          alt_en?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          storage_path?: string
+        }
+        Relationships: []
+      }
+      project_images: {
+        Row: {
+          alt_ar: string
+          alt_en: string
+          created_at: string
+          id: string
+          is_cover: boolean
+          original_filename: string | null
+          project_id: string
+          sort_order: number
+          storage_path: string
+        }
+        Insert: {
+          alt_ar: string
+          alt_en: string
+          created_at?: string
+          id?: string
+          is_cover?: boolean
+          original_filename?: string | null
+          project_id: string
+          sort_order?: number
+          storage_path: string
+        }
+        Update: {
+          alt_ar?: string
+          alt_en?: string
+          created_at?: string
+          id?: string
+          is_cover?: boolean
+          original_filename?: string | null
+          project_id?: string
+          sort_order?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_images_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          category_id: string
+          client_ar: string | null
+          client_en: string | null
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          location_ar: string | null
+          location_en: string | null
+          slug: string
+          sort_order: number
+          status_ar: string | null
+          status_en: string | null
+          title_ar: string
+          title_en: string
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          category_id: string
+          client_ar?: string | null
+          client_en?: string | null
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          location_ar?: string | null
+          location_en?: string | null
+          slug: string
+          sort_order?: number
+          status_ar?: string | null
+          status_en?: string | null
+          title_ar: string
+          title_en: string
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          category_id?: string
+          client_ar?: string | null
+          client_en?: string | null
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          location_ar?: string | null
+          location_en?: string | null
+          slug?: string
+          sort_order?: number
+          status_ar?: string | null
+          status_en?: string | null
+          title_ar?: string
+          title_en?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
@@ -5489,5 +5677,8 @@ export const Constants = {
       work_request_mode: ["open", "direct"],
       work_request_status: ["draft", "open", "bidding", "awarded", "cancelled"],
     },
+  },
+  website: {
+    Enums: {},
   },
 } as const

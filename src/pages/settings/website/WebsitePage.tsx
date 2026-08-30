@@ -1,13 +1,34 @@
+import { Tags, GalleryHorizontal, Building2 } from "lucide-react";
+import MenuGrid from "../../../components/ui/MenuGrid";
+
 const WebsitePage = () => {
+  const menuItems = [
+    {
+      label: "التصنيفات",
+      icon: Tags,
+      path: "/settings/website/categories",
+      description: "إدارة تصنيفات المشاريع المعروضة في الموقع",
+    },
+    {
+      label: "الشرائح الرئيسية",
+      icon: GalleryHorizontal,
+      path: "/settings/website/hero-slides",
+      description: "إدارة صور شرائح الصفحة الرئيسية للموقع",
+    },
+    {
+      label: "المشاريع",
+      icon: Building2,
+      path: "/settings/website/projects",
+      description: "إدارة المشاريع وصورها المعروضة في الموقع",
+    },
+  ];
+
   return (
-    <div className="bg-background  text-foreground">
-      <header className="flex items-center justify-between gap-4 mb-6"></header>
-      <main>
-        <h2 className="text-foreground">
-          مرحبًا بك في صفحة إدارة الموقع الالكتروني
-        </h2>
-      </main>
-    </div>
+    <MenuGrid
+      title="إدارة الموقع الإلكتروني"
+      items={menuItems}
+      columns={{ base: 1, sm: 2, md: 3 }}
+    />
   );
 };
 
