@@ -1,13 +1,13 @@
-import { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TextField } from "../ui/inputs/TextField";
-import { TextAreaField } from "../ui/inputs/TextAreaField";
-import { SelectField } from "../ui/inputs/SelectField";
+import { ImagePlus, Star, X } from "lucide-react";
 import Button from "../ui/Button";
+import ProjectFormFields from "./ProjectFormFields";
 import { useCategoriesQuery } from "../../hooks/website/useCategories";
 import { useCreateProject } from "../../hooks/website/useProjects";
+import { useUploadProjectImages } from "../../hooks/website/useProjectImages";
 import {
   NewProjectFormValues,
   NewProjectSchema,
@@ -24,10 +24,24 @@ const slugify = (value: string) =>
 const NewProjectForm = () => {
   const navigate = useNavigate();
   const { data: categories } = useCategoriesQuery();
-  const { mutateAsync: createProject, isPending } = useCreateProject();
+  const { mutateAsync: createProject, isPending: creating } =
+    useCreateProject();
+  const { mutateAsync: uploadProjectImages, isPending: uploadingImages } =
+    useUploadProjectImages();
 
   const [error, setError] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [coverIndex, setCoverIndex] = useState(0);
+
+  const previewUrls = useMemo(
+    () => images.map((file) => URL.createObjectURL(file)),
+    [images],
+  );
+
+  useEffect(() => {
+    return () => previewUrls.forEach((url) => URL.revokeObjectURL(url));
+  }, [previewUrls]);
 
   const {
     register,
@@ -39,10 +53,37 @@ const NewProjectForm = () => {
     defaultValues: { is_active: true, is_featured: false },
   });
 
+  const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) setImages((prev) => [...prev, ...files]);
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setCoverIndex((prev) => {
+      if (index === prev) return 0;
+      if (index < prev) return prev - 1;
+      return prev;
+    });
+  };
+
   const onSubmit = async (values: NewProjectFormValues) => {
     setError(null);
     try {
-      await createProject(values);
+      const project = await createProject(values);
+
+      if (images.length > 0) {
+        await uploadProjectImages({
+          projectId: project.id,
+          slug: project.slug,
+          titleAr: values.title_ar,
+          titleEn: values.title_en,
+          files: images,
+          coverIndex,
+        });
+      }
+
       navigate("/settings/website/projects");
     } catch (err) {
       setError(err instanceof Error ? err.message : "فشل في إنشاء المشروع");
@@ -66,113 +107,76 @@ const NewProjectForm = () => {
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
-        <SelectField
-          id="category_id"
-          label="التصنيف"
-          register={register("category_id")}
-          error={errors.category_id}
-          options={(categories ?? []).map((c) => ({
-            value: c.id,
-            label: c.name_ar,
-          }))}
+        <ProjectFormFields
+          register={register}
+          errors={errors}
+          categories={categories ?? []}
+          onTitleEnChange={(value) => {
+            if (!slugTouched) setValue("slug", slugify(value));
+          }}
+          onSlugChange={() => setSlugTouched(true)}
         />
 
-        <TextField
-          id="year"
-          label="السنة"
-          register={register("year")}
-          error={errors.year}
-        />
+        <div className="md:col-span-2 flex flex-col gap-2">
+          <label className="text-sm text-foreground">
+            الصور — انقر على النجمة لاختيار صورة الغلاف
+          </label>
 
-        <TextField
-          id="title_ar"
-          label="العنوان بالعربية"
-          register={register("title_ar")}
-          error={errors.title_ar}
-        />
-        <TextField
-          id="title_en"
-          label="العنوان بالإنجليزية"
-          register={register("title_en", {
-            onChange: (e) => {
-              if (!slugTouched) {
-                setValue("slug", slugify(e.target.value));
-              }
-            },
-          })}
-          error={errors.title_en}
-        />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {images.map((file, index) => (
+              <div
+                key={`${file.name}-${index}`}
+                className="group relative aspect-[4/3] rounded-lg overflow-hidden border border-gray-200"
+              >
+                <img
+                  src={previewUrls[index]}
+                  alt={file.name}
+                  className="w-full h-full object-cover"
+                />
 
-        <TextField
-          id="slug"
-          label="الرابط المختصر (slug)"
-          register={register("slug", {
-            onChange: () => setSlugTouched(true),
-          })}
-          error={errors.slug}
-        />
-        <div />
+                <button
+                  type="button"
+                  onClick={() => setCoverIndex(index)}
+                  className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center rounded-lg p-1.5 transition ${
+                    index === coverIndex
+                      ? "bg-amber-400 text-white"
+                      : "bg-white/90 text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-white"
+                  }`}
+                  title="تعيين كصورة غلاف"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                </button>
 
-        <TextField
-          id="client_ar"
-          label="العميل بالعربية"
-          register={register("client_ar")}
-          error={errors.client_ar}
-        />
-        <TextField
-          id="client_en"
-          label="العميل بالإنجليزية"
-          register={register("client_en")}
-          error={errors.client_en}
-        />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(index)}
+                  className="absolute top-1.5 left-1.5 inline-flex items-center justify-center rounded-lg bg-white/90 p-1.5 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-white transition"
+                  title="إزالة"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
 
-        <TextField
-          id="location_ar"
-          label="الموقع بالعربية"
-          register={register("location_ar")}
-          error={errors.location_ar}
-        />
-        <TextField
-          id="location_en"
-          label="الموقع بالإنجليزية"
-          register={register("location_en")}
-          error={errors.location_en}
-        />
+                {index === coverIndex && (
+                  <span className="absolute bottom-1.5 right-1.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-medium text-white">
+                    الغلاف
+                  </span>
+                )}
+              </div>
+            ))}
 
-        <TextField
-          id="status_ar"
-          label="الحالة بالعربية"
-          register={register("status_ar")}
-          error={errors.status_ar}
-        />
-        <TextField
-          id="status_en"
-          label="الحالة بالإنجليزية"
-          register={register("status_en")}
-          error={errors.status_en}
-        />
-
-        <TextAreaField
-          id="description_ar"
-          label="الوصف بالعربية"
-          register={register("description_ar")}
-          error={errors.description_ar}
-        />
-        <TextAreaField
-          id="description_en"
-          label="الوصف بالإنجليزية"
-          register={register("description_en")}
-          error={errors.description_en}
-        />
-
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" {...register("is_active")} />
-          مفعّل
-        </label>
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" {...register("is_featured")} />
-          مميز
-        </label>
+            <label className="aspect-[4/3] rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition cursor-pointer">
+              <ImagePlus className="w-6 h-6" />
+              <span className="text-xs font-medium">إضافة صور</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleAddImages}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
 
         <div className="md:col-span-2 flex justify-end gap-2">
           <Button
@@ -182,7 +186,7 @@ const NewProjectForm = () => {
           >
             إلغاء
           </Button>
-          <Button type="submit" loading={isPending}>
+          <Button type="submit" loading={creating || uploadingImages}>
             إنشاء المشروع
           </Button>
         </div>

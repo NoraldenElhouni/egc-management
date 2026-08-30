@@ -18,6 +18,8 @@ import WebsiteCategoriesPage from "../../pages/settings/website/WebsiteCategorie
 import WebsiteHeroSlidesPage from "../../pages/settings/website/WebsiteHeroSlidesPage";
 import WebsiteProjectsPage from "../../pages/settings/website/WebsiteProjectsPage";
 import WebsiteNewProjectPage from "../../pages/settings/website/WebsiteNewProjectPage";
+import WebsiteProjectDetailsPage from "../../pages/settings/website/WebsiteProjectDetailsPage";
+import WebsiteEditProjectPage from "../../pages/settings/website/WebsiteEditProjectPage";
 
 export default function SettingsRoutes() {
   return (
@@ -56,6 +58,14 @@ export default function SettingsRoutes() {
         <Route
           path="website/projects/new"
           element={<WebsiteNewProjectPage />}
+        />
+        <Route
+          path="website/projects/:id"
+          element={<WebsiteProjectDetailsPage />}
+        />
+        <Route
+          path="website/projects/:id/edit"
+          element={<WebsiteEditProjectPage />}
         />
       </Route>
     </Routes>

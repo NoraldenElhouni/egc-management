@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
@@ -49,7 +50,12 @@ const SortableProjectRow: React.FC<SortableProjectRowProps> = ({
       </td>
 
       <td className="py-3 px-4 align-top text-sm border-b border-gray-100">
-        <div className="font-medium text-gray-900">{project.title_ar}</div>
+        <Link
+          to={`/settings/website/projects/${project.id}`}
+          className="font-medium text-gray-900 hover:underline"
+        >
+          {project.title_ar}
+        </Link>
         <div className="text-xs text-gray-500">{project.title_en}</div>
       </td>
 
@@ -63,6 +69,11 @@ const SortableProjectRow: React.FC<SortableProjectRowProps> = ({
 
       <td className="py-3 px-4 align-top text-sm border-b border-gray-100">
         <div className="flex flex-wrap gap-1.5">
+          {project.status_ar && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+              {project.status_ar}
+            </span>
+          )}
           <span
             className={`px-2 py-0.5 rounded-full text-xs font-medium ${
               project.is_active
