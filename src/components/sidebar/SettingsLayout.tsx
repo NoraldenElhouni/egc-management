@@ -9,6 +9,8 @@ import {
   Map,
   Landmark,
   Monitor,
+  Building2,
+  ShieldCheck,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
@@ -52,6 +54,25 @@ const SettingsLayout = () => {
       path: "/settings/banks",
       description: "إدارة قائمة البنوك",
       role: ["Admin", "Manager", "Bookkeeper"],
+    },
+    // ── Phase 3: permission administration ──────────────────────────
+    // Gated with the same hardcoded role check as every other item
+    // here, on purpose. Replacing these string checks with real
+    // permission checks is Phase 7 — this phase adds configuration
+    // capability without changing how anything is gated.
+    {
+      title: "اداره الاقسام",
+      icon: Building2,
+      path: "/settings/permissions/departments",
+      description: "الأقسام وصلاحياتها الأساسية",
+      role: ["Admin"],
+    },
+    {
+      title: "صلاحيات الادوار",
+      icon: ShieldCheck,
+      path: "/settings/permissions/roles",
+      description: "الصلاحيات الأساسية لكل دور وظيفي",
+      role: ["Admin"],
     },
     {
       title: "جلسات المستخدمين",

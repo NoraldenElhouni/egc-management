@@ -21,6 +21,13 @@ import WebsiteNewProjectPage from "../../pages/settings/website/WebsiteNewProjec
 import WebsiteProjectDetailsPage from "../../pages/settings/website/WebsiteProjectDetailsPage";
 import WebsiteEditProjectPage from "../../pages/settings/website/WebsiteEditProjectPage";
 import WebsiteTeamPage from "../../pages/settings/website/WebsiteTeamPage";
+// Phase 3 — new permission administration screens. Additive only: the
+// existing /settings/roles pages above are untouched and still behave
+// exactly as they did before.
+import SettingsDepartmentsPage from "../../pages/settings/departments/SettingsDepartmentsPage";
+import DepartmentDetailPage from "../../pages/settings/departments/DepartmentDetailPage";
+import RolePermissionsListPage from "../../pages/settings/permissions/RolePermissionsListPage";
+import RolePermissionsDetailPage from "../../pages/settings/permissions/RolePermissionsDetailPage";
 
 export default function SettingsRoutes() {
   return (
@@ -69,6 +76,24 @@ export default function SettingsRoutes() {
           element={<WebsiteEditProjectPage />}
         />
         <Route path="website/team" element={<WebsiteTeamPage />} />
+
+        {/* Phase 3 — permission administration */}
+        <Route
+          path="permissions/departments"
+          element={<SettingsDepartmentsPage />}
+        />
+        <Route
+          path="permissions/departments/:id"
+          element={<DepartmentDetailPage />}
+        />
+        <Route
+          path="permissions/roles"
+          element={<RolePermissionsListPage />}
+        />
+        <Route
+          path="permissions/roles/:id"
+          element={<RolePermissionsDetailPage />}
+        />
       </Route>
     </Routes>
   );
