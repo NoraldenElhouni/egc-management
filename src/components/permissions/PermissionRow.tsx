@@ -44,6 +44,12 @@ interface PermissionRowProps {
   /** Set when validation failed for this row. */
   errorMessage?: string;
   disabled?: boolean;
+  /**
+   * False on the two project layers (Phase 6): the grant is already
+   * attached to one project, so there is no scope to choose and no
+   * column to store it in.
+   */
+  showScope?: boolean;
 }
 
 const STATE_BUTTONS: {
@@ -86,8 +92,10 @@ export default function PermissionRow({
   showNote = false,
   errorMessage,
   disabled = false,
+  showScope = true,
 }: PermissionRowProps) {
-  const needsScope = permission.is_project_scoped && draft.state !== "unset";
+  const needsScope =
+    showScope && permission.is_project_scoped && draft.state !== "unset";
   const scopeMissing = needsScope && draft.scope === null;
 
   const setState = (state: PermissionState) => {

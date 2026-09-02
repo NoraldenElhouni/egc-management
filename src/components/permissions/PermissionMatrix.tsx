@@ -31,6 +31,8 @@ interface PermissionMatrixProps {
   showNotes?: boolean;
   problems?: ValidationProblem[];
   disabled?: boolean;
+  /** False on Phase 6's two project layers — see PermissionRow. */
+  showScope?: boolean;
 }
 
 export default function PermissionMatrix({
@@ -41,6 +43,7 @@ export default function PermissionMatrix({
   showNotes = false,
   problems = [],
   disabled = false,
+  showScope = true,
 }: PermissionMatrixProps) {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -153,6 +156,7 @@ export default function PermissionMatrix({
                     showNote={showNotes}
                     errorMessage={problemById.get(permission.id)}
                     disabled={disabled}
+                    showScope={showScope}
                   />
                 ))}
               </div>

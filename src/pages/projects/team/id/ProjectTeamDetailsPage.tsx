@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import AddTeamMemberForm from "../../../../components/project/team/AddTeamMemberForm";
 import TeamRoster from "../../../../components/project/team/TeamRoster";
 import { useProjectTeam } from "../../../../hooks/team/useTeamAssignments";
@@ -55,10 +56,20 @@ const ProjectTeamDetailsPage = () => {
             — members AND their percentages. Percentages are not managed
             here any more, and the heading should not suggest they are. */}
         <p className="text-gray-600">
-          من يعمل على هذا المشروع، وبأي دور. نسب التوزيع تُدار من شاشة
-          مستقلة.
+          من يعمل على هذا المشروع، وبأي دور. نسب التوزيع تُدار من شاشة مستقلة.
         </p>
       </div>
+
+      {/* Phase 6 — the way in to the project permissions page. Kept as a
+          link rather than a tab because team membership and permissions
+          are separate facts; being on the team grants nothing by itself. */}
+      <Link
+        to={`/projects/team/${projectId}/permissions`}
+        className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+      >
+        <ShieldCheck size={15} />
+        صلاحيات هذا المشروع ←
+      </Link>
 
       <AddTeamMemberForm projectId={projectId} members={members ?? []} />
 

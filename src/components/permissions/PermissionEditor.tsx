@@ -10,6 +10,7 @@ import {
   ExistingGrant,
   GrantDiff,
   GrantDraft,
+  LayerShape,
   draftsFromGrants,
   validateDrafts,
 } from "./permissionModel";
@@ -41,6 +42,13 @@ interface PermissionEditorProps {
   renderConfirmExtra?: (diff: GrantDiff) => ReactNode;
   /** Fired when the confirmation dialog opens, before it renders. */
   onConfirmOpen?: (diff: GrantDiff) => void;
+  /**
+   * "scoped" (default) for the three company-wide layers, which must ask
+   * which projects a project-scoped grant covers. "scopeless" for Phase
+   * 6's project default and team-member override, which are already
+   * pinned to one project.
+   */
+  shape?: LayerShape;
 }
 
 export default function PermissionEditor({
@@ -53,6 +61,7 @@ export default function PermissionEditor({
   showNotes = false,
   renderConfirmExtra,
   onConfirmOpen,
+  shape = "scoped",
 }: PermissionEditorProps) {
   const original = useMemo(
     () => draftsFromGrants(catalog, savedGrants),
@@ -72,13 +81,13 @@ export default function PermissionEditor({
   }, [original]);
 
   const diff = useMemo(
-    () => buildGrantDiff(catalog, original, drafts),
-    [catalog, original, drafts],
+    () => buildGrantDiff(catalog, original, drafts, shape),
+    [catalog, original, drafts, shape],
   );
 
   const problems = useMemo(
-    () => validateDrafts(catalog, drafts),
-    [catalog, drafts],
+    () => validateDrafts(catalog, drafts, shape),
+    [catalog, drafts, shape],
   );
 
   const summaryLines = useMemo(
@@ -175,6 +184,7 @@ export default function PermissionEditor({
         showNotes={showNotes}
         problems={showProblems ? problems : []}
         disabled={saving}
+        showScope={shape === "scoped"}
       />
 
       {/* Confirmation — the plain-language summary from guide 4.1 step 7 */}

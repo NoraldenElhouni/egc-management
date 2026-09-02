@@ -99,9 +99,29 @@ export const STATE_LABELS: Record<PermissionState, string> = {
 export interface ExistingGrant {
   permission_id: string;
   allowed: boolean;
-  scope: GrantScope;
+  /**
+   * NULL for the two project layers (Phase 6). project_permission_defaults
+   * and team_member_permission_grants have no scope column at all — the
+   * row is already attached to one project, so the all-projects /
+   * team-projects-only question cannot arise. See SCOPELESS below.
+   */
+  scope: GrantScope | null;
   note: string | null;
 }
+
+// ---------------------------------------------------------------------
+// Scoped vs scopeless layers
+// ---------------------------------------------------------------------
+//
+// Three of the five layers (role, department, user) are company-wide, so
+// a project-scoped permission granted there has to say WHICH projects it
+// covers. The other two (project default, team-member override) are
+// already pinned to one project, so asking again would be nonsense.
+//
+// Passing scoped=false does three things: the scope selector is not
+// rendered, validateDrafts stops demanding a choice, and buildGrantDiff
+// emits scope: null so the write matches a table that has no such column.
+export type LayerShape = "scoped" | "scopeless";
 
 export function draftsFromGrants(
   catalog: PermissionCatalogRow[],
@@ -145,8 +165,13 @@ export interface ValidationProblem {
 export function validateDrafts(
   catalog: PermissionCatalogRow[],
   drafts: DraftMap,
+  shape: LayerShape = "scoped",
 ): ValidationProblem[] {
   const problems: ValidationProblem[] = [];
+
+  // A scopeless layer has nothing to validate — there is no choice to
+  // force, because there is no column to write it to.
+  if (shape === "scopeless") return problems;
 
   for (const permission of catalog) {
     const draft = drafts[permission.id];
@@ -171,7 +196,8 @@ export function validateDrafts(
 export interface GrantWrite {
   permission_id: string;
   allowed: boolean;
-  scope: GrantScope;
+  /** null on a scopeless layer — the table has no scope column. */
+  scope: GrantScope | null;
   note: string | null;
 }
 
@@ -188,7 +214,9 @@ export function buildGrantDiff(
   catalog: PermissionCatalogRow[],
   original: DraftMap,
   current: DraftMap,
+  shape: LayerShape = "scoped",
 ): GrantDiff {
+  const scoped = shape === "scoped";
   const upserts: GrantWrite[] = [];
   const deletes: string[] = [];
 
@@ -196,8 +224,10 @@ export function buildGrantDiff(
     const before = original[permission.id] ?? EMPTY_DRAFT;
     const after = current[permission.id] ?? EMPTY_DRAFT;
 
-    const scopeBefore = permission.is_project_scoped ? before.scope : null;
-    const scopeAfter = permission.is_project_scoped ? after.scope : null;
+    const scopeBefore =
+      scoped && permission.is_project_scoped ? before.scope : null;
+    const scopeAfter =
+      scoped && permission.is_project_scoped ? after.scope : null;
 
     const unchanged =
       before.state === after.state &&
@@ -215,17 +245,24 @@ export function buildGrantDiff(
     upserts.push({
       permission_id: permission.id,
       allowed: after.state === "allow",
-      // Company-wide permissions still need a value because the column
-      // is NOT NULL. phase1-schema.sql says to store 'all_projects' and
-      // ignore it; the resolver never reads scope for these.
-      scope: permission.is_project_scoped
-        ? (after.scope as GrantScope)
-        : "all_projects",
+      // Scopeless layers write null; the caller drops the field entirely.
+      // On a scoped layer, company-wide permissions still need a value
+      // because the column is NOT NULL — phase1-schema.sql says to store
+      // 'all_projects' and ignore it, and the resolver never reads it.
+      scope: !scoped
+        ? null
+        : permission.is_project_scoped
+          ? (after.scope as GrantScope)
+          : "all_projects",
       note: after.note.trim() === "" ? null : after.note.trim(),
     });
   }
 
-  return { upserts, deletes, isEmpty: upserts.length === 0 && deletes.length === 0 };
+  return {
+    upserts,
+    deletes,
+    isEmpty: upserts.length === 0 && deletes.length === 0,
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -272,8 +309,15 @@ export function describeChange(
     );
   };
 
+  // On a scopeless layer every write has scope === null, so the two
+  // scope-specific buckets below stay empty and everything lands here.
   describe(
-    bucket((w) => w.allowed && byId.get(w.permission_id)?.is_project_scoped === false),
+    bucket(
+      (w) =>
+        w.allowed &&
+        (w.scope === null ||
+          byId.get(w.permission_id)?.is_project_scoped === false),
+    ),
     "سيتمكن من",
     "",
   );
@@ -297,7 +341,11 @@ export function describeChange(
     "سيتمكن من",
     " — على المشاريع التي يكون عضواً في فريقها",
   );
-  describe(bucket((w) => !w.allowed), "سيُمنع صراحةً من", "");
+  describe(
+    bucket((w) => !w.allowed),
+    "سيُمنع صراحةً من",
+    "",
+  );
 
   if (diff.deletes.length > 0) {
     const names = diff.deletes
