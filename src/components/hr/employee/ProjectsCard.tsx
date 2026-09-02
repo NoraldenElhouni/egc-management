@@ -1,14 +1,16 @@
 import { formatDate } from "../../../utils/helpper";
-import { ProjectAssignmentWithDetails } from "../../../types/extended.type";
+import { EmployeeTeamMembership } from "../../../types/extended.type";
 
 interface ProjectsCardProps {
-  projects?: ProjectAssignmentWithDetails[] | [];
+  // PHASE 4: was ProjectAssignmentWithDetails, now the team-membership
+  // shape. Same fields this card actually renders — project, code,
+  // project role, status, assignment date — minus percentage, which was
+  // present on the old type and never displayed here.
+  projects?: EmployeeTeamMembership[] | [];
 }
 
 const ProjectsCard = ({ projects = [] }: ProjectsCardProps) => {
-  const list = (projects ?? []).filter(
-    Boolean
-  ) as ProjectAssignmentWithDetails[];
+  const list = (projects ?? []).filter(Boolean) as EmployeeTeamMembership[];
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 border">
       <div className="flex justify-between items-start">

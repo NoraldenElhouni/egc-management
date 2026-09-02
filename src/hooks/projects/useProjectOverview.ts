@@ -292,6 +292,20 @@ const fetchMilestoneStats = async (
   };
 };
 
+// PHASE 4 CLASSIFICATION: left on project_assignments deliberately.
+//
+// This is a MIXED read — it wants the roster AND each person's
+// percentage in one query, and percentage does not exist on
+// team_assignments (by design; guide section 2.3). Splitting it now
+// would mean joining the new team table to the old table just to get the
+// number back, for no gain.
+//
+// Leaving it is safe for the whole migration window precisely because of
+// the dual-write in useTeamAssignments.ts: project_assignments keeps an
+// accurate roster until Phase 8. This moves in Phase 5, when
+// project_distributions becomes the source for percentage and this
+// function can read the roster from one table and the money from the
+// other.
 const fetchAssignmentStats = async (
   projectId: string,
 ): Promise<AssignmentStats> => {

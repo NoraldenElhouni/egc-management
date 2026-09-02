@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Employees } from "../types/global.type";
-import { FullEmployee } from "../types/extended.type";
+import { permissionsDb } from "../lib/permissionsDb";
+import { Employees, Projects } from "../types/global.type";
+import {
+  EmployeeTeamMembership,
+  FullEmployee,
+} from "../types/extended.type";
 import { PostgrestError } from "@supabase/supabase-js";
 
 export function useEmployees() {
@@ -145,16 +149,58 @@ export function useEmployee(id: string) {
         .eq("user_id", id)
         .maybeSingle();
 
-      // 3) project assignments
-      const { data: projectData } = await supabase
-        .from("project_assignments")
-        .select(`*, projects(*), project_roles(*)`)
-        .eq("user_id", id);
+      // 3) project team memberships
+      //    PHASE 4: repointed from project_assignments to
+      //    team_assignments. This list feeds ProjectsCard on the employee
+      //    profile, which shows project name, code, project role and the
+      //    assignment date — team data, no percentage — so it belongs on
+      //    the new table.
+      //
+      //    A person holding two project roles on one project correctly
+      //    produces two entries here; nothing downstream assumes
+      //    uniqueness per project.
+      const { data: teamRows } = await permissionsDb
+        .from("team_assignments")
+        .select("id, project_id, project_role_id, assigned_at")
+        .eq("person_id", id);
 
-      const normalizedProjectData = (projectData ?? []).map((project) => ({
-        ...project,
-        project_roles: project.project_roles ?? { id: "", name: "" },
-      }));
+      const teamAssignments = teamRows ?? [];
+      const assignmentProjectIds = Array.from(
+        new Set(teamAssignments.map((r) => r.project_id)),
+      );
+      const assignmentRoleIds = Array.from(
+        new Set(teamAssignments.map((r) => r.project_role_id)),
+      );
+
+      const [{ data: assignedProjects }, { data: assignedRoles }] =
+        await Promise.all([
+          assignmentProjectIds.length
+            ? supabase.from("projects").select("*").in("id", assignmentProjectIds)
+            : Promise.resolve({ data: [] as Projects[] }),
+          assignmentRoleIds.length
+            ? permissionsDb
+                .from("project_roles")
+                .select("id, name")
+                .in("id", assignmentRoleIds)
+            : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+        ]);
+
+      const projectById = new Map(
+        ((assignedProjects ?? []) as Projects[]).map((p) => [p.id, p]),
+      );
+      const projectRoleById = new Map(
+        (assignedRoles ?? []).map((r) => [r.id, r]),
+      );
+
+      const normalizedProjectData: EmployeeTeamMembership[] =
+        teamAssignments.map((row) => ({
+          id: row.id,
+          project_id: row.project_id,
+          project_role_id: row.project_role_id,
+          assigned_at: row.assigned_at,
+          projects: projectById.get(row.project_id) ?? null,
+          project_roles: projectRoleById.get(row.project_role_id) ?? null,
+        }));
 
       // 4) payroll
       const { data: payrollData } = await supabase

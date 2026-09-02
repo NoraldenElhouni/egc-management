@@ -1,3 +1,8 @@
+// =====================================================================
+// DEPRECATED — PHASE 4. Replaced by
+// src/components/project/team/TeamRoster.tsx. Retired in Phase 8.
+// =====================================================================
+
 import { TeamEmployee } from "../../../types/team.type";
 import { TeamEmployeesColumns } from "../../tables/columns/TeamEmployeesColumns";
 import GenericTable from "../../tables/table";

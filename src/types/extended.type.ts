@@ -38,6 +38,27 @@ export type ProjectAssignmentWithDetails = ProjectAssignments & {
 
 export type EmployeeProjects = ProjectAssignmentWithDetails[];
 
+/**
+ * PHASE 4. One project a person is on the team of, as read from
+ * team_assignments.
+ *
+ * Replaces ProjectAssignmentWithDetails on FullEmployee.projects. It is
+ * a new type rather than a reuse because the shape genuinely changed:
+ * there is no percentage here, and there never will be. Team membership
+ * and payout share are separate facts in separate tables (guide section
+ * 2.2 / 2.3), and a type that carries both invites code to treat one as
+ * evidence of the other.
+ */
+export type EmployeeTeamMembership = {
+  /** team_assignments.id */
+  id: string;
+  project_id: string;
+  project_role_id: string;
+  assigned_at: string;
+  projects: Projects | null;
+  project_roles: ProjectRoles | null;
+};
+
 // Main employee type
 export type FullEmployee = Employees & {
   employee_certifications: EmployeeCertifications[];
@@ -47,7 +68,7 @@ export type FullEmployee = Employees & {
         roles: Roles;
       })
     | null;
-  projects: EmployeeProjects;
+  projects: EmployeeTeamMembership[];
   payroll: Payroll[];
 };
 

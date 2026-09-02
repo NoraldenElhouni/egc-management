@@ -1,3 +1,19 @@
+// =====================================================================
+// DEPRECATED — PHASE 4. Do not use, do not re-wire.
+// =====================================================================
+// Replaced by src/components/project/team/AddTeamMemberForm.tsx.
+//
+// This form writes team membership AND percentage into a single
+// project_assignments row, which is exactly the conflation the redesign
+// exists to undo (guide section 3.1). It also writes ONLY to the old
+// table, so anything it created would be invisible to team_assignments
+// and the two would silently drift apart.
+//
+// Left on disk rather than deleted because Phase 8 is where the old
+// table and everything attached to it is retired. Nothing imports it as
+// of Phase 4 — confirmed by repo-wide search.
+// =====================================================================
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";

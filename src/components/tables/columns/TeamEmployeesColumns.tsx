@@ -1,3 +1,17 @@
+// =====================================================================
+// DEPRECATED — PHASE 4. Do not use, do not re-wire.
+// =====================================================================
+// Replaced by src/components/project/team/TeamRoster.tsx, which groups
+// members by project role and renders everyone in a group identically.
+//
+// Two reasons this one cannot be reused as-is: it has a "النسبة"
+// (percentage) column, which must not appear on the team screen at all
+// (guide section 4.5), and a flat sortable table cannot express "these
+// three Project Managers are equals" as clearly as a grouped list.
+//
+// Retired in Phase 8 with the rest of the old team path.
+// =====================================================================
+
 import { ColumnDef } from "@tanstack/react-table";
 import { TeamEmployee } from "../../../types/team.type";
 import { Link } from "react-router-dom";
