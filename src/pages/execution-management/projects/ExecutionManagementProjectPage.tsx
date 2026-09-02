@@ -21,6 +21,7 @@ const ExecutionManagementProjectPage = () => {
         columns={ProjectExecutionColumns}
         data={projects ?? []}
         header="إدارة المشاريع"
+        initialSorting={[{ id: "serial_number", desc: true }]}
       />
     </div>
   );
