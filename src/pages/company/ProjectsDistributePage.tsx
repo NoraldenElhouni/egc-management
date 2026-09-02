@@ -227,7 +227,7 @@ const ProjectsDistributePage = () => {
               ملخص الحصص
             </p>
             {distributedProjects.flatMap((project) =>
-              (project.project_assignments ?? []).map((a) => {
+              (project.project_distributions ?? []).map((a) => {
                 const name =
                   `${a.employee.first_name} ${a.employee.last_name ?? ""}`.trim();
                 return (

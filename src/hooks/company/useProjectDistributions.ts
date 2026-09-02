@@ -8,11 +8,13 @@ import { supabase } from "../../lib/supabaseClient";
 //
 // Implementation guide sections 2.3 and 4.5. NEW file for Phase 5.
 //
-// NOTHING IN THE EXISTING DISTRIBUTION SUBSYSTEM IS TOUCHED. The old
-// editor (EmployeeDistributionEditForm, reached through the distribute
-// wizard) keeps working exactly as it does today, on the old table, at
-// its existing route. Both paths exist side by side; that is the
-// intended end state of this phase, not a temporary state.
+// Originally this file was purely additive and the old wizard was left
+// untouched on the old table. That changed by decision: the distribute
+// wizard at /company/distribute now reads and writes
+// project_distributions too, reusing writeLegacyPercentage below for
+// its half of the dual-write. Both screens exist side by side and both
+// are now on the new table, with project_assignments kept in step
+// underneath for everything that still reads it.
 //
 // WHAT THIS FILE IS ABOUT
 //   project + person + percentage. That is all. No project role, no
@@ -129,7 +131,8 @@ export function useProjectDistribution(projectId: string | undefined) {
             id: row.id,
             personId: row.person_id,
             fullName:
-              `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || "—",
+              `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() ||
+              "—",
             email: user?.email ?? null,
             percentage: Number(row.percentage),
             legacyRowCount: legacyCount.get(row.person_id) ?? 0,
@@ -283,29 +286,24 @@ export function useDistributionCandidates() {
 //   0 existing rows  -> the partner case. Insert one, with
 //                       project_role_id = NULL. Read the warning.
 //
-// ⚠️  OPEN QUESTION FOR THE PARTNER CASE — FLAGGED, NOT SOLVED
+// THE PARTNER CASE — the old NULL-role hazard is now RESOLVED
 //
-//   useProjectsDistribute.ts (the payout-run engine, untouched) filters
-//   its query with:
+//   This used to be an open money risk. useProjectsDistribute.ts (the
+//   payout-run engine) filtered its query with
 //       .neq("project_assignments.project_role_id",
 //            "c7823151-2290-4861-a383-5e00a78128ce")
+//   and in SQL `col <> 'x'` is NULL when col is NULL, which drops the
+//   row. So a partner written here with project_role_id = NULL would
+//   have been invisible to the payout engine and would not have been
+//   paid.
 //
-//   In SQL, `col <> 'x'` evaluates to NULL when col is NULL, and a NULL
-//   predicate drops the row. So rows written with project_role_id = NULL
-//   are very likely INVISIBLE to the distribute wizard — meaning a
-//   partner given a share through the new screen would not be paid by
-//   the old engine.
-//
-//   The alternatives are all worse: picking an arbitrary project role
-//   would show a partner as holding a job on the project (the exact
-//   conflation this redesign removes), and refusing to add them at all
-//   contradicts the requirement that they be addable.
-//
-//   NULL is the honest representation and it keeps the money visible in
-//   the table. But DO NOT rely on the old wizard paying these people
-//   until you have confirmed that filter's behaviour. The UI shows a
-//   warning on any share with no legacy row, and the Phase 5 report has
-//   the one-line change to that filter if you decide to make it.
+//   That filter is gone: the wizard now reads project_distributions,
+//   which has no project role at all, so the exclusion could not be
+//   expressed and was dropped by decision. Anyone with a row in
+//   project_distributions is now paid by the wizard, partner or not,
+//   and the NULL project_role_id in the mirrored legacy row no longer
+//   affects who gets money — it only records that this person holds a
+//   share without holding a job on the project, which is exactly true.
 //
 // NOT A TRANSACTION, for the same reason as Phase 4: PostgREST has no
 // client-side transaction. Order is new-table-first (it carries the
@@ -485,7 +483,7 @@ export function useSetProjectHouseShares() {
 // The legacy half of the dual-write
 // ---------------------------------------------------------------------
 
-async function writeLegacyPercentage(
+export async function writeLegacyPercentage(
   projectId: string,
   personId: string,
   percentage: number,

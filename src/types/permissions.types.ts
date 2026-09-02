@@ -158,6 +158,43 @@ export type ProjectDistributionRow = {
   updated_by: string | null;
 };
 
+/**
+ * phase1-schema.sql section 8, layer 2. "Everyone on this project."
+ * Applies to every current AND future team member — that automatic
+ * inheritance is the entire reason the layer exists (guide section 4.6).
+ *
+ * NO SCOPE COLUMN, deliberately: the row is already attached to one
+ * specific project, so "all projects / team projects only" is a question
+ * that cannot arise here. Only the three company-wide layers carry it.
+ */
+export type ProjectPermissionDefaultRow = {
+  project_id: string;
+  permission_id: string;
+  allowed: boolean;
+  granted_by: string | null;
+  granted_at: string;
+  note: string | null;
+};
+
+/**
+ * phase1-schema.sql section 8, layer 1 — the most specific layer, which
+ * beats every other. "This one person, on this one project."
+ *
+ * Keyed on users.id, NOT employees.id, even though team membership is
+ * keyed on employees.id. The two are the same value (1:1 FK); keeping
+ * every permission table on users.id removes a class of "which id is
+ * this?" bug. Also no scope column, for the same reason as above.
+ */
+export type TeamMemberPermissionGrantRow = {
+  project_id: string;
+  user_id: string;
+  permission_id: string;
+  allowed: boolean;
+  granted_by: string | null;
+  granted_at: string;
+  note: string | null;
+};
+
 /** One row of effective_permissions() / my_effective_permissions(). */
 export type EffectivePermissionRow = {
   permission_name: string;
@@ -283,6 +320,48 @@ export type PermissionsDatabase = {
           permission_id?: string;
           allowed?: boolean;
           scope?: GrantScope;
+          granted_by?: string | null;
+          granted_at?: string;
+          note?: string | null;
+        };
+        Relationships: [];
+      };
+      project_permission_defaults: {
+        Row: ProjectPermissionDefaultRow;
+        Insert: {
+          project_id: string;
+          permission_id: string;
+          allowed: boolean;
+          granted_by?: string | null;
+          granted_at?: string;
+          note?: string | null;
+        };
+        Update: {
+          project_id?: string;
+          permission_id?: string;
+          allowed?: boolean;
+          granted_by?: string | null;
+          granted_at?: string;
+          note?: string | null;
+        };
+        Relationships: [];
+      };
+      team_member_permission_grants: {
+        Row: TeamMemberPermissionGrantRow;
+        Insert: {
+          project_id: string;
+          user_id: string;
+          permission_id: string;
+          allowed: boolean;
+          granted_by?: string | null;
+          granted_at?: string;
+          note?: string | null;
+        };
+        Update: {
+          project_id?: string;
+          user_id?: string;
+          permission_id?: string;
+          allowed?: boolean;
           granted_by?: string | null;
           granted_at?: string;
           note?: string | null;
