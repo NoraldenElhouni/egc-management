@@ -9,6 +9,7 @@ import {
   Building,
   PackageOpen,
   Store,
+  FolderCog,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -62,6 +63,12 @@ const MainMenu = () => {
       label: "المتاجر",
       icon: Store,
       path: "/shops",
+      role: ["Admin", "Manager"],
+    },
+    {
+      label: "اداره التنفيذ",
+      icon: FolderCog,
+      path: "/execution-management",
       role: ["Admin", "Manager"],
     },
     {

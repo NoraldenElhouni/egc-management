@@ -102,6 +102,14 @@ const Header = () => {
     "pending-distribution": "مدفوعات قيد التوزيع",
     "password-reset": "إعادة تعيين كلمة مرور مستخدم",
     "change-password": "تغيير كلمة المرور",
+    "execution-management": "إدارة التنفيذ",
+    add: "إضافة",
+    edit: "تعديل",
+    view: "عرض",
+    departments: "الأقسام",
+    templates: "القوالب",
+    "project-distributions": "توزيع المشاريع",
+    "project-shares": "حصص المشاريع",
   };
 
   return (
