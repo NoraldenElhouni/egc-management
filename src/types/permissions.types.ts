@@ -138,6 +138,26 @@ export type ProjectRoleRow = {
   name: string;
 };
 
+/**
+ * phase1-schema.sql section 9. What share of a project a person
+ * receives. UNIQUE (project_id, person_id) — one row per person per
+ * project, which is the structural fix for the old table's
+ * "delete by (project, person) hits several rows" bug.
+ *
+ * Deliberately currency-agnostic: one percentage per person per
+ * project. The old editor presents a per-currency grid but stores a
+ * single shared column, so nothing is lost by being honest about it.
+ */
+export type ProjectDistributionRow = {
+  id: string;
+  project_id: string;
+  person_id: string;
+  percentage: number;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 /** One row of effective_permissions() / my_effective_permissions(). */
 export type EffectivePermissionRow = {
   permission_name: string;
@@ -298,6 +318,25 @@ export type PermissionsDatabase = {
           last_name?: string | null;
           email?: string | null;
           party_type?: PartyType;
+        };
+        Relationships: [];
+      };
+      project_distributions: {
+        Row: ProjectDistributionRow;
+        Insert: {
+          id?: string;
+          project_id: string;
+          person_id: string;
+          percentage: number;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          person_id?: string;
+          percentage?: number;
+          updated_at?: string;
+          updated_by?: string | null;
         };
         Relationships: [];
       };

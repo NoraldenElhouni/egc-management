@@ -8,6 +8,12 @@ import ProjectDistributionDetailPage from "../../pages/company/ProjectDistributi
 import BatchDetailPage from "../../pages/company/DistributionBatchPage";
 import SalariesPage from "../../pages/company/salary/SalariesPage";
 import EmployeeDistributionDetailsPage from "../../pages/company/EmployeeDistributionDetailsPage";
+// Phase 5 — NEW distribution screens, on the new project_distributions
+// table. Purely additive: every route above is untouched and the old
+// distribute wizard at /company/distribute keeps working exactly as it
+// did. Both paths exist side by side by design.
+import ProjectSharesListPage from "../../pages/company/ProjectSharesListPage";
+import ProjectSharesDetailPage from "../../pages/company/ProjectSharesDetailPage";
 
 const CompanyRoutes = () => {
   return (
@@ -32,6 +38,13 @@ const CompanyRoutes = () => {
           path="/distribute/employee/:employeeId"
           element={<EmployeeDistributionDetailsPage />}
         />
+        {/* Phase 5 — new distribution screens */}
+        <Route path="/shares" element={<ProjectSharesListPage />} />
+        <Route
+          path="/shares/:projectId"
+          element={<ProjectSharesDetailPage />}
+        />
+
         <Route path="/dashboard" element={<CompanyOverview />} />
       </Route>
     </Routes>

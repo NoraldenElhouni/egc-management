@@ -1,6 +1,14 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { ChevronRight, ChevronLeft, Percent } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Book,
+  HandCoins,
+  LayoutGrid,
+  Percent,
+  PieChart,
+} from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
 const CompanyLayout = () => {
@@ -9,10 +17,40 @@ const CompanyLayout = () => {
 
   const menuItems = [
     {
+      title: "القائمة الرئيسية",
+      icon: LayoutGrid,
+      path: "/company",
+      description: "كل شاشات إدارة الشركة في مكان واحد",
+    },
+    {
       title: "توزيع النسب",
       icon: Percent,
       path: "/company/distribute",
       description: "توزيع نسب الموظفين على المشاريع المختلفة",
+      role: ["Admin", "Manager"],
+    },
+    {
+      title: "مراجعة النسب",
+      icon: Book,
+      path: "/company/distribute/batches",
+      description: "مراجعة دفعات التوزيع السابقة",
+      role: ["Admin", "Manager"],
+    },
+    // Phase 5 — the new screen, alongside the old ones. The two entries
+    // above are unchanged and still lead to the existing wizard.
+    {
+      title: "نسب التوزيع (الجديد)",
+      icon: PieChart,
+      path: "/company/shares",
+      description: "نسب الأشخاص لكل مشروع، مستقلة عن عضوية الفريق",
+      role: ["Admin", "Manager"],
+    },
+    {
+      title: "الرواتب",
+      icon: HandCoins,
+      path: "/company/salaries",
+      description: "رواتب الموظفين",
+      role: ["Manager"],
     },
   ];
 
@@ -43,6 +81,17 @@ const CompanyLayout = () => {
     if (location.pathname.match(/^\/company\/clients\/\d+/)) {
       return false;
     }
+
+    // Another entry is a longer match for this URL — let that one win.
+    // Without this, /company/distribute would also highlight while the
+    // user is on /company/distribute/batches.
+    const moreSpecific = menuItems.some(
+      (item) =>
+        item.path.length > path.length &&
+        (location.pathname === item.path ||
+          location.pathname.startsWith(item.path + "/"))
+    );
+    if (moreSpecific) return false;
 
     // For other paths, check if current path starts with the menu path
     return location.pathname.startsWith(path + "/");

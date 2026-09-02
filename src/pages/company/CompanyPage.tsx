@@ -1,6 +1,12 @@
 import React, { ComponentType } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { Book, HandCoins, LayoutDashboard, Percent } from "lucide-react";
+import {
+  Book,
+  HandCoins,
+  LayoutDashboard,
+  Percent,
+  PieChart,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CompanyPage = () => {
@@ -17,6 +23,14 @@ const CompanyPage = () => {
       label: "مراجعة النسب",
       icon: Book,
       path: "/company/distribute/batches",
+      role: ["Admin", "Manager"],
+    },
+    // Phase 5 — the new shares screen, alongside the existing entries.
+    // The two cards above are unchanged and still lead to the old wizard.
+    {
+      label: "نسب التوزيع (الجديد)",
+      icon: PieChart,
+      path: "/company/shares",
       role: ["Admin", "Manager"],
     },
     {
