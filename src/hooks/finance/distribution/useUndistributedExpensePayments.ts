@@ -72,7 +72,6 @@ export function useUndistributedExpensePayments(projectId?: string) {
         )
         .eq("type", "expense")
         .eq("distributed", false)
-        .gt("percentage", 0)
         .not("payment_id", "is", null);
 
       if (projectId) {
