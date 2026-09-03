@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import {
   ChevronRight,
   ChevronLeft,
@@ -20,50 +20,32 @@ const OperationsLayout = () => {
       icon: PackageOpen,
       path: "/operations/maps",
       description: "عرض وإدارة الخرائط",
-      role: ["Admin", "Engineer", "Manager"],
+      permission: "view_operations",
     },
     {
       title: "العقود",
       icon: Sheet,
       path: "/operations/contracts",
       description: "إدارة العقود والملفات",
-      role: ["Admin", "Engineer", "Manager"],
+      permission: "view_operations",
     },
     {
       title: "حصر الكميات",
       icon: Paperclip,
       path: "/operations/boq",
       description: "إدارة حصر الكميات",
-      role: ["Admin", "Engineer", "Manager"],
+      permission: "view_operations",
     },
     {
       title: "الإعدادات",
       icon: Settings,
       path: "/operations/settings",
       description: "إعدادات وحدة التشغيل",
-      role: ["Admin", "Engineer", "Manager"],
+      permission: "view_operations",
     },
   ];
 
-  const { user, loading } = useAuth();
-
-  const visibleItems = menuItems.filter((item) => {
-    const roles = item.role;
-
-    // Public item: no roles OR empty roles array
-    if (!roles || roles.length === 0) {
-      return true;
-    }
-
-    // While loading, you can either show everything or hide protected items
-    if (loading) {
-      return true; // or `false` if you prefer stricter UI during auth loading
-    }
-
-    if (!user?.role) return false;
-
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
   const isActivePath = (path: string) => {
     if (location.pathname === path) return true;
     return location.pathname.startsWith(path + "/");

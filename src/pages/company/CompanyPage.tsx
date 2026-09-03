@@ -1,5 +1,5 @@
 import React, { ComponentType } from "react";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import {
   Book,
   HandCoins,
@@ -10,20 +10,19 @@ import {
 import { Link } from "react-router-dom";
 
 const CompanyPage = () => {
-  const { user, loading } = useAuth();
   // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
   const menuItems = [
     {
       label: "توزيع النسب",
       icon: Percent,
       path: "/company/distribute",
-      role: ["Admin", "Manager"],
+      permission: "view_distribution",
     },
     {
       label: "مراجعة النسب",
       icon: Book,
       path: "/company/distribute/batches",
-      role: ["Admin", "Manager"],
+      permission: "view_distribution",
     },
     // Phase 5 — the new shares screen, alongside the existing entries.
     // The two cards above are unchanged and still lead to the old wizard.
@@ -31,28 +30,23 @@ const CompanyPage = () => {
       label: "نسب التوزيع (الجديد)",
       icon: PieChart,
       path: "/company/shares",
-      role: ["Admin", "Manager"],
+      permission: "manage_distribution",
     },
     {
       label: "تفاصيل الشركة",
       icon: LayoutDashboard,
       path: "/company/dashboard",
-      role: ["Admin", "Manager"],
+      permission: "view_distribution",
     },
     {
       label: "الرواتب",
       icon: HandCoins,
       path: "/company/salaries",
-      role: ["Manager"],
+      permission: "view_own_salary",
     },
   ];
 
-  // Filter menu items based on the user's role. If an item has no `role` field it is public.
-  const visibleItems = menuItems.filter((item) => {
-    if (!item.role || loading) return true;
-    if (!user || !user.role) return false;
-    return item.role.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
   return (
     <div className="h-full w-full p-6 mt-10 bg-background" dir="rtl">
       <h1 className="text-2xl font-bold mb-6 text-center text-foreground">

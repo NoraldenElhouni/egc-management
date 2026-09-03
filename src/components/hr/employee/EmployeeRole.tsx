@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { FullEmployee } from "../../../types/extended.type";
-import { useAuth } from "../../../hooks/useAuth";
+import { useCan } from "../../../hooks/permissions/useCan";
 
 interface Role {
   id: string;
@@ -15,13 +15,18 @@ interface EmployeeRoleProps {
 }
 
 const EmployeeRole = ({ employee, onUpdated }: EmployeeRoleProps) => {
-  const { user } = useAuth();
-
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRole, setSelectedRole] = useState(employee.user_role?.role_id);
   const [loading, setLoading] = useState(false);
 
-  const canEdit = user?.role === "Admin" || user?.role === "Manager";
+  // PHASE 7B BATCH 2. Was: user?.role === "Admin" || user?.role === "Manager",
+  // read off the role string the session happens to be carrying. Now the
+  // resolver decides, so the answer survives someone holding two roles, a
+  // department baseline, or a per-user override.
+  //
+  // Like-for-like: manage_users is granted to Admin and Manager, which is
+  // exactly who could edit this before.
+  const { can: canEdit, loading: checkingPermission } = useCan("manage_users");
 
   // -----------------------------
   // Fetch roles
@@ -90,8 +95,11 @@ const EmployeeRole = ({ employee, onUpdated }: EmployeeRoleProps) => {
         </span>
       </div>
 
-      {/* Only admin/manager can edit */}
-      {canEdit ? (
+      {/* Gated on manage_users. While the check is in flight, say nothing
+          rather than flashing the refusal and then replacing it. */}
+      {checkingPermission ? (
+        <p className="text-sm text-gray-400">جاري التحقق من الصلاحية...</p>
+      ) : canEdit ? (
         <div className="space-y-2">
           <label className="text-sm text-gray-600">تغيير الدور</label>
 

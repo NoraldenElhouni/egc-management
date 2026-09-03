@@ -1,24 +1,21 @@
 import { UserPlus, Users } from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
-import { useAuth } from "../../hooks/useAuth";
 
 const HrPage = () => {
-  const { user, loading } = useAuth();
-
   const menuItems = [
     {
       label: "الموظفين",
       icon: Users,
       path: "/hr/employees",
       description: "إدارة سجلات الموظفين",
-      role: ["Admin", "HR", "Manager"],
+      permission: "view_employees",
     },
     {
       label: "إضافة موظف جديد",
       icon: UserPlus,
       path: "/hr/employees/new",
       description: "تسجيل موظف جديد",
-      role: ["Admin", "HR", "Manager"],
+      permission: "create_employee",
     },
     // {
     //   label: "الرواتب",
@@ -57,8 +54,6 @@ const HrPage = () => {
     <MenuGrid
       title="المالية"
       items={menuItems}
-      userRole={user?.role}
-      loading={loading}
       columns={{ base: 1, sm: 2, md: 3 }}
     />
   );

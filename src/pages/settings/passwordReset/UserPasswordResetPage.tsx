@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabaseAdmin } from "../../../lib/adminSupabase";
-import { useAuth } from "../../../hooks/useAuth";
+import { useCan } from "../../../hooks/permissions/useCan";
 
 interface FoundUser {
   id: string;
@@ -16,7 +16,7 @@ const UserPasswordResetPage = () => {
   const [searching, setSearching] = useState(false);
   const [foundUser, setFoundUser] = useState<FoundUser | null>(null);
   const [searchError, setSearchError] = useState("");
-  const { user } = useAuth();
+  const { can: canResetPassword } = useCan("reset_user_password");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -149,7 +149,11 @@ const UserPasswordResetPage = () => {
   const strength = getPasswordStrength(newPassword);
   const initials = foundUser?.email?.substring(0, 2).toUpperCase() ?? "";
 
-  if (user?.role !== "Admin" && user?.role !== "Manager") {
+  // PHASE 7B BATCH 3. Was: user?.role !== "Admin" && user?.role !== "Manager".
+  // The route is also guarded on reset_user_password (Phase 7C); this stays
+  // as defence in depth for the case where the component is rendered
+  // outside that route.
+  if (!canResetPassword) {
     return (
       <div className="max-w-lg mx-auto p-6 text-sm text-gray-500">
         ليست لديك صلاحية الوصول إلى هذه الصفحة.
@@ -210,9 +214,7 @@ const UserPasswordResetPage = () => {
                   </p>
                   <p className="text-xs text-gray-400">
                     انضم في{" "}
-                    {new Date(foundUser.created_at).toLocaleDateString(
-                      "ar-LY",
-                    )}
+                    {new Date(foundUser.created_at).toLocaleDateString("ar-LY")}
                   </p>
                 </div>
               </div>
@@ -239,9 +241,7 @@ const UserPasswordResetPage = () => {
               <p className="text-sm font-medium text-gray-900">
                 {foundUser.email}
               </p>
-              <p className="text-xs text-gray-400 font-mono">
-                {foundUser.id}
-              </p>
+              <p className="text-xs text-gray-400 font-mono">{foundUser.id}</p>
             </div>
           </div>
 
@@ -293,9 +293,7 @@ const UserPasswordResetPage = () => {
 
           {/* تأكيد كلمة المرور */}
           <div className="space-y-1">
-            <label className="text-sm text-gray-600">
-              تأكيد كلمة المرور
-            </label>
+            <label className="text-sm text-gray-600">تأكيد كلمة المرور</label>
             <input
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
@@ -304,9 +302,7 @@ const UserPasswordResetPage = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
             />
             {confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-xs text-red-500">
-                كلمتا المرور غير متطابقتين
-              </p>
+              <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
             )}
           </div>
 

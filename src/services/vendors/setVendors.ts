@@ -1,6 +1,26 @@
 import { supabaseAdmin } from "../../lib/adminSupabase";
 import { VendorFormValues } from "../../types/schema/vendor.schema";
 
+// =====================================================================
+// PHASE 8 — party_type and the single source of truth for roles
+// =====================================================================
+// Two changes, matching setEmployeeService.ts:
+//
+//   1. partyType is sent in user_metadata so handle_new_user() can set
+//      users.party_type. Phase 1 made that column NOT NULL with no
+//      default, so without this the insert fails outright — see
+//      phase8-create-employee.sql. The trigger can also derive it from
+//      the role, but stating it here means this flow does not depend on
+//      the Vendor role keeping its name.
+//
+//   2. The user_roles write is idempotent. It is the source of truth
+//      (phase2-resolver.sql DECISION 7) and this flow already wrote it;
+//      the upsert is so it keeps working once the trigger writes it too.
+//
+// users.role_id needs no reconciling here: one roleId constant feeds
+// both the metadata and the user_roles row, so they cannot disagree.
+// =====================================================================
+
 export async function addVendor(form: VendorFormValues) {
   const email = (form.email ?? "").trim();
   const password = form.password ?? "";
@@ -22,6 +42,7 @@ export async function addVendor(form: VendorFormValues) {
           lastName: (form.contact_name ?? "").trim() || null,
           phone: (form.phone_number ?? "").trim() || null,
           roleId,
+          partyType: "vendor",
         },
       });
 
@@ -104,10 +125,10 @@ export async function addVendor(form: VendorFormValues) {
   if (authUserId) {
     const { error: userRoleError } = await supabaseAdmin
       .from("user_roles")
-      .insert({
-        role_id: roleId,
-        user_id: authUserId,
-      });
+      .upsert(
+        { role_id: roleId, user_id: authUserId },
+        { onConflict: "user_id,role_id", ignoreDuplicates: true },
+      );
 
     if (userRoleError) {
       console.error("Error inserting user role data:", userRoleError);
@@ -182,6 +203,7 @@ export async function AssignUserToVendor({
         lastName: vendor.contact_name ?? null,
         phone: vendor.phone_number ?? null,
         roleId,
+        partyType: "vendor",
       },
     });
 
@@ -214,7 +236,10 @@ export async function AssignUserToVendor({
   // 4) Assign the vendor role
   const { error: roleErr } = await supabaseAdmin
     .from("user_roles")
-    .insert({ role_id: roleId, user_id: authUserId });
+    .upsert(
+      { role_id: roleId, user_id: authUserId },
+      { onConflict: "user_id,role_id", ignoreDuplicates: true },
+    );
 
   if (roleErr) {
     return {

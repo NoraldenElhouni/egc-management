@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import {
   FolderKanban,
   FolderPlus,
@@ -53,13 +53,7 @@ const ProjectsLayout = () => {
     },
   ];
 
-  const { user, loading } = useAuth();
-  const visibleItems = menuItems.filter((item) => {
-    const roles = (item as { role?: string[] }).role;
-    if (!roles || loading) return true;
-    if (!user || !user.role) return false;
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   const isActivePath = (path: string) => {
     // Exact match for the path

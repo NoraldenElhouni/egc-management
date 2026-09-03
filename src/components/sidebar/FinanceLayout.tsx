@@ -9,13 +9,12 @@ import {
   ClipboardList,
   PieChart,
 } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import { useSidebar } from "../../contexts/SidebarContext";
 
 const FinanceLayout = () => {
   const location = useLocation();
   const { isCollapsed, toggle } = useSidebar();
-  const { user, loading } = useAuth();
 
   const menuItems = [
     // {
@@ -30,50 +29,47 @@ const FinanceLayout = () => {
       icon: BookOpen,
       path: "/finance/bookkeeping",
       description: "تسجيل القيود المالية",
-      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+      permission: "view_bookkeeping",
     },
     {
       title: "الخزينة",
       icon: Vault,
       path: "/finance/treasury",
       description: "إدارة الخزينة",
-      role: ["Admin", "Finance", "Treasurer"],
+      permission: "view_treasury",
     },
     {
       title: "المدفوعات",
       icon: CreditCard,
       path: "/finance/payments",
       description: "متابعة المدفوعات",
-      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+      permission: "view_payments",
     },
     {
       title: "الشركة",
       icon: Building2,
       path: "/finance/company",
       description: "بيانات الشركة المالية",
-      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+      permission: "view_company_finance",
     },
     {
       title: "مدفوعات المقاولين والطلبات والعقود",
       icon: ClipboardList,
       path: "/finance/tracking",
       description: "مدفوعات المقاولين، الطلبات، والعقود",
-      role: ["Admin", "Finance", "Bookkeeper", "Head Finance"],
+      permission: "view_payments",
     },
     {
       title: "مدفوعات قيد التوزيع",
       icon: PieChart,
       path: "/finance/pending-distribution",
       description: "سجل مدفوعات المصاريف غير الموزعة لكل مشروع",
+      // PHASE 7B: deliberately left on a role check — this screen overlaps
+      // the undistributed-expenses work that is paused.
       role: ["Admin", "Manager"],
     },
   ];
-  const visibleItems = menuItems.filter((item) => {
-    const roles = (item as { role?: string[] }).role;
-    if (!roles || loading) return true;
-    if (!user || !user.role) return false;
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   const isActivePath = (path: string) => {
     // Exact match for the path

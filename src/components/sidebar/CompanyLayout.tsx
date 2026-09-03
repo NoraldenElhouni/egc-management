@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import {
   ChevronRight,
   ChevronLeft,
@@ -27,14 +27,14 @@ const CompanyLayout = () => {
       icon: Percent,
       path: "/company/distribute",
       description: "توزيع نسب الموظفين على المشاريع المختلفة",
-      role: ["Admin", "Manager"],
+      permission: "view_distribution",
     },
     {
       title: "مراجعة النسب",
       icon: Book,
       path: "/company/distribute/batches",
       description: "مراجعة دفعات التوزيع السابقة",
-      role: ["Admin", "Manager"],
+      permission: "view_distribution",
     },
     // Phase 5 — the new screen, alongside the old ones. The two entries
     // above are unchanged and still lead to the existing wizard.
@@ -43,24 +43,18 @@ const CompanyLayout = () => {
       icon: PieChart,
       path: "/company/shares",
       description: "نسب الأشخاص لكل مشروع، مستقلة عن عضوية الفريق",
-      role: ["Admin", "Manager"],
+      permission: "manage_distribution",
     },
     {
       title: "الرواتب",
       icon: HandCoins,
       path: "/company/salaries",
       description: "رواتب الموظفين",
-      role: ["Manager"],
+      permission: "view_own_salary",
     },
   ];
 
-  const { user, loading } = useAuth();
-  const visibleItems = menuItems.filter((item) => {
-    const roles = (item as { role?: string[] }).role;
-    if (!roles || loading) return true;
-    if (!user || !user.role) return false;
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   const isActivePath = (path: string) => {
     // Exact match for the path
@@ -89,7 +83,7 @@ const CompanyLayout = () => {
       (item) =>
         item.path.length > path.length &&
         (location.pathname === item.path ||
-          location.pathname.startsWith(item.path + "/"))
+          location.pathname.startsWith(item.path + "/")),
     );
     if (moreSpecific) return false;
 

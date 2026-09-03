@@ -7,13 +7,11 @@ import {
   Vault,
 } from "lucide-react";
 import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
-import { useAuth } from "../../hooks/useAuth";
 import { usePendingContractorPaymentsCount } from "../../hooks/finance/payments/usePendingContractorPaymentsCount";
 import { usePendingOrdersCount } from "../../hooks/finance/orders/usePendingOrdersCount";
 import { usePendingRequestPaymentsCount } from "../../hooks/finance/contracts/usePendingRequestPaymentsCount";
 
 const FinancePage = () => {
-  const { user, loading } = useAuth();
   const { count: pendingContractorPaymentsCount } =
     usePendingContractorPaymentsCount();
   const { count: pendingOrdersCount } = usePendingOrdersCount();
@@ -38,14 +36,14 @@ const FinancePage = () => {
       icon: BookOpen,
       path: "/finance/bookkeeping",
       description: "تسجيل القيود المالية",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      permission: "view_bookkeeping",
     },
     {
       label: "الخزينة",
       icon: Vault,
       path: "/finance/treasury",
       description: "إدارة الخزينة",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      permission: "view_treasury",
     },
 
     // {
@@ -60,7 +58,7 @@ const FinancePage = () => {
       icon: Building2,
       path: "/finance/company",
       description: "بيانات الشركة المالية",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      permission: "view_company_finance",
     },
     // {
     //   label: "الرواتب",
@@ -74,21 +72,21 @@ const FinancePage = () => {
       icon: Building2,
       path: "/finance/projects/add",
       description: "إضافة مشاريع جديدة",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      permission: "view_projects",
     },
     {
       label: "المدفوعات",
       icon: CreditCard,
       path: "/finance/payments",
       description: "متابعة المدفوعات",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      permission: "view_payments",
     },
     {
       label: "مدفوعات المقاولين والطلبات والعقود",
       icon: ClipboardList,
       path: "/finance/tracking",
       description: "مدفوعات المقاولين، الطلبات، والعقود",
-      role: ["Admin", "Manager", "Bookkeeper", "Head Finance"],
+      permission: "view_payments",
       badge: trackingBadgeCount === 0 ? undefined : trackingBadgeCount,
     },
     {
@@ -96,6 +94,8 @@ const FinancePage = () => {
       icon: PieChart,
       path: "/finance/pending-distribution",
       description: "سجل مدفوعات المصاريف غير الموزعة لكل مشروع",
+      // PHASE 7B: deliberately left on a role check — this screen overlaps
+      // the undistributed-expenses work that is paused.
       role: ["Manager"],
     },
   ];
@@ -104,8 +104,6 @@ const FinancePage = () => {
     <MenuGrid
       title="المالية"
       items={menuItems}
-      userRole={user?.role}
-      loading={loading}
       columns={{ base: 1, sm: 2, md: 3 }}
     />
   );

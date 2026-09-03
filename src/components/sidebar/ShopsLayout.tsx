@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import { useSidebar } from "../../contexts/SidebarContext";
 import {
   Layers,
@@ -20,56 +20,40 @@ const ShopsLayout = () => {
     icon: React.ElementType;
     path: string;
     description: string;
-    role: string[];
   }[] = [
     {
       title: "الأقسام",
       icon: Layers,
       path: "/shops/divisions",
       description: "إدارة أقسام المحلات",
-      role: [],
     },
     {
       title: "الفئات",
       icon: Tag,
       path: "/shops/categories",
       description: "إدارة فئات المنتجات",
-      role: [],
     },
     {
       title: "الفئات الفرعية",
       icon: Shapes,
       path: "/shops/subcategories",
       description: "إدارة الفئات الفرعية",
-      role: [],
     },
     {
       title: "المنتجات",
       icon: Package,
       path: "/shops/products",
       description: "إدارة المنتجات",
-      role: [],
     },
     {
       title: "الموردون",
       icon: Store,
       path: "/shops/vendors",
       description: "إدارة الموردين",
-      role: [],
     },
   ];
 
-  const { user, loading } = useAuth();
-
-  const visibleItems = menuItems.filter((item) => {
-    const roles = item.role;
-
-    if (!roles || roles.length === 0) return true;
-    if (loading) return true;
-    if (!user?.role) return false;
-
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   const isActivePath = (path: string) => {
     if (location.pathname === path) return true;

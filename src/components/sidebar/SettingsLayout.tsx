@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import {
   Users,
   Box,
@@ -17,7 +17,6 @@ import { useSidebar } from "../../contexts/SidebarContext";
 const SettingsLayout = () => {
   const location = useLocation();
   const { isCollapsed, toggle } = useSidebar();
-  const { user, loading } = useAuth();
 
   const menuItems = [
     {
@@ -25,35 +24,35 @@ const SettingsLayout = () => {
       icon: Users,
       path: "/settings/roles",
       description: "إدارة  الأدوار والصلاحيات",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "manage_roles",
     },
     {
       title: "اداره اسماء المصروفات",
       icon: Box,
       path: "/settings/expenses",
       description: "إدارة اسماء المصروفات",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "manage_reference_data",
     },
     {
       title: "اداره التخصصات",
       icon: BookText,
       path: "/settings/specializations",
       description: "إدارة التخصصات",
-      role: ["Admin", "Engineer", "Manager", "Bookkeeper"],
+      permission: "manage_specialities",
     },
     {
       title: "اداره الخرائط",
       icon: Map,
       path: "/settings/maps",
       description: "إدارة الخرائط",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "manage_reference_data",
     },
     {
       title: "اداره البنوك",
       icon: Landmark,
       path: "/settings/banks",
       description: "إدارة قائمة البنوك",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "manage_reference_data",
     },
     // ── Phase 3: permission administration ──────────────────────────
     // Gated with the same hardcoded role check as every other item
@@ -65,30 +64,25 @@ const SettingsLayout = () => {
       icon: Building2,
       path: "/settings/permissions/departments",
       description: "الأقسام وصلاحياتها الأساسية",
-      role: ["Admin"],
+      permission: "manage_departments",
     },
     {
       title: "صلاحيات الادوار",
       icon: ShieldCheck,
       path: "/settings/permissions/roles",
       description: "الصلاحيات الأساسية لكل دور وظيفي",
-      role: ["Admin"],
+      permission: "manage_permissions_company",
     },
     {
       title: "جلسات المستخدمين",
       icon: Monitor,
       path: "/settings/sessions",
       description: "متابعة الأجهزة والتطبيقات المستخدمة",
-      role: ["Admin"],
+      permission: "view_user_sessions",
     },
   ];
 
-  const visibleItems = menuItems.filter((item) => {
-    const roles = item.role;
-    if (!roles || loading) return true;
-    if (!user || !user.role) return false;
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   const isActivePath = (path: string) => {
     if (location.pathname === path) return true;

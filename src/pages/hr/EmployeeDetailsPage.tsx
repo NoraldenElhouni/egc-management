@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
 import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
 import { useAuth } from "../../hooks/useAuth";
+import { useMyPermissions } from "../../hooks/permissions/useCan";
 import EmployeeRole from "../../components/hr/employee/EmployeeRole";
 import EmployeesPermissions from "../../components/hr/employee/EmployeesPermissions";
 import SalaryDetails from "../../components/hr/employee/SalaryDetails";
@@ -17,6 +18,8 @@ import EmployeeOverridesTab from "../../components/permissions/EmployeeOverrides
 export default function EmployeeDetailsPage() {
   const [activeTab, setActiveTab] = useState("personal-info");
   const { user } = useAuth();
+  const { data: allowedPermissionsData } = useMyPermissions();
+  const allowedPermissions = allowedPermissionsData ?? new Set<string>();
   const { id } = useParams<{ id: string }>();
   const employeeId = id || "";
   const { employee, loading, error, refetch } = useEmployee(employeeId);
@@ -34,13 +37,20 @@ export default function EmployeeDetailsPage() {
       id: "employee-details",
       label: "تفاصيل الموظف",
       content: <EmployeeDetails employee={employee} onUpdated={refetch} />,
-      roles: ["Admin", "Manager"], // 👈 restricted
+      // PHASE 7B: left on a role check. The nearest catalogue entries are
+      // view_employee_personal_data and view_employee_salary, both granted
+      // to Admin only — mapping to either would drop Manager, and mapping
+      // to view_employees would add HR. Neither is a like-for-like swap.
+      roles: ["Admin", "Manager"],
     },
     {
       id: "employee-payroll",
       label: "تفاصيل المرتبات",
       content: <SalaryDetails payroll={employee.payroll} />,
-      roles: ["Manager"], // 👈 restricted
+      // PHASE 7B: left on a role check, same reason as the tab above —
+      // view_employee_salary is Admin-only and this tab is Manager-only,
+      // so they are disjoint rather than equivalent.
+      roles: ["Manager"],
     },
     {
       id: "documents",
@@ -58,13 +68,13 @@ export default function EmployeeDetailsPage() {
       id: "employee-role",
       label: "الأدوار",
       content: <EmployeeRole employee={employee} onUpdated={refetch} />,
-      roles: ["Admin", "Manager"],
+      permission: "manage_users",
     },
     {
       id: "employee-permissions",
       label: "الصلاحيات",
       content: <EmployeesPermissions employee={employee} />,
-      roles: ["Admin", "Manager"],
+      permission: "manage_permissions_company",
     },
     {
       id: "employee-overrides",
@@ -78,17 +88,21 @@ export default function EmployeeDetailsPage() {
           roleName={employee.user_role?.roles?.name ?? null}
         />
       ),
-      roles: ["Admin"],
+      permission: "manage_permissions_company",
     },
   ];
 
-  const canView = (allowedRoles?: string[]) => {
-    if (!allowedRoles) return true; // public tab
+  // PHASE 7B BATCH 5. Tabs carrying `permission` are resolved; the two
+  // that still carry `roles` fall back to the old string check. Both
+  // paths live in one place so a tab cannot be silently ungated.
+  const canView = (tab: { permission?: string; roles?: string[] }) => {
+    if (tab.permission) return allowedPermissions.has(tab.permission);
+    if (!tab.roles) return true; // public tab
     if (!user?.role) return false;
-    return allowedRoles.includes(user.role);
+    return tab.roles.includes(user.role);
   };
 
-  const visibleTabs = tabs.filter((tab) => canView(tab.roles));
+  const visibleTabs = tabs.filter(canView);
   return (
     <div className="bg-background min-h-screen">
       <div>

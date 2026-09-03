@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import RequirePermission from "../auth/RequirePermission";
 import SupplyChainLayout from "../sidebar/SupplyChainLayout";
 import SupplyChainPage from "../../pages/supply-chain/SupplyChainPage";
 import ContractorPage from "../../pages/supply-chain/contractor/ContractorPage";
@@ -14,33 +15,35 @@ import ContractorPaymentsPage from "../../pages/supply-chain/contractor/Contract
 const SupplyChainRoutes = () => {
   return (
     <Routes>
-      <Route element={<SupplyChainLayout />}>
-        <Route index element={<SupplyChainPage />} />
-        <Route path="contractors" element={<ContractorPage />} />
-        <Route path="contractors/new" element={<NewContractorPage />} />
-        {/* profile */}
-        <Route
-          path="contractors/:contractorId"
-          element={<ContractorDetailPage />}
-        />
-        {/* their bcontractorIds */}
-        <Route
-          path="contractors/:contractorId/bids"
-          element={<ContractorBidsPage />}
-        />
-        {/* their contracts */}
-        <Route
-          path="contractors/:contractorId/contracts"
-          element={<ContractorContractsPage />}
-        />
-        {/* payment history  */}
-        <Route
-          path="contractors/:contractorId/payments"
-          element={<ContractorPaymentsPage />}
-        />
-        <Route path="vendors" element={<VendorsPage />} />
-        <Route path="vendors/new" element={<NewVendorPage />} />
-        <Route path="vendors/:id" element={<VendorDetailPage />} />
+      <Route element={<RequirePermission permission="view_contractors" />}>
+        <Route element={<SupplyChainLayout />}>
+          <Route index element={<SupplyChainPage />} />
+          <Route path="contractors" element={<ContractorPage />} />
+          <Route path="contractors/new" element={<NewContractorPage />} />
+          {/* profile */}
+          <Route
+            path="contractors/:contractorId"
+            element={<ContractorDetailPage />}
+          />
+          {/* their bcontractorIds */}
+          <Route
+            path="contractors/:contractorId/bids"
+            element={<ContractorBidsPage />}
+          />
+          {/* their contracts */}
+          <Route
+            path="contractors/:contractorId/contracts"
+            element={<ContractorContractsPage />}
+          />
+          {/* payment history  */}
+          <Route
+            path="contractors/:contractorId/payments"
+            element={<ContractorPaymentsPage />}
+          />
+          <Route path="vendors" element={<VendorsPage />} />
+          <Route path="vendors/new" element={<NewVendorPage />} />
+          <Route path="vendors/:id" element={<VendorDetailPage />} />
+        </Route>
       </Route>
     </Routes>
   );

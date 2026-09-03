@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import { Users, UserPlus, ChevronRight, ChevronLeft } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 
@@ -13,14 +13,14 @@ const HRLayout = () => {
       icon: Users,
       path: "/hr/employees",
       description: "إدارة سجلات الموظفين",
-      role: ["Admin", "HR", "Manager"],
+      permission: "view_employees",
     },
     {
       title: "إضافة موظف جديد",
       icon: UserPlus,
       path: "/hr/employees/new",
       description: "تسجيل موظف جديد",
-      role: ["Admin", "HR", "Manager"],
+      permission: "create_employee",
     },
     // {
     //   title: "الرواتب",
@@ -55,13 +55,7 @@ const HRLayout = () => {
     // },
   ];
 
-  const { user, loading } = useAuth();
-  const visibleItems = menuItems.filter((item) => {
-    const roles = (item as { role?: string[] }).role;
-    if (!roles || loading) return true;
-    if (!user || !user.role) return false;
-    return roles.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   const isActivePath = (path: string) => {
     // Exact match for the path

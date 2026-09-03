@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import RequirePermission from "../auth/RequirePermission";
 import ShopsLayout from "../sidebar/ShopsLayout";
 import ShopsPage from "../../pages/shop/shopsPage";
 import DivisionsPage from "../../pages/shop/divisions/DivisionsPage";
@@ -25,53 +26,61 @@ import OrderDetailsPage from "../../pages/shop/orders/OrderDetailsPage";
 export default function ShopsRoutes() {
   return (
     <Routes>
-      <Route element={<ShopsLayout />}>
-        {/* Index */}
-        <Route index element={<ShopsPage />} />
+      <Route element={<RequirePermission permission="view_shop_catalog" />}>
+        <Route element={<ShopsLayout />}>
+          {/* Index */}
+          <Route index element={<ShopsPage />} />
 
-        {/* ── Divisions ─────────────────────────────────────────────────── */}
-        <Route path="divisions" element={<DivisionsPage />} />
-        <Route path="divisions/new" element={<NewDivisionPage />} />
-        <Route path="divisions/:divisionId" element={<DivisionDetailPage />} />
+          {/* ── Divisions ─────────────────────────────────────────────────── */}
+          <Route path="divisions" element={<DivisionsPage />} />
+          <Route path="divisions/new" element={<NewDivisionPage />} />
+          <Route
+            path="divisions/:divisionId"
+            element={<DivisionDetailPage />}
+          />
 
-        {/* ── Categories ────────────────────────────────────────────────── */}
-        <Route path="categories" element={<CategoriesPage />} />
-        <Route path="categories/new" element={<NewCategoryPage />} />
-        <Route path="categories/:categoryId" element={<CategoryDetailPage />} />
+          {/* ── Categories ────────────────────────────────────────────────── */}
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="categories/new" element={<NewCategoryPage />} />
+          <Route
+            path="categories/:categoryId"
+            element={<CategoryDetailPage />}
+          />
 
-        {/* ── Subcategories ─────────────────────────────────────────────── */}
-        <Route path="subcategories" element={<SubcategoriesPage />} />
-        <Route path="subcategories/new" element={<NewSubcategoryPage />} />
-        <Route
-          path="subcategories/:subcategoryId"
-          element={<SubcategoryDetailPage />}
-        />
-        <Route
-          path="subcategories/:subcategoryId/products"
-          element={<SubcategoryProductsPage />}
-        />
+          {/* ── Subcategories ─────────────────────────────────────────────── */}
+          <Route path="subcategories" element={<SubcategoriesPage />} />
+          <Route path="subcategories/new" element={<NewSubcategoryPage />} />
+          <Route
+            path="subcategories/:subcategoryId"
+            element={<SubcategoryDetailPage />}
+          />
+          <Route
+            path="subcategories/:subcategoryId/products"
+            element={<SubcategoryProductsPage />}
+          />
 
-        {/* ── Products ──────────────────────────────────────────────────── */}
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="products/new" element={<NewProductPage />} />
-        <Route path="products/:productId" element={<ProductDetailPage />} />
+          {/* ── Products ──────────────────────────────────────────────────── */}
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="products/new" element={<NewProductPage />} />
+          <Route path="products/:productId" element={<ProductDetailPage />} />
 
-        {/* ── Vendors ───────────────────────────────────────────────────── */}
-        <Route path="vendors" element={<ShopVendorsList />} />
-        <Route path="vendors/new" element={<NewVendorPage />} />
-        <Route path="vendors/:vendorId" element={<VendorDetailPage />} />
+          {/* ── Vendors ───────────────────────────────────────────────────── */}
+          <Route path="vendors" element={<ShopVendorsList />} />
+          <Route path="vendors/new" element={<NewVendorPage />} />
+          <Route path="vendors/:vendorId" element={<VendorDetailPage />} />
 
-        {/* ── orders ──────────────────────────────────────────────────── */}
-        <Route path="orders" element={<OrdersPage />} />
-        <Route path="orders/projects" element={<PorjectsOrdersPage />} />
-        <Route
-          path="orders/project/:projectId"
-          element={<PorjectsOrdersDetailsPage />}
-        />
-        <Route
-          path="orders/project/:projectId/:orderId"
-          element={<OrderDetailsPage />}
-        />
+          {/* ── orders ──────────────────────────────────────────────────── */}
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="orders/projects" element={<PorjectsOrdersPage />} />
+          <Route
+            path="orders/project/:projectId"
+            element={<PorjectsOrdersDetailsPage />}
+          />
+          <Route
+            path="orders/project/:projectId/:orderId"
+            element={<OrderDetailsPage />}
+          />
+        </Route>
       </Route>
     </Routes>
   );

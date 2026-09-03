@@ -12,79 +12,77 @@ import {
   FolderCog,
 } from "lucide-react";
 import { ComponentType } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useVisibleMenuItems } from "../hooks/permissions/useMenuPermissions";
 
 const MainMenu = () => {
-  const { user, loading } = useAuth();
   const menuItems = [
     {
       label: "إدارة الموظفين",
       icon: Users,
       path: "/hr",
-      role: ["Admin", "HR", "Manager"],
+      permission: "view_employees",
     },
     {
       label: "إدارة العملاء",
       icon: ShieldUser,
       path: "/crm",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "view_clients",
     },
     {
       label: "سلسلة التوريد",
       icon: LinkIcon,
       path: "/supply-chain",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "view_contractors",
     },
     {
       label: "المشاريع",
       icon: MapPin,
       path: "/projects",
-      role: ["Admin", "Manager"],
+      permission: "view_projects",
     },
     {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      role: ["Admin", "Finance", "Bookkeeper", "Manager", "Head Finance"],
+      permission: "view_bookkeeping",
     },
     {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      role: ["Manager"],
+      permission: "view_distribution",
     },
     {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
-      role: ["Admin", "Engineer", "Manager"],
+      permission: "view_operations",
     },
     {
       label: "المتاجر",
       icon: Store,
       path: "/shops",
-      role: ["Admin", "Manager"],
+      permission: "view_shop_catalog",
     },
     {
       label: "اداره التنفيذ",
       icon: FolderCog,
       path: "/execution-management",
-      role: ["Admin", "Manager"],
+      permission: "manage_execution",
     },
     {
       label: "الإعدادات",
       icon: Settings,
       path: "/settings",
-      role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
+      permission: [
+        "manage_reference_data",
+        "manage_specialities",
+        "manage_roles",
+      ],
     },
   ];
 
-  // Filter menu items based on the user's role. If an item has no `role` field it is public.
-  const visibleItems = menuItems.filter((item) => {
-    if (!item.role || loading) return true;
-    if (!user || !user.role) return false;
-    return item.role.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   return (
     <div className="h-full w-full p-6 mt-10 bg-background" dir="rtl">

@@ -2,8 +2,63 @@ import { supabaseAdmin } from "../../lib/adminSupabase";
 import { Employees } from "../../types/global.type";
 import { UserFormValues } from "../../types/schema/users.schema";
 
+// =====================================================================
+// Creating a company employee under the Phases 1-7 model
+// =====================================================================
+// Three things this flow now guarantees, and one it depends on the
+// database for.
+//
+// 1. DEPARTMENT. employees.department_id is set from the form. One
+//    department per person (phase1-schema.sql, guide 4.1). It is
+//    optional: an employee with no department is valid and simply gets
+//    nothing from layer 4.
+//
+// 2. ROLE VIA user_roles. This is the single source of truth
+//    (phase2-resolver.sql DECISION 7). The flow already wrote it; what
+//    is new is that the write is idempotent and that users.role_id is
+//    reconciled against it afterwards rather than assumed to agree.
+//
+//    The divergence this prevents is not hypothetical. handle_new_user()
+//    writes users.role_id ONLY — it has never inserted user_roles — so
+//    every account whose creation path forgot the explicit insert ended
+//    up with a role_id and no user_roles row. That is the whole of Phase
+//    0's 38-account gap. This path always writes both.
+//
+// 3. party_type = 'company'. Passed explicitly in user_metadata rather
+//    than left to a default. This flow creates staff and only staff;
+//    contractors, vendors and clients have their own services.
+//
+// WHAT THIS FILE CANNOT DO ALONE. public.users is written by the
+// handle_new_user() trigger on auth.users, not from here — this code
+// never sees that row until after it exists. So the metadata below is a
+// request, and the trigger has to honour it. See
+// phase8-create-employee.sql: as the trigger stands today it does not
+// read partyType at all, and since Phase 1 made users.party_type NOT
+// NULL with no default, the insert cannot succeed. That SQL is the other
+// half of this change.
+//
+// NO PERMISSIONS ARE GRANTED HERE. Deliberately. A new employee gets a
+// role and a department and nothing else; whatever those two already
+// grant is exactly what they can do. Individual overrides are a separate
+// act, through the Phase 3 screens. Guide 4.1: "creation and capability
+// are two separate acts".
+// =====================================================================
+
 const ENGINEER_ROLE_ID = "212424d8-219a-4899-a24b-5d5bf05546e8";
-const DEFAULT_ROLE_ID = "803c44ac-0af1-4586-81a2-67e1bc7eb7ef"; // choose your real default role
+
+// DEFAULT_ROLE_ID used to be 803c44ac-0af1-4586-81a2-67e1bc7eb7ef, which
+// is the CLIENT role — its own comment said "choose your real default
+// role" and nobody ever did. It was passed to auth metadata, so the
+// trigger wrote users.role_id = Client, while the user_roles insert
+// below fell back to Engineer. Two fallbacks in one function, disagreeing
+// with each other: precisely the divergence pattern this phase exists to
+// remove. And once handle_new_user() derives party_type from the role
+// (phase8-create-employee.sql), a Client role would have made a new
+// employee an external party.
+//
+// It never fired because the form always sends a roleId. One constant
+// now, so it cannot.
+const DEFAULT_ROLE_ID = ENGINEER_ROLE_ID;
 
 export const createEmployee = async (data: UserFormValues) => {
   const normalizeEmptyToNull = (v?: string | null) => {
@@ -30,6 +85,10 @@ export const createEmployee = async (data: UserFormValues) => {
         dob: data.dob,
         employeeType: data.employeeType,
         roleId: data.roleId ?? DEFAULT_ROLE_ID,
+        // Read by handle_new_user() to set users.party_type. Hardcoded,
+        // not taken from the form: this service creates staff and only
+        // staff. A contractor or vendor must go through its own service.
+        partyType: "company",
       },
     });
 
@@ -86,6 +145,8 @@ export const createEmployee = async (data: UserFormValues) => {
     email: data.email ?? "",
     phone_number: data.phone ?? "",
     base_salary: data.baseSalary ?? 0,
+    // Layer 4 of the ladder. Null is a real answer, not a missing one.
+    department_id: normalizeEmptyToNull(data.departmentId),
     specializations_id: data.specializationsId ?? null,
     dob: normalizeEmptyToNull(data.dob),
     place_of_birth: data.placeOfBirth ?? null,
@@ -152,13 +213,20 @@ export const createEmployee = async (data: UserFormValues) => {
     };
   }
 
-  // role
+  // ── role: user_roles is the source of truth ────────────────────────
   const roleToAssign = normalizeUuidOrDefault(data.roleId, ENGINEER_ROLE_ID);
 
-  const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
-    role_id: roleToAssign,
-    user_id: userId,
-  });
+  // upsert, not insert: if handle_new_user() is ever taught to write
+  // user_roles itself (phase8-create-employee.sql proposes exactly that),
+  // this must not start failing on a duplicate. Ignoring the conflict
+  // keeps both halves correct whichever one runs first.
+  const { error: roleError } = await supabaseAdmin.from("user_roles").upsert(
+    { role_id: roleToAssign, user_id: userId },
+    {
+      onConflict: "user_id,role_id",
+      ignoreDuplicates: true,
+    },
+  );
 
   if (roleError) {
     console.error(roleError);
@@ -166,6 +234,27 @@ export const createEmployee = async (data: UserFormValues) => {
       success: false,
       error: roleError,
       message: "فشل في إنشاء منصب المستخدم",
+    };
+  }
+
+  // ── keep users.role_id in step ─────────────────────────────────────
+  // The trigger already set it from user_metadata.roleId, so this is
+  // normally a no-op. It is here because "normally" is what produced the
+  // 38-account divergence: the two are written by different code at
+  // different times, and only one of them was ever checked. Phase 8
+  // retires this column; until then the two must agree, and user_roles
+  // above is the one that wins.
+  const { error: legacyRoleError } = await supabaseAdmin
+    .from("users")
+    .update({ role_id: roleToAssign })
+    .eq("id", userId);
+
+  if (legacyRoleError) {
+    console.error("Error reconciling users.role_id:", legacyRoleError);
+    return {
+      success: false,
+      error: legacyRoleError,
+      message: "فشل في مزامنة دور المستخدم",
     };
   }
 

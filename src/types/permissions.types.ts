@@ -485,6 +485,17 @@ export type PermissionsDatabase = {
         };
         Returns: boolean;
       };
+      // --- The auth.uid() forms. Phase 7B uses these, never the two
+      // above: can_do/effective_permissions take a user id, and a screen
+      // that passes one can be made to ask on someone else's behalf.
+      can_i: {
+        Args: { p_permission_name: string; p_project_id?: string | null };
+        Returns: boolean;
+      };
+      my_effective_permissions: {
+        Args: { p_project_id?: string | null };
+        Returns: EffectivePermissionRow[];
+      };
     };
     Enums: {
       party_type_enum: PartyType;

@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import RequirePermission from "../auth/RequirePermission";
 import CompanyLayout from "../sidebar/CompanyLayout";
 import CompanyPage from "../../pages/company/CompanyPage";
 import ProjectsDistributePage from "../../pages/company/ProjectsDistributePage";
@@ -20,32 +21,37 @@ const CompanyRoutes = () => {
     <Routes>
       <Route element={<CompanyLayout />}>
         <Route index element={<CompanyPage />} />
-        <Route path="/salaries" element={<SalariesPage />} />
-        <Route path="/salaries/:employeeId" element={<SalariesPage />} />
+        <Route element={<RequirePermission permission="view_own_salary" />}>
+          <Route path="/salaries" element={<SalariesPage />} />
+          <Route path="/salaries/:employeeId" element={<SalariesPage />} />
+        </Route>
 
-        <Route path="/distribute" element={<ProjectsDistributePage />} />
+        {/* Gates the route only; no distribution logic is touched. */}
+        <Route element={<RequirePermission permission="view_distribution" />}>
+          <Route path="/distribute" element={<ProjectsDistributePage />} />
 
-        <Route
-          path="/distribute/batches"
-          element={<DistributionBatchesPage />}
-        />
-        <Route path="/distribute/batch/:date" element={<BatchDetailPage />} />
-        <Route
-          path="/distribute/project/:projectId"
-          element={<ProjectDistributionDetailPage />}
-        />
-        <Route
-          path="/distribute/employee/:employeeId"
-          element={<EmployeeDistributionDetailsPage />}
-        />
-        {/* Phase 5 — new distribution screens */}
-        <Route path="/shares" element={<ProjectSharesListPage />} />
-        <Route
-          path="/shares/:projectId"
-          element={<ProjectSharesDetailPage />}
-        />
+          <Route
+            path="/distribute/batches"
+            element={<DistributionBatchesPage />}
+          />
+          <Route path="/distribute/batch/:date" element={<BatchDetailPage />} />
+          <Route
+            path="/distribute/project/:projectId"
+            element={<ProjectDistributionDetailPage />}
+          />
+          <Route
+            path="/distribute/employee/:employeeId"
+            element={<EmployeeDistributionDetailsPage />}
+          />
+          {/* Phase 5 — new distribution screens */}
+          <Route path="/shares" element={<ProjectSharesListPage />} />
+          <Route
+            path="/shares/:projectId"
+            element={<ProjectSharesDetailPage />}
+          />
 
-        <Route path="/dashboard" element={<CompanyOverview />} />
+          <Route path="/dashboard" element={<CompanyOverview />} />
+        </Route>
       </Route>
     </Routes>
   );

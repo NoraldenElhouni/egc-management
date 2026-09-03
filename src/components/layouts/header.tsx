@@ -110,6 +110,7 @@ const Header = () => {
     templates: "القوالب",
     "project-distributions": "توزيع المشاريع",
     "project-shares": "حصص المشاريع",
+    counters: "العدادات",
   };
 
   return (

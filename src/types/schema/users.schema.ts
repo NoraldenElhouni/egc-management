@@ -48,6 +48,16 @@ export const userSchema = z
     status: z.enum(["active", "inactive", "on leave"]),
     roleId: z.preprocess(emptyToUndefined, z.string().optional()),
 
+    // Phase 1's departments table. ONE department per person — the
+    // decision is recorded in phase1-schema.sql and the guide's section
+    // 4.1, and it is why this is a single id and not an array.
+    //
+    // Optional on purpose. An employee with no department is a valid
+    // employee; the department layer simply contributes nothing to their
+    // ladder. Making it required here would be inventing a rule the data
+    // model does not have (22 of 55 current staff have none).
+    departmentId: z.preprocess(emptyToUndefined, z.string().optional()),
+
     // ✅ make it optional here (we will enforce conditionally)
     specializationsId: z.preprocess(emptyToUndefined, z.string().optional()),
 
