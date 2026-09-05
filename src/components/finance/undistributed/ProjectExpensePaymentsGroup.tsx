@@ -30,6 +30,10 @@ function CurrencyAmounts({ totals }: { totals: Record<string, number> }) {
   );
 }
 
+function hasNegative(totals: Record<string, number>): boolean {
+  return Object.values(totals).some((amount) => amount < 0);
+}
+
 interface ProjectExpensePaymentsGroupProps {
   projectId: string;
   projectName: string;
@@ -53,6 +57,7 @@ const ProjectExpensePaymentsGroup = ({
 
   const paymentTotals = sumByCurrency(rows, "paymentAmount");
   const companyTotals = sumByCurrency(rows, "percentageAmount");
+  const refundCount = rows.filter((r) => r.logType === "refund").length;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -85,6 +90,11 @@ const ProjectExpensePaymentsGroup = ({
             <span className="flex-shrink-0 rounded-full bg-blue-50 text-blue-700 text-xs font-medium px-2 py-0.5">
               {rows.length} دفعة
             </span>
+            {refundCount > 0 && (
+              <span className="flex-shrink-0 rounded-full bg-amber-50 text-amber-700 text-xs font-medium px-2 py-0.5">
+                {refundCount} استرداد
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-6 flex-shrink-0 text-sm">
@@ -94,7 +104,11 @@ const ProjectExpensePaymentsGroup = ({
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-400">نصيب الشركة</div>
-              <div className="font-semibold text-blue-700">
+              <div
+                className={`font-semibold ${
+                  hasNegative(companyTotals) ? "text-red-600" : "text-blue-700"
+                }`}
+              >
                 <CurrencyAmounts totals={companyTotals} />
               </div>
             </div>

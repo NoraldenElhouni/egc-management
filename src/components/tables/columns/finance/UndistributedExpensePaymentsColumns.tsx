@@ -14,12 +14,17 @@ export const undistributedExpensePaymentsColumns: ColumnDef<UndistributedExpense
       header: "المصروف",
       accessorFn: (row) => row.expenseDescription ?? "",
       cell: ({ row }) => (
-        <div>
+        <div className="flex items-center gap-2">
+          {row.original.logType === "refund" && (
+            <span className="flex-shrink-0 rounded-full bg-amber-50 text-amber-700 text-xs font-medium px-2 py-0.5">
+              استرداد
+            </span>
+          )}
           <span className="font-medium text-gray-900">
             {row.original.expenseDescription || "—"}
           </span>
           {row.original.expenseSerial != null && (
-            <span className="text-gray-400 font-mono text-xs mr-2">
+            <span className="text-gray-400 font-mono text-xs">
               #{String(row.original.expenseSerial).padStart(3, "0")}
             </span>
           )}
@@ -58,7 +63,11 @@ export const undistributedExpensePaymentsColumns: ColumnDef<UndistributedExpense
       cell: ({ row }) => {
         const v = row.original.paymentAmount;
         return (
-          <span className="font-medium whitespace-nowrap">
+          <span
+            className={`font-medium whitespace-nowrap ${
+              v != null && v < 0 ? "text-red-600" : ""
+            }`}
+          >
             {v != null ? formatCurrency(v, row.original.currency) : "—"}
           </span>
         );
@@ -73,7 +82,13 @@ export const undistributedExpensePaymentsColumns: ColumnDef<UndistributedExpense
       accessorKey: "percentageAmount",
       header: "مبلغ الشركة",
       cell: ({ row }) => (
-        <span className="font-semibold text-blue-700 whitespace-nowrap">
+        <span
+          className={`font-semibold whitespace-nowrap ${
+            row.original.percentageAmount < 0
+              ? "text-red-600"
+              : "text-blue-700"
+          }`}
+        >
           {formatCurrency(row.original.percentageAmount, row.original.currency)}
         </span>
       ),
