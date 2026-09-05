@@ -1,198 +1,42 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
-import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
-import {
-  ChevronRight,
-  ChevronLeft,
-  Book,
-  HandCoins,
-  LayoutGrid,
-  Percent,
-  PieChart,
-} from "lucide-react";
-import { useSidebar } from "../../contexts/SidebarContext";
+import SidebarLayout from "./SidebarLayout";
+import { COMPANY_ITEMS } from "../../config/navigation/company";
+import type { NavItem } from "../../config/navigation/types";
 
-const CompanyLayout = () => {
-  const location = useLocation();
-  const { isCollapsed, toggle } = useSidebar();
+const isActivePath = (path: string, pathname: string, items: NavItem[]) => {
+  if (pathname === path) return true;
 
-  const menuItems = [
-    {
-      title: "القائمة الرئيسية",
-      icon: LayoutGrid,
-      path: "/company",
-      description: "كل شاشات إدارة الشركة في مكان واحد",
-    },
-    {
-      title: "توزيع النسب",
-      icon: Percent,
-      path: "/company/distribute",
-      description: "توزيع نسب الموظفين على المشاريع المختلفة",
-      permission: "view_distribution",
-    },
-    {
-      title: "مراجعة النسب",
-      icon: Book,
-      path: "/company/distribute/batches",
-      description: "مراجعة دفعات التوزيع السابقة",
-      permission: "view_distribution",
-    },
-    // Phase 5 — the new screen, alongside the old ones. The two entries
-    // above are unchanged and still lead to the existing wizard.
-    {
-      title: "نسب التوزيع (الجديد)",
-      icon: PieChart,
-      path: "/company/shares",
-      description: "نسب الأشخاص لكل مشروع، مستقلة عن عضوية الفريق",
-      permission: "manage_distribution",
-    },
-    {
-      title: "الرواتب",
-      icon: HandCoins,
-      path: "/company/salaries",
-      description: "رواتب الموظفين",
-      permission: "view_own_salary",
-    },
-  ];
+  // For /company, only activate if on exact path or no sub-route
+  if (
+    path === "/company" &&
+    pathname !== "/company" &&
+    !pathname.match(/^\/company\/clients\/\d+$/)
+  ) {
+    return false;
+  }
 
-  const { visibleItems } = useVisibleMenuItems(menuItems);
+  // For detail pages (numeric ID), don't activate any menu item
+  if (pathname.match(/^\/company\/clients\/\d+/)) return false;
 
-  const isActivePath = (path: string) => {
-    // Exact match for the path
-    if (location.pathname === path) {
-      return true;
-    }
-
-    // For /company, only activate if on exact path or no sub-route
-    if (
-      path === "/company" &&
-      location.pathname !== "/company" &&
-      !location.pathname.match(/^\/company\/clients\/\d+$/)
-    ) {
-      return false;
-    }
-
-    // For detail pages (numeric ID), don't activate any menu item
-    if (location.pathname.match(/^\/company\/clients\/\d+/)) {
-      return false;
-    }
-
-    // Another entry is a longer match for this URL — let that one win.
-    // Without this, /company/distribute would also highlight while the
-    // user is on /company/distribute/batches.
-    const moreSpecific = menuItems.some(
-      (item) =>
-        item.path.length > path.length &&
-        (location.pathname === item.path ||
-          location.pathname.startsWith(item.path + "/")),
-    );
-    if (moreSpecific) return false;
-
-    // For other paths, check if current path starts with the menu path
-    return location.pathname.startsWith(path + "/");
-  };
-
-  return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-50">
-      {/* Sidebar - Fixed, no scrolling */}
-      <aside
-        className={`bg-white border-r border-gray-200 flex flex-col fixed right-0 top-16 bottom-0 transition-all duration-300 ${
-          isCollapsed ? "w-20" : "w-72"
-        }`}
-      >
-        {/* Header with Collapse Button */}
-        <div
-          className={`p-6 flex-shrink-0 relative ${
-            isCollapsed ? "" : "border-b border-gray-200"
-          }`}
-        >
-          {!isCollapsed && (
-            <>
-              <h2 className="text-2xl font-bold text-gray-900">إدارة الشركة</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                إدارة معلومات الشركة والموظفين
-              </p>
-            </>
-          )}
-
-          {/* Collapse Toggle Button */}
-          <button
-            onClick={toggle}
-            className={`absolute top-6 hover:bg-gray-100 rounded-full p-2 transition-all ${
-              isCollapsed ? "left-1/2 -translate-x-1/2" : "left-4"
-            }`}
-            title={isCollapsed ? "توسيع القائمة" : "طي القائمة"}
-          >
-            {isCollapsed ? (
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            ) : (
-              <ChevronRight className="w-5 h-5 text-gray-600" />
-            )}
-          </button>
-        </div>
-
-        {/* Navigation - Scrollable */}
-        <nav className="flex-1 overflow-y-auto p-4 scrollbar-hide">
-          <ul className="space-y-1">
-            {visibleItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = isActivePath(item.path);
-
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`
-                      flex items-start gap-3 px-4 py-3 rounded-lg transition-all duration-200
-                      ${
-                        isActive
-                          ? "bg-blue-50 text-blue-700 shadow-sm"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }
-                      ${isCollapsed ? "justify-center" : ""}
-                    `}
-                    title={isCollapsed ? item.title : ""}
-                  >
-                    <Icon
-                      className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                        isActive ? "text-blue-600" : "text-gray-400"
-                      }`}
-                    />
-                    {!isCollapsed && (
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className={`font-medium text-sm ${
-                            isActive ? "text-blue-900" : "text-gray-900"
-                          }`}
-                        >
-                          {item.title}
-                        </div>
-                        <div
-                          className={`text-xs mt-0.5 ${
-                            isActive ? "text-blue-600" : "text-gray-500"
-                          }`}
-                        >
-                          {item.description}
-                        </div>
-                      </div>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </aside>
-
-      {/* Main Content - Scrollable, offset by sidebar width */}
-      <main
-        className={`flex-1 overflow-y-auto scrollbar-hide transition-all duration-300 ${
-          isCollapsed ? "mr-20" : "mr-72"
-        }`}
-      >
-        <Outlet />
-      </main>
-    </div>
+  // Another entry is a longer match for this URL — let that one win.
+  // Without this, /company/distribute would also highlight while the
+  // user is on /company/distribute/batches.
+  const moreSpecific = items.some(
+    (item) =>
+      item.path.length > path.length &&
+      (pathname === item.path || pathname.startsWith(item.path + "/")),
   );
+  if (moreSpecific) return false;
+
+  return pathname.startsWith(path + "/");
 };
+
+const CompanyLayout = () => (
+  <SidebarLayout
+    title="إدارة الشركة"
+    subtitle="إدارة معلومات الشركة والموظفين"
+    items={COMPANY_ITEMS.filter((item) => item.showInSidebar !== false)}
+    isActivePath={isActivePath}
+  />
+);
 
 export default CompanyLayout;

@@ -1,0 +1,102 @@
+import {
+  BookText,
+  Box,
+  Building2,
+  Globe,
+  KeyRound,
+  Landmark,
+  Logs,
+  Map,
+  Monitor,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import type { NavItem } from "./types";
+
+export const SETTINGS_ITEMS: NavItem[] = [
+  {
+    label: "اداره الادوار",
+    icon: Users,
+    path: "/settings/roles",
+    description: "إدارة  الأدوار والصلاحيات",
+    permission: "manage_roles",
+  },
+  {
+    label: "اداره اسماء المصروفات",
+    icon: Box,
+    path: "/settings/expenses",
+    description: "إدارة اسماء المصروفات",
+    permission: "manage_reference_data",
+  },
+  {
+    label: "اداره التخصصات",
+    icon: BookText,
+    path: "/settings/specializations",
+    description: "إدارة التخصصات",
+    permission: "manage_specialities",
+  },
+  {
+    label: "اداره الخرائط",
+    icon: Map,
+    path: "/settings/maps",
+    description: "إدارة الخرائط",
+    permission: "manage_reference_data",
+  },
+  {
+    label: "اداره البنوك",
+    icon: Landmark,
+    path: "/settings/banks",
+    description: "إدارة قائمة البنوك",
+    permission: "manage_reference_data",
+  },
+  // ── Phase 3: permission administration ──────────────────────────
+  // Gated with the same hardcoded role check as every other item here,
+  // on purpose. Replacing these string checks with real permission
+  // checks is Phase 7 — this phase adds configuration capability
+  // without changing how anything is gated. Issue #15: these two were
+  // only in the sidebar list before this file existed.
+  {
+    label: "اداره الاقسام",
+    icon: Building2,
+    path: "/settings/permissions/departments",
+    description: "الأقسام وصلاحياتها الأساسية",
+    permission: "manage_departments",
+  },
+  {
+    label: "صلاحيات الادوار",
+    icon: ShieldCheck,
+    path: "/settings/permissions/roles",
+    description: "الصلاحيات الأساسية لكل دور وظيفي",
+    permission: "manage_permissions_company",
+  },
+  {
+    label: "جلسات المستخدمين",
+    icon: Monitor,
+    path: "/settings/sessions",
+    description: "متابعة الأجهزة والتطبيقات المستخدمة",
+    permission: "view_user_sessions",
+  },
+  // Issue #15: these three were only in the menu-page list before this
+  // file existed — absent from the sidebar entirely.
+  {
+    label: "السجلات",
+    icon: Logs,
+    path: "/settings/logs",
+    description: "سجلات النظام",
+    permission: "view_audit_logs",
+  },
+  {
+    label: "إعادة تعيين كلمة مرور مستخدم",
+    icon: KeyRound,
+    path: "/settings/password-reset",
+    description: "إعادة تعيين كلمة مرور أي مستخدم",
+    permission: "reset_user_password",
+  },
+  {
+    label: "إعدادات الموقع",
+    icon: Globe,
+    path: "/settings/website",
+    description: "إعدادات الموقع",
+    permission: "manage_website",
+  },
+];

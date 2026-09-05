@@ -1,37 +1,10 @@
-import { PackageOpen, Paperclip, Settings, Sheet } from "lucide-react";
-import MenuGrid, { MenuItem } from "../../components/ui/MenuGrid";
+import MenuGrid from "../../components/ui/MenuGrid";
+import { OPERATIONS_ITEMS } from "../../config/navigation/operations";
 
 const OperationsPage = () => {
-  const menuItems: MenuItem[] = [
-    {
-      label: "الخرائط",
-      icon: PackageOpen,
-      path: "/operations/maps",
-      description: "عرض وإدارة الخرائط",
-      permission: "view_operations",
-    },
-    {
-      label: "العقود",
-      icon: Sheet,
-      path: "/operations/contracts",
-      description: "إدارة العقود والملفات",
-      permission: "view_operations",
-    },
-    {
-      label: "حصر الكميات",
-      icon: Paperclip,
-      path: "/operations/boq",
-      description: "إدارة حصر الكميات",
-      permission: "view_operations",
-    },
-    {
-      label: "الإعدادات",
-      icon: Settings,
-      path: "/operations/settings",
-      description: "إعدادات وحدة التشغيل",
-      permission: "view_operations",
-    },
-  ];
+  const menuItems = OPERATIONS_ITEMS.filter(
+    (item) => item.showInMenuGrid !== false,
+  );
 
   return (
     <MenuGrid

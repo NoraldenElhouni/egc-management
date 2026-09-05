@@ -1,50 +1,12 @@
-import React, { ComponentType } from "react";
+import { ComponentType } from "react";
 import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
-import {
-  Book,
-  HandCoins,
-  LayoutDashboard,
-  Percent,
-  PieChart,
-} from "lucide-react";
 import { Link } from "react-router-dom";
+import { COMPANY_ITEMS } from "../../config/navigation/company";
 
 const CompanyPage = () => {
-  // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
-  const menuItems = [
-    {
-      label: "توزيع النسب",
-      icon: Percent,
-      path: "/company/distribute",
-      permission: "view_distribution",
-    },
-    {
-      label: "مراجعة النسب",
-      icon: Book,
-      path: "/company/distribute/batches",
-      permission: "view_distribution",
-    },
-    // Phase 5 — the new shares screen, alongside the existing entries.
-    // The two cards above are unchanged and still lead to the old wizard.
-    {
-      label: "نسب التوزيع (الجديد)",
-      icon: PieChart,
-      path: "/company/shares",
-      permission: "manage_distribution",
-    },
-    {
-      label: "تفاصيل الشركة",
-      icon: LayoutDashboard,
-      path: "/company/dashboard",
-      permission: "view_distribution",
-    },
-    {
-      label: "الرواتب",
-      icon: HandCoins,
-      path: "/company/salaries",
-      permission: "view_own_salary",
-    },
-  ];
+  const menuItems = COMPANY_ITEMS.filter(
+    (item) => item.showInMenuGrid !== false,
+  );
 
   const { visibleItems } = useVisibleMenuItems(menuItems);
   return (

@@ -1,16 +1,10 @@
-import { House } from "lucide-react";
 import MenuGrid from "../../components/ui/MenuGrid";
+import { EXECUTION_ITEMS } from "../../config/navigation/execution";
 
 const ExecutionManagementPage = () => {
-  const menuItems = [
-    {
-      label: "إدارة المشاريع",
-      icon: House,
-      path: "./projects",
-      description: "إدارة المشاريع",
-      permission: "manage_execution",
-    },
-  ];
+  const menuItems = EXECUTION_ITEMS.filter(
+    (item) => item.showInMenuGrid !== false,
+  );
 
   return (
     <MenuGrid
