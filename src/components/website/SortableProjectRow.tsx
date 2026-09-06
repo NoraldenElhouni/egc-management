@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { Project } from "../../hooks/website/useProjects";
+import { dateToYear } from "../../utils/date";
 
 type SortableProjectRowProps = {
   project: Project;
@@ -64,7 +65,7 @@ const SortableProjectRow: React.FC<SortableProjectRowProps> = ({
       </td>
 
       <td className="py-3 px-4 align-top text-sm border-b border-gray-100">
-        {project.year ?? "-"}
+        {dateToYear(project.year) || "-"}
       </td>
 
       <td className="py-3 px-4 align-top text-sm border-b border-gray-100">
