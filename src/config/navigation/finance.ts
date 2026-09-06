@@ -56,11 +56,11 @@ export const FINANCE_ITEMS: NavItem[] = [
     icon: PieChart,
     path: "/finance/pending-distribution",
     description: "سجل مدفوعات المصاريف غير الموزعة لكل مشروع",
-    // PHASE 7B: deliberately left on a role check — this screen overlaps
-    // the undistributed-expenses work that is paused. Issue #15: the
-    // menu page and sidebar had drifted to ["Manager"] vs
-    // ["Admin","Manager"]; reconciled to the wider set rather than
-    // narrowing Admin's access.
-    role: ["Admin", "Manager"],
+    // Issue #11/#19: converted off the legacy role check. The
+    // view_pending_distribution catalogue entry already existed with
+    // zero grants; granted to Admin and Manager to match the
+    // ["Admin","Manager"] gate this replaces (itself the issue #15
+    // reconciliation of a prior ["Manager"] vs ["Admin","Manager"] drift).
+    permission: "view_pending_distribution",
   },
 ];

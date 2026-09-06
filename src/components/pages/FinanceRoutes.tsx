@@ -80,8 +80,9 @@ const FinanceRoutes = () => {
           <Route path="contracts" element={<ContractsPage />} />
         </Route>
 
-        {/* Left on its role check: overlaps the paused undistributed-expenses work. */}
-        <Route element={<RequirePermission roles={["Admin", "Manager"]} />}>
+        <Route
+          element={<RequirePermission permission="view_pending_distribution" />}
+        >
           <Route
             path="pending-distribution"
             element={<UndistributedExpensePaymentsPage />}

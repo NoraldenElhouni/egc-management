@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useMyPermissions } from "./useCan";
-import { useAuth } from "../useAuth";
 
 // =====================================================================
 // PHASE 7B BATCHES 4 & 5 — one filter for every menu in the app
@@ -36,7 +35,7 @@ export interface PermissionGatedItem {
   /**
    * The permission required to see this item.
    *
-   * - omitted → public, always visible (unless `role` is set)
+   * - omitted → public, always visible
    * - a string → must be allowed
    * - an array → allowed if ANY of them is (OR, not AND)
    *
@@ -47,20 +46,6 @@ export interface PermissionGatedItem {
    * is to be kept in sync with nine others.
    */
   permission?: string | string[];
-
-  /**
-   * LEGACY, and nearly gone. The hardcoded role list Phase 7B replaced.
-   *
-   * The scope-mismatch holdouts are all converted. Exactly one menu entry
-   * still uses this: /finance/pending-distribution, deliberately left on
-   * a role check because it overlaps the paused undistributed-expenses
-   * work. (Two tabs in EmployeeDetailsPage do the same, with their own
-   * filter.)
-   *
-   * `permission` wins if both are set. Delete this field, and the legacy
-   * branch in RequirePermission.tsx, once that screen is converted.
-   */
-  role?: string[];
 }
 
 /**
@@ -74,28 +59,22 @@ export interface PermissionGatedItem {
  * permission_catalog.is_project_scoped before adding a gate here.
  */
 // `T extends object` rather than `T extends PermissionGatedItem`:
-// PermissionGatedItem has only optional members, which makes it a weak
-// type, and TypeScript rejects a menu item that happens to set neither
-// `permission` nor `role` — i.e. every fully public menu. The two fields
-// are read through a narrowing cast below instead.
+// PermissionGatedItem has only an optional member, which makes it a weak
+// type, and TypeScript rejects a menu item that happens to set no
+// `permission` at all — i.e. every fully public menu. The field is read
+// through a narrowing cast below instead.
 export function useVisibleMenuItems<T extends object>(
   items: T[],
   projectId?: string,
 ): { visibleItems: T[]; loading: boolean } {
   const { data: allowed, isPending } = useMyPermissions(projectId);
-  const { user } = useAuth();
-  const roleName = user?.role ?? null;
 
   const visibleItems = useMemo(() => {
     return items.filter((item) => {
-      const { permission: required, role: roles } = item as PermissionGatedItem;
+      const { permission: required } = item as PermissionGatedItem;
 
       if (!required || (Array.isArray(required) && required.length === 0)) {
-        // No permission set. Fall back to the legacy role list if the
-        // item still has one; otherwise the item is public.
-        if (!roles || roles.length === 0) return true;
-        if (!roleName) return false;
-        return roles.includes(roleName);
+        return true;
       }
 
       if (!allowed) return false;
@@ -103,7 +82,7 @@ export function useVisibleMenuItems<T extends object>(
         ? required.some((name) => allowed.has(name))
         : allowed.has(required);
     });
-  }, [items, allowed, roleName]);
+  }, [items, allowed]);
 
   return { visibleItems, loading: isPending };
 }

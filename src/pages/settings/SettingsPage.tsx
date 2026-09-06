@@ -10,7 +10,7 @@ const SettingsPage = () => {
     <MenuGrid
       title="الإعدادات"
       items={menuItems}
-      columns={{ base: 1, sm: 2, md: 3 }}
+      columns={{ base: 1, sm: 2, md: 4 }}
     />
   );
 };

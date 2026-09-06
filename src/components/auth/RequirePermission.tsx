@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import { useMyPermissions } from "../../hooks/permissions/useCan";
-import { useAuth } from "../../hooks/useAuth";
 
 // =====================================================================
 // PHASE 7C — the first real route guard in the desktop app
@@ -31,13 +30,6 @@ import { useAuth } from "../../hooks/useAuth";
 interface RequirePermissionProps {
   /** Allowed if this permission resolves true — or ANY of them, given an array. */
   permission?: string | string[];
-  /**
-   * LEGACY fallback, matching PermissionGatedItem.role. Down to a single
-   * caller: /finance/pending-distribution, held back because it overlaps
-   * the paused undistributed-expenses work. Ignored when `permission` is
-   * set. Delete both when that route is converted.
-   */
-  roles?: string[];
   /** Project id for project-scoped permissions. Rarely needed here. */
   projectId?: string;
 }
@@ -50,19 +42,11 @@ const Denied = () => (
   </div>
 );
 
-const RequirePermission = ({
-  permission,
-  roles,
-  projectId,
-}: RequirePermissionProps) => {
+const RequirePermission = ({ permission, projectId }: RequirePermissionProps) => {
   const { data: allowed, isPending, isError } = useMyPermissions(projectId);
-  const { user } = useAuth();
 
-  // Legacy role branch: no resolver call is needed to decide it.
-  if (!permission) {
-    if (!roles || roles.length === 0) return <Outlet />;
-    const roleName = user?.role;
-    return roleName && roles.includes(roleName) ? <Outlet /> : <Denied />;
+  if (!permission || (Array.isArray(permission) && permission.length === 0)) {
+    return <Outlet />;
   }
 
   // Blank while resolving. Showing the page and pulling it away is worse
