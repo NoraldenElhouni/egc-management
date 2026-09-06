@@ -306,18 +306,6 @@ export default function ProjectSharesEditor({ summary, shares }: Props) {
                       >
                         {share.email}
                       </span>
-                      {share.legacyRowCount === 0 && (
-                        <span className="block text-[11px] text-amber-700 mt-0.5">
-                          لا يوجد سجل مقابل في الجدول القديم — قد لا تظهر هذه
-                          النسبة في شاشات التوزيع القديمة.
-                        </span>
-                      )}
-                      {share.legacyRowCount > 1 && (
-                        <span className="block text-[11px] text-gray-500 mt-0.5">
-                          لهذا الشخص {share.legacyRowCount} أدوار في المشروع؛
-                          تُكتب النسبة كاملة على سجل واحد والباقي صفر.
-                        </span>
-                      )}
                     </span>
                   </span>
 

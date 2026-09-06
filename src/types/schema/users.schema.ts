@@ -52,10 +52,12 @@ export const userSchema = z
     // decision is recorded in phase1-schema.sql and the guide's section
     // 4.1, and it is why this is a single id and not an array.
     //
-    // Optional on purpose. An employee with no department is a valid
-    // employee; the department layer simply contributes nothing to their
-    // ladder. Making it required here would be inventing a rule the data
-    // model does not have (22 of 55 current staff have none).
+    // Optional here (we will enforce conditionally) — same pattern as
+    // specializationsId below. An employee with no department is still a
+    // valid employee in general; the column stays nullable for the 22
+    // existing staff with none. But issue #17: an Engineer with no
+    // department silently loses layer 4 of the ladder, so it's required
+    // for that role specifically.
     departmentId: z.preprocess(emptyToUndefined, z.string().optional()),
 
     // ✅ make it optional here (we will enforce conditionally)
@@ -96,6 +98,17 @@ export const userSchema = z
         code: z.ZodIssueCode.custom,
         path: ["specializationsId"],
         message: "يجب اختيار تخصص للمهندس",
+      });
+    }
+
+    // Issue #17: department stays optional in general, but an Engineer
+    // with none silently drops layer 4 of the permission ladder — so it's
+    // required for that role.
+    if (isEngineering && !data.departmentId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["departmentId"],
+        message: "يجب اختيار القسم للمهندس",
       });
     }
   });

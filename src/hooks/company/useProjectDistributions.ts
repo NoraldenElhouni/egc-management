@@ -8,13 +8,12 @@ import { supabase } from "../../lib/supabaseClient";
 //
 // Implementation guide sections 2.3 and 4.5. NEW file for Phase 5.
 //
-// Originally this file was purely additive and the old wizard was left
-// untouched on the old table. That changed by decision: the distribute
-// wizard at /company/distribute now reads and writes
-// project_distributions too, reusing writeLegacyPercentage below for
-// its half of the dual-write. Both screens exist side by side and both
-// are now on the new table, with project_assignments kept in step
-// underneath for everything that still reads it.
+// The distribute wizard at /company/distribute and the new shares screen
+// both read and write project_distributions, and only project_distributions.
+// Issue #18 retired the project_assignments mirror this file used to
+// maintain (writeLegacyPercentage) — the payout-run engine
+// (useProjectsDistribute.ts) already reads project_distributions
+// directly, and it was the last thing this mirror existed for.
 //
 // WHAT THIS FILE IS ABOUT
 //   project + person + percentage. That is all. No project role, no
@@ -53,12 +52,6 @@ export interface DistributionShare {
   fullName: string;
   email: string | null;
   percentage: number;
-  /**
-   * How many project_assignments rows this person has on this project.
-   * Drives the legacy-representation warning in the UI — see the
-   * dual-write notes further down.
-   */
-  legacyRowCount: number;
 }
 
 export interface ProjectShareSummary {
@@ -104,25 +97,14 @@ export function useProjectDistribution(projectId: string | undefined) {
       const distributionRows = rows ?? [];
       const personIds = distributionRows.map((r) => r.person_id);
 
-      // Names, and the legacy row count used for the dual-write warning.
-      const [{ data: users }, { data: legacyRows }] = await Promise.all([
-        personIds.length
-          ? supabase
-              .from("users")
-              .select("id, first_name, last_name, email")
-              .in("id", personIds)
-          : Promise.resolve({ data: [] as never[] }),
-        supabase
-          .from("project_assignments")
-          .select("user_id")
-          .eq("project_id", projectId as string),
-      ]);
+      const { data: users } = personIds.length
+        ? await supabase
+            .from("users")
+            .select("id, first_name, last_name, email")
+            .in("id", personIds)
+        : { data: [] as never[] };
 
       const userById = new Map((users ?? []).map((u) => [u.id, u]));
-      const legacyCount = new Map<string, number>();
-      for (const row of legacyRows ?? []) {
-        legacyCount.set(row.user_id, (legacyCount.get(row.user_id) ?? 0) + 1);
-      }
 
       const shares: DistributionShare[] = distributionRows
         .map((row) => {
@@ -135,7 +117,6 @@ export function useProjectDistribution(projectId: string | undefined) {
               "—",
             email: user?.email ?? null,
             percentage: Number(row.percentage),
-            legacyRowCount: legacyCount.get(row.person_id) ?? 0,
           };
         })
         .sort((a, b) => a.fullName.localeCompare(b.fullName, "ar"));
@@ -258,57 +239,21 @@ export function useDistributionCandidates() {
 }
 
 // ---------------------------------------------------------------------
-// DUAL-WRITE — new table plus the old one
+// WRITES — project_distributions only
 // ---------------------------------------------------------------------
 //
-// Same principle as Phase 4's team dual-write: the old screens must keep
-// showing correct, live numbers, so every write here also lands in
-// project_assignments.percentage.
+// Issue #18 retired the project_assignments mirror this file used to
+// maintain on every write (writeLegacyPercentage, and the compensating
+// rollback either mutation ran if that second write failed). The payout
+// engine, the shares wizard and the shares PDF all read
+// project_distributions directly now, so there is nothing left reading
+// the old table that this needs to keep in step with.
 //
-// THE MAPPING IS NOT ONE-TO-ONE, AND THAT MATTERS
-//
-//   new: project_distributions   UNIQUE (project_id, person_id)
-//        -> exactly one row per person per project
-//   old: project_assignments     no unique constraint
-//        -> one row per (person, PROJECT ROLE), so a person holding two
-//           project roles has TWO rows, and the old screens SUM over all
-//           of them
-//
-//   So "set Fatima to 25%" has three possible shapes in the old table:
-//
-//   1 existing row   -> set it to 25. Clean.
-//   2+ existing rows -> set the canonical one (lowest id, deterministic)
-//                       to 25 and the REST TO ZERO. The old screens sum,
-//                       so this keeps their total right without deleting
-//                       anyone's team row. Writing 25 to both would show
-//                       50, which is the existing bug in
-//                       EmployeeDistributionEditForm — see below.
-//   0 existing rows  -> the partner case. Insert one, with
-//                       project_role_id = NULL. Read the warning.
-//
-// THE PARTNER CASE — the old NULL-role hazard is now RESOLVED
-//
-//   This used to be an open money risk. useProjectsDistribute.ts (the
-//   payout-run engine) filtered its query with
-//       .neq("project_assignments.project_role_id",
-//            "c7823151-2290-4861-a383-5e00a78128ce")
-//   and in SQL `col <> 'x'` is NULL when col is NULL, which drops the
-//   row. So a partner written here with project_role_id = NULL would
-//   have been invisible to the payout engine and would not have been
-//   paid.
-//
-//   That filter is gone: the wizard now reads project_distributions,
-//   which has no project role at all, so the exclusion could not be
-//   expressed and was dropped by decision. Anyone with a row in
-//   project_distributions is now paid by the wizard, partner or not,
-//   and the NULL project_role_id in the mirrored legacy row no longer
-//   affects who gets money — it only records that this person holds a
-//   share without holding a job on the project, which is exactly true.
-//
-// NOT A TRANSACTION, for the same reason as Phase 4: PostgREST has no
-// client-side transaction. Order is new-table-first (it carries the
-// uniqueness constraint, so a conflict fails before anything is
-// written), with a compensating rollback if the legacy write fails.
+// UNIQUE (project_id, person_id) on project_distributions means there is
+// exactly one row per person per project — no "canonical row plus zero
+// out the rest" bookkeeping like the old table needed, because the old
+// table had no such constraint and could hold several rows per person
+// (one per project role).
 
 interface UpsertArgs {
   projectId: string;
@@ -336,18 +281,6 @@ export function useSetProjectShare() {
       percentage,
       updatedBy,
     }: UpsertArgs) => {
-      // Snapshot the old value so the compensating rollback can restore
-      // it rather than guessing.
-      const { data: before } = await permissionsDb
-        .from("project_distributions")
-        .select("id, percentage")
-        .eq("project_id", projectId)
-        .eq("person_id", personId)
-        .maybeSingle();
-      // .maybeSingle() is CORRECT here, unlike in the old code: the
-      // UNIQUE constraint guarantees zero-or-one row. This is the
-      // difference between relying on a constraint and hoping.
-
       const { error } = await permissionsDb
         .from("project_distributions")
         .upsert(
@@ -361,25 +294,6 @@ export function useSetProjectShare() {
           { onConflict: "project_id,person_id" },
         );
       if (error) throw error;
-
-      try {
-        await writeLegacyPercentage(projectId, personId, percentage);
-      } catch (legacyError) {
-        // Undo the new-table write so the two cannot disagree.
-        if (before) {
-          await permissionsDb
-            .from("project_distributions")
-            .update({ percentage: before.percentage })
-            .eq("id", before.id);
-        } else {
-          await permissionsDb
-            .from("project_distributions")
-            .delete()
-            .eq("project_id", projectId)
-            .eq("person_id", personId);
-        }
-        throw legacyError;
-      }
     },
     onSuccess: (_d, variables) => {
       queryClient.invalidateQueries({
@@ -398,43 +312,22 @@ interface RemoveArgs {
 /**
  * Removes one person's share.
  *
- * Sets the legacy rows to 0 rather than deleting them. Deleting would
- * remove that person's project_assignments row, which in the old schema
- * is ALSO their team membership — and removing someone's share must not
- * remove them from the team. That is the entire point of the split
- * (guide section 2.3).
+ * Deletes the project_distributions row outright — team_assignments is
+ * a separate table entirely, so this has no effect on whether the
+ * person is still on the project team. That is the entire point of the
+ * split (guide section 2.3).
  */
 export function useRemoveProjectShare() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ projectId, personId }: RemoveArgs) => {
-      const { data: before } = await permissionsDb
-        .from("project_distributions")
-        .select("id, percentage")
-        .eq("project_id", projectId)
-        .eq("person_id", personId)
-        .maybeSingle();
-
       const { error } = await permissionsDb
         .from("project_distributions")
         .delete()
         .eq("project_id", projectId)
         .eq("person_id", personId);
       if (error) throw error;
-
-      try {
-        await writeLegacyPercentage(projectId, personId, 0);
-      } catch (legacyError) {
-        if (before) {
-          await permissionsDb.from("project_distributions").insert({
-            project_id: projectId,
-            person_id: personId,
-            percentage: before.percentage,
-          });
-        }
-        throw legacyError;
-      }
     },
     onSuccess: (_d, variables) => {
       queryClient.invalidateQueries({
@@ -479,57 +372,3 @@ export function useSetProjectHouseShares() {
   });
 }
 
-// ---------------------------------------------------------------------
-// The legacy half of the dual-write
-// ---------------------------------------------------------------------
-
-export async function writeLegacyPercentage(
-  projectId: string,
-  personId: string,
-  percentage: number,
-): Promise<void> {
-  const { data: legacyRows, error } = await supabase
-    .from("project_assignments")
-    .select("id")
-    .eq("project_id", projectId)
-    .eq("user_id", personId)
-    .order("id", { ascending: true });
-  if (error) throw error;
-
-  const rows = legacyRows ?? [];
-
-  if (rows.length === 0) {
-    // The partner case. See the warning in the dual-write notes above.
-    const { error: insertError } = await supabase
-      .from("project_assignments")
-      .insert({
-        project_id: projectId,
-        user_id: personId,
-        percentage,
-        project_role_id: null,
-      });
-    if (insertError) throw insertError;
-    return;
-  }
-
-  // Canonical row carries the whole percentage; any others go to zero so
-  // the old screens' SUM stays correct. Matched BY ID, never by
-  // (project, person) — matching by the pair is precisely the bug in
-  // EmployeeDistributionEditForm, where one edit silently rewrites every
-  // project-role row a person holds.
-  const [canonical, ...others] = rows;
-
-  const { error: updateError } = await supabase
-    .from("project_assignments")
-    .update({ percentage })
-    .eq("id", canonical.id);
-  if (updateError) throw updateError;
-
-  for (const row of others) {
-    const { error: zeroError } = await supabase
-      .from("project_assignments")
-      .update({ percentage: 0 })
-      .eq("id", row.id);
-    if (zeroError) throw zeroError;
-  }
-}

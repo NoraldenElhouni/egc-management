@@ -9,10 +9,11 @@ import type { ProjectRoleRow } from "../../types/permissions.types";
 //
 // Implementation guide section 4.4 and section 2.2.
 //
-// This is the first thing in either app to treat team_assignments as the
-// source of truth. project_assignments is still written on every change
-// (see the dual-write note below) so nothing reading the old table
-// breaks while the migration is in flight.
+// team_assignments is the only table this file touches. It used to also
+// dual-write project_assignments so nothing reading the old table went
+// stale during the migration — issue #18 retired that mirror: the app
+// no longer reads or writes project_assignments anywhere, so there is
+// nothing left to keep in step with it.
 //
 // WHAT THIS FILE DELIBERATELY DOES NOT DO
 //   - No percentage, anywhere. Distribution is a separate table, a
@@ -166,40 +167,19 @@ export function useAssignableStaffForTeam() {
 }
 
 // ---------------------------------------------------------------------
-// WRITES — dual-write to the new table AND the old one
+// WRITES — team_assignments only
 // ---------------------------------------------------------------------
 //
-// THE DUAL-WRITE RULE, and why it is shaped like this
+// Issue #18: this used to dual-write project_assignments too, with a
+// compensating rollback for when the second write failed. That mirror
+// is gone — team_assignments is the only table a team-membership change
+// touches now, so there is nothing left to keep in step and nothing to
+// roll back.
 //
-//   Until Phase 8 retires project_assignments, every team change must
-//   land in both tables or in neither. Things still reading the old
-//   table directly — the distribution screens, the shares PDF, the
-//   project overview — must keep seeing an accurate roster throughout
-//   the migration.
-//
-//   percentage is NEVER touched here. On insert it is left unset; on
-//   delete the whole row goes, which is correct because removing someone
-//   from a team should also remove the row the old table used to
-//   represent that membership. Their project_distributions row (Phase 5)
-//   is a different table entirely and is not touched by any of this.
-//
-//   ORDER MATTERS. The new table is written FIRST, because it is the one
-//   carrying the UNIQUE (project_id, person_id, project_role_id)
-//   constraint from Phase 1. A duplicate add therefore fails before
-//   anything has been written anywhere, which is the cheapest possible
-//   failure. If the second write fails we roll the first one back by
-//   hand — see the compensating delete below.
-//
-//   WHY NOT A REAL TRANSACTION: PostgREST has no client-side transaction.
-//   Two statements from the browser cannot be atomic. The honest options
-//   were (a) a Postgres function taking both writes, or (b) compensating
-//   rollback in the client. (a) is better and is what I would build if
-//   this were long-lived, but it is another SQL migration to review and
-//   run, and this dual-write is temporary scaffolding that dies in Phase
-//   8. (b) is implemented below, and the failure it cannot cover — the
-//   compensating delete itself failing — is surfaced to the user with
-//   both ids so it can be repaired by hand rather than silently
-//   diverging.
+// percentage is NEVER touched here, in either direction. A person can be
+// on the team with no share and hold a share without being on the team;
+// neither is an error and neither is inferred from the other. Their
+// project_distributions row (Phase 5) is a different table entirely.
 
 interface AddArgs {
   projectId: string;
@@ -219,7 +199,6 @@ export function useAddTeamMember() {
       projectRoleId,
       assignedBy,
     }: AddArgs) => {
-      // 1. New table first — it carries the uniqueness constraint.
       const { data: created, error } = await permissionsDb
         .from("team_assignments")
         .insert({
@@ -240,36 +219,6 @@ export function useAddTeamMember() {
           );
         }
         throw error;
-      }
-
-      // 2. Old table, so nothing still reading it goes stale.
-      //    percentage is deliberately omitted — it stays whatever the
-      //    distribution screens set, and this row simply has none.
-      const { error: legacyError } = await supabase
-        .from("project_assignments")
-        .insert({
-          project_id: projectId,
-          user_id: personId, // misnamed in the old schema; FK is employees.id
-          project_role_id: projectRoleId,
-        });
-
-      if (legacyError) {
-        // Compensating rollback: undo step 1 so the two tables cannot
-        // disagree. Failing the whole operation is better than a
-        // half-applied one.
-        const { error: undoError } = await permissionsDb
-          .from("team_assignments")
-          .delete()
-          .eq("id", created.id);
-
-        if (undoError) {
-          throw new Error(
-            `فشلت الإضافة في الجدول القديم، وتعذّر التراجع عن الجدول الجديد. ` +
-              `يجب حذف السجل يدوياً: team_assignments.id = ${created.id}. ` +
-              `الخطأ الأصلي: ${legacyError.message}`,
-          );
-        }
-        throw legacyError;
       }
 
       return created.id;
@@ -293,52 +242,12 @@ export function useRemoveTeamMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      assignmentId,
-      projectId,
-      personId,
-      projectRoleId,
-    }: RemoveArgs) => {
-      // Old table first this time. If the new-table delete then fails,
-      // re-inserting into the old table is straightforward; the reverse
-      // would have to recreate a row whose id other things may hold.
-      //
-      // Matched on all three columns, NOT on (project, person) alone —
-      // that is exactly the bug the distribution form has today, where
-      // deleting by (project_id, user_id) silently removes every role a
-      // person holds on the project instead of the one intended.
-      const { error: legacyError } = await supabase
-        .from("project_assignments")
-        .delete()
-        .eq("project_id", projectId)
-        .eq("user_id", personId)
-        .eq("project_role_id", projectRoleId);
-      if (legacyError) throw legacyError;
-
+    mutationFn: async ({ assignmentId }: RemoveArgs) => {
       const { error } = await permissionsDb
         .from("team_assignments")
         .delete()
         .eq("id", assignmentId);
-
-      if (error) {
-        // Put the old row back so the two tables stay in step.
-        const { error: undoError } = await supabase
-          .from("project_assignments")
-          .insert({
-            project_id: projectId,
-            user_id: personId,
-            project_role_id: projectRoleId,
-          });
-        if (undoError) {
-          throw new Error(
-            `فشل الحذف من الجدول الجديد، وتعذّر التراجع عن الجدول القديم. ` +
-              `يجب إعادة إضافة السجل يدوياً في project_assignments ` +
-              `(project_id=${projectId}, user_id=${personId}, project_role_id=${projectRoleId}). ` +
-              `الخطأ الأصلي: ${error.message}`,
-          );
-        }
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({

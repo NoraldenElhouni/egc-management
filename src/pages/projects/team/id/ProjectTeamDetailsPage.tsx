@@ -9,13 +9,11 @@ import ErrorPage from "../../../../components/ui/errorPage";
 // =====================================================================
 // The project Team tab — implementation guide section 4.4.
 // =====================================================================
-// Phase 4. Reads and writes team_assignments (dual-writing to the old
-// project_assignments table until Phase 8 — see useTeamAssignments.ts).
-//
-// The previous version of this page rendered AddingNewTeamProjects and
-// TeamList, which wrote percentage and team membership into one row of
-// project_assignments. Both are now unreferenced and marked deprecated;
-// they are removed in Phase 8 along with the table itself.
+// Phase 4. Reads and writes team_assignments only — issue #18 retired
+// the project_assignments mirror useTeamAssignments.ts used to keep in
+// step (see that file). AddingNewTeamProjects, the previous version's
+// component that wrote percentage and team membership into one
+// project_assignments row, has been deleted.
 //
 // WHO CAN SEE THIS PAGE has not changed. It is gated by the same route
 // and sidebar checks as before — wiring the resolver into access control

@@ -12,22 +12,20 @@ import { Currency } from "../../../types/global.type";
 import EmployeePicker from "./EmployeePicker";
 import { supabase } from "../../../lib/supabaseClient";
 import { permissionsDb } from "../../../lib/permissionsDb";
-import { writeLegacyPercentage } from "../../../hooks/company/useProjectDistributions";
 import { useAuth } from "../../../hooks/useAuth";
 
 // =====================================================================
-// Phase 5 follow-up — this editor now writes project_distributions.
+// Phase 5 follow-up — this editor writes project_distributions only.
 // =====================================================================
 // It used to read and write project_assignments, where a row meant BOTH
 // "has a share" and "is on the team in this project role". Those are
 // now separate facts in separate tables. This screen owns the money
 // half only; team membership is managed on the project's Team tab.
 //
-// Every write is mirrored back into project_assignments.percentage via
-// writeLegacyPercentage, so anything still reading the old table keeps
-// showing live numbers. That helper is shared with the new shares
-// screen deliberately — one implementation of the mirror, so the two
-// cannot drift.
+// Issue #18 retired the project_assignments mirror this screen used to
+// write on every change — nothing reads that table for payout or team
+// numbers anymore, so there's nothing left for the mirror to keep in
+// step with.
 // =====================================================================
 
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
@@ -189,20 +187,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
       return;
     }
 
-    try {
-      await writeLegacyPercentage(project.id, employeeId, percentage);
-    } catch (legacyError) {
-      // Undo the new-table write so the two cannot disagree.
-      console.error("Error mirroring to project_assignments:", legacyError);
-      await permissionsDb
-        .from("project_distributions")
-        .delete()
-        .eq("project_id", project.id)
-        .eq("person_id", employeeId);
-      window.alert("حدث خطأ أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.");
-      return;
-    }
-
     const total = watchedRows.find((r) => r.currency === currency)?.total ?? 0;
     append({
       id: `${currency}-employee-${employeeId}-${Date.now()}`,
@@ -235,20 +219,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
       return;
     }
 
-    // The legacy row goes to ZERO, not deleted. In the old schema that
-    // row is also the person's team membership, and taking away someone's
-    // share must not take them off the project team.
-    try {
-      await writeLegacyPercentage(project.id, row.employeeId, 0);
-    } catch (legacyError) {
-      console.error("Error mirroring removal:", legacyError);
-      window.alert(
-        "تم حذف النسبة لكن تعذّر تحديث الجدول القديم. الرجاء المراجعة.",
-      );
-    } finally {
-      setIsRemoving(null);
-    }
-
+    setIsRemoving(null);
     remove(rowIndex);
   };
 
@@ -297,16 +268,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
           console.error("Error updating distribution:", shareError);
           window.alert(
             "حدث خطأ أثناء تحديث بيانات الموظفين. الرجاء المحاولة مرة أخرى.",
-          );
-          return;
-        }
-
-        try {
-          await writeLegacyPercentage(project.id, personId, percentage);
-        } catch (legacyError) {
-          console.error("Error mirroring share to the old table:", legacyError);
-          window.alert(
-            "تم حفظ النسب الجديدة لكن تعذّر تحديث الجدول القديم. الرجاء المراجعة.",
           );
           return;
         }
