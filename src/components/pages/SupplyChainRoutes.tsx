@@ -15,34 +15,58 @@ import ContractorPaymentsPage from "../../pages/supply-chain/contractor/Contract
 const SupplyChainRoutes = () => {
   return (
     <Routes>
-      <Route element={<RequirePermission permission="view_contractors" />}>
-        <Route element={<SupplyChainLayout />}>
+      {/* Issue #19 gap 4: was one permission (view_contractors) for the
+          whole section. Every leaf route now gates on its own permission,
+          using the already-existing, previously-unwired catalog entries
+          built for exactly this. */}
+      <Route element={<SupplyChainLayout />}>
+        <Route element={<RequirePermission permission="view_contractors" />}>
           <Route index element={<SupplyChainPage />} />
           <Route path="contractors" element={<ContractorPage />} />
-          <Route path="contractors/new" element={<NewContractorPage />} />
           {/* profile */}
           <Route
             path="contractors/:contractorId"
             element={<ContractorDetailPage />}
           />
-          {/* their bcontractorIds */}
-          <Route
-            path="contractors/:contractorId/bids"
-            element={<ContractorBidsPage />}
-          />
-          {/* their contracts */}
+          {/* their contracts — no dedicated "contractor contracts" permission
+              exists in the catalog, so this stays on the section's base
+              permission rather than borrowing a differently-scoped one
+              (view_project_contracts is about a project's own contract
+              register, not a contractor's contracts across projects). */}
           <Route
             path="contractors/:contractorId/contracts"
             element={<ContractorContractsPage />}
           />
-          {/* payment history  */}
+        </Route>
+        <Route element={<RequirePermission permission="manage_contractors" />}>
+          <Route path="contractors/new" element={<NewContractorPage />} />
+        </Route>
+        <Route
+          element={<RequirePermission permission="view_contractor_bids" />}
+        >
+          {/* their bids */}
+          <Route
+            path="contractors/:contractorId/bids"
+            element={<ContractorBidsPage />}
+          />
+        </Route>
+        <Route
+          element={
+            <RequirePermission permission="view_contractor_payments" />
+          }
+        >
+          {/* payment history */}
           <Route
             path="contractors/:contractorId/payments"
             element={<ContractorPaymentsPage />}
           />
+        </Route>
+        <Route element={<RequirePermission permission="view_vendors" />}>
           <Route path="vendors" element={<VendorsPage />} />
-          <Route path="vendors/new" element={<NewVendorPage />} />
           <Route path="vendors/:id" element={<VendorDetailPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="manage_vendors" />}>
+          <Route path="vendors/new" element={<NewVendorPage />} />
         </Route>
       </Route>
     </Routes>

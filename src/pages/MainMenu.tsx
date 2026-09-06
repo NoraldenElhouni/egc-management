@@ -20,7 +20,9 @@ const MainMenu = () => {
       label: "إدارة الموظفين",
       icon: Users,
       path: "/hr",
-      permission: "view_employees",
+      // Issue #19 gap 2: was view_employees, missing anyone who only
+      // holds create_employee. Real section permission now.
+      permission: "view_hr_section",
     },
     {
       label: "إدارة العملاء",
@@ -44,41 +46,44 @@ const MainMenu = () => {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      permission: "view_bookkeeping",
+      // Issue #19 gap 2: was view_bookkeeping, a proxy that missed anyone
+      // holding only e.g. view_treasury. Real section permission now.
+      permission: "view_finance_section",
     },
     {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      permission: "view_distribution",
+      permission: "view_company_section",
     },
     {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
-      permission: "view_operations",
+      permission: "view_operations_section",
     },
     {
       label: "المتاجر",
       icon: Store,
       path: "/shops",
-      permission: "view_shop_catalog",
+      permission: "view_shops_section",
     },
     {
       label: "اداره التنفيذ",
       icon: FolderCog,
       path: "/execution-management",
-      permission: "manage_execution",
+      permission: "view_execution_section",
     },
     {
       label: "الإعدادات",
       icon: Settings,
       path: "/settings",
-      permission: [
-        "manage_reference_data",
-        "manage_specialities",
-        "manage_roles",
-      ],
+      // Issue #19 gap 2: was an OR-array of 3 of the section's 9
+      // permissions — missed the other 6 (view_audit_logs,
+      // reset_user_password, manage_website, manage_departments,
+      // manage_permissions_company, view_user_sessions) entirely. Real
+      // section permission now.
+      permission: "view_settings_section",
     },
   ];
 

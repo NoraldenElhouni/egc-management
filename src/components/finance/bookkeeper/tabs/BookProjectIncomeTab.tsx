@@ -1,4 +1,4 @@
-import { useAuth } from "../../../../hooks/useAuth";
+import { useCan } from "../../../../hooks/permissions/useCan";
 import { ProjectIncome } from "../../../../types/global.type";
 import { ProjectWithDetailsForBook } from "../../../../types/projects.type";
 import { ProjectsIncomeColumns } from "../../../tables/columns/ProjectIncomeColumns";
@@ -13,14 +13,22 @@ interface BookProjectIncomeTabProps {
 }
 
 const BookProjectIncomeTab = ({ project }: BookProjectIncomeTabProps) => {
-  const { user } = useAuth();
+  // Issue 11/19: this used to compare user.role to the lowercase literal
+  // "bookkeeper", which never matched the real role name ("Bookkeeper") —
+  // the filter was dead code, and every role saw the full income list.
+  // view_project_finance_income already existed in the catalog, granted
+  // only to Bookkeeper, unused anywhere in code — clearly meant for
+  // exactly this. Wired here to actually restrict, per decision: holding
+  // it means refund-only. Defaults to restricted while the permission
+  // check is still resolving, since that's the less-exposed state.
+  const { can: restrictToRefunds, loading: permissionLoading } = useCan(
+    "view_project_finance_income",
+  );
   const fillteredIncomes =
     project?.project_incomes?.filter((income: ProjectIncome) => {
-      // default: no filter
-
-      // when bookkeeper: show refunds
-      if (user?.role === "bookkeeper") return income.fund === "refund";
-
+      if (permissionLoading || restrictToRefunds) {
+        return income.fund === "refund";
+      }
       return true;
     }) || [];
 

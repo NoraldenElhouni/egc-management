@@ -18,12 +18,31 @@ import ProjectCountersPage from "../../pages/projects/ProjectCountersPage";
 const ProjectsRoutes = () => {
   return (
     <Routes>
-      <Route element={<RequirePermission permission="view_projects" />}>
-        <Route element={<ProjectsLayout />}>
+      {/* Issue #19 gap 4: was one permission (view_projects) for the whole
+          section. Every leaf route now gates on its own permission, using
+          the already-existing, previously-unwired catalog entries built
+          for exactly this. */}
+      <Route element={<ProjectsLayout />}>
+        <Route element={<RequirePermission permission="view_projects" />}>
           <Route index element={<ProjectsPage />} />
+          <Route path=":id" element={<ProjectDetailsPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="create_project" />}>
           <Route path="new" element={<NewProjectPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_project_team" />}>
           <Route path="team" element={<ProjectTeamPage />} />
+        </Route>
+        <Route
+          element={<RequirePermission permission="manage_project_team" />}
+        >
           <Route path="team/:projectId" element={<ProjectTeamDetailsPage />} />
+        </Route>
+        <Route
+          element={
+            <RequirePermission permission="manage_permissions_project" />
+          }
+        >
           <Route
             path="team/:projectId/permissions"
             element={<ProjectPermissionsPage />}
@@ -32,9 +51,12 @@ const ProjectsRoutes = () => {
             path="team/:projectId/:empId/permissions"
             element={<TeamPermissions />}
           />
+        </Route>
+        <Route
+          element={<RequirePermission permission="view_project_counters" />}
+        >
           <Route path="counters" element={<ProjectsCountersPage />} />
           <Route path=":id/counters" element={<ProjectCountersPage />} />
-          <Route path=":id" element={<ProjectDetailsPage />} />
         </Route>
       </Route>
     </Routes>

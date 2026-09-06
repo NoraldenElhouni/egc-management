@@ -3,7 +3,7 @@ import Button from "./ui/Button";
 import { ProjectWithDetailsForBook } from "../types/projects.type";
 import ErrorPage from "./ui/errorPage";
 import { fetchManagementApi } from "../lib/managementApiClient";
-import { useAuth } from "../hooks/useAuth";
+import { useCan } from "../hooks/permissions/useCan";
 
 interface InvoiceButtonSummedProps {
   project: ProjectWithDetailsForBook | null;
@@ -14,9 +14,14 @@ export default function InvoiceButtonSummed({
 }: InvoiceButtonSummedProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  // Issue 11/19: converted off the hardcoded role check. New permission,
+  // granted only to Manager — the exact audience the role check enforced —
+  // so this is a pure refactor, not an access change.
+  const { can: canGenerateInvoice, loading: permissionLoading } = useCan(
+    "generate_summed_invoice",
+  );
 
-  if (user?.role !== "Manager") return null;
+  if (permissionLoading || !canGenerateInvoice) return null;
 
   if (!project || project === null) return <ErrorPage />;
 

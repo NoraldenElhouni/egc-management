@@ -4,7 +4,6 @@ import { useEmployee } from "../../hooks/useEmployees";
 import { useParams } from "react-router-dom";
 import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
 import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
-import { useAuth } from "../../hooks/useAuth";
 import { useMyPermissions } from "../../hooks/permissions/useCan";
 import EmployeeRole from "../../components/hr/employee/EmployeeRole";
 import EmployeesPermissions from "../../components/hr/employee/EmployeesPermissions";
@@ -17,7 +16,6 @@ import EmployeeOverridesTab from "../../components/permissions/EmployeeOverrides
 
 export default function EmployeeDetailsPage() {
   const [activeTab, setActiveTab] = useState("personal-info");
-  const { user } = useAuth();
   const { data: allowedPermissionsData } = useMyPermissions();
   const allowedPermissions = allowedPermissionsData ?? new Set<string>();
   const { id } = useParams<{ id: string }>();
@@ -37,20 +35,13 @@ export default function EmployeeDetailsPage() {
       id: "employee-details",
       label: "تفاصيل الموظف",
       content: <EmployeeDetails employee={employee} onUpdated={refetch} />,
-      // PHASE 7B: left on a role check. The nearest catalogue entries are
-      // view_employee_personal_data and view_employee_salary, both granted
-      // to Admin only — mapping to either would drop Manager, and mapping
-      // to view_employees would add HR. Neither is a like-for-like swap.
-      roles: ["Admin", "Manager"],
+      permission: "view_employee_personal_data",
     },
     {
       id: "employee-payroll",
       label: "تفاصيل المرتبات",
       content: <SalaryDetails payroll={employee.payroll} />,
-      // PHASE 7B: left on a role check, same reason as the tab above —
-      // view_employee_salary is Admin-only and this tab is Manager-only,
-      // so they are disjoint rather than equivalent.
-      roles: ["Manager"],
+      permission: "view_employee_compensation",
     },
     {
       id: "documents",
@@ -92,14 +83,12 @@ export default function EmployeeDetailsPage() {
     },
   ];
 
-  // PHASE 7B BATCH 5. Tabs carrying `permission` are resolved; the two
-  // that still carry `roles` fall back to the old string check. Both
-  // paths live in one place so a tab cannot be silently ungated.
-  const canView = (tab: { permission?: string; roles?: string[] }) => {
-    if (tab.permission) return allowedPermissions.has(tab.permission);
-    if (!tab.roles) return true; // public tab
-    if (!user?.role) return false;
-    return tab.roles.includes(user.role);
+  // Every tab is permission-gated now — issue 19's last two holdouts
+  // (this file) converted. No hardcoded role check remains anywhere in
+  // this component.
+  const canView = (tab: { permission?: string }) => {
+    if (!tab.permission) return true; // public tab
+    return allowedPermissions.has(tab.permission);
   };
 
   const visibleTabs = tabs.filter(canView);
