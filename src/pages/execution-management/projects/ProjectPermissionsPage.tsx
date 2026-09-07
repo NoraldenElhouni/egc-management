@@ -1,19 +1,19 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Info, Users } from "lucide-react";
-import { useAuth } from "../../../../hooks/useAuth";
-import { usePermissionCatalog } from "../../../../hooks/permissions/usePermissionCatalog";
-import { useProjectTeam } from "../../../../hooks/team/useTeamAssignments";
+import { useAuth } from "../../../hooks/useAuth";
+import { usePermissionCatalog } from "../../../hooks/permissions/usePermissionCatalog";
+import { useProjectTeam } from "../../../hooks/team/useTeamAssignments";
 import {
   useProjectDefaults,
   useSaveProjectDefaults,
-} from "../../../../hooks/permissions/useProjectGrants";
-import ProjectDefaultsSection from "../../../../components/permissions/ProjectDefaultsSection";
-import TeamMemberOverridesSection from "../../../../components/permissions/TeamMemberOverridesSection";
-import type { GrantDiff } from "../../../../components/permissions/permissionModel";
-import LoadingPage from "../../../../components/ui/LoadingPage";
-import ErrorPage from "../../../../components/ui/errorPage";
-import BackButton from "../../../../components/ui/BackButton";
+} from "../../../hooks/permissions/useProjectGrants";
+import ProjectDefaultsSection from "../../../components/permissions/ProjectDefaultsSection";
+import TeamMemberOverridesSection from "../../../components/permissions/TeamMemberOverridesSection";
+import type { GrantDiff } from "../../../components/permissions/permissionModel";
+import LoadingPage from "../../../components/ui/LoadingPage";
+import ErrorPage from "../../../components/ui/errorPage";
+import BackButton from "../../../components/ui/BackButton";
 
 // =====================================================================
 // Project → Permissions — implementation guide section 4.6. Phase 6.
@@ -21,16 +21,15 @@ import BackButton from "../../../../components/ui/BackButton";
 // The last two of the five layers become configurable here. After this
 // page exists, the whole model is expressible through the UI.
 //
-// WHAT THIS PAGE STILL DOES NOT DO, deliberately:
-//   - Nothing here gates access. Both apps still decide what to show
-//     from their existing hardcoded role checks. Wiring the resolver
-//     into real access control is Phase 7.
-//   - RLS is untouched and stays exactly as permissive as it is today.
-//   - The OLD per-employee project permissions screen (TeamPermissions,
-//     at team/:projectId/:empId/permissions) is left in place and
-//     working, on the old project_user_permissions table, same as Phase
-//     3 left the old employee permissions tab alone. Both exist side by
-//     side until the 184-row migration is approved and run.
+// Moved here from /projects/team/:projectId/permissions along with the
+// team screen — permissions belong next to the team they apply to.
+//
+// The OLD per-employee screen (TeamPermissions, on the dead
+// project_user_permissions table) that used to sit beside this one has
+// been deleted, not moved. See issues/02. This page is now the only
+// project permissions screen.
+//
+// RLS is untouched and stays exactly as permissive as it is today.
 //
 // ONLY PROJECT-SCOPED PERMISSIONS ARE OFFERED. This is not a UI
 // simplification, it is a correctness requirement: the resolver ignores
@@ -104,9 +103,14 @@ export default function ProjectPermissionsPage() {
             تُعرض هنا صلاحيات المشاريع فقط. الصلاحيات العامة (مثل عرض المحاسبة)
             لا تُضبط لكل مشروع على حدة — مكانها الدور أو القسم أو استثناء الشخص.
           </p>
+          {/* This line used to read "this screen only records settings —
+              nothing in the app relies on it yet." That was true in
+              Phase 6 and false since Phase 7 wired the resolver into
+              real route and menu access. Left uncorrected it told people
+              the working screen did nothing, which is part of why the
+              old (actually dead) screen kept being used instead. */}
           <p className="text-xs mt-1 text-blue-800">
-            هذه الشاشة تُسجّل الإعدادات فقط. لا شيء في التطبيق يعتمد عليها بعد
-            في منح أو منع الوصول الفعلي.
+            ما يُحفظ هنا يسري فعليًا على وصول المستخدمين لهذا المشروع.
           </p>
         </div>
       </div>
@@ -117,7 +121,7 @@ export default function ProjectPermissionsPage() {
           {distinctPeople} شخص في الفريق
         </span>
         <Link
-          to={`/projects/team/${projectId}`}
+          to={`/execution-management/projects/${projectId}`}
           className="text-xs text-blue-600 hover:text-blue-800 font-medium"
         >
           إدارة أعضاء الفريق ←

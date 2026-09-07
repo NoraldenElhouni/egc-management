@@ -180,8 +180,12 @@ export const ProjectExecutionColumns: ColumnDef<ProjectExecution>[] = [
     header: "اسم المشروع",
     cell: ({ row }) => (
       <div>
+        {/* Was /projects/:id, which jumped out of Execution Management
+            into the Projects section. Now stays here and opens the
+            project's team screen — this table is the way in to team
+            management. */}
         <Link
-          to={`/projects/${row.original.id}`}
+          to={`/execution-management/projects/${row.original.id}`}
           className="font-medium hover:underline"
         >
           {row.original.name}

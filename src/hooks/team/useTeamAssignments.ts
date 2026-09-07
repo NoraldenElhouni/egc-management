@@ -28,6 +28,12 @@ export const projectTeamKey = (projectId: string) => ["project-team", projectId]
 export const PROJECT_ROLES_KEY = ["project-roles"];
 export const assignableStaffKey = ["team-assignable-staff"];
 
+// The cross-project overview (/execution-management/projects/teams).
+// Deliberately not keyed by project - it holds every team at once, so
+// any team change made anywhere in the app must invalidate it. Both
+// mutations at the bottom of this file do exactly that.
+export const ALL_PROJECT_TEAMS_KEY = ["project-teams-all"];
+
 export interface TeamMember {
   /** team_assignments.id — the row, not the person. */
   assignmentId: string;
@@ -227,6 +233,9 @@ export function useAddTeamMember() {
       queryClient.invalidateQueries({
         queryKey: projectTeamKey(variables.projectId),
       });
+      // Keeps the cross-project overview honest: a change made on one
+      // project's own screen must show up there too, and vice versa.
+      queryClient.invalidateQueries({ queryKey: ALL_PROJECT_TEAMS_KEY });
     },
   });
 }
@@ -253,6 +262,9 @@ export function useRemoveTeamMember() {
       queryClient.invalidateQueries({
         queryKey: projectTeamKey(variables.projectId),
       });
+      // Keeps the cross-project overview honest: a change made on one
+      // project's own screen must show up there too, and vice versa.
+      queryClient.invalidateQueries({ queryKey: ALL_PROJECT_TEAMS_KEY });
       // Deliberately does NOT invalidate anything distribution-related.
       // Removing someone from a team has no effect on their percentage,
       // and pretending otherwise by refetching would suggest it might.

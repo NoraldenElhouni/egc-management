@@ -1,23 +1,27 @@
 import { Link, useParams } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
-import AddTeamMemberForm from "../../../../components/project/team/AddTeamMemberForm";
-import TeamRoster from "../../../../components/project/team/TeamRoster";
-import { useProjectTeam } from "../../../../hooks/team/useTeamAssignments";
-import LoadingPage from "../../../../components/ui/LoadingPage";
-import ErrorPage from "../../../../components/ui/errorPage";
+import AddTeamMemberForm from "../../../components/project/team/AddTeamMemberForm";
+import TeamRoster from "../../../components/project/team/TeamRoster";
+import { useProjectTeam } from "../../../hooks/team/useTeamAssignments";
+import LoadingPage from "../../../components/ui/LoadingPage";
+import ErrorPage from "../../../components/ui/errorPage";
 
 // =====================================================================
-// The project Team tab — implementation guide section 4.4.
+// The project Team screen — implementation guide section 4.4.
 // =====================================================================
-// Phase 4. Reads and writes team_assignments only — issue #18 retired
-// the project_assignments mirror useTeamAssignments.ts used to keep in
-// step (see that file). AddingNewTeamProjects, the previous version's
-// component that wrote percentage and team membership into one
-// project_assignments row, has been deleted.
+// Moved here from /projects/team/:projectId. Team management now lives
+// inside Execution Management: pick a project from the projects table,
+// land here, manage who works on it. The Projects section no longer
+// carries a team screen at all.
 //
-// WHO CAN SEE THIS PAGE has not changed. It is gated by the same route
-// and sidebar checks as before — wiring the resolver into access control
-// is Phase 7, not this phase.
+// Reads and writes team_assignments only — issue #18 retired the
+// project_assignments mirror useTeamAssignments.ts used to keep in step
+// (see that file).
+//
+// Access is unchanged by the move. manage_execution (the section) and
+// manage_project_team (this route) are both granted to exactly Admin and
+// Manager, with no department or individual grants on either, so nobody
+// gained or lost the team screen by relocating it.
 // =====================================================================
 
 const ProjectTeamDetailsPage = () => {
@@ -62,7 +66,7 @@ const ProjectTeamDetailsPage = () => {
           link rather than a tab because team membership and permissions
           are separate facts; being on the team grants nothing by itself. */}
       <Link
-        to={`/projects/team/${projectId}/permissions`}
+        to={`/execution-management/projects/${projectId}/permissions`}
         className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
       >
         <ShieldCheck size={15} />

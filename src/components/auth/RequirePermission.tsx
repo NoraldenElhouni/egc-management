@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 import { useMyPermissions } from "../../hooks/permissions/useCan";
 
 // =====================================================================
@@ -30,7 +30,11 @@ import { useMyPermissions } from "../../hooks/permissions/useCan";
 interface RequirePermissionProps {
   /** Allowed if this permission resolves true — or ANY of them, given an array. */
   permission?: string | string[];
-  /** Project id for project-scoped permissions. Rarely needed here. */
+  /**
+   * Project id for project-scoped permissions. Usually omitted: when the
+   * guard sits on a route whose path declares `:projectId`, that param is
+   * picked up automatically. See the PROJECT-SCOPED note below.
+   */
   projectId?: string;
 }
 
@@ -42,8 +46,36 @@ const Denied = () => (
   </div>
 );
 
-const RequirePermission = ({ permission, projectId }: RequirePermissionProps) => {
-  const { data: allowed, isPending, isError } = useMyPermissions(projectId);
+const RequirePermission = ({
+  permission,
+  projectId,
+}: RequirePermissionProps) => {
+  // PROJECT-SCOPED PERMISSIONS. A permission with is_project_scoped = true
+  // resolves to false when asked without a project — correctly, per
+  // phase2-resolver.sql DECISION 3, since "may you manage the team" is not
+  // answerable until you say which team. Guards that named such a
+  // permission and passed no project therefore denied EVERYONE, Admin
+  // included: three routes shipped broken that way in issue #19 gap 4.
+  //
+  // So take the project from the URL when the route supplies one. React
+  // Router only exposes a param to the element of a route whose own path
+  // declares it, so this works when the guard is written as
+  //
+  //   <Route path="projects/:projectId" element={<RequirePermission ... />}>
+  //
+  // and NOT when it is a pathless wrapper around such a route. If you gate
+  // on a project-scoped permission, the guard route must carry the param.
+  //
+  // Harmless for company-wide permissions: the resolver ignores project
+  // context for those entirely (DECISION 6), so the answer is unchanged.
+  const params = useParams<{ projectId?: string }>();
+  const effectiveProjectId = projectId ?? params.projectId;
+
+  const {
+    data: allowed,
+    isPending,
+    isError,
+  } = useMyPermissions(effectiveProjectId);
 
   if (!permission || (Array.isArray(permission) && permission.length === 0)) {
     return <Outlet />;

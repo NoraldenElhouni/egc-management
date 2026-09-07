@@ -1,4 +1,4 @@
-import { House } from "lucide-react";
+import { House, Users } from "lucide-react";
 import type { NavItem } from "./types";
 
 export const EXECUTION_ITEMS: NavItem[] = [
@@ -15,5 +15,12 @@ export const EXECUTION_ITEMS: NavItem[] = [
     // page required manage_execution. Gated wins — the sidebar was the
     // one drifted from intent.
     permission: "manage_execution",
+  },
+  {
+    label: "فرق المشاريع",
+    icon: Users,
+    path: "/execution-management/projects/teams",
+    description: "كل المشاريع وأعضاء فرقها في صفحة واحدة",
+    permission: "view_all_project_teams",
   },
 ];

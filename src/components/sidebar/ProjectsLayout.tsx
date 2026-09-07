@@ -1,4 +1,4 @@
-import { FolderKanban, FolderPlus, Users, AlertTriangle } from "lucide-react";
+import { FolderKanban, FolderPlus, AlertTriangle } from "lucide-react";
 import SidebarLayout from "./SidebarLayout";
 import type { NavItem } from "../../config/navigation/types";
 
@@ -14,12 +14,6 @@ const menuItems: NavItem[] = [
     icon: FolderPlus,
     path: "/projects/new",
     description: "إضافة مشروع جديد",
-  },
-  {
-    label: "الفريق",
-    icon: Users,
-    path: "/projects/team",
-    description: "إدارة فريق المشاريع",
   },
   {
     label: "العدادات",
