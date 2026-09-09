@@ -6,11 +6,7 @@ import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
 import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
 import { useMyPermissions } from "../../hooks/permissions/useCan";
 import EmployeeRole from "../../components/hr/employee/EmployeeRole";
-import EmployeesPermissions from "../../components/hr/employee/EmployeesPermissions";
 import SalaryDetails from "../../components/hr/employee/SalaryDetails";
-// Phase 3 — new user-override tab. Added ALONGSIDE the existing
-// "الصلاحيات" tab, which still reads the old permission tables and is
-// deliberately left untouched until Phase 7/8.
 import EmployeeOverridesTab from "../../components/permissions/EmployeeOverridesTab";
 // import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 
@@ -62,14 +58,8 @@ export default function EmployeeDetailsPage() {
       permission: "manage_users",
     },
     {
-      id: "employee-permissions",
-      label: "الصلاحيات",
-      content: <EmployeesPermissions employee={employee} />,
-      permission: "manage_permissions_company",
-    },
-    {
       id: "employee-overrides",
-      label: "استثناءات الصلاحيات (النظام الجديد)",
+      label: "الصلاحيات",
       content: (
         <EmployeeOverridesTab
           employeeId={employee.id ?? ""}

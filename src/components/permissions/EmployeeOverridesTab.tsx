@@ -15,15 +15,10 @@ import LoadingPage from "../ui/LoadingPage";
 // =====================================================================
 // Screen 3 — implementation guide section 4.3.
 // =====================================================================
-// A NEW tab on the employee profile. The existing "الصلاحيات" tab
-// (EmployeesPermissions.tsx) is deliberately left in place and
-// untouched: it still reads the OLD permissions tables and still
-// behaves exactly as it did before this phase. Removing it is Phase 7/8
-// work, once something actually consumes the new model.
-//
-// Everything shown here about "what they have today" is INFORMATIONAL.
-// Nothing on this page, or anywhere else in either app, gates behaviour
-// on the resolver yet.
+// The employee profile's "الصلاحيات" tab. The old tab of the same name
+// (EmployeesPermissions.tsx, reading the dead `permissions` /
+// `role_permissions` / `user_permissions` tables) was removed — issue 03.
+// This is now the only permissions tab on this page.
 // =====================================================================
 
 interface Props {
