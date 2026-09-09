@@ -1,12 +1,26 @@
 import { Link } from "react-router-dom";
 import { ComponentType } from "react";
 import { LucideIcon } from "lucide-react";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
+import type { PermissionGatedItem } from "../../hooks/permissions/useMenuPermissions";
 
-export interface MenuItem {
+// =====================================================================
+// PHASE 7B BATCH 5 — MenuGrid asks the resolver, not the caller
+// =====================================================================
+// `role?: string[]` and the `userRole` prop are gone. Every caller used
+// to pass `userRole={user?.role}` and MenuGrid matched it against a
+// hardcoded list; now MenuGrid resolves the current user's permissions
+// itself. Callers no longer need useAuth at all.
+//
+// `loading` remains a prop, but it now means "the page's own data is
+// still loading" — the permission check has its own loading state and
+// is handled internally.
+// =====================================================================
+
+export interface MenuItem extends PermissionGatedItem {
   label: string;
   icon: LucideIcon;
   path: string;
-  role?: string[];
   description?: string;
   disabled?: boolean;
   /** Small red corner badge — a number (e.g. 3) or text (e.g. "جديد", "1 مراجعة"). Falsy values render nothing. */
@@ -16,7 +30,7 @@ export interface MenuItem {
 export interface MenuGridProps {
   title?: string;
   items: MenuItem[];
-  userRole?: string | null;
+  /** The page's own data loading, not the permission check. */
   loading?: boolean;
   columns?: {
     base?: number;
@@ -34,7 +48,6 @@ export interface MenuGridProps {
 const MenuGrid = ({
   title = "القائمة الرئيسية",
   items,
-  userRole,
   loading = false,
   columns = { base: 2, sm: 3, md: 4 },
   cardClassName = "bg-gray-100 hover:bg-primary-superLight transition-colors rounded-2xl p-6 text-gray-700 text-center",
@@ -43,19 +56,15 @@ const MenuGrid = ({
   onItemClick,
   showDisabledItems = false,
 }: MenuGridProps) => {
-  // Filter menu items based on user role and loading state
-  const visibleItems = items.filter((item) => {
-    if (loading) return false;
+  // Permission filtering lives in one shared hook; this component only
+  // adds its own disabled/loading rules on top.
+  const { visibleItems: permittedItems, loading: checkingPermissions } =
+    useVisibleMenuItems(items);
+
+  const visibleItems = permittedItems.filter((item) => {
+    if (loading || checkingPermissions) return false;
     if (item.disabled && !showDisabledItems) return false;
-
-    // ✅ PUBLIC ITEM (no role OR empty role array)
-    if (!item.role || item.role.length === 0) return true;
-
-    // ❌ no user → hide restricted
-    if (!userRole) return false;
-
-    // ✅ role match
-    return item.role.includes(userRole);
+    return true;
   });
 
   // Generate grid columns class
@@ -130,7 +139,7 @@ const MenuGrid = ({
         })}
       </div>
 
-      {visibleItems.length === 0 && !loading && (
+      {visibleItems.length === 0 && !loading && !checkingPermissions && (
         <div className="text-center py-8 text-gray-500">
           لا توجد عناصر متاحة للعرض
         </div>

@@ -16,14 +16,14 @@ export interface ProjectPercentageRow {
   period_start: string;
 }
 
-export interface ProjectAssignment {
+// Phase 5 follow-up: this wizard now reads its rates from
+// project_distributions, not project_assignments. The two tables differ
+// in one way that matters here — project_distributions has NO project
+// role, because a share and a job on the project are separate facts.
+// So there is no project_role_id and no role column in this screen.
+export interface ProjectDistributionShare {
   id: string;
   percentage: number;
-  project_role_id: string | null;
-  project_role?: {
-    id: string;
-    name: string;
-  } | null;
 
   employee: {
     id: string;
@@ -37,7 +37,7 @@ export interface ProjectAssignment {
 export interface DistributionProject extends Projects {
   serial_number: number | null;
   project_percentage: ProjectPercentageRow[];
-  project_assignments: ProjectAssignment[];
+  project_distributions: ProjectDistributionShare[];
 }
 
 // ─── Progress ────────────────────────────────────────────────────────────────
@@ -80,8 +80,6 @@ export function calcEmployeeEarnings(
   employeeId: string;
   name: string;
   assignmentPct: number;
-  projectRoleId?: string;
-  projectRoleName?: string;
   earning: number;
   cashEarning: number;
   bankEarning: number;
@@ -90,7 +88,7 @@ export function calcEmployeeEarnings(
     project.project_percentage,
     currency,
   );
-  return project.project_assignments.map((a) => {
+  return (project.project_distributions ?? []).map((a) => {
     const pct = Number(a.percentage) / 100;
 
     return {
@@ -98,9 +96,6 @@ export function calcEmployeeEarnings(
       name: `${a.employee.first_name} ${a.employee.last_name ?? ""}`.trim(),
 
       assignmentPct: Number(a.percentage),
-
-      projectRoleId: a.project_role_id ?? undefined,
-      projectRoleName: a.project_role?.name ?? undefined,
 
       earning: total * pct,
       cashEarning: cash * pct,
@@ -159,14 +154,9 @@ export function useProjectsDistribute() {
           `
           *,
           project_percentage(*),
-          project_assignments(
+          project_distributions(
           id,
           percentage,
-          project_role_id,
-          project_role:project_roles(
-            id,
-            name
-          ),
           employee:employees(
             id,
             first_name,
@@ -182,10 +172,12 @@ export function useProjectsDistribute() {
           "in",
           `(5451aaae-c632-46f4-9913-8670cffcc8e7,e0a50575-bcc1-474a-98b8-8f57770a14fa,eed51009-4cfa-497c-87a1-cbf5a756f3da,f2d38514-32e0-4eeb-b6cd-fcdbed6a93ab)`,
         )
-        .neq(
-          "project_assignments.project_role_id",
-          "c7823151-2290-4861-a383-5e00a78128ce",
-        )
+        // The exclusion of project role c7823151-2290-4861-a383-5e00a78128ce
+        // that used to sit here is GONE, by decision: project_distributions
+        // has no project role, so the filter cannot be expressed on the new
+        // table. Anyone holding a row in project_distributions is now paid.
+        // If people were being kept out of payout runs by that role, they
+        // must be removed from project_distributions instead.
         .order("serial_number", { ascending: true });
 
       // .in("id", [
@@ -202,7 +194,14 @@ export function useProjectsDistribute() {
         ),
       );
 
-      setProjects(filtered as DistributionProject[]);
+      // Cast through unknown: the generated Database types predate Phase 1,
+      // so supabase-js resolves the project_distributions embed to a
+      // SelectQueryError and refuses the direct cast. Re-run `npm run types`
+      // once Phase 1 is in the generated schema and this can go back to a
+      // plain `as DistributionProject[]`. Same reason src/lib/permissionsDb.ts
+      // exists — that client cannot be used here because this one query spans
+      // projects, project_percentage and employees as well.
+      setProjects(filtered as unknown as DistributionProject[]);
     } catch (err) {
       setError(err as PostgrestError);
     } finally {
@@ -333,12 +332,14 @@ export function useProjectsDistribute() {
                 deltas.main.cash += companyAmount;
               }
 
-              const employeeRows = project.project_assignments.map((a) => ({
-                employeeId: a.employee.id,
-                name: `${a.employee.first_name} ${a.employee.last_name ?? ""}`,
-                pct: Number(a.percentage),
-                amount: rowAmount * (Number(a.percentage) / 100),
-              }));
+              const employeeRows = (project.project_distributions ?? []).map(
+                (a) => ({
+                  employeeId: a.employee.id,
+                  name: `${a.employee.first_name} ${a.employee.last_name ?? ""}`,
+                  pct: Number(a.percentage),
+                  amount: rowAmount * (Number(a.percentage) / 100),
+                }),
+              );
 
               await supabase.from("project_percentage_period_items").insert([
                 {

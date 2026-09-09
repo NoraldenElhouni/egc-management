@@ -9,75 +9,85 @@ import {
   Building,
   PackageOpen,
   Store,
+  FolderCog,
 } from "lucide-react";
 import { ComponentType } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useVisibleMenuItems } from "../hooks/permissions/useMenuPermissions";
 
 const MainMenu = () => {
-  const { user, loading } = useAuth();
   const menuItems = [
     {
       label: "إدارة الموظفين",
       icon: Users,
       path: "/hr",
-      role: ["Admin", "HR", "Manager"],
+      // Issue #19 gap 2: was view_employees, missing anyone who only
+      // holds create_employee. Real section permission now.
+      permission: "view_hr_section",
     },
     {
       label: "إدارة العملاء",
       icon: ShieldUser,
       path: "/crm",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "view_clients",
     },
     {
       label: "سلسلة التوريد",
       icon: LinkIcon,
       path: "/supply-chain",
-      role: ["Admin", "Manager", "Bookkeeper"],
+      permission: "view_contractors",
     },
     {
       label: "المشاريع",
       icon: MapPin,
       path: "/projects",
-      role: ["Admin", "Manager"],
+      permission: "view_projects",
     },
     {
       label: "المالية",
       icon: DollarSign,
       path: "/finance",
-      role: ["Admin", "Finance", "Bookkeeper", "Manager", "Head Finance"],
+      // Issue #19 gap 2: was view_bookkeeping, a proxy that missed anyone
+      // holding only e.g. view_treasury. Real section permission now.
+      permission: "view_finance_section",
     },
     {
       label: "الشركة",
       icon: Building,
       path: "/company",
-      role: ["Manager"],
+      permission: "view_company_section",
     },
     {
       label: "التشغيل",
       icon: PackageOpen,
       path: "/operations",
-      role: ["Admin", "Engineer", "Manager"],
+      permission: "view_operations_section",
     },
     {
       label: "المتاجر",
       icon: Store,
       path: "/shops",
-      role: ["Admin", "Manager"],
+      permission: "view_shops_section",
+    },
+    {
+      label: "اداره التنفيذ",
+      icon: FolderCog,
+      path: "/execution-management",
+      permission: "view_execution_section",
     },
     {
       label: "الإعدادات",
       icon: Settings,
       path: "/settings",
-      role: ["Admin", "Finance", "Engineer", "Bookkeeper"],
+      // Issue #19 gap 2: was an OR-array of 3 of the section's 9
+      // permissions — missed the other 6 (view_audit_logs,
+      // reset_user_password, manage_website, manage_departments,
+      // manage_permissions_company, view_user_sessions) entirely. Real
+      // section permission now.
+      permission: "view_settings_section",
     },
   ];
 
-  // Filter menu items based on the user's role. If an item has no `role` field it is public.
-  const visibleItems = menuItems.filter((item) => {
-    if (!item.role || loading) return true;
-    if (!user || !user.role) return false;
-    return item.role.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
 
   return (
     <div className="h-full w-full p-6 mt-10 bg-background" dir="rtl">

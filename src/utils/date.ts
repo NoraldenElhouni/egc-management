@@ -13,6 +13,16 @@ export const getMonthRange = (month: string) => {
   return { from, to };
 };
 
+export const yearToDate = (year: string | null | undefined): string | null => {
+  if (!year || !year.trim()) return null;
+  return `${year.trim()}-01-01`;
+};
+
+export const dateToYear = (date: string | null | undefined): string => {
+  if (!date) return "";
+  return date.slice(0, 4);
+};
+
 export const isInMonth = (
   dateStr: string | null | undefined,
   month: string,

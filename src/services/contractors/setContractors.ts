@@ -1,6 +1,26 @@
 import { supabaseAdmin } from "../../lib/adminSupabase";
 import { ContractorFormValues } from "../../types/schema/contractors.schema";
 
+// =====================================================================
+// PHASE 8 — party_type and the single source of truth for roles
+// =====================================================================
+// Two changes, matching setEmployeeService.ts:
+//
+//   1. partyType is sent in user_metadata so handle_new_user() can set
+//      users.party_type. Phase 1 made that column NOT NULL with no
+//      default, so without this the insert fails outright — see
+//      phase8-create-employee.sql. The trigger can also derive it from
+//      the role, but stating it here means this flow does not depend on
+//      the Contractor role keeping its name.
+//
+//   2. The user_roles write is idempotent. It is the source of truth
+//      (phase2-resolver.sql DECISION 7) and this flow already wrote it;
+//      the upsert is so it keeps working once the trigger writes it too.
+//
+// users.role_id needs no reconciling here: one roleId constant feeds
+// both the metadata and the user_roles row, so they cannot disagree.
+// =====================================================================
+
 export async function AddContractors(form: ContractorFormValues) {
   const email = (form.email ?? "").trim();
   const password = form.password ?? "";
@@ -23,6 +43,7 @@ export async function AddContractors(form: ContractorFormValues) {
           phone: (form.phone ?? "").trim() || null,
           nationality: (form.nationality ?? "").trim() || null,
           roleId,
+          partyType: "contractor",
         },
       });
 
@@ -102,10 +123,10 @@ export async function AddContractors(form: ContractorFormValues) {
   if (authUserId) {
     const { error: userRoleError } = await supabaseAdmin
       .from("user_roles")
-      .insert({
-        role_id: roleId,
-        user_id: authUserId,
-      });
+      .upsert(
+        { role_id: roleId, user_id: authUserId },
+        { onConflict: "user_id,role_id", ignoreDuplicates: true },
+      );
 
     if (userRoleError) {
       console.error("Error inserting user role:", userRoleError);
@@ -181,6 +202,7 @@ export async function AssignUserToContractor({
         lastName: contractor.last_name ?? "",
         phone: contractor.phone_number ?? null,
         roleId,
+        partyType: "contractor",
       },
     });
 
@@ -217,7 +239,10 @@ export async function AssignUserToContractor({
   // 4) Assign the contractor role
   const { error: roleErr } = await supabaseAdmin
     .from("user_roles")
-    .insert({ role_id: roleId, user_id: authUserId });
+    .upsert(
+      { role_id: roleId, user_id: authUserId },
+      { onConflict: "user_id,role_id", ignoreDuplicates: true },
+    );
 
   if (roleErr) {
     console.error(roleErr);

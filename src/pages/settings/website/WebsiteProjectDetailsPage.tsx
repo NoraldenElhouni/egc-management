@@ -29,6 +29,7 @@ import ProjectImageAltFormDialog from "../../../components/website/ProjectImageA
 import SortableProjectImageTile from "../../../components/website/SortableProjectImageTile";
 import DeleteProjectDialog from "../../../components/website/DeleteProjectDialog";
 import { useProjectQuery, useDeleteProject } from "../../../hooks/website/useProjects";
+import { dateToYear } from "../../../utils/date";
 import {
   ProjectImage,
   useCreateProjectImage,
@@ -198,7 +199,7 @@ const WebsiteProjectDetailsPage = () => {
           </div>
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InfoField label="السنة" value={project.year} />
+            <InfoField label="السنة" value={dateToYear(project.year)} />
             <InfoField label="العميل (عربي)" value={project.client_ar} />
             <InfoField label="العميل (إنجليزي)" value={project.client_en} />
             <InfoField label="الموقع (عربي)" value={project.location_ar} />

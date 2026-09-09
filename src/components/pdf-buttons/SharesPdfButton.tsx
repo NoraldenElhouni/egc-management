@@ -47,13 +47,13 @@ function buildPayload(projects: DistributionProject[]): SharesReportPayload {
   const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
   const today = new Date().toISOString().split("T")[0];
 
-  // ── Build a bank-info lookup from project_assignments (already has employee.bank_name / bank_account_number) ──
+  // ── Build a bank-info lookup from project_distributions (already has employee.bank_name / bank_account_number) ──
   const bankInfoMap = new Map<
     string,
     { bank_name?: string; bank_account_number?: string }
   >();
   projects.forEach((project) => {
-    (project.project_assignments ?? []).forEach((a) => {
+    (project.project_distributions ?? []).forEach((a) => {
       if (!bankInfoMap.has(a.employee.id)) {
         bankInfoMap.set(a.employee.id, {
           bank_name: a.employee.bank_name ?? undefined,

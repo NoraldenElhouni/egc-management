@@ -11,6 +11,22 @@ import { formatCurrency } from "../../../utils/helpper";
 import { Currency } from "../../../types/global.type";
 import EmployeePicker from "./EmployeePicker";
 import { supabase } from "../../../lib/supabaseClient";
+import { permissionsDb } from "../../../lib/permissionsDb";
+import { useAuth } from "../../../hooks/useAuth";
+
+// =====================================================================
+// Phase 5 follow-up — this editor writes project_distributions only.
+// =====================================================================
+// It used to read and write project_assignments, where a row meant BOTH
+// "has a share" and "is on the team in this project role". Those are
+// now separate facts in separate tables. This screen owns the money
+// half only; team membership is managed on the project's Team tab.
+//
+// Issue #18 retired the project_assignments mirror this screen used to
+// write on every change — nothing reads that table for payout or team
+// numbers anymore, so there's nothing left for the mirror to keep in
+// step with.
+// =====================================================================
 
 const CURRENCIES: Currency[] = ["LYD", "USD", "EUR"];
 
@@ -21,8 +37,6 @@ const rowSchema = z.object({
   label: z.string(),
   type: z.enum(["bank", "company", "employee"]),
   employeeId: z.string().optional(),
-  projectRoleId: z.string().optional(),
-  projectRoleName: z.string().optional(),
   currency: z.enum(["LYD", "USD", "EUR"]),
   total: z.number(),
   percentage: z
@@ -69,6 +83,7 @@ interface Props {
 }
 
 const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
+  const { user } = useAuth();
   const [pickerCurrency, setPickerCurrency] = useState<Currency | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRemoving, setIsRemoving] = useState<number | null>(null); // rowIndex being removed
@@ -109,10 +124,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
           label: `👤 ${emp.name}`,
           type: "employee",
           employeeId: emp.employeeId,
-
-          projectRoleId: emp.projectRoleId,
-          projectRoleName: emp.projectRoleName,
-
           currency,
           total: dist.total,
           percentage: Number(emp.assignmentPct || 0),
@@ -155,18 +166,23 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
     employeeId: string,
     name: string,
     percentage: number,
-    roleId: string,
-    roleName: string,
   ) => {
-    const { error } = await supabase.from("project_assignments").insert({
-      project_id: project.id,
-      user_id: employeeId,
-      percentage,
-      project_role_id: roleId,
-    });
+    // upsert, not insert: UNIQUE (project_id, person_id) means there is
+    // exactly one row per person here, so adding someone who already has
+    // a share updates it rather than failing or duplicating.
+    const { error } = await permissionsDb.from("project_distributions").upsert(
+      {
+        project_id: project.id,
+        person_id: employeeId,
+        percentage,
+        updated_by: user?.id ?? null,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "project_id,person_id" },
+    );
 
     if (error) {
-      console.error("Error adding project assignment:", error);
+      console.error("Error adding project distribution:", error);
       window.alert("حدث خطأ أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.");
       return;
     }
@@ -181,8 +197,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
       total,
       percentage,
       amount: Number(((percentage / 100) * total).toFixed(2)),
-      projectRoleId: roleId,
-      projectRoleName: roleName,
     });
   };
 
@@ -192,19 +206,20 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
     if (row.type !== "employee" || !row.employeeId) return;
 
     setIsRemoving(rowIndex);
-    const { error } = await supabase
-      .from("project_assignments")
+    const { error } = await permissionsDb
+      .from("project_distributions")
       .delete()
       .eq("project_id", project.id)
-      .eq("user_id", row.employeeId);
-    setIsRemoving(null);
+      .eq("person_id", row.employeeId);
 
     if (error) {
-      console.error("Error removing project assignment:", error);
+      setIsRemoving(null);
+      console.error("Error removing project distribution:", error);
       window.alert("حدث خطأ أثناء حذف الموظف. الرجاء المحاولة مرة أخرى.");
       return;
     }
 
+    setIsRemoving(null);
     remove(rowIndex);
   };
 
@@ -213,31 +228,49 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
     setIsSubmitting(true);
 
     try {
-      // 1. Update all employee assignment percentages in parallel
-      if (!project.project_assignments) {
-        window.alert("بيانات المشروع غير كاملة. لا يمكن تحديث التوزيع.");
-        return;
+      // 1. Update every person's share.
+      //
+      // The form shows one row per person PER CURRENCY, but the table
+      // stores a single percentage per person per project. So the same
+      // person can appear up to three times here. Collapse them first,
+      // and refuse to guess if the currencies disagree — the old code
+      // fired one update per row in parallel, which meant whichever
+      // request happened to land last silently won.
+      const byPerson = new Map<string, number>();
+      for (const row of values.rows) {
+        if (row.type !== "employee" || !row.employeeId) continue;
+        const existing = byPerson.get(row.employeeId);
+        if (existing !== undefined && existing !== row.percentage) {
+          window.alert(
+            `النسبة مختلفة بين العملات لنفس الشخص (${existing}% و ${row.percentage}%). ` +
+              "النسبة مخزنة مرة واحدة لكل شخص، فوحّد القيمة قبل الحفظ.",
+          );
+          return;
+        }
+        byPerson.set(row.employeeId, row.percentage);
       }
 
-      const employeeUpdates = values.rows
-        .filter((r) => r.type === "employee" && r.employeeId)
-        .map((row) =>
-          supabase
-            .from("project_assignments")
-            .update({ percentage: row.percentage })
-            .eq("project_id", project.id)
-            .eq("user_id", row.employeeId as string),
-        );
+      for (const [personId, percentage] of byPerson) {
+        const { error: shareError } = await permissionsDb
+          .from("project_distributions")
+          .upsert(
+            {
+              project_id: project.id,
+              person_id: personId,
+              percentage,
+              updated_by: user?.id ?? null,
+              updated_at: new Date().toISOString(),
+            } as never,
+            { onConflict: "project_id,person_id" },
+          );
 
-      const assignmentResults = await Promise.all(employeeUpdates);
-      const assignmentError = assignmentResults.find((r) => r.error)?.error;
-
-      if (assignmentError) {
-        console.error("Error updating assignments:", assignmentError);
-        window.alert(
-          "حدث خطأ أثناء تحديث بيانات الموظفين. الرجاء المحاولة مرة أخرى.",
-        );
-        return;
+        if (shareError) {
+          console.error("Error updating distribution:", shareError);
+          window.alert(
+            "حدث خطأ أثناء تحديث بيانات الموظفين. الرجاء المحاولة مرة أخرى.",
+          );
+          return;
+        }
       }
 
       // 2. Update project-level bank / company percentages
@@ -288,15 +321,8 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
             )
             .map((r) => r.employeeId)
             .filter((id): id is string => Boolean(id))}
-          onAdd={(empId, name, pct, roleId, roleName) => {
-            void handleAddEmployee(
-              pickerCurrency,
-              empId,
-              name,
-              pct,
-              roleId,
-              roleName,
-            );
+          onAdd={(empId, name, pct) => {
+            void handleAddEmployee(pickerCurrency, empId, name, pct);
           }}
           onClose={() => setPickerCurrency(null)}
         />
@@ -346,7 +372,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                 <thead>
                   <tr className="bg-gray-50 text-right text-gray-500">
                     <th className="px-2 py-2">الجهة</th>
-                    <th className="px-2 py-2">الدور</th>
                     <th className="px-2 py-2 w-28">النسبة %</th>
                     <th className="px-2 py-2 w-32">المبلغ</th>
                     <th className="px-2 py-2 w-8" />
@@ -377,11 +402,6 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
                       >
                         <td className="px-2 py-2 font-medium">
                           {rowData?.label}
-                        </td>
-                        <td className="px-2 py-2">
-                          {rowType === "employee"
-                            ? (rowData?.projectRoleName ?? "-")
-                            : "-"}
                         </td>
 
                         {/* Percentage — drives amount on change */}
@@ -450,9 +470,7 @@ const EmployeeDistributionEditForm = ({ project, onSave }: Props) => {
 
                 <tfoot>
                   <tr className="bg-gray-50 text-right font-semibold">
-                    <td className="px-2 py-2" colSpan={2}>
-                      المجموع
-                    </td>
+                    <td className="px-2 py-2">المجموع</td>
                     <td className="px-2 py-2 tabular-nums">
                       {formatCurrency(currentSum, group.currency)}
                     </td>

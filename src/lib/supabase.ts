@@ -1961,6 +1961,39 @@ export type Database = {
           },
         ]
       }
+      contractor_specialities: {
+        Row: {
+          contractor_id: string
+          created_at: string
+          speciality_id: string
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string
+          speciality_id: string
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string
+          speciality_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_specialities_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_specialities_speciality_id_fkey"
+            columns: ["speciality_id"]
+            isOneToOne: false
+            referencedRelation: "specialities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractors: {
         Row: {
           bank_account_aproved: boolean | null
@@ -2166,6 +2199,88 @@ export type Database = {
           },
         ]
       }
+      department_permission_grants: {
+        Row: {
+          allowed: boolean
+          department_id: string
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          permission_id: string
+          scope: Database["public"]["Enums"]["grant_scope_enum"]
+        }
+        Insert: {
+          allowed: boolean
+          department_id: string
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id: string
+          scope?: Database["public"]["Enums"]["grant_scope_enum"]
+        }
+        Update: {
+          allowed?: boolean
+          department_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string
+          scope?: Database["public"]["Enums"]["grant_scope_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_permission_grants_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_permission_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_permission_grants_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          name_ar: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_account: {
         Row: {
           bank_balance: number
@@ -2271,6 +2386,39 @@ export type Database = {
           },
         ]
       }
+      employee_specialities: {
+        Row: {
+          created_at: string
+          employee_id: string
+          speciality_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          speciality_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          speciality_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_specialities_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_specialities_speciality_id_fkey"
+            columns: ["speciality_id"]
+            isOneToOne: false
+            referencedRelation: "specialities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           address: string | null
@@ -2281,6 +2429,7 @@ export type Database = {
           blood_type: string | null
           created_at: string
           date_of_joining: string | null
+          department_id: string | null
           dob: string | null
           email: string
           emergency_contact: string | null
@@ -2318,6 +2467,7 @@ export type Database = {
           blood_type?: string | null
           created_at?: string
           date_of_joining?: string | null
+          department_id?: string | null
           dob?: string | null
           email: string
           emergency_contact?: string | null
@@ -2355,6 +2505,7 @@ export type Database = {
           blood_type?: string | null
           created_at?: string
           date_of_joining?: string | null
+          department_id?: string | null
           dob?: string | null
           email?: string
           emergency_contact?: string | null
@@ -2384,6 +2535,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_id_fkey"
             columns: ["id"]
@@ -2703,6 +2861,47 @@ export type Database = {
           },
         ]
       }
+      permission_catalog: {
+        Row: {
+          area: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_project_scoped: boolean
+          name: string
+          parent_permission_id: string | null
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          is_project_scoped: boolean
+          name: string
+          parent_permission_id?: string | null
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_project_scoped?: boolean
+          name?: string
+          parent_permission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_catalog_parent_permission_id_fkey"
+            columns: ["parent_permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           id: string
@@ -2821,6 +3020,58 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_distributions: {
+        Row: {
+          created_at: string
+          id: string
+          percentage: number
+          person_id: string
+          project_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          percentage: number
+          person_id: string
+          project_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          percentage?: number
+          person_id?: string
+          project_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_distributions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_distributions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_distributions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -3339,6 +3590,55 @@ export type Database = {
           },
         ]
       }
+      project_permission_defaults: {
+        Row: {
+          allowed: boolean
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          permission_id: string
+          project_id: string
+        }
+        Insert: {
+          allowed: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id: string
+          project_id: string
+        }
+        Update: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_permission_defaults_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_permission_defaults_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_permission_defaults_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_refund: {
         Row: {
           amount: number
@@ -3594,6 +3894,58 @@ export type Database = {
             columns: ["request_id"]
             isOneToOne: false
             referencedRelation: "work_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permission_grants: {
+        Row: {
+          allowed: boolean
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          permission_id: string
+          role_id: string
+          scope: Database["public"]["Enums"]["grant_scope_enum"]
+        }
+        Insert: {
+          allowed: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id: string
+          role_id: string
+          scope?: Database["public"]["Enums"]["grant_scope_enum"]
+        }
+        Update: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string
+          role_id?: string
+          scope?: Database["public"]["Enums"]["grant_scope_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permission_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permission_grants_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permission_grants_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
             referencedColumns: ["id"]
           },
         ]
@@ -4287,6 +4639,27 @@ export type Database = {
           },
         ]
       }
+      specialities: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       specialization_categories: {
         Row: {
           created_at: string
@@ -4424,6 +4797,121 @@ export type Database = {
           },
         ]
       }
+      team_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          person_id: string
+          project_id: string
+          project_role_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          person_id: string
+          project_id: string
+          project_role_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          person_id?: string
+          project_id?: string
+          project_role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_assignments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_assignments_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_member_permission_grants: {
+        Row: {
+          allowed: boolean
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          permission_id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          allowed: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_permission_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_permission_grants_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_permission_grants_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_permission_grants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       update: {
         Row: {
           android_url: string | null
@@ -4453,6 +4941,58 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      user_permission_grants: {
+        Row: {
+          allowed: boolean
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          permission_id: string
+          scope: Database["public"]["Enums"]["grant_scope_enum"]
+          user_id: string
+        }
+        Insert: {
+          allowed: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id: string
+          scope?: Database["public"]["Enums"]["grant_scope_enum"]
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string
+          scope?: Database["public"]["Enums"]["grant_scope_enum"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permission_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_permission_grants_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_permission_grants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_permissions: {
         Row: {
@@ -4571,6 +5111,7 @@ export type Database = {
           first_name: string
           id: string
           last_name: string | null
+          party_type: Database["public"]["Enums"]["party_type_enum"]
           phone: string | null
           role_id: string
           status: Database["public"]["Enums"]["user_status_enum"]
@@ -4585,6 +5126,7 @@ export type Database = {
           first_name: string
           id?: string
           last_name?: string | null
+          party_type: Database["public"]["Enums"]["party_type_enum"]
           phone?: string | null
           role_id: string
           status?: Database["public"]["Enums"]["user_status_enum"]
@@ -4599,6 +5141,7 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string | null
+          party_type?: Database["public"]["Enums"]["party_type_enum"]
           phone?: string | null
           role_id?: string
           status?: Database["public"]["Enums"]["user_status_enum"]
@@ -4610,6 +5153,39 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_specialities: {
+        Row: {
+          created_at: string
+          speciality_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          speciality_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          speciality_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_specialities_speciality_id_fkey"
+            columns: ["speciality_id"]
+            isOneToOne: false
+            referencedRelation: "specialities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_specialities_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -4918,6 +5494,28 @@ export type Database = {
           success: boolean
         }[]
       }
+      can_do: {
+        Args: {
+          p_permission_name: string
+          p_project_id?: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      can_i: {
+        Args: { p_permission_name: string; p_project_id?: string }
+        Returns: boolean
+      }
+      effective_permissions: {
+        Args: { p_project_id?: string; p_user_id: string }
+        Returns: {
+          allowed: boolean
+          area: string
+          is_project_scoped: boolean
+          permission_name: string
+          source_layer: string
+        }[]
+      }
       get_contractors_expenses: {
         Args: { p_project_id: string }
         Returns: {
@@ -5012,6 +5610,16 @@ export type Database = {
         }
         Returns: Json
       }
+      my_effective_permissions: {
+        Args: { p_project_id?: string }
+        Returns: {
+          allowed: boolean
+          area: string
+          is_project_scoped: boolean
+          permission_name: string
+          source_layer: string
+        }[]
+      }
       process_expense_payment: {
         Args: {
           p_amount: number
@@ -5031,6 +5639,21 @@ export type Database = {
         }[]
       }
       reset_project_fresh: { Args: { p_project_id: string }; Returns: Json }
+      resolve_permission_ladder: {
+        Args: {
+          p_permission_id?: string
+          p_project_id?: string
+          p_user_id: string
+        }
+        Returns: {
+          allowed: boolean
+          area: string
+          is_project_scoped: boolean
+          permission_id: string
+          permission_name: string
+          source_layer: string
+        }[]
+      }
       rpc_add_project_expense: {
         Args: {
           p_contractor_id?: string
@@ -5294,8 +5917,10 @@ export type Database = {
         | "deleted"
       expense_type: "material" | "labor" | "maps"
       fund_type: "client" | "internal" | "sale" | "refund" | "other"
+      grant_scope_enum: "all_projects" | "team_projects_only"
       milestone_status: "pending" | "in_progress" | "completed" | "approved"
       owner_type: "employee" | "project" | "company" | "contractor"
+      party_type_enum: "company" | "vendor" | "contractor" | "client"
       payment_method: "cash" | "bank"
       payment_request_status: "pending" | "approved" | "declined" | "paid"
       payment_type: "cash" | "cheque" | "transfer" | "deposit" | "bank"
@@ -5663,8 +6288,10 @@ export const Constants = {
       ],
       expense_type: ["material", "labor", "maps"],
       fund_type: ["client", "internal", "sale", "refund", "other"],
+      grant_scope_enum: ["all_projects", "team_projects_only"],
       milestone_status: ["pending", "in_progress", "completed", "approved"],
       owner_type: ["employee", "project", "company", "contractor"],
+      party_type_enum: ["company", "vendor", "contractor", "client"],
       payment_method: ["cash", "bank"],
       payment_request_status: ["pending", "approved", "declined", "paid"],
       payment_type: ["cash", "cheque", "transfer", "deposit", "bank"],

@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import RequirePermission from "../auth/RequirePermission";
 import HRLayout from "../sidebar/HRLayout";
 import HrPage from "../../pages/hr/HrPage";
 import NewEmployeePage from "../../pages/hr/NewEmployeePage";
@@ -13,12 +14,15 @@ export default function HRRoutes() {
   return (
     <Routes>
       <Route element={<HRLayout />}>
-        <Route index element={<HrPage />} />
-
-        <Route path="employees" element={<EmployeesPage />} />
-        <Route path="employees/new" element={<NewEmployeePage />} />
-        <Route path="employees/:id" element={<EmployeeDetailsPage />} />
-        <Route path="employees/:id/edit" element={<EmployeesPage />} />
+        <Route element={<RequirePermission permission="view_employees" />}>
+          <Route index element={<HrPage />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="employees/:id" element={<EmployeeDetailsPage />} />
+          <Route path="employees/:id/edit" element={<EmployeesPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="create_employee" />}>
+          <Route path="employees/new" element={<NewEmployeePage />} />
+        </Route>
 
         <Route path="loans-advances" element={<LoansAdvancesPage />} />
         <Route path="attendance" element={<AttendancePage />} />

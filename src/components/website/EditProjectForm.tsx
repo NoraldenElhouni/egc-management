@@ -13,6 +13,7 @@ import {
   NewProjectSchema,
   PROJECT_STATUS_OPTIONS,
 } from "../../types/schema/website/newProject.schema";
+import { dateToYear } from "../../utils/date";
 
 const toFormValues = (project: Project): NewProjectFormValues => ({
   category_id: project.category_id,
@@ -26,7 +27,7 @@ const toFormValues = (project: Project): NewProjectFormValues => ({
   status:
     PROJECT_STATUS_OPTIONS.find((o) => o.ar === project.status_ar)?.value ??
     "",
-  year: project.year ?? "",
+  year: dateToYear(project.year),
   description_ar: project.description_ar ?? "",
   description_en: project.description_en ?? "",
   is_active: project.is_active,

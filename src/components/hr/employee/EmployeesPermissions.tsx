@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { FullEmployee } from "../../../types/extended.type";
-import { useAuth } from "../../../hooks/useAuth";
+import { useCan } from "../../../hooks/permissions/useCan";
 
 interface Permission {
   id: string;
@@ -21,8 +21,6 @@ interface EmployeeRoleProps {
 }
 
 const EmployeesPermissions = ({ employee, onUpdated }: EmployeeRoleProps) => {
-  const { user } = useAuth();
-
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
   const [rolePermissionIds, setRolePermissionIds] = useState<Set<string>>(
@@ -31,7 +29,18 @@ const EmployeesPermissions = ({ employee, onUpdated }: EmployeeRoleProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const canEdit = user?.role === "Admin" || user?.role === "Manager";
+  // PHASE 7B BATCH 2. Was: user?.role === "Admin" || user?.role === "Manager".
+  //
+  // THIS ONE NARROWS. manage_permissions_company is granted to Admin only
+  // (Phase 7B worksheet #5), so a Manager who can edit permissions here
+  // today will find the toggles read-only after this change. That is the
+  // worksheet's decision, not a side effect of the swap: handing out
+  // permissions is the one action that can grant its holder anything else,
+  // so it sits a rung above manage_users. Widen it by granting the
+  // permission to Manager, not by editing this line.
+  const { can: canEdit, loading: checkingPermission } = useCan(
+    "manage_permissions_company",
+  );
 
   // -----------------------------------------
   // Fetch all permissions + user's overrides
@@ -220,8 +229,15 @@ const EmployeesPermissions = ({ employee, onUpdated }: EmployeeRoleProps) => {
         </div>
       </div>
 
-      {!canEdit && (
-        <p className="text-sm text-gray-400">لا يمكنك تعديل هذا الحقل</p>
+      {/* Neutral while the resolver answers; the refusal only once it has.
+          Toggles stay disabled throughout, because canEdit is false until
+          the answer arrives. */}
+      {checkingPermission ? (
+        <p className="text-sm text-gray-400">جاري التحقق من الصلاحية...</p>
+      ) : (
+        !canEdit && (
+          <p className="text-sm text-gray-400">لا يمكنك تعديل هذا الحقل</p>
+        )
       )}
 
       {Object.entries(grouped).map(([type, permissions]) => (

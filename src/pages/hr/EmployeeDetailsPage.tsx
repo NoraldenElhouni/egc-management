@@ -4,15 +4,20 @@ import { useEmployee } from "../../hooks/useEmployees";
 import { useParams } from "react-router-dom";
 import EmployeeDetails from "../../components/hr/employee/EmployeeDetails";
 import EmployeeDocuments from "../../components/hr/employee/EmployeeDocuments";
-import { useAuth } from "../../hooks/useAuth";
+import { useMyPermissions } from "../../hooks/permissions/useCan";
 import EmployeeRole from "../../components/hr/employee/EmployeeRole";
 import EmployeesPermissions from "../../components/hr/employee/EmployeesPermissions";
 import SalaryDetails from "../../components/hr/employee/SalaryDetails";
+// Phase 3 — new user-override tab. Added ALONGSIDE the existing
+// "الصلاحيات" tab, which still reads the old permission tables and is
+// deliberately left untouched until Phase 7/8.
+import EmployeeOverridesTab from "../../components/permissions/EmployeeOverridesTab";
 // import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 
 export default function EmployeeDetailsPage() {
   const [activeTab, setActiveTab] = useState("personal-info");
-  const { user } = useAuth();
+  const { data: allowedPermissionsData } = useMyPermissions();
+  const allowedPermissions = allowedPermissionsData ?? new Set<string>();
   const { id } = useParams<{ id: string }>();
   const employeeId = id || "";
   const { employee, loading, error, refetch } = useEmployee(employeeId);
@@ -30,13 +35,13 @@ export default function EmployeeDetailsPage() {
       id: "employee-details",
       label: "تفاصيل الموظف",
       content: <EmployeeDetails employee={employee} onUpdated={refetch} />,
-      roles: ["Admin", "Manager"], // 👈 restricted
+      permission: "view_employee_personal_data",
     },
     {
       id: "employee-payroll",
       label: "تفاصيل المرتبات",
       content: <SalaryDetails payroll={employee.payroll} />,
-      roles: ["Manager"], // 👈 restricted
+      permission: "view_employee_compensation",
     },
     {
       id: "documents",
@@ -54,23 +59,39 @@ export default function EmployeeDetailsPage() {
       id: "employee-role",
       label: "الأدوار",
       content: <EmployeeRole employee={employee} onUpdated={refetch} />,
-      roles: ["Admin", "Manager"],
+      permission: "manage_users",
     },
     {
       id: "employee-permissions",
       label: "الصلاحيات",
       content: <EmployeesPermissions employee={employee} />,
-      roles: ["Admin", "Manager"],
+      permission: "manage_permissions_company",
+    },
+    {
+      id: "employee-overrides",
+      label: "استثناءات الصلاحيات (النظام الجديد)",
+      content: (
+        <EmployeeOverridesTab
+          employeeId={employee.id ?? ""}
+          employeeName={`${employee.first_name ?? ""} ${
+            employee.last_name ?? ""
+          }`.trim()}
+          roleName={employee.user_role?.roles?.name ?? null}
+        />
+      ),
+      permission: "manage_permissions_company",
     },
   ];
 
-  const canView = (allowedRoles?: string[]) => {
-    if (!allowedRoles) return true; // public tab
-    if (!user?.role) return false;
-    return allowedRoles.includes(user.role);
+  // Every tab is permission-gated now — issue 19's last two holdouts
+  // (this file) converted. No hardcoded role check remains anywhere in
+  // this component.
+  const canView = (tab: { permission?: string }) => {
+    if (!tab.permission) return true; // public tab
+    return allowedPermissions.has(tab.permission);
   };
 
-  const visibleTabs = tabs.filter((tab) => canView(tab.roles));
+  const visibleTabs = tabs.filter(canView);
   return (
     <div className="bg-background min-h-screen">
       <div>

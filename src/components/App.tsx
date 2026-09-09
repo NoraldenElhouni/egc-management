@@ -20,6 +20,8 @@ import OperationsRoutes from "./pages/OperationsRoutes";
 import { SidebarProvider } from "../contexts/SidebarContext";
 import { UpdateProvider } from "../contexts/Updateprovider";
 import ShopsRoutes from "./pages/ShopsRoutes";
+import ExecutionManagementRoutes from "./pages/ExecutionManagementRoutes";
+import RequirePermission from "./auth/RequirePermission";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -99,7 +101,9 @@ const AppRouter = () => {
             <Route path="/dashboard" element={<Dashboard />} />
 
             {/* HR */}
-            <Route path="/hr/*" element={<HRRoutes />} />
+            <Route element={<RequirePermission permission="view_hr_section" />}>
+              <Route path="/hr/*" element={<HRRoutes />} />
+            </Route>
 
             {/* CRM */}
             <Route path="/crm/*" element={<CRMRoutes />} />
@@ -111,19 +115,51 @@ const AppRouter = () => {
             <Route path="/projects/*" element={<ProjectsRoutes />} />
 
             {/* Finance */}
-            <Route path="/finance/*" element={<FinanceRoutes />} />
+            <Route
+              element={<RequirePermission permission="view_finance_section" />}
+            >
+              <Route path="/finance/*" element={<FinanceRoutes />} />
+            </Route>
 
             <Route path="/profile" element={<ProfilePage />} />
 
             {/* Settings */}
-            <Route path="/settings/*" element={<SettingsRoutes />} />
+            <Route
+              element={<RequirePermission permission="view_settings_section" />}
+            >
+              <Route path="/settings/*" element={<SettingsRoutes />} />
+            </Route>
 
             {/* operations */}
-            <Route path="/operations/*" element={<OperationsRoutes />} />
+            <Route
+              element={
+                <RequirePermission permission="view_operations_section" />
+              }
+            >
+              <Route path="/operations/*" element={<OperationsRoutes />} />
+            </Route>
 
-            <Route path="/shops/*" element={<ShopsRoutes />} />
+            <Route
+              element={<RequirePermission permission="view_shops_section" />}
+            >
+              <Route path="/shops/*" element={<ShopsRoutes />} />
+            </Route>
 
-            <Route path="/company/*" element={<CompanyRoutes />} />
+            <Route
+              element={<RequirePermission permission="view_company_section" />}
+            >
+              <Route path="/company/*" element={<CompanyRoutes />} />
+            </Route>
+            <Route
+              element={
+                <RequirePermission permission="view_execution_section" />
+              }
+            >
+              <Route
+                path="/execution-management/*"
+                element={<ExecutionManagementRoutes />}
+              />
+            </Route>
           </Route>
         </Route>
       )}

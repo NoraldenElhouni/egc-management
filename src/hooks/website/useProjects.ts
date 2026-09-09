@@ -4,6 +4,7 @@ import {
   NewProjectFormValues,
   PROJECT_STATUS_OPTIONS,
 } from "../../types/schema/website/newProject.schema";
+import { yearToDate } from "../../utils/date";
 
 export interface Project {
   id: string;
@@ -69,7 +70,7 @@ const createProject = async (
 
   const nextSortOrder = lastProject ? lastProject.sort_order + 1 : 0;
 
-  const { status, ...rest } = values;
+  const { status, year, ...rest } = values;
   const statusOption = PROJECT_STATUS_OPTIONS.find((o) => o.value === status);
 
   const { data, error } = await supabase
@@ -77,6 +78,7 @@ const createProject = async (
     .from("projects")
     .insert({
       ...rest,
+      year: yearToDate(year),
       status_ar: statusOption?.ar ?? null,
       status_en: statusOption?.en ?? null,
       sort_order: nextSortOrder,
@@ -95,7 +97,7 @@ const updateProject = async ({
   id: string;
   values: NewProjectFormValues;
 }): Promise<Project> => {
-  const { status, ...rest } = values;
+  const { status, year, ...rest } = values;
   const statusOption = PROJECT_STATUS_OPTIONS.find((o) => o.value === status);
 
   const { data, error } = await supabase
@@ -103,6 +105,7 @@ const updateProject = async ({
     .from("projects")
     .update({
       ...rest,
+      year: yearToDate(year),
       status_ar: statusOption?.ar ?? null,
       status_en: statusOption?.en ?? null,
     })

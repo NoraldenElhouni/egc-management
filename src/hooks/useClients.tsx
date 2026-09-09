@@ -5,6 +5,10 @@ import { ClientFormValues } from "../types/schema/clients.schema";
 import { supabaseAdmin } from "../lib/adminSupabase";
 import { PostgrestError } from "@supabase/supabase-js";
 
+// The Client role. Was written out as a bare uuid in two places; one
+// constant so they cannot drift apart.
+const CLIENT_ROLE_ID = "803c44ac-0af1-4586-81a2-67e1bc7eb7ef";
+
 export function useClients() {
   const [clients, setClients] = useState<Clients[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +49,11 @@ export function useClients() {
               firstName: payload.firstName,
               lastName: payload.lastName,
               nationality: payload.nationality,
-              roleId: "803c44ac-0af1-4586-81a2-67e1bc7eb7ef",
+              roleId: CLIENT_ROLE_ID,
+              // handle_new_user() sets users.party_type from this. Phase 1
+              // made the column NOT NULL with no default, so without it
+              // the insert fails — see phase8-create-employee.sql.
+              partyType: "client",
             },
           });
 
@@ -57,6 +65,32 @@ export function useClients() {
         }
 
         userId = userData?.user?.id ?? null;
+
+        // ── the missing write ──────────────────────────────────────────
+        // This flow created an auth user and never inserted user_roles.
+        // Every other creation path in the app does. That single omission
+        // is why client accounts hold a users.role_id and resolve to no
+        // role at all — phase2-resolver.sql DECISION 7 reads user_roles,
+        // not role_id — and it is a named part of Phase 0's 38-account
+        // divergence.
+        //
+        // It is written with supabaseAdmin, like the auth user above,
+        // rather than the anon client used for the rows below.
+        if (userId) {
+          const { error: userRoleError } = await supabaseAdmin
+            .from("user_roles")
+            .upsert(
+              { user_id: userId, role_id: CLIENT_ROLE_ID },
+              { onConflict: "user_id,role_id", ignoreDuplicates: true },
+            );
+
+          if (userRoleError) {
+            console.error("Error assigning client role:", userRoleError);
+            setError(userRoleError);
+            setLoading(false);
+            return { data: null, error: userRoleError };
+          }
+        }
       }
 
       // -----------------------------
@@ -65,7 +99,7 @@ export function useClients() {
       const { data: role, error: roleError } = await supabase
         .from("roles")
         .select("*")
-        .eq("id", "803c44ac-0af1-4586-81a2-67e1bc7eb7ef")
+        .eq("id", CLIENT_ROLE_ID)
         .single();
 
       if (roleError) {

@@ -1,44 +1,14 @@
-import React, { ComponentType } from "react";
-import { useAuth } from "../../hooks/useAuth";
-import { Book, HandCoins, LayoutDashboard, Percent } from "lucide-react";
+import { ComponentType } from "react";
+import { useVisibleMenuItems } from "../../hooks/permissions/useMenuPermissions";
 import { Link } from "react-router-dom";
+import { COMPANY_ITEMS } from "../../config/navigation/company";
 
 const CompanyPage = () => {
-  const { user, loading } = useAuth();
-  // Use icon components (not JSX elements) so we can control size/class easily when rendering cards
-  const menuItems = [
-    {
-      label: "توزيع النسب",
-      icon: Percent,
-      path: "/company/distribute",
-      role: ["Admin", "Manager"],
-    },
-    {
-      label: "مراجعة النسب",
-      icon: Book,
-      path: "/company/distribute/batches",
-      role: ["Admin", "Manager"],
-    },
-    {
-      label: "تفاصيل الشركة",
-      icon: LayoutDashboard,
-      path: "/company/dashboard",
-      role: ["Admin", "Manager"],
-    },
-    {
-      label: "الرواتب",
-      icon: HandCoins,
-      path: "/company/salaries",
-      role: ["Manager"],
-    },
-  ];
+  const menuItems = COMPANY_ITEMS.filter(
+    (item) => item.showInMenuGrid !== false,
+  );
 
-  // Filter menu items based on the user's role. If an item has no `role` field it is public.
-  const visibleItems = menuItems.filter((item) => {
-    if (!item.role || loading) return true;
-    if (!user || !user.role) return false;
-    return item.role.includes(user.role);
-  });
+  const { visibleItems } = useVisibleMenuItems(menuItems);
   return (
     <div className="h-full w-full p-6 mt-10 bg-background" dir="rtl">
       <h1 className="text-2xl font-bold mb-6 text-center text-foreground">

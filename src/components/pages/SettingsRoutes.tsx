@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import RequirePermission from "../auth/RequirePermission";
 import SettingsLayout from "../sidebar/SettingsLayout";
 import SettingsPage from "../../pages/settings/SettingsPage";
 import SettingsRolesPage from "../../pages/settings/roles/SettingsRolesPage";
@@ -21,54 +22,118 @@ import WebsiteNewProjectPage from "../../pages/settings/website/WebsiteNewProjec
 import WebsiteProjectDetailsPage from "../../pages/settings/website/WebsiteProjectDetailsPage";
 import WebsiteEditProjectPage from "../../pages/settings/website/WebsiteEditProjectPage";
 import WebsiteTeamPage from "../../pages/settings/website/WebsiteTeamPage";
+// Phase 3 — new permission administration screens. Additive only: the
+// existing /settings/roles pages above are untouched and still behave
+// exactly as they did before.
+import SettingsDepartmentsPage from "../../pages/settings/departments/SettingsDepartmentsPage";
+import DepartmentDetailPage from "../../pages/settings/departments/DepartmentDetailPage";
+import RolePermissionsListPage from "../../pages/settings/permissions/RolePermissionsListPage";
+import RolePermissionsDetailPage from "../../pages/settings/permissions/RolePermissionsDetailPage";
 
 export default function SettingsRoutes() {
   return (
     <Routes>
       <Route element={<SettingsLayout />}>
-        <Route index element={<SettingsPage />} />
+        <Route
+          element={
+            <RequirePermission
+              permission={[
+                "manage_reference_data",
+                "manage_specialities",
+                "manage_roles",
+              ]}
+            />
+          }
+        >
+          <Route index element={<SettingsPage />} />
+        </Route>
 
-        <Route path="roles" element={<SettingsRolesPage />} />
-        <Route path="roles/new" element={<NewRolePage />} />
-        <Route path="roles/:id" element={<RolesDetailsPage />} />
+        <Route element={<RequirePermission permission="manage_roles" />}>
+          <Route path="roles" element={<SettingsRolesPage />} />
+          <Route path="roles/new" element={<NewRolePage />} />
+          <Route path="roles/:id" element={<RolesDetailsPage />} />
+        </Route>
 
-        <Route path="expenses" element={<SettingsExpensesPage />} />
-        <Route path="expenses/:id" element={<ExpenseDetailsPage />} />
+        <Route
+          element={<RequirePermission permission="manage_reference_data" />}
+        >
+          <Route path="expenses" element={<SettingsExpensesPage />} />
+          <Route path="expenses/:id" element={<ExpenseDetailsPage />} />
+          <Route path="maps" element={<MapsPage />} />
+          <Route path="banks" element={<BanksPage />} />
+        </Route>
 
-        <Route
-          path="specializations"
-          element={<SettingsSpecializationsPage />}
-        />
-        <Route
-          path="specializations/:id"
-          element={<SpecializationDetailPage />}
-        />
+        <Route element={<RequirePermission permission="manage_specialities" />}>
+          <Route
+            path="specializations"
+            element={<SettingsSpecializationsPage />}
+          />
+          <Route
+            path="specializations/:id"
+            element={<SpecializationDetailPage />}
+          />
+        </Route>
 
-        <Route path="maps" element={<MapsPage />} />
-        <Route path="banks" element={<BanksPage />} />
-        <Route path="sessions" element={<UserSessionsPage />} />
-        <Route path="logs" element={<LogsPage />} />
-        <Route path="password-reset" element={<UserPasswordResetPage />} />
-        <Route path="website" element={<WebsitePage />} />
-        <Route path="website/categories" element={<WebsiteCategoriesPage />} />
+        <Route element={<RequirePermission permission="view_user_sessions" />}>
+          <Route path="sessions" element={<UserSessionsPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_audit_logs" />}>
+          <Route path="logs" element={<LogsPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="reset_user_password" />}>
+          <Route path="password-reset" element={<UserPasswordResetPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="manage_website" />}>
+          <Route path="website" element={<WebsitePage />} />
+          <Route
+            path="website/categories"
+            element={<WebsiteCategoriesPage />}
+          />
+          <Route
+            path="website/hero-slides"
+            element={<WebsiteHeroSlidesPage />}
+          />
+          <Route path="website/projects" element={<WebsiteProjectsPage />} />
+          <Route
+            path="website/projects/new"
+            element={<WebsiteNewProjectPage />}
+          />
+          <Route
+            path="website/projects/:id"
+            element={<WebsiteProjectDetailsPage />}
+          />
+          <Route
+            path="website/projects/:id/edit"
+            element={<WebsiteEditProjectPage />}
+          />
+          <Route path="website/team" element={<WebsiteTeamPage />} />
+        </Route>
+
+        {/* Phase 3 — permission administration */}
+        <Route element={<RequirePermission permission="manage_departments" />}>
+          <Route
+            path="permissions/departments"
+            element={<SettingsDepartmentsPage />}
+          />
+          <Route
+            path="permissions/departments/:id"
+            element={<DepartmentDetailPage />}
+          />
+        </Route>
         <Route
-          path="website/hero-slides"
-          element={<WebsiteHeroSlidesPage />}
-        />
-        <Route path="website/projects" element={<WebsiteProjectsPage />} />
-        <Route
-          path="website/projects/new"
-          element={<WebsiteNewProjectPage />}
-        />
-        <Route
-          path="website/projects/:id"
-          element={<WebsiteProjectDetailsPage />}
-        />
-        <Route
-          path="website/projects/:id/edit"
-          element={<WebsiteEditProjectPage />}
-        />
-        <Route path="website/team" element={<WebsiteTeamPage />} />
+          element={
+            <RequirePermission permission="manage_permissions_company" />
+          }
+        >
+          <Route
+            path="permissions/roles"
+            element={<RolePermissionsListPage />}
+          />
+          <Route
+            path="permissions/roles/:id"
+            element={<RolePermissionsDetailPage />}
+          />
+        </Route>
       </Route>
     </Routes>
   );

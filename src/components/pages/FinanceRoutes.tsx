@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import RequirePermission from "../auth/RequirePermission";
 import FinanceLayout from "../sidebar/FinanceLayout";
 import FinancePage from "../../pages/finance/FinancePage";
 import TreasuryPage from "../../pages/finance/treasury/TreasuryPage";
@@ -20,35 +21,73 @@ const FinanceRoutes = () => {
     <Routes>
       {/* ✅ Bookkeeping section خارج FinanceLayout */}
 
-      <Route path="bookkeeping/*" element={<BookkeepingRoutes />} />
+      <Route element={<RequirePermission permission="view_bookkeeping" />}>
+        <Route path="bookkeeping/*" element={<BookkeepingRoutes />} />
+      </Route>
 
       {/* ✅ باقي صفحات Finance داخل FinanceLayout */}
       <Route element={<FinanceLayout />}>
-        <Route index element={<FinancePage />} />
-
-        <Route path="treasury" element={<TreasuryPage />} />
-        <Route path="treasury/project/:id" element={<TreasuryProjectPage />} />
-
-        <Route path="company" element={<CompanyPage />} />
         <Route
-          path="company/expense/:expenseId"
-          element={<ComapnyExpensePayments />}
-        />
+          element={
+            <RequirePermission
+              permission={[
+                "view_bookkeeping",
+                "view_company_finance",
+                "view_payments",
+                "view_treasury",
+              ]}
+            />
+          }
+        >
+          <Route index element={<FinancePage />} />
+        </Route>
 
-        <Route path="bookkeeping" element={<BookkeepingPage />} />
-        <Route path="projects/add" element={<NewProjectFinance />} />
-        <Route path="payments" element={<NotPiadExpensePage />} />
+        <Route element={<RequirePermission permission="view_treasury" />}>
+          <Route path="treasury" element={<TreasuryPage />} />
+          <Route
+            path="treasury/project/:id"
+            element={<TreasuryProjectPage />}
+          />
+        </Route>
+
         <Route
-          path="contractor-payments"
-          element={<ContractorPaymentsPage />}
-        />
-        <Route path="tracking" element={<FinanceTrackingPage />} />
-        <Route path="orders" element={<OrdersPage />} />
-        <Route path="contracts" element={<ContractsPage />} />
+          element={<RequirePermission permission="view_company_finance" />}
+        >
+          <Route path="company" element={<CompanyPage />} />
+          <Route
+            path="company/expense/:expenseId"
+            element={<ComapnyExpensePayments />}
+          />
+        </Route>
+
+        <Route element={<RequirePermission permission="view_bookkeeping" />}>
+          <Route path="bookkeeping" element={<BookkeepingPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_projects" />}>
+          <Route path="projects/add" element={<NewProjectFinance />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_payments" />}>
+          <Route path="payments" element={<NotPiadExpensePage />} />
+        </Route>
+
+        <Route element={<RequirePermission permission="view_payments" />}>
+          <Route
+            path="contractor-payments"
+            element={<ContractorPaymentsPage />}
+          />
+          <Route path="tracking" element={<FinanceTrackingPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="contracts" element={<ContractsPage />} />
+        </Route>
+
         <Route
-          path="pending-distribution"
-          element={<UndistributedExpensePaymentsPage />}
-        />
+          element={<RequirePermission permission="view_pending_distribution" />}
+        >
+          <Route
+            path="pending-distribution"
+            element={<UndistributedExpensePaymentsPage />}
+          />
+        </Route>
       </Route>
     </Routes>
   );

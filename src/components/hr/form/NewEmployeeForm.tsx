@@ -11,6 +11,7 @@ import { DateField } from "../../ui/inputs/DateField";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { createEmployee } from "../../../services/employees/setEmployeeService";
 import { useUtils } from "../../../hooks/useUtils";
+import { useDepartments } from "../../../hooks/permissions/useDepartments";
 import { ImageUploadField } from "../../ui/inputs/ImageUploadField";
 import { useNavigate } from "react-router-dom";
 import { EMPLOYEE_TYPE } from "../../../enum/employee";
@@ -19,6 +20,13 @@ const NewEmployeeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { specializations, roles, managers } = useUtils();
+  // Phase 1's departments table — the real one, not the role-scoped
+  // specializations list below it. The two are different things and this
+  // form now asks for both: a department decides what you may do
+  // (permission ladder layer 4), a specialization describes what you are
+  // trained in.
+  const { data: departments = [], isPending: departmentsLoading } =
+    useDepartments();
   const navigate = useNavigate();
 
   const {
@@ -132,6 +140,7 @@ const NewEmployeeForm: React.FC = () => {
     [
       "dateOfJoining",
       "managerId",
+      "departmentId",
       "specializationsId",
       "salaryType",
       "baseSalary",
@@ -445,6 +454,24 @@ const NewEmployeeForm: React.FC = () => {
               ]}
               register={register("managerId")}
               error={errors.managerId}
+            />
+
+            {/* Department — permission ladder layer 4. Single-select by
+                design: one department per person (phase1-schema.sql).
+                Shown for every role, unlike specializations below, which
+                only apply to engineers. */}
+            <SelectField
+              id="departmentId"
+              label="القسم (اختياري)"
+              options={[
+                { value: "", label: departmentsLoading ? "..." : "بدون قسم" },
+                ...departments.map((department) => ({
+                  value: department.id,
+                  label: department.name_ar || department.name,
+                })),
+              ]}
+              register={register("departmentId")}
+              error={errors.departmentId}
             />
 
             {showSpecializations && (
