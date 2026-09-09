@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabaseClient";
 import { FullEmployee } from "../../../types/extended.type";
+import EmployeeDepartment from "./EmployeeDepartment";
 import EmployeeHeaderCard, {
   EmployeeHeaderValues,
 } from "./cards/EmployeeHeaderCard";
@@ -69,6 +70,10 @@ const EmployeeDetails = ({ employee, onUpdated }: EmployeeDetailsProps) => {
         </div>
 
         <EmployeeHeaderCard employee={employee} onSave={handleSave} />
+
+        <div className="mb-6">
+          <EmployeeDepartment employeeId={employee.id} />
+        </div>
 
         <ProjectsCard projects={employee.projects || []} />
 
