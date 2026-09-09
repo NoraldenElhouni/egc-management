@@ -117,7 +117,14 @@ const NewProjectForm: React.FC = () => {
         <DateField
           id="start_date"
           label="تاريخ البدء"
-          register={register("start_date")}
+          // valueAsDate, for the same reason percentage/latitude/longitude
+          // above use valueAsNumber: an <input type="date"> hands React
+          // Hook Form the raw string "2026-09-07", while the schema
+          // declares z.date() and addProject() calls .toISOString() on
+          // it. Without this the form rejected every date with "expected
+          // date, received string". Empty input gives null, which the
+          // schema allows.
+          register={register("start_date", { valueAsDate: true })}
           error={errors.start_date}
         />
 
