@@ -6,6 +6,14 @@ const ContractsPage = () => {
       <ProjectsList
         basePath="/operations/contracts/project"
         version="contracts"
+        counters={[
+          {
+            id: "contracts_count",
+            header: "عدد العقود",
+            table: "contracts",
+            schema: "contracts",
+          },
+        ]}
       />
     </div>
   );

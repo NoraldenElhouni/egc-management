@@ -4,43 +4,42 @@ import { createProjectsColumns } from "../../tables/columns/ProjectsColumns";
 import GenericTable from "../../tables/table";
 import OverviewStatus from "../../ui/OverviewStatus";
 import { formatCurrency } from "../../../utils/helpper";
-import { useContractCountsByProject } from "../../../hooks/operations/contracts/useContracts";
-import { useOrderCountsByProject } from "../../../hooks/shop/orders/useOrders";
+import {
+  ProjectCountSource,
+  useProjectCounts,
+} from "../../../hooks/projects/useProjectCounts";
 
 interface ProjectsListProps {
   basePath?: string;
   version?: string;
+  /**
+   * Extra "N per project" columns — contracts, orders, BOQ zones,
+   * whatever's next. The caller declares what it wants counted; this
+   * component doesn't know or care which page is asking.
+   */
+  counters?: ProjectCountSource[];
 }
 
 const ProjectsList = ({
   basePath = "/projects",
   version = "default",
+  counters = [],
 }: ProjectsListProps) => {
   const { projects } = useProjects();
-
-  const { countsByProject: contractsCountByProject } =
-    useContractCountsByProject(version === "contracts");
-  const { countsByProject: ordersCountByProject } = useOrderCountsByProject(
-    version === "orders",
-  );
+  const counts = useProjectCounts(counters);
 
   const columns = useMemo(
     () =>
-      createProjectsColumns((id) => `${basePath}/${id}`, version, [
-        {
-          id: "contracts_count",
-          header: "عدد العقود",
-          countMap: contractsCountByProject,
-          show: version === "contracts",
-        },
-        {
-          id: "orders_count",
-          header: "عدد الطلبات",
-          countMap: ordersCountByProject,
-          show: version === "orders",
-        },
-      ]),
-    [basePath, version, contractsCountByProject, ordersCountByProject],
+      createProjectsColumns(
+        (id) => `${basePath}/${id}`,
+        version,
+        counts.map((c) => ({
+          id: c.id,
+          header: c.header,
+          countMap: c.countMap,
+        })),
+      ),
+    [basePath, version, counts],
   );
 
   // -----------------------------
