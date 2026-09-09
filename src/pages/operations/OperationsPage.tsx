@@ -1,15 +1,15 @@
 import MenuGrid from "../../components/ui/MenuGrid";
-import { OPERATIONS_ITEMS } from "../../config/navigation/operations";
+import { useOperationsSectionItems } from "../../hooks/permissions/useOperationsSectionItems";
 
 const OperationsPage = () => {
-  const menuItems = OPERATIONS_ITEMS.filter(
-    (item) => item.showInMenuGrid !== false,
-  );
+  const { items, loading } = useOperationsSectionItems();
+  const menuItems = items.filter((item) => item.showInMenuGrid !== false);
 
   return (
     <MenuGrid
       title="ادارة التشغيل"
       items={menuItems}
+      loading={loading}
       columns={{ base: 1, sm: 2, md: 3 }}
     />
   );
