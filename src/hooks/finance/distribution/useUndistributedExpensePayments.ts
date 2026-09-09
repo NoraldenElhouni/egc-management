@@ -76,7 +76,7 @@ export function useUndistributedExpensePayments(projectId?: string) {
           "id, amount, percentage, project_id, payment_id, expense_id, refund_id, type, created_at",
         )
         .eq("distributed", false)
-        .not("payment_id", "is", null);
+        .not("payment_id", "is", null)
         .gt("percentage", 0)
         .or(
           "and(type.eq.expense,payment_id.not.is.null),and(type.eq.refund,refund_id.not.is.null)",
