@@ -17,6 +17,7 @@ import { useVendor } from "../../hooks/supply-chain/vendors/useVendors";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { useCan } from "../../hooks/permissions/useCan";
 import VendorContractorPdfButton from "../../components/pdf-buttons/VendorContractorPdfButton";
 import EditVendorDialog from "../../components/supply-chain/vendor/EditVendorDialog";
 import EditVendorBankInfoDialog from "../../components/supply-chain/vendor/EditVendorBankInfoDialog";
@@ -143,6 +144,12 @@ const ProjectGroupRow = ({
 
 const VendorDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  // Same gap as ClientDetailPage/ContractorDetailPage had: manage_vendors
+  // already covered /vendors/new, but this page's two edit dialogs
+  // (profile, bank info) had no permission check — reachable by anyone
+  // holding only view_vendors.
+  const { can: canManageVendors, loading: checkingCanManage } =
+    useCan("manage_vendors");
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showBankEditDialog, setShowBankEditDialog] = useState(false);
   const [showBankApprovedWarning, setShowBankApprovedWarning] = useState(false);
@@ -237,18 +244,22 @@ const VendorDetailPage = () => {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setShowEditDialog(true)}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
-              >
-                تعديل بيانات المورد
-              </button>
-              <button
-                onClick={handleOpenBankEdit}
-                className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition"
-              >
-                تعديل معلومات البنك
-              </button>
+              {!checkingCanManage && canManageVendors && (
+                <>
+                  <button
+                    onClick={() => setShowEditDialog(true)}
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+                  >
+                    تعديل بيانات المورد
+                  </button>
+                  <button
+                    onClick={handleOpenBankEdit}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                  >
+                    تعديل معلومات البنك
+                  </button>
+                </>
+              )}
               <VendorContractorPdfButton id={id} type="vendor" />
             </div>
           </div>

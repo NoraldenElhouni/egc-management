@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useClient } from "../../hooks/useClients";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useCan } from "../../hooks/permissions/useCan";
 import LoadingPage from "../../components/ui/LoadingPage";
 import ErrorPage from "../../components/ui/errorPage";
 import { formatDate } from "../../utils/helpper";
@@ -27,6 +28,13 @@ import { Projects } from "../../types/global.type";
 
 const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  // manage_clients already covers /crm/clients/new (issue 19 gap 4); this
+  // is the description's other half — "وتعديل بياناتهم" — actually
+  // enforced now instead of just documented. Deny while loading, same
+  // convention as every other permission check: don't flash the edit
+  // button before the answer is in.
+  const { can: canManageClients, loading: checkingCanManage } =
+    useCan("manage_clients");
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [editMode, setEditMode] = useState(false);
@@ -292,13 +300,16 @@ const ClientDetailPage = () => {
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
                 {!editMode ? (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span>تعديل</span>
-                  </button>
+                  !checkingCanManage &&
+                  canManageClients && (
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>تعديل</span>
+                    </button>
+                  )
                 ) : (
                   <>
                     <button

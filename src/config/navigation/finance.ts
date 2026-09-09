@@ -35,7 +35,7 @@ export const FINANCE_ITEMS: NavItem[] = [
     icon: Building2,
     path: "/finance/projects/add",
     description: "إضافة مشاريع جديدة",
-    permission: "view_projects",
+    permission: "create_project",
   },
   {
     label: "المدفوعات",
