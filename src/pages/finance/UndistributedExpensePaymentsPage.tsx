@@ -134,7 +134,10 @@ const UndistributedExpensePaymentsPage = () => {
               : row.paymentSerial != null
                 ? String(row.paymentSerial)
                 : "",
-          description: row.expenseDescription ?? "",
+          description:
+            row.logType === "refund"
+              ? `استرداد: ${row.expenseDescription ?? ""}`.trim()
+              : (row.expenseDescription ?? ""),
           amount: row.paymentAmount ?? 0,
           date: (row.expenseDate ?? row.paymentDate ?? row.createdAt).slice(
             0,

@@ -33,8 +33,10 @@ async function fetchInChunks<T>(
 
 export interface UndistributedExpensePaymentRow {
   logId: string;
+  logType: "expense" | "refund";
   paymentId: string | null;
   expenseId: string | null;
+  refundId: string | null;
   projectId: string;
   projectName: string;
   projectSerial: number | null;
@@ -65,14 +67,20 @@ export function useUndistributedExpensePayments(projectId?: string) {
     setError(null);
 
     try {
+      // Expense logs add to the company share, refund logs subtract from it
+      // (they are stored with a negative amount), so the pending view has to
+      // carry both to match what the distribution run will actually move.
       let logsQuery = supabase
         .from("project_percentage_logs")
         .select(
-          "id, amount, percentage, project_id, payment_id, expense_id, created_at",
+          "id, amount, percentage, project_id, payment_id, expense_id, refund_id, type, created_at",
         )
-        .eq("type", "expense")
         .eq("distributed", false)
         .not("payment_id", "is", null);
+        .gt("percentage", 0)
+        .or(
+          "and(type.eq.expense,payment_id.not.is.null),and(type.eq.refund,refund_id.not.is.null)",
+        );
 
       if (projectId) {
         logsQuery = logsQuery.eq("project_id", projectId);
@@ -93,36 +101,47 @@ export function useUndistributedExpensePayments(projectId?: string) {
 
       const paymentIds = new Set<string>();
       const expenseIds = new Set<string>();
+      const refundIds = new Set<string>();
       const projectIds = new Set<string>();
 
       (logsData ?? []).forEach((l) => {
         if (l.payment_id) paymentIds.add(l.payment_id);
         if (l.expense_id) expenseIds.add(l.expense_id);
+        if (l.refund_id) refundIds.add(l.refund_id);
         projectIds.add(l.project_id);
       });
 
-      const [paymentsData, expensesData, projectsData] = await Promise.all([
-        fetchInChunks(Array.from(paymentIds), (ids) =>
-          supabase
-            .from("expense_payments")
-            .select("id, amount, created_at, payment_method, serial_number")
-            .in("id", ids),
-        ),
-        fetchInChunks(Array.from(expenseIds), (ids) =>
-          supabase
-            .from("project_expenses")
-            .select(
-              "id, description, serial_number, expense_date, expense_type, phase, currency, vendor_id, contractor_id",
-            )
-            .in("id", ids),
-        ),
-        fetchInChunks(Array.from(projectIds), (ids) =>
-          supabase
-            .from("projects")
-            .select("id, name, serial_number")
-            .in("id", ids),
-        ),
-      ]);
+      const [paymentsData, expensesData, refundsData, projectsData] =
+        await Promise.all([
+          fetchInChunks(Array.from(paymentIds), (ids) =>
+            supabase
+              .from("expense_payments")
+              .select("id, amount, created_at, payment_method, serial_number")
+              .in("id", ids),
+          ),
+          fetchInChunks(Array.from(expenseIds), (ids) =>
+            supabase
+              .from("project_expenses")
+              .select(
+                "id, description, serial_number, expense_date, expense_type, phase, currency, vendor_id, contractor_id",
+              )
+              .in("id", ids),
+          ),
+          fetchInChunks(Array.from(refundIds), (ids) =>
+            supabase
+              .from("project_refund")
+              .select(
+                "id, amount, description, serial_number, income_date, payment_method, currency",
+              )
+              .in("id", ids),
+          ),
+          fetchInChunks(Array.from(projectIds), (ids) =>
+            supabase
+              .from("projects")
+              .select("id, name, serial_number")
+              .in("id", ids),
+          ),
+        ]);
 
       const vendorIds = new Set<string>();
       const contractorIds = new Set<string>();
@@ -145,6 +164,7 @@ export function useUndistributedExpensePayments(projectId?: string) {
 
       const paymentsMap = new Map(paymentsData.map((p) => [p.id, p]));
       const expensesMap = new Map(expensesData.map((e) => [e.id, e]));
+      const refundsMap = new Map(refundsData.map((r) => [r.id, r]));
       const projectsMap = new Map(projectsData.map((p) => [p.id, p]));
       const vendorsMap = new Map(vendorsData.map((v) => [v.id, v]));
       const contractorsMap = new Map(contractorsData.map((c) => [c.id, c]));
@@ -157,6 +177,7 @@ export function useUndistributedExpensePayments(projectId?: string) {
           const expense = l.expense_id
             ? expensesMap.get(l.expense_id)
             : undefined;
+          const refund = l.refund_id ? refundsMap.get(l.refund_id) : undefined;
           const project = projectsMap.get(l.project_id);
           const vendor = expense?.vendor_id
             ? vendorsMap.get(expense.vendor_id)
@@ -165,25 +186,49 @@ export function useUndistributedExpensePayments(projectId?: string) {
             ? contractorsMap.get(expense.contractor_id)
             : undefined;
 
+          const isRefund = l.type === "refund";
+
           return {
             logId: l.id,
+            logType: isRefund ? ("refund" as const) : ("expense" as const),
             paymentId: l.payment_id,
             expenseId: l.expense_id,
+            refundId: l.refund_id,
             projectId: l.project_id,
             projectName: project?.name ?? "—",
             projectSerial: project?.serial_number ?? null,
             percentageAmount: l.amount,
             percentage: l.percentage,
-            paymentAmount: payment?.amount ?? null,
-            paymentDate: payment?.created_at ?? null,
-            paymentMethod: payment?.payment_method ?? null,
-            paymentSerial: payment?.serial_number ?? null,
-            expenseDescription: expense?.description ?? null,
-            expenseSerial: expense?.serial_number ?? null,
-            expenseDate: expense?.expense_date ?? null,
-            expenseType: expense?.expense_type ?? null,
-            phase: expense?.phase ?? null,
-            currency: expense?.currency ?? "LYD",
+            // A refund gives money back, so it counts against the payment total
+            // the same way its log amount counts against the company share.
+            paymentAmount: isRefund
+              ? refund
+                ? -refund.amount
+                : null
+              : (payment?.amount ?? null),
+            paymentDate: isRefund
+              ? (refund?.income_date ?? null)
+              : (payment?.created_at ?? null),
+            paymentMethod: isRefund
+              ? (refund?.payment_method ?? null)
+              : (payment?.payment_method ?? null),
+            paymentSerial: isRefund
+              ? (refund?.serial_number ?? null)
+              : (payment?.serial_number ?? null),
+            expenseDescription: isRefund
+              ? (refund?.description ?? null)
+              : (expense?.description ?? null),
+            expenseSerial: isRefund
+              ? (refund?.serial_number ?? null)
+              : (expense?.serial_number ?? null),
+            expenseDate: isRefund
+              ? (refund?.income_date ?? null)
+              : (expense?.expense_date ?? null),
+            expenseType: isRefund ? null : (expense?.expense_type ?? null),
+            phase: isRefund ? null : (expense?.phase ?? null),
+            currency: isRefund
+              ? (refund?.currency ?? "LYD")
+              : (expense?.currency ?? "LYD"),
             vendorName: vendor?.vendor_name ?? null,
             contractorName: contractor
               ? `${contractor.first_name} ${contractor.last_name ?? ""}`.trim()

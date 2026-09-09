@@ -167,7 +167,6 @@ export function useProjectsDistribute() {
         )
         `,
         )
-        .eq("status", "active")
         .not(
           "id",
           "in",
@@ -267,7 +266,7 @@ export function useProjectsDistribute() {
               .select("*")
               .eq("project_id", project.id)
               .eq("currency", currency)
-              .gt("period_percentage", 0);
+              .gt("percentage", 0);
 
             if (freshErr) throw freshErr;
             if (!freshPctRows?.length) continue;
