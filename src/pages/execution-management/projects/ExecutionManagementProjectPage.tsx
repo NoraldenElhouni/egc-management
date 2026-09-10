@@ -3,6 +3,7 @@ import GenericTable from "../../../components/tables/table";
 import ErrorPage from "../../../components/ui/errorPage";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import { useProjects } from "../../../hooks/execution-management/project/useProjects";
+import ProjectsDueDateTimeline from "../../../components/project/ProjectsDueDateTimeline";
 
 const ExecutionManagementProjectPage = () => {
   const { data: projects, isLoading, error } = useProjects();
@@ -17,6 +18,7 @@ const ExecutionManagementProjectPage = () => {
 
   return (
     <div className="bg-background p-6 text-foreground">
+      <ProjectsDueDateTimeline projects={projects ?? []} />
       <GenericTable
         columns={ProjectExecutionColumns}
         data={projects ?? []}

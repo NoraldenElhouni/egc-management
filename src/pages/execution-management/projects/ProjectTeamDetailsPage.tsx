@@ -3,8 +3,19 @@ import { ShieldCheck } from "lucide-react";
 import AddTeamMemberForm from "../../../components/project/team/AddTeamMemberForm";
 import TeamRoster from "../../../components/project/team/TeamRoster";
 import { useProjectTeam } from "../../../hooks/team/useTeamAssignments";
+import { useProject } from "../../../hooks/useProjects";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
+import { statusColor } from "../../../utils/colors/status";
+
+// Same labels as the main projects table (ProjectsColumns.tsx), so a
+// status badge reads the same everywhere in the app.
+const STATUS_LABELS: Record<string, string> = {
+  active: "نشط",
+  paused: "متوقف",
+  completed: "مكتمل",
+  cancelled: "ملغي",
+};
 
 // =====================================================================
 // The project Team screen — implementation guide section 4.4.
@@ -27,6 +38,7 @@ import ErrorPage from "../../../components/ui/errorPage";
 const ProjectTeamDetailsPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { data: members, isLoading, error } = useProjectTeam(projectId);
+  const { project } = useProject(projectId ?? "");
 
   if (!projectId) {
     return (
@@ -53,12 +65,34 @@ const ProjectTeamDetailsPage = () => {
   return (
     <div className="p-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">فريق المشروع</h1>
+        {/* The project's own identity, front and center — this screen
+            is reached from a list of dozens of projects, so the first
+            thing on it should say which one you're looking at. */}
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {project?.name ?? "فريق المشروع"}
+          </h1>
+          {project && project.serial_number !== null && (
+            <span className="text-sm text-gray-400" dir="ltr">
+              #{project.serial_number}
+            </span>
+          )}
+          {project?.status && (
+            <span
+              className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor(
+                project.status,
+              )}`}
+            >
+              {STATUS_LABELS[project.status] ?? project.status}
+            </span>
+          )}
+        </div>
         {/* The old subtitle said "إدارة أعضاء الفريق ونسبهم في المشروع"
             — members AND their percentages. Percentages are not managed
             here any more, and the heading should not suggest they are. */}
         <p className="text-gray-600">
-          من يعمل على هذا المشروع، وبأي دور. نسب التوزيع تُدار من شاشة مستقلة.
+          فريق المشروع — من يعمل عليه، وبأي دور. نسب التوزيع تُدار من شاشة
+          مستقلة.
         </p>
       </div>
 
