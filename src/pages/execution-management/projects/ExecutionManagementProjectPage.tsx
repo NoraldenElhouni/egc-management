@@ -21,7 +21,10 @@ const ExecutionManagementProjectPage = () => {
         columns={ProjectExecutionColumns}
         data={projects ?? []}
         header="إدارة المشاريع"
-        initialSorting={[{ id: "serial_number", desc: true }]}
+        initialSorting={[{ id: "estimated_due_date", desc: true }]}
+        enableFiltering
+        enableSorting
+        showGlobalFilter
       />
     </div>
   );

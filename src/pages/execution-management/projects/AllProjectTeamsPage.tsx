@@ -18,6 +18,17 @@ import TeamRoster from "../../../components/project/team/TeamRoster";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
 import Button from "../../../components/ui/Button";
+import { ProjectStatusValues } from "../../../types/schema/projects.schema";
+import { statusColor } from "../../../utils/colors/status";
+
+// Same labels/colors as the main projects table (ProjectsColumns.tsx), so
+// a status reads the same everywhere in the app.
+const PROJECT_STATUS_LABELS: Record<(typeof ProjectStatusValues)[number], string> = {
+  active: "نشط",
+  paused: "متوقف",
+  completed: "مكتمل",
+  cancelled: "ملغي",
+};
 
 // =====================================================================
 // EVERY PROJECT TEAM ON ONE PAGE — /execution-management/projects/teams
@@ -61,6 +72,7 @@ export default function AllProjectTeamsPage() {
   const [search, setSearch] = useState("");
   const [roleId, setRoleId] = useState("");
   const [staffing, setStaffing] = useState<Staffing>("all");
+  const [status, setStatus] = useState("");
 
   // FILTER RULE, stated once so the behaviour is predictable:
   // search and role filter MEMBERS. A project survives if it still has
@@ -76,6 +88,7 @@ export default function AllProjectTeamsPage() {
         if (staffing === "unstaffed") return project.members.length === 0;
         return true;
       })
+      .filter((project) => status === "" || project.status === status)
       .map((project) => {
         const projectMatches =
           q === "" ||
@@ -100,7 +113,7 @@ export default function AllProjectTeamsPage() {
         if (project.members.length === 0) return projectMatches && !roleId;
         return members.length > 0;
       });
-  }, [projects, search, roleId, staffing]);
+  }, [projects, search, roleId, staffing, status]);
 
   const stats = useMemo(() => {
     const all = projects ?? [];
@@ -110,9 +123,13 @@ export default function AllProjectTeamsPage() {
     ).size;
     return {
       projects: all.length,
+      active: all.filter((p) => p.status === "active").length,
       assignments,
       people,
-      unstaffed: all.filter((p) => p.members.length === 0).length,
+      unstaffedAll: all.filter((p) => p.members.length === 0).length,
+      unstaffedActive: all.filter(
+        (p) => p.status === "active" && p.members.length === 0,
+      ).length,
     };
   }, [projects]);
 
@@ -129,7 +146,8 @@ export default function AllProjectTeamsPage() {
     );
   }
 
-  const filtersActive = search.trim() !== "" || roleId !== "" || staffing !== "all";
+  const filtersActive =
+    search.trim() !== "" || roleId !== "" || staffing !== "all" || status !== "";
 
   return (
     <div className="p-4 space-y-4 max-w-6xl mx-auto">
@@ -145,18 +163,28 @@ export default function AllProjectTeamsPage() {
 
       {/* ── Summary ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="مشروع" value={stats.projects} />
+        <StatCard
+          label="مشروع"
+          value={stats.projects}
+          subs={[{ text: `${stats.active} نشط` }]}
+        />
         <StatCard label="تعيين في فريق" value={stats.assignments} />
         <StatCard label="شخص مختلف" value={stats.people} />
         <StatCard
           label="مشروع بلا فريق"
-          value={stats.unstaffed}
-          tone={stats.unstaffed > 0 ? "warn" : "plain"}
+          value={stats.unstaffedAll}
+          subs={[
+            {
+              text: `${stats.unstaffedActive} نشط`,
+              warn: stats.unstaffedActive > 0,
+            },
+          ]}
+          tone={stats.unstaffedActive > 0 ? "warn" : "plain"}
         />
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────────── */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-3 grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="relative">
           <Search
             size={15}
@@ -193,6 +221,19 @@ export default function AllProjectTeamsPage() {
           <option value="staffed">التي لديها فريق فقط</option>
           <option value="unstaffed">التي بلا فريق فقط</option>
         </select>
+
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="">كل الحالات</option>
+          {ProjectStatusValues.map((value) => (
+            <option key={value} value={value}>
+              {PROJECT_STATUS_LABELS[value]}
+            </option>
+          ))}
+        </select>
       </div>
 
       {filtersActive && (
@@ -205,6 +246,7 @@ export default function AllProjectTeamsPage() {
               setSearch("");
               setRoleId("");
               setStaffing("all");
+              setStatus("");
             }}
             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
           >
@@ -245,10 +287,12 @@ export default function AllProjectTeamsPage() {
 function StatCard({
   label,
   value,
+  subs,
   tone = "plain",
 }: {
   label: string;
   value: number;
+  subs?: { text: string; warn?: boolean }[];
   tone?: "plain" | "warn";
 }) {
   return (
@@ -259,12 +303,24 @@ function StatCard({
           : "border-gray-200 bg-white"
       }`}
     >
-      <div
-        className={`text-xl font-bold ${
-          tone === "warn" ? "text-amber-800" : "text-gray-900"
-        }`}
-      >
-        {value}
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span
+          className={`text-xl font-bold ${
+            tone === "warn" ? "text-amber-800" : "text-gray-900"
+          }`}
+        >
+          {value}
+        </span>
+        {subs?.map((s) => (
+          <span
+            key={s.text}
+            className={`text-[11px] ${
+              s.warn ? "text-amber-700" : "text-gray-400"
+            }`}
+          >
+            ({s.text})
+          </span>
+        ))}
       </div>
       <div
         className={`text-xs mt-0.5 ${
@@ -313,6 +369,17 @@ function ProjectTeamCard({
             {project.serialNumber !== null && (
               <span className="text-[11px] text-gray-400" dir="ltr">
                 #{project.serialNumber}
+              </span>
+            )}
+            {project.status && (
+              <span
+                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${statusColor(
+                  project.status,
+                )}`}
+              >
+                {PROJECT_STATUS_LABELS[
+                  project.status as (typeof ProjectStatusValues)[number]
+                ] ?? project.status}
               </span>
             )}
           </div>

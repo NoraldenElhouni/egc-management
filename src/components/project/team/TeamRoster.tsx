@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { Trash2, UserRound } from "lucide-react";
+import { Pencil, Trash2, UserRound } from "lucide-react";
 import {
   TeamMember,
+  useProjectRoles,
   useRemoveTeamMember,
+  useUpdateTeamMemberRole,
 } from "../../../hooks/team/useTeamAssignments";
 import Button from "../../ui/Button";
 
@@ -25,10 +27,14 @@ interface Props {
 }
 
 export default function TeamRoster({ projectId, members }: Props) {
+  const { data: roles } = useProjectRoles();
   const removeMember = useRemoveTeamMember();
+  const updateRole = useUpdateTeamMemberRole();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRoleId, setEditRoleId] = useState("");
 
   const grouped = useMemo(() => {
     const byRole = new Map<string, { roleName: string; people: TeamMember[] }>();
@@ -59,6 +65,34 @@ export default function TeamRoster({ projectId, members }: Props) {
       setConfirmId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذّر إزالة العضو");
+    } finally {
+      setPendingId(null);
+    }
+  };
+
+  const openEdit = (member: TeamMember) => {
+    setEditId(member.assignmentId);
+    setEditRoleId(member.projectRoleId);
+    setConfirmId(null);
+    setError(null);
+  };
+
+  const handleSaveRole = async (member: TeamMember) => {
+    if (editRoleId === member.projectRoleId) {
+      setEditId(null);
+      return;
+    }
+    setPendingId(member.assignmentId);
+    setError(null);
+    try {
+      await updateRole.mutateAsync({
+        assignmentId: member.assignmentId,
+        projectId,
+        projectRoleId: editRoleId,
+      });
+      setEditId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذّر تعديل الدور");
     } finally {
       setPendingId(null);
     }
@@ -120,7 +154,36 @@ export default function TeamRoster({ projectId, members }: Props) {
                   </span>
                 </span>
 
-                {confirmId === member.assignmentId ? (
+                {editId === member.assignmentId ? (
+                  <span className="flex items-center gap-2">
+                    <select
+                      value={editRoleId}
+                      onChange={(e) => setEditRoleId(e.target.value)}
+                      className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      {(roles ?? []).map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="primary"
+                      size="xs"
+                      loading={pendingId === member.assignmentId}
+                      onClick={() => handleSaveRole(member)}
+                    >
+                      حفظ
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => setEditId(null)}
+                    >
+                      إلغاء
+                    </Button>
+                  </span>
+                ) : confirmId === member.assignmentId ? (
                   <span className="flex items-center gap-2">
                     <span className="text-xs text-gray-600">
                       إزالة من الفريق؟
@@ -142,17 +205,28 @@ export default function TeamRoster({ projectId, members }: Props) {
                     </Button>
                   </span>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => {
-                      setConfirmId(member.assignmentId);
-                      setError(null);
-                    }}
-                  >
-                    <Trash2 size={13} className="ml-1" />
-                    إزالة
-                  </Button>
+                  <span className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => openEdit(member)}
+                    >
+                      <Pencil size={13} className="ml-1" />
+                      الدور
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => {
+                        setConfirmId(member.assignmentId);
+                        setEditId(null);
+                        setError(null);
+                      }}
+                    >
+                      <Trash2 size={13} className="ml-1" />
+                      إزالة
+                    </Button>
+                  </span>
                 )}
               </li>
             ))}

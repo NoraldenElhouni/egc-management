@@ -240,6 +240,48 @@ export function useAddTeamMember() {
   });
 }
 
+interface UpdateRoleArgs {
+  assignmentId: string;
+  projectId: string;
+  projectRoleId: string;
+}
+
+/**
+ * Changes an existing assignment's role in place — an UPDATE on
+ * team_assignments.project_role_id, not a remove-then-add. That matters
+ * because assignmentId (and its assigned_at/assigned_by) is preserved,
+ * where delete+insert would silently reset both.
+ */
+export function useUpdateTeamMemberRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assignmentId, projectRoleId }: UpdateRoleArgs) => {
+      const { error } = await permissionsDb
+        .from("team_assignments")
+        .update({ project_role_id: projectRoleId })
+        .eq("id", assignmentId);
+
+      if (error) {
+        // 23505 = unique_violation. Phase 1's
+        // UNIQUE (project_id, person_id, project_role_id).
+        if ((error as { code?: string }).code === "23505") {
+          throw new Error("هذا الشخص لديه بالفعل هذا الدور في هذا المشروع.");
+        }
+        throw error;
+      }
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: projectTeamKey(variables.projectId),
+      });
+      // Keeps the cross-project overview honest: a change made on one
+      // project's own screen must show up there too, and vice versa.
+      queryClient.invalidateQueries({ queryKey: ALL_PROJECT_TEAMS_KEY });
+    },
+  });
+}
+
 interface RemoveArgs {
   assignmentId: string;
   projectId: string;
