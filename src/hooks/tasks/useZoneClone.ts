@@ -4,6 +4,7 @@ import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import type { TargetBoard } from "./useTemplatePicker";
 import type { EmployeeLite, TaskTypeLite } from "./useTaskBoard";
+import { callCopyTaskTree } from "./copyTaskTree";
 
 // =====================================================================
 // D5 — Clone zone, build plan Part 7.
@@ -137,7 +138,6 @@ export function useSourceZoneTasks(sourceBoardId: string | undefined) {
 export function useCloneZoneApply() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const tasksDb = supabase.schema("tasks");
 
   const apply = useMutation({
     mutationFn: async ({
@@ -153,14 +153,13 @@ export function useCloneZoneApply() {
 
       for (const boardId of targetBoardIds) {
         for (const rootId of selectedRootIds) {
-          const { error } = await tasksDb.rpc("copy_task_tree", {
-            p_source_type: "task",
-            p_source_root_id: rootId,
-            p_target_board_id: boardId,
-            p_anchor_date: anchorDate,
-            p_created_by: user.id,
+          await callCopyTaskTree({
+            sourceType: "task",
+            sourceRootId: rootId,
+            targetBoardId: boardId,
+            anchorDate,
+            createdBy: user.id,
           });
-          if (error) throw error;
         }
       }
 

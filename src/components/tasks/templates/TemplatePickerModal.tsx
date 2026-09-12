@@ -23,6 +23,17 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// A PostgrestError extends Error, but some rejection shapes (a plain
+// {message} object, a string) don't — catching those with `instanceof
+// Error` silently threw away the real Postgres error text in favor of a
+// generic fallback. This surfaces whatever text is actually there.
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  if (typeof err === "string") return err;
+  return "تعذّر تطبيق القالب";
+}
+
 export default function TemplatePickerModal({
   spaceId,
   currentBoardId,
@@ -119,7 +130,7 @@ export default function TemplatePickerModal({
 
       onApplied();
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : "تعذّر تطبيق القالب");
+      setConfirmError(extractErrorMessage(err));
     }
   };
 

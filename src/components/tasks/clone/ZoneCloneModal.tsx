@@ -42,6 +42,17 @@ function colorFor(id: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
+// A PostgrestError extends Error, but some rejection shapes (a plain
+// {message} object, a string) don't — catching those with `instanceof
+// Error` silently threw away the real Postgres error text in favor of a
+// generic fallback. This surfaces whatever text is actually there.
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  if (typeof err === "string") return err;
+  return "تعذّر استنساخ المنطقة";
+}
+
 function dayOffset(date: string | null, from: string | null): string | null {
   if (!date || !from) return null;
   const days = Math.round(
@@ -126,7 +137,7 @@ export default function ZoneCloneModal({
       });
       onApplied();
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : "تعذّر استنساخ المنطقة");
+      setConfirmError(extractErrorMessage(err));
     }
   };
 

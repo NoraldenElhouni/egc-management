@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
+import { callCopyTaskTree } from "./copyTaskTree";
 
 // =====================================================================
 // D4 — Template picker, build plan Part 7.
@@ -165,14 +166,13 @@ export function useTemplatePicker(spaceId: string | undefined) {
 
       for (const boardId of targetBoardIds) {
         for (const rootId of selectedRootIds) {
-          const { error } = await tasksDb.rpc("copy_task_tree", {
-            p_source_type: "template",
-            p_source_root_id: rootId,
-            p_target_board_id: boardId,
-            p_anchor_date: anchorDate,
-            p_created_by: user.id,
+          await callCopyTaskTree({
+            sourceType: "template",
+            sourceRootId: rootId,
+            targetBoardId: boardId,
+            anchorDate,
+            createdBy: user.id,
           });
-          if (error) throw error;
         }
       }
 

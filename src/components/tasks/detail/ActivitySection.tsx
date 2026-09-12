@@ -47,7 +47,7 @@ export default function ActivitySection({
                     {ACTION_LABELS[a.action] ?? a.action}
                   </span>
                   <div className="text-xs text-gray-400">
-                    {new Date(a.created_at).toLocaleString("ar")}
+                    {new Date(a.created_at).toLocaleString("ar-u-nu-latn")}
                   </div>
                 </div>
               </div>
