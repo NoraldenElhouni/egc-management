@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Lock, Camera } from "lucide-react";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
@@ -16,6 +17,7 @@ export const ROW_GRID =
 
 interface TaskRowProps {
   task: TaskRowType;
+  boardId: string;
   depth: number;
   childrenByParent: Map<string | null, TaskRowType[]>;
   collapsedIds: Set<string>;
@@ -38,6 +40,7 @@ interface TaskRowProps {
 
 export default function TaskRow({
   task,
+  boardId,
   depth,
   childrenByParent,
   collapsedIds,
@@ -57,6 +60,7 @@ export default function TaskRow({
   onChangeAssignees,
   onCreateTask,
 }: TaskRowProps) {
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const [addingChild, setAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState("");
@@ -115,7 +119,12 @@ export default function TaskRow({
             />
           )}
 
-          <span className="truncate text-sm text-gray-800">{task.title}</span>
+          <button
+            onClick={() => navigate(`/tasks/board/${boardId}/task/${task.id}`)}
+            className="truncate text-sm text-gray-800 hover:underline"
+          >
+            {task.title}
+          </button>
 
           {linkedTaskIds.has(task.id) && (
             <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
@@ -168,6 +177,7 @@ export default function TaskRow({
             <TaskRow
               key={child.id}
               task={child}
+              boardId={boardId}
               depth={depth + 1}
               childrenByParent={childrenByParent}
               collapsedIds={collapsedIds}

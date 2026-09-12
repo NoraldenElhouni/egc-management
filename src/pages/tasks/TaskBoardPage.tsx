@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
@@ -43,6 +43,7 @@ export default function TaskBoardPage() {
       <div className="flex-1 overflow-hidden">
         <TaskTable
           key={boardId}
+          boardId={data.board.id}
           boardZoneId={data.board.zone_id}
           zoneName={data.zoneName}
           tasks={data.tasks}
@@ -63,6 +64,12 @@ export default function TaskBoardPage() {
           canCreateTask={!!data.projectId}
         />
       </div>
+
+      {/* D3 slide-over, nested route board/:boardId/task/:taskId — see
+          TasksRoutes.tsx. TaskDetailPanel itself is a fixed overlay, so
+          this Outlet mounting here (rather than replacing the list) is
+          what keeps the board visible behind it. */}
+      <Outlet />
     </div>
   );
 }

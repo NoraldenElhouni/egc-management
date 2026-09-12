@@ -3,16 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
+import { resolveStatusSetId } from "./resolveStatusSetId";
 
-// =====================================================================
 // D2 — Zone board (list view), the main screen (build plan Part 7, D2).
-// =====================================================================
-// resolve_status_set(board_id) is documented in the build plan (§4.3)
-// but does NOT appear in the live schema's RPC surface (confirmed via
-// `supabase gen types` against the linked project) — replicated here
-// client-side instead of calling a function that doesn't exist:
-// board's own status_set_id -> its space's -> the global default
-// (status_sets.is_default = true, space_id null).
 
 export type TaskRow = Database["tasks"]["Tables"]["tasks"]["Row"];
 export type StatusRow = Database["tasks"]["Tables"]["statuses"]["Row"];
@@ -44,31 +37,6 @@ export interface TaskBoardData {
   unmetRequirementTaskIds: Set<string>;
   /** null when the board's space has no project — task creation is disabled (see build plan Part 11 open decision on project_id). */
   projectId: string | null;
-}
-
-async function resolveStatusSetId(
-  boardStatusSetId: string | null,
-  spaceId: string,
-): Promise<string> {
-  const tasksDb = supabase.schema("tasks");
-  if (boardStatusSetId) return boardStatusSetId;
-
-  const { data: space, error: spaceError } = await tasksDb
-    .from("spaces")
-    .select("status_set_id")
-    .eq("id", spaceId)
-    .single();
-  if (spaceError) throw spaceError;
-  if (space.status_set_id) return space.status_set_id;
-
-  const { data: globalSet, error: globalError } = await tasksDb
-    .from("status_sets")
-    .select("id")
-    .is("space_id", null)
-    .eq("is_default", true)
-    .single();
-  if (globalError) throw globalError;
-  return globalSet.id;
 }
 
 export function useTaskBoard(boardId: string | undefined) {

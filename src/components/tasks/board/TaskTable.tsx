@@ -20,6 +20,7 @@ const GROUP_LABELS: Record<GroupBy, string> = {
 };
 
 interface TaskTableProps {
+  boardId: string;
   boardZoneId: string | null;
   zoneName: string | null;
   tasks: TaskRowType[];
@@ -59,6 +60,7 @@ function computeDepths(tasks: TaskRowType[]): Map<string, number> {
 }
 
 export default function TaskTable({
+  boardId,
   boardZoneId,
   zoneName,
   tasks,
@@ -216,6 +218,7 @@ export default function TaskTable({
               <TaskRow
                 key={task.id}
                 task={task}
+                boardId={boardId}
                 depth={0}
                 childrenByParent={childrenByParent}
                 collapsedIds={collapsedIds}
