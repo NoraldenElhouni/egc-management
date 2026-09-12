@@ -2251,6 +2251,36 @@ export type Database = {
           },
         ]
       }
+      department_permission_grants_backup_20260908: {
+        Row: {
+          allowed: boolean | null
+          department_id: string | null
+          granted_at: string | null
+          granted_by: string | null
+          note: string | null
+          permission_id: string | null
+          scope: Database["public"]["Enums"]["grant_scope_enum"] | null
+        }
+        Insert: {
+          allowed?: boolean | null
+          department_id?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
+        }
+        Update: {
+          allowed?: boolean | null
+          department_id?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           code: string
@@ -2931,55 +2961,6 @@ export type Database = {
           },
         ]
       }
-      project_assignments: {
-        Row: {
-          assigned_at: string
-          id: string
-          percentage: number
-          project_id: string
-          project_role_id: string | null
-          user_id: string
-        }
-        Insert: {
-          assigned_at?: string
-          id?: string
-          percentage?: number
-          project_id: string
-          project_role_id?: string | null
-          user_id: string
-        }
-        Update: {
-          assigned_at?: string
-          id?: string
-          percentage?: number
-          project_id?: string
-          project_role_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_assignments_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_assignments_project_role_id_fkey"
-            columns: ["project_role_id"]
-            isOneToOne: false
-            referencedRelation: "project_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_assignments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_balances: {
         Row: {
           balance: number
@@ -3639,6 +3620,33 @@ export type Database = {
           },
         ]
       }
+      project_permission_defaults_backup_20260908: {
+        Row: {
+          allowed: boolean | null
+          granted_at: string | null
+          granted_by: string | null
+          note: string | null
+          permission_id: string | null
+          project_id: string | null
+        }
+        Insert: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          project_id?: string | null
+        }
+        Update: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          project_id?: string | null
+        }
+        Relationships: []
+      }
       project_refund: {
         Row: {
           amount: number
@@ -3949,6 +3957,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_permission_grants_backup_20260908: {
+        Row: {
+          allowed: boolean | null
+          granted_at: string | null
+          granted_by: string | null
+          note: string | null
+          permission_id: string | null
+          role_id: string | null
+          scope: Database["public"]["Enums"]["grant_scope_enum"] | null
+        }
+        Insert: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          role_id?: string | null
+          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
+        }
+        Update: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          role_id?: string | null
+          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
+        }
+        Relationships: []
       }
       role_permissions: {
         Row: {
@@ -4745,58 +4783,6 @@ export type Database = {
           },
         ]
       }
-      task_requests: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          project_id: string | null
-          specialty_id: string
-          status: string
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          project_id?: string | null
-          specialty_id: string
-          status?: string
-          text: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          project_id?: string | null
-          specialty_id?: string
-          status?: string
-          text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_requests_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_requests_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_requests_specialty_id_fkey"
-            columns: ["specialty_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       team_assignments: {
         Row: {
           assigned_at: string
@@ -4912,6 +4898,36 @@ export type Database = {
           },
         ]
       }
+      team_member_permission_grants_backup_20260908: {
+        Row: {
+          allowed: boolean | null
+          granted_at: string | null
+          granted_by: string | null
+          note: string | null
+          permission_id: string | null
+          project_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          project_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          project_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       update: {
         Row: {
           android_url: string | null
@@ -4993,6 +5009,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_permission_grants_backup_20260908: {
+        Row: {
+          allowed: boolean | null
+          granted_at: string | null
+          granted_by: string | null
+          note: string | null
+          permission_id: string | null
+          scope: Database["public"]["Enums"]["grant_scope_enum"] | null
+          user_id: string | null
+        }
+        Insert: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
+          user_id?: string | null
+        }
+        Update: {
+          allowed?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          note?: string | null
+          permission_id?: string | null
+          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_permissions: {
         Row: {
@@ -5942,6 +5988,1456 @@ export type Database = {
       [_ in never]: never
     }
   }
+  tasks: {
+    Tables: {
+      automation_runs: {
+        Row: {
+          automation_id: string | null
+          error: string | null
+          id: string
+          ran_at: string
+          rule_key: string | null
+          status: Database["tasks"]["Enums"]["automation_run_status"]
+          task_id: string | null
+        }
+        Insert: {
+          automation_id?: string | null
+          error?: string | null
+          id?: string
+          ran_at?: string
+          rule_key?: string | null
+          status: Database["tasks"]["Enums"]["automation_run_status"]
+          task_id?: string | null
+        }
+        Update: {
+          automation_id?: string | null
+          error?: string | null
+          id?: string
+          ran_at?: string
+          rule_key?: string | null
+          status?: Database["tasks"]["Enums"]["automation_run_status"]
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          action_config: Json
+          action_type: Database["tasks"]["Enums"]["automation_action_type"]
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          scope_id: string
+          scope_type: Database["tasks"]["Enums"]["automation_scope_type"]
+          trigger_config: Json
+          trigger_type: Database["tasks"]["Enums"]["automation_trigger_type"]
+        }
+        Insert: {
+          action_config?: Json
+          action_type: Database["tasks"]["Enums"]["automation_action_type"]
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          scope_id: string
+          scope_type: Database["tasks"]["Enums"]["automation_scope_type"]
+          trigger_config?: Json
+          trigger_type: Database["tasks"]["Enums"]["automation_trigger_type"]
+        }
+        Update: {
+          action_config?: Json
+          action_type?: Database["tasks"]["Enums"]["automation_action_type"]
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          scope_id?: string
+          scope_type?: Database["tasks"]["Enums"]["automation_scope_type"]
+          trigger_config?: Json
+          trigger_type?: Database["tasks"]["Enums"]["automation_trigger_type"]
+        }
+        Relationships: []
+      }
+      board_columns: {
+        Row: {
+          board_id: string
+          field_definition_id: string
+          id: string
+          is_visible: boolean
+          sort_order: number
+          width: number | null
+        }
+        Insert: {
+          board_id: string
+          field_definition_id: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          width?: number | null
+        }
+        Update: {
+          board_id?: string
+          field_definition_id?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_columns_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_columns_field_definition_id_fkey"
+            columns: ["field_definition_id"]
+            isOneToOne: false
+            referencedRelation: "field_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_view: Database["tasks"]["Enums"]["board_view"]
+          department_id: string | null
+          description: string | null
+          folder_id: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          sort_order: number
+          space_id: string
+          status_set_id: string | null
+          zone_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_view?: Database["tasks"]["Enums"]["board_view"]
+          department_id?: string | null
+          description?: string | null
+          folder_id?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          sort_order?: number
+          space_id: string
+          status_set_id?: string | null
+          zone_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_view?: Database["tasks"]["Enums"]["board_view"]
+          department_id?: string | null
+          description?: string | null
+          folder_id?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          sort_order?: number
+          space_id?: string
+          status_set_id?: string | null
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boards_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boards_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boards_status_set_id_fkey"
+            columns: ["status_set_id"]
+            isOneToOne: false
+            referencedRelation: "status_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_items: {
+        Row: {
+          assignee_user_id: string | null
+          checklist_id: string
+          content: string
+          id: string
+          is_checked: boolean
+          sort_order: number
+        }
+        Insert: {
+          assignee_user_id?: string | null
+          checklist_id: string
+          content: string
+          id?: string
+          is_checked?: boolean
+          sort_order?: number
+        }
+        Update: {
+          assignee_user_id?: string | null
+          checklist_id?: string
+          content?: string
+          id?: string
+          is_checked?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklists: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+          task_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+          task_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklists_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_definitions: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_system: boolean
+          name: string
+          name_ar: string
+          type: Database["tasks"]["Enums"]["field_type"]
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          name_ar: string
+          type: Database["tasks"]["Enums"]["field_type"]
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          name_ar?: string
+          type?: Database["tasks"]["Enums"]["field_type"]
+        }
+        Relationships: []
+      }
+      folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          sort_order: number
+          space_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          sort_order?: number
+          space_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          sort_order?: number
+          space_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurrence_rules: {
+        Row: {
+          board_id: string
+          create_mode: Database["tasks"]["Enums"]["recurrence_create_mode"]
+          created_at: string
+          created_by: string | null
+          day_of_month: number | null
+          days_of_week: number[] | null
+          ends_on: string | null
+          frequency: Database["tasks"]["Enums"]["recurrence_frequency"]
+          id: string
+          interval: number
+          is_active: boolean
+          max_occurrences: number | null
+          missed_run_behavior: Database["tasks"]["Enums"]["missed_run_behavior"]
+          next_run_at: string | null
+          source_task_id: string
+          starts_on: string
+        }
+        Insert: {
+          board_id: string
+          create_mode: Database["tasks"]["Enums"]["recurrence_create_mode"]
+          created_at?: string
+          created_by?: string | null
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          ends_on?: string | null
+          frequency: Database["tasks"]["Enums"]["recurrence_frequency"]
+          id?: string
+          interval?: number
+          is_active?: boolean
+          max_occurrences?: number | null
+          missed_run_behavior?: Database["tasks"]["Enums"]["missed_run_behavior"]
+          next_run_at?: string | null
+          source_task_id: string
+          starts_on: string
+        }
+        Update: {
+          board_id?: string
+          create_mode?: Database["tasks"]["Enums"]["recurrence_create_mode"]
+          created_at?: string
+          created_by?: string | null
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          ends_on?: string | null
+          frequency?: Database["tasks"]["Enums"]["recurrence_frequency"]
+          id?: string
+          interval?: number
+          is_active?: boolean
+          max_occurrences?: number | null
+          missed_run_behavior?: Database["tasks"]["Enums"]["missed_run_behavior"]
+          next_run_at?: string | null
+          source_task_id?: string
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrence_rules_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrence_rules_source_task_id_fkey"
+            columns: ["source_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      space_members: {
+        Row: {
+          access_level: Database["tasks"]["Enums"]["access_level"]
+          added_at: string
+          added_by: string | null
+          id: string
+          space_id: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: Database["tasks"]["Enums"]["access_level"]
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          space_id: string
+          user_id: string
+        }
+        Update: {
+          access_level?: Database["tasks"]["Enums"]["access_level"]
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          space_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_members_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spaces: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          owner_user_id: string | null
+          project_id: string | null
+          settings: Json
+          space_type: Database["tasks"]["Enums"]["space_type"]
+          status_set_id: string | null
+          visibility: Database["tasks"]["Enums"]["visibility"]
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          owner_user_id?: string | null
+          project_id?: string | null
+          settings?: Json
+          space_type: Database["tasks"]["Enums"]["space_type"]
+          status_set_id?: string | null
+          visibility?: Database["tasks"]["Enums"]["visibility"]
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          owner_user_id?: string | null
+          project_id?: string | null
+          settings?: Json
+          space_type?: Database["tasks"]["Enums"]["space_type"]
+          status_set_id?: string | null
+          visibility?: Database["tasks"]["Enums"]["visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spaces_status_set_id_fkey"
+            columns: ["status_set_id"]
+            isOneToOne: false
+            referencedRelation: "status_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_sets: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          space_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          space_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          space_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_sets_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      statuses: {
+        Row: {
+          category: Database["tasks"]["Enums"]["status_category"]
+          color: string | null
+          created_at: string
+          id: string
+          label: string
+          label_ar: string
+          sort_order: number
+          status_set_id: string
+        }
+        Insert: {
+          category: Database["tasks"]["Enums"]["status_category"]
+          color?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          label_ar: string
+          sort_order?: number
+          status_set_id: string
+        }
+        Update: {
+          category?: Database["tasks"]["Enums"]["status_category"]
+          color?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          label_ar?: string
+          sort_order?: number
+          status_set_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statuses_status_set_id_fkey"
+            columns: ["status_set_id"]
+            isOneToOne: false
+            referencedRelation: "status_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          color: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      task_activity: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          entity_type: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          task_id: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          entity_type: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          task_id: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          entity_type?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_activity_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_dependencies: {
+        Row: {
+          blocked_task_id: string
+          blocking_task_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          blocked_task_id: string
+          blocking_task_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          blocked_task_id?: string
+          blocking_task_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_blocked_task_id_fkey"
+            columns: ["blocked_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_blocking_task_id_fkey"
+            columns: ["blocking_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          link_mode: Database["tasks"]["Enums"]["link_mode"]
+          record_id: string
+          record_type: Database["tasks"]["Enums"]["link_record_type"]
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link_mode: Database["tasks"]["Enums"]["link_mode"]
+          record_id: string
+          record_type: Database["tasks"]["Enums"]["link_record_type"]
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link_mode?: Database["tasks"]["Enums"]["link_mode"]
+          record_id?: string
+          record_type?: Database["tasks"]["Enums"]["link_record_type"]
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_links_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_relationships: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          field_definition_id: string | null
+          id: string
+          related_task_id: string
+          relationship_type: Database["tasks"]["Enums"]["relationship_type"]
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          field_definition_id?: string | null
+          id?: string
+          related_task_id: string
+          relationship_type: Database["tasks"]["Enums"]["relationship_type"]
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          field_definition_id?: string | null
+          id?: string
+          related_task_id?: string
+          relationship_type?: Database["tasks"]["Enums"]["relationship_type"]
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_relationships_field_definition_id_fkey"
+            columns: ["field_definition_id"]
+            isOneToOne: false
+            referencedRelation: "field_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_relationships_related_task_id_fkey"
+            columns: ["related_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_relationships_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_requirements: {
+        Row: {
+          config: Json
+          id: string
+          is_satisfied: boolean
+          requirement_type: Database["tasks"]["Enums"]["requirement_type"]
+          satisfied_at: string | null
+          satisfied_by: string | null
+          task_id: string
+        }
+        Insert: {
+          config?: Json
+          id?: string
+          is_satisfied?: boolean
+          requirement_type: Database["tasks"]["Enums"]["requirement_type"]
+          satisfied_at?: string | null
+          satisfied_by?: string | null
+          task_id: string
+        }
+        Update: {
+          config?: Json
+          id?: string
+          is_satisfied?: boolean
+          requirement_type?: Database["tasks"]["Enums"]["requirement_type"]
+          satisfied_at?: string | null
+          satisfied_by?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_requirements_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_tags: {
+        Row: {
+          tag_id: string
+          task_id: string
+        }
+        Insert: {
+          tag_id: string
+          task_id: string
+        }
+        Update: {
+          tag_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_tags_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_types: {
+        Row: {
+          color: string | null
+          icon: string | null
+          id: string
+          is_system: boolean
+          name: string
+          name_ar: string
+        }
+        Insert: {
+          color?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          name_ar: string
+        }
+        Update: {
+          color?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          name_ar?: string
+        }
+        Relationships: []
+      }
+      task_values: {
+        Row: {
+          field_definition_id: string
+          id: string
+          task_id: string
+          value: Json
+        }
+        Insert: {
+          field_definition_id: string
+          id?: string
+          task_id: string
+          value?: Json
+        }
+        Update: {
+          field_definition_id?: string
+          id?: string
+          task_id?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_values_field_definition_id_fkey"
+            columns: ["field_definition_id"]
+            isOneToOne: false
+            referencedRelation: "field_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_values_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          board_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          description: Json
+          due_date: string | null
+          id: string
+          is_archived: boolean
+          is_overdue: boolean
+          occurrence_date: string | null
+          parent_task_id: string | null
+          priority: Database["tasks"]["Enums"]["priority"] | null
+          project_id: string
+          recurrence_rule_id: string | null
+          sort_order: number
+          source_template_task_id: string | null
+          specialization_id: string | null
+          start_date: string | null
+          status_id: string
+          task_type_id: string
+          time_estimate_minutes: number | null
+          title: string
+          updated_at: string
+          zone_id: string | null
+        }
+        Insert: {
+          board_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: Json
+          due_date?: string | null
+          id?: string
+          is_archived?: boolean
+          is_overdue?: boolean
+          occurrence_date?: string | null
+          parent_task_id?: string | null
+          priority?: Database["tasks"]["Enums"]["priority"] | null
+          project_id: string
+          recurrence_rule_id?: string | null
+          sort_order?: number
+          source_template_task_id?: string | null
+          specialization_id?: string | null
+          start_date?: string | null
+          status_id: string
+          task_type_id?: string
+          time_estimate_minutes?: number | null
+          title: string
+          updated_at?: string
+          zone_id?: string | null
+        }
+        Update: {
+          board_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: Json
+          due_date?: string | null
+          id?: string
+          is_archived?: boolean
+          is_overdue?: boolean
+          occurrence_date?: string | null
+          parent_task_id?: string | null
+          priority?: Database["tasks"]["Enums"]["priority"] | null
+          project_id?: string
+          recurrence_rule_id?: string | null
+          sort_order?: number
+          source_template_task_id?: string | null
+          specialization_id?: string | null
+          start_date?: string | null
+          status_id?: string
+          task_type_id?: string
+          time_estimate_minutes?: number | null
+          title?: string
+          updated_at?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_recurrence_rule_id_fkey"
+            columns: ["recurrence_rule_id"]
+            isOneToOne: false
+            referencedRelation: "recurrence_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_source_template_task_id_fkey"
+            columns: ["source_template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_task_type_id_fkey"
+            columns: ["task_type_id"]
+            isOneToOne: false
+            referencedRelation: "task_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_checklist_items: {
+        Row: {
+          content: string
+          id: string
+          sort_order: number
+          template_checklist_id: string
+        }
+        Insert: {
+          content: string
+          id?: string
+          sort_order?: number
+          template_checklist_id: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          sort_order?: number
+          template_checklist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_checklist_items_template_checklist_id_fkey"
+            columns: ["template_checklist_id"]
+            isOneToOne: false
+            referencedRelation: "template_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_checklists: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+          template_task_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+          template_task_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+          template_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_checklists_template_task_id_fkey"
+            columns: ["template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_field_definitions: {
+        Row: {
+          field_definition_id: string
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          field_definition_id: string
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          field_definition_id?: string
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_field_definitions_field_definition_id_fkey"
+            columns: ["field_definition_id"]
+            isOneToOne: false
+            referencedRelation: "field_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_field_definitions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_requirements: {
+        Row: {
+          config: Json
+          id: string
+          requirement_type: Database["tasks"]["Enums"]["requirement_type"]
+          template_task_id: string
+        }
+        Insert: {
+          config?: Json
+          id?: string
+          requirement_type: Database["tasks"]["Enums"]["requirement_type"]
+          template_task_id: string
+        }
+        Update: {
+          config?: Json
+          id?: string
+          requirement_type?: Database["tasks"]["Enums"]["requirement_type"]
+          template_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_requirements_template_task_id_fkey"
+            columns: ["template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_tasks: {
+        Row: {
+          default_values: Json
+          department_id: string | null
+          description: Json
+          id: string
+          is_selected_by_default: boolean
+          parent_template_task_id: string | null
+          priority: Database["tasks"]["Enums"]["priority"] | null
+          relative_due_offset_days: number | null
+          relative_start_offset_days: number | null
+          sort_order: number
+          specialization_id: string | null
+          task_type_id: string
+          template_id: string
+          time_estimate_minutes: number | null
+          title: string
+          title_ar: string
+        }
+        Insert: {
+          default_values?: Json
+          department_id?: string | null
+          description?: Json
+          id?: string
+          is_selected_by_default?: boolean
+          parent_template_task_id?: string | null
+          priority?: Database["tasks"]["Enums"]["priority"] | null
+          relative_due_offset_days?: number | null
+          relative_start_offset_days?: number | null
+          sort_order?: number
+          specialization_id?: string | null
+          task_type_id?: string
+          template_id: string
+          time_estimate_minutes?: number | null
+          title: string
+          title_ar: string
+        }
+        Update: {
+          default_values?: Json
+          department_id?: string | null
+          description?: Json
+          id?: string
+          is_selected_by_default?: boolean
+          parent_template_task_id?: string | null
+          priority?: Database["tasks"]["Enums"]["priority"] | null
+          relative_due_offset_days?: number | null
+          relative_start_offset_days?: number | null
+          sort_order?: number
+          specialization_id?: string | null
+          task_type_id?: string
+          template_id?: string
+          time_estimate_minutes?: number | null
+          title?: string
+          title_ar?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_tasks_parent_template_task_id_fkey"
+            columns: ["parent_template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_tasks_task_type_id_fkey"
+            columns: ["task_type_id"]
+            isOneToOne: false
+            referencedRelation: "task_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates: {
+        Row: {
+          applies_to: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          name_ar: string
+          template_scope: Database["tasks"]["Enums"]["template_scope"]
+        }
+        Insert: {
+          applies_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          name_ar: string
+          template_scope: Database["tasks"]["Enums"]["template_scope"]
+        }
+        Update: {
+          applies_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          name_ar?: string
+          template_scope?: Database["tasks"]["Enums"]["template_scope"]
+        }
+        Relationships: []
+      }
+      time_entries: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          is_billable: boolean
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          is_billable?: boolean
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          is_billable?: boolean
+          started_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      advance_recurrence_next_run: {
+        Args: { p_rule: Database["tasks"]["Tables"]["recurrence_rules"]["Row"] }
+        Returns: string
+      }
+      assert_requirements_satisfied: {
+        Args: { p_task_id: string }
+        Returns: undefined
+      }
+      automation_close_tasks_on_linked_record: {
+        Args: {
+          p_record_id: string
+          p_record_type: Database["tasks"]["Enums"]["link_record_type"]
+        }
+        Returns: undefined
+      }
+      automation_guard_enter: {
+        Args: { p_key: string; p_task_id: string }
+        Returns: boolean
+      }
+      copy_task_tree: {
+        Args: {
+          p_anchor_date: string
+          p_created_by: string
+          p_parent_task_id?: string
+          p_source_root_id: string
+          p_source_type: Database["tasks"]["Enums"]["copy_source_type"]
+          p_target_board_id: string
+        }
+        Returns: {
+          new_id: string
+          old_id: string
+        }[]
+      }
+      default_task_type_id: { Args: never; Returns: string }
+      dependency_would_cycle: {
+        Args: { p_blocked_task_id: string; p_blocking_task_id: string }
+        Returns: boolean
+      }
+      generate_recurrence_occurrences: { Args: never; Returns: undefined }
+      recompute_overdue_flags: { Args: never; Returns: undefined }
+    }
+    Enums: {
+      access_level: "view" | "comment" | "edit" | "full"
+      automation_action_type:
+        | "set_status"
+        | "set_assignee"
+        | "set_priority"
+        | "post_comment"
+        | "move_task"
+        | "create_task"
+        | "send_notification"
+        | "apply_template"
+      automation_run_status: "success" | "failed" | "skipped"
+      automation_scope_type: "space" | "folder" | "board"
+      automation_trigger_type:
+        | "status_changed"
+        | "task_created"
+        | "due_date_arrives"
+        | "field_changed"
+        | "assignee_changed"
+        | "all_subtasks_complete"
+        | "dependency_cleared"
+        | "linked_record_changed"
+      board_view: "list" | "board"
+      copy_source_type: "template" | "task"
+      field_type:
+        | "text"
+        | "long_text"
+        | "number"
+        | "currency"
+        | "date"
+        | "select"
+        | "multi_select"
+        | "user"
+        | "checkbox"
+        | "url"
+        | "email"
+        | "phone"
+        | "formula"
+        | "relationship"
+      link_mode: "produces" | "references"
+      link_record_type:
+        | "shop_order"
+        | "work_request"
+        | "contract_round"
+        | "contract"
+        | "payment_request"
+        | "expense"
+        | "project_map"
+      missed_run_behavior: "backfill" | "skip"
+      priority: "urgent" | "high" | "normal" | "low"
+      recurrence_create_mode: "on_schedule" | "after_completion"
+      recurrence_frequency: "daily" | "weekly" | "monthly" | "yearly"
+      relationship_type: "relates_to" | "duplicate_of" | "reference"
+      requirement_type:
+        | "attachment"
+        | "report"
+        | "approval"
+        | "checklist_complete"
+        | "subtasks_complete"
+        | "linked_record"
+      space_type: "project" | "department" | "company" | "personal"
+      status_category: "not_started" | "active" | "done" | "closed"
+      template_scope: "board" | "task"
+      visibility: "public" | "private"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   website: {
     Tables: {
       categories: {
@@ -6140,12 +7636,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6169,11 +7665,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6194,11 +7690,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6219,11 +7715,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6236,11 +7732,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6303,6 +7799,78 @@ export const Constants = {
       user_status_enum: ["active", "inactive", "on leave", "on holiday"],
       work_request_mode: ["open", "direct"],
       work_request_status: ["draft", "open", "bidding", "awarded", "cancelled"],
+    },
+  },
+  tasks: {
+    Enums: {
+      access_level: ["view", "comment", "edit", "full"],
+      automation_action_type: [
+        "set_status",
+        "set_assignee",
+        "set_priority",
+        "post_comment",
+        "move_task",
+        "create_task",
+        "send_notification",
+        "apply_template",
+      ],
+      automation_run_status: ["success", "failed", "skipped"],
+      automation_scope_type: ["space", "folder", "board"],
+      automation_trigger_type: [
+        "status_changed",
+        "task_created",
+        "due_date_arrives",
+        "field_changed",
+        "assignee_changed",
+        "all_subtasks_complete",
+        "dependency_cleared",
+        "linked_record_changed",
+      ],
+      board_view: ["list", "board"],
+      copy_source_type: ["template", "task"],
+      field_type: [
+        "text",
+        "long_text",
+        "number",
+        "currency",
+        "date",
+        "select",
+        "multi_select",
+        "user",
+        "checkbox",
+        "url",
+        "email",
+        "phone",
+        "formula",
+        "relationship",
+      ],
+      link_mode: ["produces", "references"],
+      link_record_type: [
+        "shop_order",
+        "work_request",
+        "contract_round",
+        "contract",
+        "payment_request",
+        "expense",
+        "project_map",
+      ],
+      missed_run_behavior: ["backfill", "skip"],
+      priority: ["urgent", "high", "normal", "low"],
+      recurrence_create_mode: ["on_schedule", "after_completion"],
+      recurrence_frequency: ["daily", "weekly", "monthly", "yearly"],
+      relationship_type: ["relates_to", "duplicate_of", "reference"],
+      requirement_type: [
+        "attachment",
+        "report",
+        "approval",
+        "checklist_complete",
+        "subtasks_complete",
+        "linked_record",
+      ],
+      space_type: ["project", "department", "company", "personal"],
+      status_category: ["not_started", "active", "done", "closed"],
+      template_scope: ["board", "task"],
+      visibility: ["public", "private"],
     },
   },
   website: {

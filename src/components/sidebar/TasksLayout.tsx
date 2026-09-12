@@ -1,0 +1,401 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Search,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Folder,
+  FolderKanban,
+  Building2,
+  Building,
+  User,
+  Layers,
+  ListTodo,
+  Users,
+  Loader2,
+} from "lucide-react";
+import { useSidebar } from "../../contexts/SidebarContext";
+import { supabase } from "../../lib/supabaseClient";
+import {
+  useTasksSidebar,
+  type SpaceNode,
+  type BoardWithCount,
+  type SpaceType,
+} from "../../hooks/tasks/useTasksSidebar";
+
+// =====================================================================
+// D1 — persistent Tasks sidebar (tasks/task-module-build-plan.md, Part 7).
+// Spaces grouped by type, each expandable to folders/boards with an open
+// count; department shortcuts; "My work"; a search box that searches
+// tasks, not just navigation.
+//
+// Bespoke markup rather than the shared SidebarLayout — same call as
+// BookkeeperLayout: the content here is a dynamic, expandable tree with
+// live counts and search, not a static NavItem[] menu.
+//
+// Every destination below (board, department, my-work, a search hit)
+// currently lands on TasksPage's placeholder — D2/D6/D7/D3 haven't been
+// built yet. That's intentional, same as the main-menu card landing on
+// a placeholder before this sidebar existed.
+// =====================================================================
+
+const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
+  project: "مساحات المشاريع",
+  department: "مساحات الأقسام",
+  company: "مساحات الشركة",
+  personal: "مساحتي الخاصة",
+};
+
+const SPACE_TYPE_ORDER: SpaceType[] = [
+  "project",
+  "department",
+  "company",
+  "personal",
+];
+
+const SPACE_TYPE_ICONS: Record<SpaceType, typeof FolderKanban> = {
+  project: FolderKanban,
+  department: Building2,
+  company: Building,
+  personal: User,
+};
+
+interface SearchHit {
+  id: string;
+  title: string;
+  boardName: string;
+  spaceName: string;
+}
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="min-w-[1.25rem] rounded-full bg-slate-200 px-1.5 text-center text-xs font-medium text-slate-600">
+      {count}
+    </span>
+  );
+}
+
+function BoardRow({ item }: { item: BoardWithCount }) {
+  const location = useLocation();
+  const path = `/tasks/board/${item.board.id}`;
+  const isActive = location.pathname === path;
+
+  return (
+    <Link
+      to={path}
+      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+        isActive
+          ? "bg-primary-superLight text-primary font-medium"
+          : "text-gray-600 hover:bg-gray-100"
+      }`}
+    >
+      <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+      <span className="flex-1 truncate">{item.board.name}</span>
+      <CountBadge count={item.openCount} />
+    </Link>
+  );
+}
+
+function SpaceSection({ node }: { node: SpaceNode }) {
+  const [isOpen, setIsOpen] = useState(true);
+  const Icon = SPACE_TYPE_ICONS[node.space.space_type];
+  const totalOpen =
+    node.boards.reduce((sum, b) => sum + b.openCount, 0) +
+    node.folders.reduce(
+      (sum, f) => sum + f.boards.reduce((s, b) => s + b.openCount, 0),
+      0,
+    );
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100"
+      >
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${
+            isOpen ? "" : "-rotate-90"
+          }`}
+        />
+        <Icon className="h-4 w-4 shrink-0 text-gray-500" />
+        <span className="flex-1 truncate text-right">{node.space.name}</span>
+        <CountBadge count={totalOpen} />
+      </button>
+
+      {isOpen && (
+        <div className="mr-5 space-y-0.5 border-r border-gray-100 pr-2">
+          {node.folders.map((folderNode) => (
+            <div key={folderNode.folder.id}>
+              <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500">
+                <Folder className="h-3.5 w-3.5" />
+                <span className="truncate">{folderNode.folder.name}</span>
+              </div>
+              <div className="mr-4 space-y-0.5">
+                {folderNode.boards.map((b) => (
+                  <BoardRow key={b.board.id} item={b} />
+                ))}
+              </div>
+            </div>
+          ))}
+          {node.boards.map((b) => (
+            <BoardRow key={b.board.id} item={b} />
+          ))}
+          {node.folders.length === 0 && node.boards.length === 0 && (
+            <div className="px-2 py-1 text-xs text-gray-400">لا توجد لوحات</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TasksLayout = () => {
+  const { isCollapsed, toggle } = useSidebar();
+  const { data, loading } = useTasksSidebar();
+  const navigate = useNavigate();
+
+  const [searchInput, setSearchInput] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef<number | null>(null);
+
+  // board_id -> { boardName, spaceName }, flattened once per sidebar fetch,
+  // used only to decorate search hits (which come back as bare rows).
+  const boardContext = useMemo(() => {
+    const map = new Map<string, { boardName: string; spaceName: string }>();
+    if (!data) return map;
+    for (const nodes of Object.values(data.spacesByType)) {
+      for (const node of nodes) {
+        const allBoards = [
+          ...node.boards,
+          ...node.folders.flatMap((f) => f.boards),
+        ];
+        for (const b of allBoards) {
+          map.set(b.board.id, {
+            boardName: b.board.name,
+            spaceName: node.space.name,
+          });
+        }
+      }
+    }
+    return map;
+  }, [data]);
+
+  useEffect(() => {
+    if (searchTimer.current) window.clearTimeout(searchTimer.current);
+
+    const term = searchInput.trim();
+    if (term.length < 2 || boardContext.size === 0) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    searchTimer.current = window.setTimeout(async () => {
+      const boardIds = Array.from(boardContext.keys());
+      const { data: rows, error } = await supabase
+        .schema("tasks")
+        .from("tasks")
+        .select("id, title, board_id")
+        .in("board_id", boardIds)
+        .eq("is_archived", false)
+        .ilike("title", `%${term}%`)
+        .limit(8);
+
+      if (!error) {
+        setSearchResults(
+          (rows ?? []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            boardName: boardContext.get(row.board_id)?.boardName ?? "",
+            spaceName: boardContext.get(row.board_id)?.spaceName ?? "",
+          })),
+        );
+      }
+      setSearching(false);
+    }, 300);
+
+    return () => {
+      if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    };
+  }, [searchInput, boardContext]);
+
+  const openSearchHit = (hit: SearchHit) => {
+    setSearchInput("");
+    setSearchResults([]);
+    navigate(`/tasks/task/${hit.id}`);
+  };
+
+  const spaceGroups = data
+    ? SPACE_TYPE_ORDER.map((type) => ({
+        type,
+        nodes: data.spacesByType[type],
+      })).filter((g) => g.nodes.length > 0)
+    : [];
+
+  if (isCollapsed) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] bg-gray-50">
+        <aside className="fixed right-0 top-16 bottom-0 flex w-20 flex-col items-center gap-2 border-l border-gray-200 bg-white py-4">
+          <button
+            onClick={toggle}
+            className="rounded-full p-2 hover:bg-gray-100"
+            title="توسيع القائمة"
+          >
+            <ChevronLeft className="h-5 w-5 text-gray-600" />
+          </button>
+          <Link
+            to="/tasks"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            title="المهام"
+          >
+            <ListTodo className="h-5 w-5" />
+          </Link>
+          <Link
+            to="/tasks/my-work"
+            className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            title="أعمالي"
+          >
+            <Users className="h-5 w-5" />
+            {!!data?.myWorkCount && (
+              <span className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
+            )}
+          </Link>
+        </aside>
+        <main className="mr-20 flex-1 overflow-y-auto scrollbar-hide">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-[calc(100vh-64px)] bg-gray-50">
+      <aside className="fixed right-0 top-16 bottom-0 flex w-72 flex-col border-l border-gray-200 bg-white">
+        <div className="relative flex-shrink-0 border-b border-gray-200 p-4">
+          <h2 className="text-lg font-semibold text-gray-900">المهام</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            المساحات، اللوحات، وأعمالي
+          </p>
+          <button
+            onClick={toggle}
+            className="absolute top-4 left-4 rounded-full p-1 hover:bg-gray-100"
+            title="طي القائمة"
+          >
+            <ChevronRight className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Search — searches tasks, not navigation */}
+        <div className="relative flex-shrink-0 p-3">
+          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-2">
+            <Search className="h-4 w-4 text-gray-400" />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="ابحث في المهام..."
+              className="w-full bg-transparent text-sm outline-none"
+              aria-label="بحث عن مهمة"
+            />
+            {searching && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+            )}
+          </div>
+
+          {searchInput.trim().length >= 2 && (
+            <div className="absolute right-3 left-3 z-20 mt-1 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+              {searchResults.length === 0 && !searching ? (
+                <div className="p-3 text-sm text-gray-400">لا توجد نتائج</div>
+              ) : (
+                searchResults.map((hit) => (
+                  <button
+                    key={hit.id}
+                    onClick={() => openSearchHit(hit)}
+                    className="flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-3 py-2 text-right hover:bg-gray-50 last:border-b-0"
+                  >
+                    <span className="truncate text-sm font-medium text-gray-800">
+                      {hit.title}
+                    </span>
+                    <span className="truncate text-xs text-gray-400">
+                      {hit.spaceName} · {hit.boardName}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto p-3 scrollbar-hide">
+          {loading ? (
+            <div className="space-y-2 p-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-7 animate-pulse rounded-md bg-slate-100" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {spaceGroups.map((group) => (
+                <div key={group.type} className="space-y-1">
+                  <div className="px-2 text-xs font-semibold text-gray-400">
+                    {SPACE_TYPE_LABELS[group.type]}
+                  </div>
+                  {group.nodes.map((node) => (
+                    <SpaceSection key={node.space.id} node={node} />
+                  ))}
+                </div>
+              ))}
+              {spaceGroups.length === 0 && (
+                <div className="px-2 text-sm text-gray-400">
+                  لا توجد مساحات متاحة
+                </div>
+              )}
+
+              {!!data?.departments.length && (
+                <div className="space-y-1 border-t border-gray-100 pt-3">
+                  <div className="px-2 text-xs font-semibold text-gray-400">
+                    الأقسام
+                  </div>
+                  {data.departments.map((dept) => (
+                    <Link
+                      key={dept.id}
+                      to={`/tasks/department/${dept.id}`}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                    >
+                      <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      <span className="flex-1 truncate">
+                        {dept.name_ar ?? dept.name}
+                      </span>
+                      <CountBadge count={dept.openCount} />
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-gray-100 pt-3">
+                <Link
+                  to="/tasks/my-work"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100"
+                >
+                  <Users className="h-4 w-4 shrink-0 text-gray-500" />
+                  <span className="flex-1 truncate">أعمالي</span>
+                  <CountBadge count={data?.myWorkCount ?? 0} />
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </aside>
+
+      <main className="mr-72 flex-1 overflow-y-auto scrollbar-hide">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
+export default TasksLayout;
