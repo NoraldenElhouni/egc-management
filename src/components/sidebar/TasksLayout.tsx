@@ -14,6 +14,9 @@ import {
   ListTodo,
   Users,
   Loader2,
+  Settings,
+  FileStack,
+  Tag,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 import { supabase } from "../../lib/supabaseClient";
@@ -109,20 +112,29 @@ function SpaceSection({ node }: { node: SpaceNode }) {
     );
 
   return (
-    <div>
-      <button
-        onClick={() => setIsOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100"
-      >
-        <ChevronDown
-          className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${
-            isOpen ? "" : "-rotate-90"
-          }`}
-        />
-        <Icon className="h-4 w-4 shrink-0 text-gray-500" />
-        <span className="flex-1 truncate text-right">{node.space.name}</span>
+    <div className="group/space">
+      <div className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
+        <button
+          onClick={() => setIsOpen((v) => !v)}
+          className="flex flex-1 items-center gap-2 overflow-hidden text-right"
+        >
+          <ChevronDown
+            className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${
+              isOpen ? "" : "-rotate-90"
+            }`}
+          />
+          <Icon className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="flex-1 truncate text-right">{node.space.name}</span>
+        </button>
         <CountBadge count={totalOpen} />
-      </button>
+        <Link
+          to={`/tasks/space/${node.space.id}/settings`}
+          className="shrink-0 rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
+          title="إعدادات المساحة"
+        >
+          <Settings className="h-3.5 w-3.5" />
+        </Link>
+      </div>
 
       {isOpen && (
         <div className="mr-5 space-y-0.5 border-r border-gray-100 pr-2">
@@ -384,6 +396,24 @@ const TasksLayout = () => {
                   <Users className="h-4 w-4 shrink-0 text-gray-500" />
                   <span className="flex-1 truncate">أعمالي</span>
                   <CountBadge count={data?.myWorkCount ?? 0} />
+                </Link>
+              </div>
+
+              <div className="space-y-1 border-t border-gray-100 pt-3">
+                <div className="px-2 text-xs font-semibold text-gray-400">الإدارة</div>
+                <Link
+                  to="/tasks/admin/templates"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  <FileStack className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="flex-1 truncate">القوالب</span>
+                </Link>
+                <Link
+                  to="/tasks/admin/fields"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  <Tag className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="flex-1 truncate">الحقول والوسوم وأنواع المهام</span>
                 </Link>
               </div>
             </>
