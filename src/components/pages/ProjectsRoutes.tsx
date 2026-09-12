@@ -18,11 +18,25 @@ const ProjectsRoutes = () => {
         <Route element={<RequirePermission permission="create_project" />}>
           <Route path="new" element={<NewProjectPage />} />
         </Route>
+        {/* All-projects counters summary. Gated on view_all_project_counters,
+            which is company-wide on purpose: view_project_counters is
+            is_project_scoped = true and the resolver force-denies a
+            project-scoped permission asked without a project (DECISION 3),
+            so it cannot gate a page summarizing every project at once.
+            view_all_project_counters does not exist in permission_catalog
+            yet — see permissions/new-permissions-todo.md — so this route
+            denies everyone until that row is added in Supabase. */}
+        <Route
+          element={
+            <RequirePermission permission="view_all_project_counters" />
+          }
+        >
+          <Route path="counters" element={<ProjectsCountersPage />} />
+        </Route>
         <Route
           element={<RequirePermission permission="view_project_counters" />}
         >
-          <Route path="counters" element={<ProjectsCountersPage />} />
-          <Route path=":id/counters" element={<ProjectCountersPage />} />
+          <Route path=":projectId/counters" element={<ProjectCountersPage />} />
         </Route>
       </Route>
     </Routes>

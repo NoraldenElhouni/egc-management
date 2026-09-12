@@ -4,8 +4,8 @@ import ProjectCountersList from "../../components/project/counters/ProjectCounte
 import LoadingPage from "../../components/ui/LoadingPage";
 
 const ProjectCountersPage = () => {
-  const params = useParams<{ id: string }>();
-  const projectId = params.id ?? "";
+  const params = useParams<{ projectId: string }>();
+  const projectId = params.projectId ?? "";
   const { project, loading } = useProject(projectId);
 
   if (loading) return <LoadingPage label="جارٍ تحميل المشروع..." />;

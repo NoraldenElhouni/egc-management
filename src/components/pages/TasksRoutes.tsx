@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import TasksLayout from "../sidebar/TasksLayout";
 import TasksPage from "../../pages/tasks/TasksPage";
+import TaskBoardPage from "../../pages/tasks/TaskBoardPage";
 
 // No RequirePermission here yet — permission keys for this module are
 // Part 6 of the build plan (tasks/task-module-build-plan.md), deliberately
@@ -16,7 +17,7 @@ export default function TasksRoutes() {
     <Routes>
       <Route element={<TasksLayout />}>
         <Route index element={<TasksPage />} />
-        <Route path="board/:boardId" element={<TasksPage />} />
+        <Route path="board/:boardId" element={<TaskBoardPage />} />
         <Route path="department/:departmentId" element={<TasksPage />} />
         <Route path="my-work" element={<TasksPage />} />
         <Route path="task/:taskId" element={<TasksPage />} />
