@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileStack, Copy } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
+import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
+import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
 export default function TaskBoardPage() {
@@ -17,6 +20,8 @@ export default function TaskBoardPage() {
     setAssignees,
     createTask,
   } = useTaskBoard(boardId);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showZoneClone, setShowZoneClone] = useState(false);
 
   if (loading) {
     return (
@@ -36,8 +41,24 @@ export default function TaskBoardPage() {
 
   return (
     <div className="flex h-full flex-col" dir="rtl">
-      <div className="border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <h1 className="text-base font-semibold text-gray-900">{data.board.name}</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowZoneClone(true)}
+            className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            استنساخ منطقة
+          </button>
+          <button
+            onClick={() => setShowTemplatePicker(true)}
+            className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <FileStack className="h-3.5 w-3.5" />
+            استخدام قالب
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -70,6 +91,24 @@ export default function TaskBoardPage() {
           this Outlet mounting here (rather than replacing the list) is
           what keeps the board visible behind it. */}
       <Outlet />
+
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          spaceId={data.board.space_id}
+          currentBoardId={data.board.id}
+          onClose={() => setShowTemplatePicker(false)}
+          onApplied={() => setShowTemplatePicker(false)}
+        />
+      )}
+
+      {showZoneClone && (
+        <ZoneCloneModal
+          spaceId={data.board.space_id}
+          currentBoardId={data.board.id}
+          onClose={() => setShowZoneClone(false)}
+          onApplied={() => setShowZoneClone(false)}
+        />
+      )}
     </div>
   );
 }
