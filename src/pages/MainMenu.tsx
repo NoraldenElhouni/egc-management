@@ -10,6 +10,7 @@ import {
   PackageOpen,
   Store,
   FolderCog,
+  ListTodo,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useVisibleMenuItems } from "../hooks/permissions/useMenuPermissions";
@@ -73,6 +74,15 @@ const MainMenu = () => {
       icon: FolderCog,
       path: "/execution-management",
       permission: "view_execution_section",
+    },
+    {
+      // Part 6 (permissions) is deliberately skipped for now — no
+      // `permission` key here means it's public, same as omitting it for
+      // any other public item. Add tasks.* keys and a view_tasks_section
+      // gate before this ships for real (see task-module-build-plan.md).
+      label: "المهام",
+      icon: ListTodo,
+      path: "/tasks",
     },
     {
       label: "الإعدادات",

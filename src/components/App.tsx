@@ -21,6 +21,7 @@ import { SidebarProvider } from "../contexts/SidebarContext";
 import { UpdateProvider } from "../contexts/Updateprovider";
 import ShopsRoutes from "./pages/ShopsRoutes";
 import ExecutionManagementRoutes from "./pages/ExecutionManagementRoutes";
+import TasksRoutes from "./pages/TasksRoutes";
 import RequirePermission from "./auth/RequirePermission";
 
 const AppRouter = () => {
@@ -160,6 +161,9 @@ const AppRouter = () => {
                 element={<ExecutionManagementRoutes />}
               />
             </Route>
+
+            {/* Tasks — no RequirePermission yet, see TasksRoutes.tsx */}
+            <Route path="/tasks/*" element={<TasksRoutes />} />
           </Route>
         </Route>
       )}

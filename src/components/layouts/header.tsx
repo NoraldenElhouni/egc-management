@@ -18,6 +18,7 @@ const Header = () => {
     if (path.startsWith("/finance")) return "المالية";
     if (path.startsWith("/profile")) return "الملف الشخصي";
     if (path.startsWith("/settings")) return "الإعدادات";
+    if (path.startsWith("/tasks")) return "إدارة المهام";
     if (path.startsWith("/website")) return "إدارة الموقع";
     return "الصفحة";
   };
@@ -42,6 +43,7 @@ const Header = () => {
     finance: "المالية",
     profile: "الملف الشخصي",
     settings: "الإعدادات",
+    tasks: "المهام",
     website: "إدارة الموقع",
     new: "جديد",
     attendance: "الحضور والإجازات",
