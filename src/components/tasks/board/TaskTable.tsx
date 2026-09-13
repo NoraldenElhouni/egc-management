@@ -40,6 +40,7 @@ interface TaskTableProps {
   unmetRequirementTaskIds: Set<string>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
+  hiddenColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangePriority: (taskId: string, priority: Priority | null) => void;
@@ -50,6 +51,7 @@ interface TaskTableProps {
   onAttachField: (fieldDefinitionId: string) => void;
   onCreateAndAttachField: (input: { name: string; name_ar: string; type: FieldType; config: Json }) => void;
   onDetachColumn: (boardColumnId: string) => void;
+  onSetColumnVisibility: (boardColumnId: string, visible: boolean) => void;
   onRenameField: (fieldDefinitionId: string, name_ar: string) => void;
   onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
 }
@@ -88,6 +90,7 @@ export default function TaskTable({
   unmetRequirementTaskIds,
   subtaskProgressByTask,
   customColumns,
+  hiddenColumns,
   valuesByTask,
   onChangeStatus,
   onChangePriority,
@@ -98,6 +101,7 @@ export default function TaskTable({
   onAttachField,
   onCreateAndAttachField,
   onDetachColumn,
+  onSetColumnVisibility,
   onRenameField,
   onMoveTaskTo,
 }: TaskTableProps) {
@@ -250,6 +254,7 @@ export default function TaskTable({
             column={col}
             onRename={(name_ar) => onRenameField(col.fieldDefinitionId, name_ar)}
             onDetach={() => onDetachColumn(col.boardColumnId)}
+            onHide={() => onSetColumnVisibility(col.boardColumnId, false)}
           />
         ))}
         <button
@@ -264,6 +269,7 @@ export default function TaskTable({
       {showColumnEditor && (
         <ColumnEditorModal
           attachedFieldIds={new Set(customColumns.map((c) => c.fieldDefinitionId))}
+          hiddenColumns={hiddenColumns}
           onAttach={(fieldId) => {
             onAttachField(fieldId);
             setShowColumnEditor(false);
@@ -272,6 +278,7 @@ export default function TaskTable({
             onCreateAndAttachField({ ...input, config: input.config as Json });
             setShowColumnEditor(false);
           }}
+          onUnhide={(boardColumnId) => onSetColumnVisibility(boardColumnId, true)}
           onClose={() => setShowColumnEditor(false)}
         />
       )}
@@ -346,20 +353,41 @@ export default function TaskTable({
   );
 }
 
+const FIELD_TYPE_LABELS: Record<CustomColumn["type"], string> = {
+  text: "نص",
+  long_text: "نص طويل",
+  number: "رقم",
+  currency: "عملة",
+  date: "تاريخ",
+  select: "اختيار واحد",
+  multi_select: "اختيار متعدد",
+  user: "مستخدم",
+  checkbox: "مربع اختيار",
+  url: "رابط",
+  email: "بريد إلكتروني",
+  phone: "هاتف",
+  formula: "معادلة",
+  relationship: "علاقة",
+};
+
 // The fixed built-in columns (status/priority/assignee/date/department)
 // aren't backed by field_definitions, so there's nothing for a "···" on
 // them to actually edit/hide/delete — only attached custom columns get
 // one, and it does something real (rename the shared field, or detach
 // this column from just this board, which build plan §4.11 confirms is
-// non-destructive since task_values survive it).
+// non-destructive since task_values survive it). "Hide" is reversible —
+// setColumnVisibility just flips is_visible, and the "+" modal's hidden-
+// columns list is the only way back, so both must ship together.
 function CustomColumnHeader({
   column,
   onRename,
   onDetach,
+  onHide,
 }: {
   column: CustomColumn;
   onRename: (name_ar: string) => void;
   onDetach: () => void;
+  onHide: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -388,8 +416,11 @@ function CustomColumnHeader({
   }
 
   return (
-    <div ref={ref} className="relative flex items-center justify-between">
-      <span className="truncate">{column.name_ar}</span>
+    <div ref={ref} className="relative flex items-center justify-between gap-1">
+      <span className="truncate" title={FIELD_TYPE_LABELS[column.type]}>
+        {column.name_ar}
+        <span className="mr-1 text-[10px] font-normal text-gray-400">({FIELD_TYPE_LABELS[column.type]})</span>
+      </span>
       <button onClick={() => setOpen((v) => !v)} className="shrink-0 text-gray-300 hover:text-gray-500">
         <MoreHorizontal className="h-3 w-3" />
       </button>
@@ -403,6 +434,15 @@ function CustomColumnHeader({
             className="block w-full px-3 py-1.5 text-right text-xs hover:bg-gray-50"
           >
             تعديل الاسم
+          </button>
+          <button
+            onClick={() => {
+              onHide();
+              setOpen(false);
+            }}
+            className="block w-full px-3 py-1.5 text-right text-xs hover:bg-gray-50"
+          >
+            إخفاء العمود
           </button>
           <button onClick={onDetach} className="block w-full px-3 py-1.5 text-right text-xs text-red-500 hover:bg-red-50">
             إزالة العمود

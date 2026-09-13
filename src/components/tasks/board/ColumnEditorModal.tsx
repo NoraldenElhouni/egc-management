@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { X, Search, Plus } from "lucide-react";
-import { useAllFieldDefinitions, type FieldType } from "../../../hooks/tasks/useTaskBoard";
+import { X, Search, Plus, Eye } from "lucide-react";
+import { useAllFieldDefinitions, type FieldType, type CustomColumn } from "../../../hooks/tasks/useTaskBoard";
 
 // D2's "+" column editor — clickup-task-ui skill: "offer 'use existing
 // field' as well as 'create new field'" since fields are define-once,
@@ -26,13 +26,17 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
 
 export default function ColumnEditorModal({
   attachedFieldIds,
+  hiddenColumns,
   onAttach,
   onCreate,
+  onUnhide,
   onClose,
 }: {
   attachedFieldIds: Set<string>;
+  hiddenColumns: CustomColumn[];
   onAttach: (fieldDefinitionId: string) => void;
   onCreate: (input: { name: string; name_ar: string; type: FieldType; config: object }) => void;
+  onUnhide: (boardColumnId: string) => void;
   onClose: () => void;
 }) {
   const allFields = useAllFieldDefinitions();
@@ -59,6 +63,25 @@ export default function ColumnEditorModal({
             <X className="h-4.5 w-4.5" />
           </button>
         </div>
+
+        {hiddenColumns.length > 0 && (
+          <div className="space-y-1 border-b border-gray-100 px-4 py-2">
+            <div className="text-xs font-semibold text-gray-500">أعمدة مخفية</div>
+            {hiddenColumns.map((c) => (
+              <button
+                key={c.boardColumnId}
+                onClick={() => onUnhide(c.boardColumnId)}
+                className="flex w-full items-center justify-between rounded-md px-2 py-1 text-right text-sm text-gray-500 hover:bg-gray-50"
+              >
+                <span className="truncate">{c.name_ar}</span>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-primary">
+                  <Eye className="h-3 w-3" />
+                  إظهار
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-1 border-b border-gray-100 px-4 pt-2">
           <button

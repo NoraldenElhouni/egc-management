@@ -57,6 +57,7 @@ export interface TaskBoardData {
   /** null when the board's space isn't a project space (department/company/personal) — tasks.project_id is nullable for exactly this case. */
   projectId: string | null;
   customColumns: CustomColumn[];
+  hiddenColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>; // task_id -> field_definition_id -> value
 }
 
@@ -261,11 +262,14 @@ export function useTaskBoard(boardId: string | undefined) {
         subtaskProgressByTask.set(t.parent_task_id, progress);
       }
 
+      // Fetch every column regardless of visibility — is_visible was
+      // previously only ever written as true, so "hide" had no unhide
+      // path (a hidden column would just vanish from every query that
+      // filters on it). hiddenColumns below is what makes it reversible.
       const { data: boardColumnRows, error: boardColumnsError } = await tasksDb
         .from("board_columns")
-        .select("id, field_definition_id, sort_order")
+        .select("id, field_definition_id, sort_order, is_visible")
         .eq("board_id", boardId)
-        .eq("is_visible", true)
         .order("sort_order");
       if (boardColumnsError) throw boardColumnsError;
 
@@ -282,14 +286,24 @@ export function useTaskBoard(boardId: string | undefined) {
       if (valuesError) throw valuesError;
 
       const fieldDefById = new Map((fieldDefRows ?? []).map((f) => [f.id, f]));
-      const customColumns: CustomColumn[] = (boardColumnRows ?? [])
+      const allColumns = (boardColumnRows ?? [])
         .map((c) => {
           const field = fieldDefById.get(c.field_definition_id);
           return field
-            ? { boardColumnId: c.id, fieldDefinitionId: field.id, name_ar: field.name_ar, type: field.type, config: field.config }
+            ? { boardColumnId: c.id, fieldDefinitionId: field.id, name_ar: field.name_ar, type: field.type, config: field.config, isVisible: c.is_visible }
             : null;
         })
-        .filter((c): c is CustomColumn => !!c);
+        .filter((c): c is CustomColumn & { isVisible: boolean } => !!c);
+
+      const toCustomColumn = (c: CustomColumn & { isVisible: boolean }): CustomColumn => ({
+        boardColumnId: c.boardColumnId,
+        fieldDefinitionId: c.fieldDefinitionId,
+        name_ar: c.name_ar,
+        type: c.type,
+        config: c.config,
+      });
+      const customColumns: CustomColumn[] = allColumns.filter((c) => c.isVisible).map(toCustomColumn);
+      const hiddenColumns: CustomColumn[] = allColumns.filter((c) => !c.isVisible).map(toCustomColumn);
 
       const valuesByTask = new Map<string, Map<string, Json>>();
       for (const row of valueRows ?? []) {
@@ -318,6 +332,7 @@ export function useTaskBoard(boardId: string | undefined) {
         subtaskProgressByTask,
         projectId: space.project_id,
         customColumns,
+        hiddenColumns,
         valuesByTask,
       };
     },
@@ -476,6 +491,14 @@ export function useTaskBoard(boardId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const setColumnVisibility = useMutation({
+    mutationFn: async ({ boardColumnId, visible }: { boardColumnId: string; visible: boolean }) => {
+      const { error } = await tasksDb.from("board_columns").update({ is_visible: visible }).eq("id", boardColumnId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   const renameField = useMutation({
     mutationFn: async ({ fieldDefinitionId, name_ar }: { fieldDefinitionId: string; name_ar: string }) => {
       const { error } = await tasksDb.from("field_definitions").update({ name_ar }).eq("id", fieldDefinitionId);
@@ -541,6 +564,7 @@ export function useTaskBoard(boardId: string | undefined) {
     attachField: attachField.mutateAsync,
     createAndAttachField: createAndAttachField.mutateAsync,
     detachColumn: detachColumn.mutateAsync,
+    setColumnVisibility: setColumnVisibility.mutateAsync,
     renameField: renameField.mutateAsync,
     moveTaskTo: moveTaskTo.mutateAsync,
   };

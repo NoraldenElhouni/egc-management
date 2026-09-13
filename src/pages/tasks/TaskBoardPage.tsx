@@ -23,6 +23,7 @@ export default function TaskBoardPage() {
     attachField,
     createAndAttachField,
     detachColumn,
+    setColumnVisibility,
     renameField,
     moveTaskTo,
   } = useTaskBoard(boardId);
@@ -85,6 +86,7 @@ export default function TaskBoardPage() {
           unmetRequirementTaskIds={data.unmetRequirementTaskIds}
           subtaskProgressByTask={data.subtaskProgressByTask}
           customColumns={data.customColumns}
+          hiddenColumns={data.hiddenColumns}
           valuesByTask={data.valuesByTask}
           onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}
           onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
@@ -95,6 +97,7 @@ export default function TaskBoardPage() {
           onAttachField={attachField}
           onCreateAndAttachField={createAndAttachField}
           onDetachColumn={detachColumn}
+          onSetColumnVisibility={(boardColumnId, visible) => setColumnVisibility({ boardColumnId, visible })}
           onRenameField={(fieldDefinitionId, name_ar) => renameField({ fieldDefinitionId, name_ar })}
           onMoveTaskTo={moveTaskTo}
         />
