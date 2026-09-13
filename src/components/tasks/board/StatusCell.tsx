@@ -20,12 +20,18 @@ interface StatusCellProps {
   statuses: StatusRow[];
   currentStatusId: string;
   onChange: (statusId: string) => void;
+  /** Which edge the dropdown hangs from — "right" (default) fits the wide
+   * board table; "left" is for narrow contexts near the screen's left
+   * edge (the D3 detail panel), where a right-anchored dropdown would
+   * extend further left and overflow off-screen. */
+  align?: "left" | "right";
 }
 
 export default function StatusCell({
   statuses,
   currentStatusId,
   onChange,
+  align = "right",
 }: StatusCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -44,7 +50,7 @@ export default function StatusCell({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
           {statuses.map((status) => (
             <button
               key={status.id}

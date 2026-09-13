@@ -33,6 +33,9 @@ interface AssigneeCellProps {
   employeesById: Map<string, EmployeeLite>;
   allEmployees: EmployeeLite[];
   onChange: (userIds: string[]) => void;
+  /** See StatusCell's align prop — "left" for narrow contexts near the
+   * screen's left edge (the D3 detail panel). */
+  align?: "left" | "right";
 }
 
 export default function AssigneeCell({
@@ -40,6 +43,7 @@ export default function AssigneeCell({
   employeesById,
   allEmployees,
   onChange,
+  align = "right",
 }: AssigneeCellProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -99,7 +103,7 @@ export default function AssigneeCell({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-56 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-56 rounded-lg border border-gray-200 bg-white shadow-lg`}>
           <div className="border-b border-gray-100 p-2">
             <input
               autoFocus

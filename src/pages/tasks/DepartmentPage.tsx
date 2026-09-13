@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { Loader2, ListTodo, AlarmClock, Lock, UserX, ChevronDown, ChevronLeft } from "lucide-react";
 import { useDepartmentView } from "../../hooks/tasks/useDepartmentView";
 import Badge, { type BadgeVariant } from "../../components/ui/Badge";
@@ -7,8 +7,11 @@ import type { Priority } from "../../hooks/tasks/useTaskBoard";
 
 // D6 — Department view (build plan Part 7). Everything here is read-only
 // — an overview, not an editable board (D2 already owns editing) — so
-// rows navigate into the task's real board/detail instead of exposing
-// inline dropdowns for status/priority/assignee.
+// rows expose no inline dropdowns for status/priority/assignee. A row
+// click opens the D3 slide-over as a nested route right here (task/:taskId
+// under department/:departmentId, see TasksRoutes.tsx) rather than
+// navigating away to the task's board, so this list stays visible behind
+// it exactly like D2's own board page does.
 
 const PRIORITY_LABELS: Record<Priority, string> = {
   urgent: "عاجل",
@@ -145,7 +148,7 @@ export default function DepartmentPage() {
                           return (
                             <button
                               key={task.id}
-                              onClick={() => navigate(`/tasks/board/${task.board_id}/task/${task.id}`)}
+                              onClick={() => navigate(`/tasks/department/${departmentId}/task/${task.id}`)}
                               className="flex w-full items-center gap-2 border-t border-gray-50 px-4 py-2 text-right text-sm hover:bg-gray-50"
                             >
                               <span className="flex-1 truncate text-gray-700">{task.title}</span>
@@ -216,6 +219,8 @@ export default function DepartmentPage() {
           </div>
         )}
       </div>
+
+      <Outlet />
     </div>
   );
 }

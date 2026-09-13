@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { X, Loader2, ChevronLeft } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { X, Loader2, ChevronLeft, Trash2 } from "lucide-react";
 import { useTaskDetail } from "../../../hooks/tasks/useTaskDetail";
 import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
@@ -17,11 +17,16 @@ import ActivitySection from "./ActivitySection";
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
 // =====================================================================
-// Rendered as the nested route board/:boardId/task/:taskId (see
-// TasksRoutes.tsx) — the parent route's element, TaskBoardPage, renders
-// this via <Outlet/> as an absolutely-positioned overlay so the list
-// stays mounted and visible behind it, never a full page navigation, per
-// the build plan's explicit rule for this screen.
+// Rendered as a nested task/:taskId route under board/:boardId, D6's
+// department/:departmentId, or D7's my-work (see TasksRoutes.tsx) — the
+// parent route's element renders this via <Outlet/> as an
+// absolutely-positioned overlay so the list stays mounted and visible
+// behind it, never a full page navigation, per the build plan's explicit
+// rule for this screen. Since three different parents can host it, this
+// component never hardcodes "/tasks/board/..." — basePath below strips
+// the trailing "/task/:taskId" off the current URL, so close() and every
+// internal link (breadcrumb parent, subtasks) return to whichever list
+// actually opened this panel.
 
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -33,8 +38,10 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 export default function TaskDetailPanel() {
-  const { boardId, taskId } = useParams<{ boardId: string; taskId: string }>();
+  const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.replace(/\/task\/[^/]+$/, "");
   const {
     data,
     loading,
@@ -52,12 +59,24 @@ export default function TaskDetailPanel() {
     editComment,
     deleteComment,
     toggleCommentResolved,
+    deleteTask,
+    deletingTask,
   } = useTaskDetail(taskId);
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
 
-  const close = () => navigate(`/tasks/board/${boardId}`);
+  const handleDelete = async () => {
+    if (!data) return;
+    const warning = data.subtasks.length
+      ? `حذف "${data.task.title}" و${data.subtasks.length} مهمة فرعية تحتها نهائياً؟ لا يمكن التراجع عن هذا.`
+      : `حذف "${data.task.title}" نهائياً؟ لا يمكن التراجع عن هذا.`;
+    if (!confirm(warning)) return;
+    await deleteTask();
+    navigate(basePath);
+  };
+
+  const close = () => navigate(basePath);
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end" dir="rtl">
@@ -82,7 +101,7 @@ export default function TaskDetailPanel() {
                 <>
                   <ChevronLeft className="h-3 w-3" />
                   <button
-                    onClick={() => navigate(`/tasks/board/${boardId}/task/${data.breadcrumb.parentId}`)}
+                    onClick={() => navigate(`${basePath}/task/${data.breadcrumb.parentId}`)}
                     className="truncate hover:text-gray-600 hover:underline"
                   >
                     {data.breadcrumb.parentTitle}
@@ -141,12 +160,14 @@ export default function TaskDetailPanel() {
                   statuses={data.statuses}
                   currentStatusId={data.task.status_id}
                   onChange={(statusId) => updateField({ status_id: statusId })}
+                  align="left"
                 />
               </FieldRow>
               <FieldRow label="الأولوية">
                 <PriorityCell
                   priority={data.task.priority}
                   onChange={(priority) => updateField({ priority })}
+                  align="left"
                 />
               </FieldRow>
               <FieldRow label="القسم">
@@ -183,6 +204,7 @@ export default function TaskDetailPanel() {
                   employeesById={data.employeesById}
                   allEmployees={data.employees}
                   onChange={(userIds) => setAssignees(userIds)}
+                  align="left"
                 />
               </FieldRow>
               <FieldRow label="تاريخ البدء">
@@ -241,7 +263,7 @@ export default function TaskDetailPanel() {
 
             <Section title="المهام الفرعية">
               <SubtasksSection
-                boardId={data.breadcrumb.boardId}
+                basePath={basePath}
                 subtasks={data.subtasks}
                 onAdd={(title) => addSubtask(title)}
               />
@@ -265,6 +287,28 @@ export default function TaskDetailPanel() {
                 onDeleteComment={deleteComment}
                 onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
               />
+            </Section>
+
+            <Section title="منطقة الخطر">
+              <div className="rounded-md border border-red-100 bg-red-50/50 p-3">
+                <button
+                  onClick={handleDelete}
+                  disabled={deletingTask}
+                  className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                >
+                  {deletingTask ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  حذف المهمة نهائياً
+                </button>
+                {data.subtasks.length > 0 && (
+                  <p className="mt-1 text-xs text-red-400">
+                    سيتم حذف {data.subtasks.length} مهمة فرعية تحتها أيضاً.
+                  </p>
+                )}
+              </div>
             </Section>
           </div>
         )}

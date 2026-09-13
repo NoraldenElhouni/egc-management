@@ -448,6 +448,22 @@ export function useTaskDetail(taskId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  // Hard delete, matching this module's other "danger zone" actions
+  // (useSpaceSettings.ts's deleteBoard) rather than soft-archiving —
+  // tasks_parent_task_id_fkey is ON DELETE CASCADE, so this also removes
+  // every subtask underneath. The caller (TaskDetailPanel) navigates away
+  // on success since the panel has nothing left to render.
+  const deleteTask = useMutation({
+    mutationFn: async () => {
+      if (!taskId) throw new Error("no task id");
+      const { error } = await tasksDb.from("tasks").delete().eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-board", query.data?.task.board_id] });
+    },
+  });
+
   return {
     data: query.data,
     loading: query.isPending,
@@ -466,5 +482,7 @@ export function useTaskDetail(taskId: string | undefined) {
     editComment: editComment.mutateAsync,
     deleteComment: deleteComment.mutate,
     toggleCommentResolved: toggleCommentResolved.mutate,
+    deleteTask: deleteTask.mutateAsync,
+    deletingTask: deleteTask.isPending,
   };
 }

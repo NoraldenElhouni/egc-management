@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { Loader2, CheckCheck } from "lucide-react";
 import { useMyWork, type MyWorkTask } from "../../hooks/tasks/useMyWork";
 import Badge, { type BadgeVariant } from "../../components/ui/Badge";
@@ -106,7 +106,7 @@ export default function MyWorkPage() {
                   return (
                     <button
                       key={task.id}
-                      onClick={() => navigate(`/tasks/board/${task.board_id}/task/${task.id}`)}
+                      onClick={() => navigate(`/tasks/my-work/task/${task.id}`)}
                       className="flex w-full items-center gap-2 border-t border-gray-50 px-3 py-2 text-right text-sm hover:bg-gray-50"
                     >
                       <span className="flex-1 truncate text-gray-700">{task.title}</span>
@@ -136,6 +136,8 @@ export default function MyWorkPage() {
           </div>
         )}
       </div>
+
+      <Outlet />
     </div>
   );
 }

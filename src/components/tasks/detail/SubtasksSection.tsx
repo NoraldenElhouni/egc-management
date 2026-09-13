@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import type { StatusRow } from "../../../hooks/tasks/useTaskBoard";
 
 interface SubtasksSectionProps {
-  boardId: string;
+  basePath: string;
   subtasks: { id: string; title: string; status: StatusRow | null }[];
   onAdd: (title: string) => void;
 }
@@ -13,8 +13,10 @@ interface SubtasksSectionProps {
 // from checklists (ChecklistsSection.tsx), per build plan §4.10. Opening
 // one swaps the panel to that subtask (same slide-over, new task id) —
 // ClickUp stacks panels; this repo's router-driven panel does not, which
-// is a deliberate simplification (see build plan D3 note).
-export default function SubtasksSection({ boardId, subtasks, onAdd }: SubtasksSectionProps) {
+// is a deliberate simplification (see build plan D3 note). basePath is
+// whichever list (board/department/my-work) currently hosts the panel —
+// see TaskDetailPanel's own header comment.
+export default function SubtasksSection({ basePath, subtasks, onAdd }: SubtasksSectionProps) {
   const navigate = useNavigate();
   const [newTitle, setNewTitle] = useState("");
 
@@ -30,7 +32,7 @@ export default function SubtasksSection({ boardId, subtasks, onAdd }: SubtasksSe
       {subtasks.map((st) => (
         <button
           key={st.id}
-          onClick={() => navigate(`/tasks/board/${boardId}/task/${st.id}`)}
+          onClick={() => navigate(`${basePath}/task/${st.id}`)}
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-right text-sm hover:bg-gray-50"
         >
           <span

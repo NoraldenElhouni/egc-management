@@ -24,6 +24,7 @@ import { supabase } from "../../lib/supabaseClient";
 import {
   useTasksSidebar,
   type SpaceNode,
+  type FolderNode,
   type BoardWithCount,
   type SpaceType,
 } from "../../hooks/tasks/useTasksSidebar";
@@ -256,11 +257,72 @@ function AddFolderInline({ spaceId, onDone }: { spaceId: string; onDone: () => v
   );
 }
 
+function FolderSection({
+  spaceId,
+  projectId,
+  folderNode,
+}: {
+  spaceId: string;
+  projectId: string | null;
+  folderNode: FolderNode;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [addingBoard, setAddingBoard] = useState(false);
+  const openCount = folderNode.boards.reduce((sum, b) => sum + b.openCount, 0);
+
+  return (
+    <div className="group/folder">
+      <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500">
+        <button
+          onClick={() => setIsOpen((v) => !v)}
+          className="flex flex-1 items-center gap-2 overflow-hidden text-right"
+        >
+          <ChevronDown
+            className={`h-3 w-3 shrink-0 text-gray-400 transition-transform ${
+              isOpen ? "" : "-rotate-90"
+            }`}
+          />
+          <Folder className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 truncate">{folderNode.folder.name}</span>
+        </button>
+        <CountBadge count={openCount} />
+        <button
+          onClick={() => {
+            setIsOpen(true);
+            setAddingBoard(true);
+          }}
+          className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/folder:opacity-100"
+          title="إضافة لوحة"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+      </div>
+      {isOpen && (
+        <div className="mr-4 space-y-0.5">
+          {addingBoard && (
+            <AddBoardInline
+              spaceId={spaceId}
+              folderId={folderNode.folder.id}
+              projectId={projectId}
+              onDone={() => setAddingBoard(false)}
+            />
+          )}
+          {folderNode.boards.map((b) => (
+            <BoardRow key={b.board.id} item={b} />
+          ))}
+          {folderNode.boards.length === 0 && !addingBoard && (
+            <div className="px-2 py-1 text-xs text-gray-400">لا توجد لوحات</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SpaceSection({ node }: { node: SpaceNode }) {
   const [isOpen, setIsOpen] = useState(true);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addMode, setAddMode] = useState<"board" | "folder" | null>(null);
-  const [addingFolderBoardId, setAddingFolderBoardId] = useState<string | null>(null);
   const addMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(addMenuRef, () => setAddMenuOpen(false));
   const Icon = SPACE_TYPE_ICONS[node.space.space_type];
@@ -334,32 +396,12 @@ function SpaceSection({ node }: { node: SpaceNode }) {
         <div className="mr-5 space-y-0.5 border-r border-gray-100 pr-2">
           {addMode === "folder" && <AddFolderInline spaceId={node.space.id} onDone={() => setAddMode(null)} />}
           {node.folders.map((folderNode) => (
-            <div key={folderNode.folder.id} className="group/folder">
-              <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500">
-                <Folder className="h-3.5 w-3.5" />
-                <span className="flex-1 truncate">{folderNode.folder.name}</span>
-                <button
-                  onClick={() => setAddingFolderBoardId(folderNode.folder.id)}
-                  className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/folder:opacity-100"
-                  title="إضافة لوحة"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="mr-4 space-y-0.5">
-                {addingFolderBoardId === folderNode.folder.id && (
-                  <AddBoardInline
-                    spaceId={node.space.id}
-                    folderId={folderNode.folder.id}
-                    projectId={node.space.project_id}
-                    onDone={() => setAddingFolderBoardId(null)}
-                  />
-                )}
-                {folderNode.boards.map((b) => (
-                  <BoardRow key={b.board.id} item={b} />
-                ))}
-              </div>
-            </div>
+            <FolderSection
+              key={folderNode.folder.id}
+              spaceId={node.space.id}
+              projectId={node.space.project_id}
+              folderNode={folderNode}
+            />
           ))}
           {addMode === "board" && (
             <AddBoardInline

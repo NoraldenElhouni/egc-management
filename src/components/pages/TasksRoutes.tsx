@@ -16,12 +16,16 @@ import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
 // skipped for now. Wire tasks.* keys into permission_catalog and gate this
 // section the same way HR/Finance/etc. do before this ships for real.
 //
-// board/:id (D2) and its nested task/:id (D3, the slide-over),
-// department/:id (D6), my-work (D7), admin/templates[/:id] (D8),
+// board/:id (D2), department/:id (D6), and my-work (D7) each mount D3's
+// slide-over as their own nested task/:id route. TaskDetailPanel reads no
+// boardId param — it derives its "base path" from the current URL, so
+// closing or following a breadcrumb/subtask link returns to whichever of
+// the three lists opened it (previously every list navigated away to the
+// task's board instead of staying put). admin/templates[/:id] (D8),
 // space/:id/settings (D9, which also holds D10's automations tab), and
-// admin/fields (D11) are all real now; task/:id without a board (D1's
-// search, etc.) goes through TaskRedirect so the panel is never opened
-// without the list mounted behind it.
+// admin/fields (D11) are all real now; task/:id without a list context
+// (D1's search, etc.) goes through TaskRedirect so the panel is never
+// opened without a list mounted behind it.
 export default function TasksRoutes() {
   return (
     <Routes>
@@ -30,8 +34,12 @@ export default function TasksRoutes() {
         <Route path="board/:boardId" element={<TaskBoardPage />}>
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
-        <Route path="department/:departmentId" element={<DepartmentPage />} />
-        <Route path="my-work" element={<MyWorkPage />} />
+        <Route path="department/:departmentId" element={<DepartmentPage />}>
+          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        </Route>
+        <Route path="my-work" element={<MyWorkPage />}>
+          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        </Route>
         <Route path="admin/templates" element={<TemplatesAdminPage />} />
         <Route path="admin/templates/:templateId" element={<TemplateBuilderPage />} />
         <Route path="admin/fields" element={<FieldsAdminPage />} />

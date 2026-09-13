@@ -23,9 +23,12 @@ const PRIORITIES: Priority[] = ["urgent", "high", "normal", "low"];
 interface PriorityCellProps {
   priority: Priority | null;
   onChange: (priority: Priority | null) => void;
+  /** See StatusCell's align prop — "left" for narrow contexts near the
+   * screen's left edge (the D3 detail panel). */
+  align?: "left" | "right";
 }
 
-export default function PriorityCell({ priority, onChange }: PriorityCellProps) {
+export default function PriorityCell({ priority, onChange, align = "right" }: PriorityCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false));
@@ -50,7 +53,7 @@ export default function PriorityCell({ priority, onChange }: PriorityCellProps) 
       )}
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
           {PRIORITIES.map((p) => (
             <button
               key={p}
