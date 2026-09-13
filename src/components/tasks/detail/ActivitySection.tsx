@@ -3,6 +3,8 @@ import { History, MessageSquare, Check, Pencil, Trash2, X } from "lucide-react";
 import type { Activity, Comment } from "../../../hooks/tasks/useTaskDetail";
 import type { EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
 import { useAuth } from "../../../hooks/useAuth";
+import MentionTextarea from "./MentionTextarea";
+import MentionText from "./MentionText";
 
 const ACTION_LABELS: Record<string, string> = {
   created: "أنشأ المهمة",
@@ -32,18 +34,22 @@ export default function ActivitySection({
   activity,
   comments,
   employeesById,
+  excludeTaskId,
   onAddComment,
   onEditComment,
   onDeleteComment,
   onToggleResolved,
+  onNavigateToTask,
 }: {
   activity: Activity[];
   comments: Comment[];
   employeesById: Map<string, EmployeeLite>;
+  excludeTaskId: string;
   onAddComment: (text: string) => void;
   onEditComment: (id: string, text: string) => void;
   onDeleteComment: (id: string) => void;
   onToggleResolved: (id: string, resolved: boolean) => void;
+  onNavigateToTask: (taskId: string) => void;
 }) {
   const { user } = useAuth();
   const [draft, setDraft] = useState("");
@@ -79,13 +85,14 @@ export default function ActivitySection({
       <div className="flex items-start gap-2">
         <MessageSquare className="mt-1.5 h-3.5 w-3.5 shrink-0 text-gray-300" />
         <div className="flex-1">
-          <textarea
+          <MentionTextarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={setDraft}
+            excludeTaskId={excludeTaskId}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
             }}
-            placeholder="اكتب تعليقاً... (Ctrl+Enter للإرسال)"
+            placeholder="اكتب تعليقاً... (Ctrl+Enter للإرسال، @ للإشارة إلى مهمة)"
             rows={2}
             className="w-full resize-none rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none"
           />
@@ -164,15 +171,20 @@ export default function ActivitySection({
 
                   {isEditing ? (
                     <div className="mt-1 flex items-center gap-1.5">
-                      <input
+                      <MentionTextarea
                         autoFocus
                         value={editDraft}
-                        onChange={(e) => setEditDraft(e.target.value)}
+                        onChange={setEditDraft}
+                        excludeTaskId={excludeTaskId}
+                        rows={1}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") submitEdit(c.id);
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            submitEdit(c.id);
+                          }
                           if (e.key === "Escape") setEditingId(null);
                         }}
-                        className="flex-1 rounded border border-gray-200 px-1.5 py-1 text-sm outline-none"
+                        className="flex-1 resize-none rounded border border-gray-200 px-1.5 py-1 text-sm outline-none"
                       />
                       <button onClick={() => submitEdit(c.id)} className="text-primary">
                         <Check className="h-3.5 w-3.5" />
@@ -182,7 +194,7 @@ export default function ActivitySection({
                       </button>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap text-gray-700">{text}</p>
+                    <MentionText text={text} onNavigateToTask={onNavigateToTask} />
                   )}
                   <div className="text-xs text-gray-400">
                     {new Date(c.created_at).toLocaleString("ar-u-nu-latn")}

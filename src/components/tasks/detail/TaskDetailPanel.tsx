@@ -5,6 +5,7 @@ import { useTaskDetail } from "../../../hooks/tasks/useTaskDetail";
 import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
 import AssigneeCell from "../board/AssigneeCell";
+import CustomFieldCell from "../board/CustomFieldCell";
 import LinkedRecordCard from "./LinkedRecordCard";
 import LinkRecordPicker from "./LinkRecordPicker";
 import RequirementsSection from "./RequirementsSection";
@@ -16,6 +17,7 @@ import AttachmentsSection from "./AttachmentsSection";
 import ActivitySection from "./ActivitySection";
 import TagPicker from "./TagPicker";
 import RecurrenceSection from "./RecurrenceSection";
+import MentionTextarea from "./MentionTextarea";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -52,12 +54,16 @@ export default function TaskDetailPanel() {
     updateField,
     setAssignees,
     satisfyRequirement,
+    setCustomValue,
+    addRequirement,
+    deleteRequirement,
     addChecklist,
     addChecklistItem,
     toggleChecklistItem,
     addSubtask,
     addRelationship,
     removeRelationship,
+    syncMentions,
     addLink,
     removeLink,
     addComment,
@@ -150,16 +156,22 @@ export default function TaskDetailPanel() {
 
             {/* description is JSON (build plan §4.7), not HTML — no rich-text
                 editor exists in this repo yet, so this stores {text: string}
-                as a placeholder shape rather than a real doc model. */}
-            <textarea
+                as a placeholder shape rather than a real doc model. Typing
+                "@task title" opens a search dropdown (MentionTextarea) —
+                the token it inserts renders as raw text here (no view/edit
+                split for this field) but still creates the reference
+                relationship on save, per build plan §4.13. */}
+            <MentionTextarea
               value={
                 descriptionDraft ??
                 ((data.task.description as { text?: string } | null)?.text ?? "")
               }
-              onChange={(e) => setDescriptionDraft(e.target.value)}
+              onChange={setDescriptionDraft}
+              excludeTaskId={data.task.id}
               onBlur={() => {
                 if (descriptionDraft !== null) {
                   updateField({ description: { text: descriptionDraft } });
+                  syncMentions(descriptionDraft);
                 }
                 setDescriptionDraft(null);
               }}
@@ -237,6 +249,21 @@ export default function TaskDetailPanel() {
                   className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
                 />
               </FieldRow>
+              {/* The board's attached custom fields (D2's "+" column
+                  editor) previously had no home in this panel — only the
+                  dense board row could show or edit them. */}
+              {data.customColumns.map((col) => (
+                <FieldRow key={col.boardColumnId} label={col.name_ar}>
+                  <CustomFieldCell
+                    column={col}
+                    value={data.customValues.get(col.fieldDefinitionId)}
+                    employeesById={data.employeesById}
+                    allEmployees={data.employees}
+                    onChange={(value) => setCustomValue({ fieldDefinitionId: col.fieldDefinitionId, value })}
+                    align="left"
+                  />
+                </FieldRow>
+              ))}
             </div>
 
             <Section title="السجل المرتبط">
@@ -249,10 +276,12 @@ export default function TaskDetailPanel() {
               </div>
             </Section>
 
-            <Section title="" hidden={data.requirements.length === 0}>
+            <Section title="">
               <RequirementsSection
                 requirements={data.requirements}
                 onToggle={(id, satisfied) => satisfyRequirement({ requirementId: id, satisfied })}
+                onAdd={addRequirement}
+                onDelete={deleteRequirement}
               />
             </Section>
 
@@ -302,10 +331,18 @@ export default function TaskDetailPanel() {
                 activity={data.activity}
                 comments={data.comments}
                 employeesById={data.employeesById}
-                onAddComment={(text) => addComment({ text })}
-                onEditComment={(id, text) => editComment({ id, text })}
+                excludeTaskId={data.task.id}
+                onAddComment={async (text) => {
+                  await addComment({ text });
+                  syncMentions(text);
+                }}
+                onEditComment={async (id, text) => {
+                  await editComment({ id, text });
+                  syncMentions(text);
+                }}
                 onDeleteComment={deleteComment}
                 onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
+                onNavigateToTask={(id) => navigate(`${basePath}/task/${id}`)}
               />
             </Section>
 

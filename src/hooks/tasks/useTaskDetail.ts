@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
-import type { Database } from "../../lib/supabase";
+import type { Database, Json } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { resolveStatusSetId } from "./resolveStatusSetId";
-import type { EmployeeLite, StatusRow, TaskRow } from "./useTaskBoard";
+import type { EmployeeLite, StatusRow, TaskRow, CustomColumn } from "./useTaskBoard";
 import type { Tag } from "./useAdminCatalog";
+import { extractMentionedTaskIds } from "./mentionUtils";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -61,6 +62,8 @@ export interface TaskDetailData {
   comments: Comment[];
   allTags: Tag[];
   tagIds: string[];
+  customColumns: CustomColumn[];
+  customValues: Map<string, Json>;
 }
 
 export function useTaskDetail(taskId: string | undefined) {
@@ -238,6 +241,41 @@ export function useTaskDetail(taskId: string | undefined) {
         relatedTitle: refTaskById.get(r.related_task_id)?.title ?? "مهمة محذوفة",
       }));
 
+      // The board's attached custom fields (D2's "+"/"···" columns) had no
+      // home anywhere in D3 until now — only the dense board row could
+      // show or edit them. Same CustomColumn shape useTaskBoard.ts uses,
+      // so CustomFieldCell renders identically in both places.
+      const { data: boardColumnRows, error: boardColumnsError } = await tasksDb
+        .from("board_columns")
+        .select("id, field_definition_id, sort_order")
+        .eq("board_id", task.board_id)
+        .order("sort_order");
+      if (boardColumnsError) throw boardColumnsError;
+
+      const columnFieldIds = (boardColumnRows ?? []).map((c) => c.field_definition_id);
+      const [{ data: fieldDefRows, error: fieldDefsError }, { data: valueRows, error: valuesError }] = await Promise.all([
+        columnFieldIds.length
+          ? tasksDb.from("field_definitions").select("id, name_ar, type, config").in("id", columnFieldIds)
+          : Promise.resolve({ data: [], error: null }),
+        columnFieldIds.length
+          ? tasksDb.from("task_values").select("field_definition_id, value").eq("task_id", taskId).in("field_definition_id", columnFieldIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (fieldDefsError) throw fieldDefsError;
+      if (valuesError) throw valuesError;
+
+      const fieldDefById = new Map((fieldDefRows ?? []).map((f) => [f.id, f]));
+      const customColumns: CustomColumn[] = (boardColumnRows ?? [])
+        .map((c) => {
+          const field = fieldDefById.get(c.field_definition_id);
+          return field
+            ? { boardColumnId: c.id, fieldDefinitionId: field.id, name_ar: field.name_ar, type: field.type, config: field.config }
+            : null;
+        })
+        .filter((c): c is CustomColumn => !!c);
+
+      const customValues = new Map<string, Json>((valueRows ?? []).map((v) => [v.field_definition_id, v.value]));
+
       return {
         task,
         breadcrumb: {
@@ -275,6 +313,8 @@ export function useTaskDetail(taskId: string | undefined) {
         comments: comments ?? [],
         allTags: allTags ?? [],
         tagIds: (taskTagRows ?? []).map((r) => r.tag_id),
+        customColumns,
+        customValues,
       };
     },
   });
@@ -288,6 +328,17 @@ export function useTaskDetail(taskId: string | undefined) {
     mutationFn: async (patch: Partial<Pick<TaskRow, "title" | "description" | "status_id" | "priority" | "due_date" | "start_date" | "department_id" | "specialization_id">>) => {
       if (!taskId) return;
       const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const setCustomValue = useMutation({
+    mutationFn: async ({ fieldDefinitionId, value }: { fieldDefinitionId: string; value: Json }) => {
+      if (!taskId) return;
+      const { error } = await tasksDb
+        .from("task_values")
+        .upsert({ task_id: taskId, field_definition_id: fieldDefinitionId, value }, { onConflict: "task_id,field_definition_id" });
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -323,6 +374,23 @@ export function useTaskDetail(taskId: string | undefined) {
           satisfied_by: satisfied ? user?.id ?? null : null,
         })
         .eq("id", requirementId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addRequirement = useMutation({
+    mutationFn: async (requirementType: Database["tasks"]["Enums"]["requirement_type"]) => {
+      if (!taskId) throw new Error("no task id");
+      const { error } = await tasksDb.from("task_requirements").insert({ task_id: taskId, requirement_type: requirementType });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteRequirement = useMutation({
+    mutationFn: async (requirementId: string) => {
+      const { error } = await tasksDb.from("task_requirements").delete().eq("id", requirementId);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -373,6 +441,36 @@ export function useTaskDetail(taskId: string | undefined) {
         relationship_type: type,
         created_by: user?.id ?? null,
       });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  // Build plan §4.13: "reference rows are created automatically when
+  // someone @mentions a task elsewhere" — called after saving a
+  // description or comment whose text may contain "@[Title](id)" tokens
+  // (mentionUtils.ts). Skips ids that already have a reference
+  // relationship, since task_relationships has no uniqueness constraint
+  // (known issue, tasks-module-db-summary.md §6) and re-saving the same
+  // text repeatedly would otherwise pile up duplicate rows.
+  const syncMentions = useMutation({
+    mutationFn: async (text: string) => {
+      if (!taskId || !query.data) return;
+      const mentionedIds = extractMentionedTaskIds(text).filter((id) => id !== taskId);
+      if (!mentionedIds.length) return;
+      const alreadyReferenced = new Set(
+        query.data.relationships.filter((r) => r.relationship_type === "reference").map((r) => r.related_task_id),
+      );
+      const toInsert = mentionedIds.filter((id) => !alreadyReferenced.has(id));
+      if (!toInsert.length) return;
+      const { error } = await tasksDb.from("task_relationships").insert(
+        toInsert.map((relatedTaskId) => ({
+          task_id: taskId,
+          related_task_id: relatedTaskId,
+          relationship_type: "reference" as const,
+          created_by: user?.id ?? null,
+        })),
+      );
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -526,14 +624,18 @@ export function useTaskDetail(taskId: string | undefined) {
     error: query.error,
     refetch: query.refetch,
     updateField: updateField.mutate,
+    setCustomValue: setCustomValue.mutate,
     setAssignees: setAssignees.mutate,
     satisfyRequirement: satisfyRequirement.mutate,
+    addRequirement: addRequirement.mutate,
+    deleteRequirement: deleteRequirement.mutate,
     addChecklist: addChecklist.mutate,
     addChecklistItem: addChecklistItem.mutate,
     toggleChecklistItem: toggleChecklistItem.mutate,
     addSubtask: addSubtask.mutate,
     addRelationship: addRelationship.mutate,
     removeRelationship: removeRelationship.mutate,
+    syncMentions: syncMentions.mutate,
     addLink: addLink.mutateAsync,
     removeLink: removeLink.mutate,
     addComment: addComment.mutateAsync,

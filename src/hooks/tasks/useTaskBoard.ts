@@ -53,6 +53,7 @@ export interface TaskBoardData {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  subtaskProgressByTask: Map<string, { done: number; total: number }>;
   /** null when the board's space isn't a project space (department/company/personal) — tasks.project_id is nullable for exactly this case. */
   projectId: string | null;
   customColumns: CustomColumn[];
@@ -244,6 +245,22 @@ export function useTaskBoard(boardId: string | undefined) {
         (requirementsResult.data ?? []).map((r) => r.task_id),
       );
 
+      // Subtask progress (Part 11 open decision #5) — plain completed-count,
+      // not weighted by time_estimate_minutes: most ad-hoc tasks never get
+      // an estimate filled in, so weighting would silently show 0% or hide
+      // the badge entirely for them. Counting always works. Direct
+      // children only, not the whole subtree, matching D2's row scope.
+      const categoryByStatusId = new Map((statuses ?? []).map((s) => [s.id, s.category]));
+      const subtaskProgressByTask = new Map<string, { done: number; total: number }>();
+      for (const t of tasks ?? []) {
+        if (!t.parent_task_id) continue;
+        const progress = subtaskProgressByTask.get(t.parent_task_id) ?? { done: 0, total: 0 };
+        progress.total += 1;
+        const category = categoryByStatusId.get(t.status_id);
+        if (category === "done" || category === "closed") progress.done += 1;
+        subtaskProgressByTask.set(t.parent_task_id, progress);
+      }
+
       const { data: boardColumnRows, error: boardColumnsError } = await tasksDb
         .from("board_columns")
         .select("id, field_definition_id, sort_order")
@@ -298,6 +315,7 @@ export function useTaskBoard(boardId: string | undefined) {
         linkedTaskIds,
         blockedTaskIds,
         unmetRequirementTaskIds,
+        subtaskProgressByTask,
         projectId: space.project_id,
         customColumns,
         valuesByTask,

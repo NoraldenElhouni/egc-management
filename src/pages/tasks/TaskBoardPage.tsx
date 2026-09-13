@@ -83,6 +83,7 @@ export default function TaskBoardPage() {
           linkedTaskIds={data.linkedTaskIds}
           blockedTaskIds={data.blockedTaskIds}
           unmetRequirementTaskIds={data.unmetRequirementTaskIds}
+          subtaskProgressByTask={data.subtaskProgressByTask}
           customColumns={data.customColumns}
           valuesByTask={data.valuesByTask}
           onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}

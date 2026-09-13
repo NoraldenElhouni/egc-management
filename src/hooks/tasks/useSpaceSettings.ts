@@ -45,6 +45,12 @@ export interface BoardLite {
   taskCount: number;
 }
 
+export interface FolderLite {
+  id: string;
+  name: string;
+  boardCount: number;
+}
+
 export interface SpaceSettingsData {
   space: Space;
   members: MemberLite[];
@@ -52,7 +58,7 @@ export interface SpaceSettingsData {
   statuses: StatusRow[];
   statusSetIsSpaceOwned: boolean;
   boards: BoardLite[];
-  folders: { id: string; name: string }[];
+  folders: FolderLite[];
 }
 
 export function useSpaceSettings(spaceId: string | undefined) {
@@ -134,6 +140,12 @@ export function useSpaceSettings(spaceId: string | undefined) {
       }
       const zoneNameById = new Map((zoneRows ?? []).map((z) => [z.id, z.name]));
 
+      const boardCountByFolder = new Map<string, number>();
+      for (const row of boardRows ?? []) {
+        if (!row.folder_id) continue;
+        boardCountByFolder.set(row.folder_id, (boardCountByFolder.get(row.folder_id) ?? 0) + 1);
+      }
+
       return {
         space,
         members: (memberRows ?? []).map((m) => ({
@@ -154,7 +166,11 @@ export function useSpaceSettings(spaceId: string | undefined) {
           folderId: b.folder_id,
           taskCount: taskCountByBoard.get(b.id) ?? 0,
         })),
-        folders: folderRows ?? [],
+        folders: (folderRows ?? []).map((f) => ({
+          id: f.id,
+          name: f.name,
+          boardCount: boardCountByFolder.get(f.id) ?? 0,
+        })),
       };
     },
   });
@@ -265,6 +281,44 @@ export function useSpaceSettings(spaceId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  // Archive, not hard delete — spaces.is_archived is already filtered on
+  // everywhere a space list is read (useTasksSidebar, useDepartmentView,
+  // the /tasks landing page), so this is a safe, already-respected
+  // soft-delete: the space just stops appearing anywhere, nothing about
+  // its boards/tasks is touched or lost.
+  const archiveSpace = useMutation({
+    mutationFn: async () => {
+      if (!spaceId) throw new Error("no space id");
+      const { error } = await tasksDb.from("spaces").update({ is_archived: true }).eq("id", spaceId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const renameFolder = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await tasksDb.from("folders").update({ name }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  // Same archive-not-delete reasoning as archiveSpace, plus one extra
+  // step: folders.is_archived is filtered when building the sidebar tree,
+  // and a board still pointing at a now-hidden folder_id would vanish
+  // from that tree entirely (shows under neither the folder nor the
+  // space) — so boards inside are un-filed (folder_id → null) first,
+  // which keeps them visible directly under the space.
+  const archiveFolder = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: unfileError } = await tasksDb.from("boards").update({ folder_id: null }).eq("folder_id", id);
+      if (unfileError) throw unfileError;
+      const { error } = await tasksDb.from("folders").update({ is_archived: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   const updateBoard = useMutation({
     mutationFn: async ({
       id,
@@ -292,6 +346,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
     loading: query.isPending,
     error: query.error,
     updateSpace: updateSpace.mutateAsync,
+    archiveSpace: archiveSpace.mutateAsync,
     updateFeatureSettings: updateFeatureSettings.mutateAsync,
     addMember: addMember.mutateAsync,
     updateMemberAccess: updateMemberAccess.mutateAsync,
@@ -303,5 +358,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
     deleteStatus: deleteStatus.mutateAsync,
     updateBoard: updateBoard.mutateAsync,
     deleteBoard: deleteBoard.mutateAsync,
+    renameFolder: renameFolder.mutateAsync,
+    archiveFolder: archiveFolder.mutateAsync,
   };
 }

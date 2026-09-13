@@ -38,6 +38,7 @@ interface TaskTableProps {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
   onChangeStatus: (taskId: string, statusId: string) => void;
@@ -85,6 +86,7 @@ export default function TaskTable({
   linkedTaskIds,
   blockedTaskIds,
   unmetRequirementTaskIds,
+  subtaskProgressByTask,
   customColumns,
   valuesByTask,
   onChangeStatus,
@@ -301,6 +303,7 @@ export default function TaskTable({
                 linkedTaskIds={linkedTaskIds}
                 blockedTaskIds={blockedTaskIds}
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
+                subtaskProgressByTask={subtaskProgressByTask}
                 customColumns={customColumns}
                 valuesByTask={valuesByTask}
                 onChangeStatus={onChangeStatus}

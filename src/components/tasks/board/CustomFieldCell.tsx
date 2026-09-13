@@ -20,12 +20,16 @@ export default function CustomFieldCell({
   employeesById,
   allEmployees,
   onChange,
+  align = "right",
 }: {
   column: CustomColumn;
   value: Json | undefined;
   employeesById: Map<string, EmployeeLite>;
   allEmployees: EmployeeLite[];
   onChange: (value: Json) => void;
+  /** See StatusCell's align prop — "left" for narrow contexts near the
+   * screen's left edge (the D3 detail panel). */
+  align?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -98,7 +102,7 @@ export default function CustomFieldCell({
             {current?.label_ar ?? "—"}
           </button>
           {open && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+            <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
               {options.map((o) => (
                 <button
                   key={o.id}
@@ -140,7 +144,7 @@ export default function CustomFieldCell({
                 })}
           </button>
           {open && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+            <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
               {options.map((o) => (
                 <label key={o.id} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50">
                   <input type="checkbox" checked={selectedIds.includes(o.id)} onChange={() => toggle(o.id)} className="h-3.5 w-3.5" />
@@ -162,7 +166,7 @@ export default function CustomFieldCell({
             {employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "—"}
           </button>
           {open && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-40 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+            <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-40 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
               {allEmployees.map((e) => (
                 <button
                   key={e.id}

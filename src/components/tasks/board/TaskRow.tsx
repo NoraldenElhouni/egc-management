@@ -49,6 +49,7 @@ interface TaskRowProps {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
   onChangeStatus: (taskId: string, statusId: string) => void;
@@ -79,6 +80,7 @@ export default function TaskRow({
   linkedTaskIds,
   blockedTaskIds,
   unmetRequirementTaskIds,
+  subtaskProgressByTask,
   customColumns,
   valuesByTask,
   onChangeStatus,
@@ -130,6 +132,7 @@ export default function TaskRow({
   const department = task.department_id
     ? departmentNamesById.get(task.department_id)
     : null;
+  const progress = subtaskProgressByTask.get(task.id);
 
   return (
     <>
@@ -206,6 +209,19 @@ export default function TaskRow({
             {task.title}
           </button>
 
+          {progress && (
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                progress.done === progress.total
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+              title="المهام الفرعية المكتملة"
+            >
+              {progress.done}/{progress.total}
+            </span>
+          )}
+
           {linkedTaskIds.has(task.id) && (
             <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
           )}
@@ -281,6 +297,7 @@ export default function TaskRow({
               linkedTaskIds={linkedTaskIds}
               blockedTaskIds={blockedTaskIds}
               unmetRequirementTaskIds={unmetRequirementTaskIds}
+              subtaskProgressByTask={subtaskProgressByTask}
               customColumns={customColumns}
               valuesByTask={valuesByTask}
               onChangeStatus={onChangeStatus}
