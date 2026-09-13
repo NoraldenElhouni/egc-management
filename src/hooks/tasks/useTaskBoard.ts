@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import type { Database, Json } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { resolveStatusSetId } from "./resolveStatusSetId";
+import { DEFAULT_FEATURE_SETTINGS, type SpaceFeatureSettings } from "./useSpaceSettings";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7, D2).
 //
@@ -59,6 +60,7 @@ export interface TaskBoardData {
   customColumns: CustomColumn[];
   hiddenColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>; // task_id -> field_definition_id -> value
+  featureSettings: SpaceFeatureSettings;
 }
 
 export function useAllFieldDefinitions() {
@@ -96,7 +98,7 @@ export function useTaskBoard(boardId: string | undefined) {
         await Promise.all([
           tasksDb
             .from("spaces")
-            .select("project_id")
+            .select("project_id, settings")
             .eq("id", board.space_id)
             .single(),
           resolveStatusSetId(board.status_set_id, board.space_id),
@@ -106,6 +108,17 @@ export function useTaskBoard(boardId: string | undefined) {
         ]);
       if (spaceError) throw spaceError;
       if (zoneRow.error) throw zoneRow.error;
+
+      // D9's "الميزات" tab wrote these but nothing ever read them back —
+      // priorities/task_types were saved, fully inert. This is the read
+      // side: D2 respects them for the priority column and the task-type
+      // dot/group-by option. time_tracking stays inert (no time-tracking
+      // UI exists yet to gate); default_view stays inert (Kanban is
+      // Part 7/Phase 7 "Later", not built).
+      const featureSettings: SpaceFeatureSettings = {
+        ...DEFAULT_FEATURE_SETTINGS,
+        ...(space.settings as unknown as Partial<SpaceFeatureSettings>),
+      };
 
       const [
         { data: statuses, error: statusesError },
@@ -334,6 +347,7 @@ export function useTaskBoard(boardId: string | undefined) {
         customColumns,
         hiddenColumns,
         valuesByTask,
+        featureSettings,
       };
     },
   });

@@ -12,6 +12,7 @@ import type {
   TaskRow as TaskRowType,
   TaskTypeLite,
 } from "../../../hooks/tasks/useTaskBoard";
+import type { SpaceFeatureSettings } from "../../../hooks/tasks/useSpaceSettings";
 import type { Json } from "../../../lib/supabase";
 
 type GroupBy = "none" | "department" | "assignee" | "task_type" | "zone";
@@ -42,6 +43,7 @@ interface TaskTableProps {
   customColumns: CustomColumn[];
   hiddenColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
+  featureSettings: SpaceFeatureSettings;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangePriority: (taskId: string, priority: Priority | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
@@ -92,6 +94,7 @@ export default function TaskTable({
   customColumns,
   hiddenColumns,
   valuesByTask,
+  featureSettings,
   onChangeStatus,
   onChangePriority,
   onChangeDueDate,
@@ -214,11 +217,13 @@ export default function TaskTable({
           onChange={(e) => setGroupBy(e.target.value as GroupBy)}
           className="rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-gray-600 outline-none"
         >
-          {(Object.keys(GROUP_LABELS) as GroupBy[]).map((g) => (
-            <option key={g} value={g}>
-              {GROUP_LABELS[g]}
-            </option>
-          ))}
+          {(Object.keys(GROUP_LABELS) as GroupBy[])
+            .filter((g) => g !== "task_type" || featureSettings.task_types)
+            .map((g) => (
+              <option key={g} value={g}>
+                {GROUP_LABELS[g]}
+              </option>
+            ))}
         </select>
         <div className="flex items-center gap-1.5">
           <button
@@ -239,12 +244,12 @@ export default function TaskTable({
       </div>
 
       <div
-        style={rowGridStyle(customColumns.length)}
+        style={rowGridStyle(customColumns.length, featureSettings.priorities)}
         className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-2 py-2 text-xs font-semibold text-gray-500"
       >
         <div>عنوان المهمة</div>
         <div>الحالة</div>
-        <div>الأولوية</div>
+        {featureSettings.priorities && <div>الأولوية</div>}
         <div>الفريق</div>
         <div>الاستحقاق</div>
         <div>القسم</div>
@@ -313,6 +318,8 @@ export default function TaskTable({
                 subtaskProgressByTask={subtaskProgressByTask}
                 customColumns={customColumns}
                 valuesByTask={valuesByTask}
+                showPriority={featureSettings.priorities}
+                showTaskType={featureSettings.task_types}
                 onChangeStatus={onChangeStatus}
                 onChangePriority={onChangePriority}
                 onChangeDueDate={onChangeDueDate}

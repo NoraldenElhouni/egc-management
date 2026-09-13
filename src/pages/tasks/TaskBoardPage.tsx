@@ -88,6 +88,7 @@ export default function TaskBoardPage() {
           customColumns={data.customColumns}
           hiddenColumns={data.hiddenColumns}
           valuesByTask={data.valuesByTask}
+          featureSettings={data.featureSettings}
           onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}
           onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
           onChangeDueDate={(taskId, dueDate) => updateDueDate({ taskId, dueDate })}

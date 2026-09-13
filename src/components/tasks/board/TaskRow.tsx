@@ -15,17 +15,21 @@ import type {
 } from "../../../hooks/tasks/useTaskBoard";
 import type { Json } from "../../../lib/supabase";
 
-const FIXED_COLUMNS = "minmax(0,1fr) 120px 84px 96px 92px 100px";
+const FIXED_COLUMNS_WITH_PRIORITY = "minmax(0,1fr) 120px 84px 96px 92px 100px";
+const FIXED_COLUMNS_NO_PRIORITY = "minmax(0,1fr) 120px 96px 92px 100px";
 
 // A dynamic grid template (custom columns vary per board) can't be a
 // static Tailwind class, so both the header (TaskTable) and every row
 // compute the same inline style from the same column count — they must
-// stay in sync or cells drift out from under their header.
-export function rowGridStyle(customColumnCount: number): CSSProperties {
+// stay in sync or cells drift out from under their header. showPriority
+// comes from the space's feature toggles (D9) — turning "priorities" off
+// used to save the setting without anything reading it back.
+export function rowGridStyle(customColumnCount: number, showPriority = true): CSSProperties {
+  const fixed = showPriority ? FIXED_COLUMNS_WITH_PRIORITY : FIXED_COLUMNS_NO_PRIORITY;
   const customCols = Array(customColumnCount).fill("120px").join(" ");
   return {
     display: "grid",
-    gridTemplateColumns: `${FIXED_COLUMNS}${customCols ? ` ${customCols}` : ""} 64px`,
+    gridTemplateColumns: `${fixed}${customCols ? ` ${customCols}` : ""} 64px`,
     alignItems: "center",
     gap: "0.5rem",
   };
@@ -52,6 +56,8 @@ interface TaskRowProps {
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
+  showPriority: boolean;
+  showTaskType: boolean;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangePriority: (taskId: string, priority: TaskRowType["priority"]) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
@@ -83,6 +89,8 @@ export default function TaskRow({
   subtaskProgressByTask,
   customColumns,
   valuesByTask,
+  showPriority,
+  showTaskType,
   onChangeStatus,
   onChangePriority,
   onChangeDueDate,
@@ -148,7 +156,7 @@ export default function TaskRow({
         }}
         onDragLeave={() => setDropZone(null)}
         onDrop={handleDrop}
-        style={rowGridStyle(customColumns.length)}
+        style={rowGridStyle(customColumns.length, showPriority)}
         className={`min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50 ${
           dropZone === "before"
             ? "border-t-2 border-t-primary"
@@ -194,7 +202,7 @@ export default function TaskRow({
             <span className="w-3.5 shrink-0" />
           )}
 
-          {taskType && (
+          {showTaskType && taskType && (
             <span
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ background: taskType.color ?? "#9CA3AF" }}
@@ -248,10 +256,12 @@ export default function TaskRow({
           currentStatusId={task.status_id}
           onChange={(statusId) => onChangeStatus(task.id, statusId)}
         />
-        <PriorityCell
-          priority={task.priority}
-          onChange={(priority) => onChangePriority(task.id, priority)}
-        />
+        {showPriority && (
+          <PriorityCell
+            priority={task.priority}
+            onChange={(priority) => onChangePriority(task.id, priority)}
+          />
+        )}
         <AssigneeCell
           assigneeIds={assigneesByTask.get(task.id) ?? []}
           employeesById={employeesById}
@@ -300,6 +310,8 @@ export default function TaskRow({
               subtaskProgressByTask={subtaskProgressByTask}
               customColumns={customColumns}
               valuesByTask={valuesByTask}
+              showPriority={showPriority}
+              showTaskType={showTaskType}
               onChangeStatus={onChangeStatus}
               onChangePriority={onChangePriority}
               onChangeDueDate={onChangeDueDate}
