@@ -4,6 +4,7 @@ import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import type { EmployeeLite, StatusRow, TaskRow } from "./useTaskBoard";
+import type { Tag } from "./useAdminCatalog";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -58,6 +59,8 @@ export interface TaskDetailData {
   attachments: Attachment[];
   activity: Activity[];
   comments: Comment[];
+  allTags: Tag[];
+  tagIds: string[];
 }
 
 export function useTaskDetail(taskId: string | undefined) {
@@ -120,6 +123,8 @@ export function useTaskDetail(taskId: string | undefined) {
         { data: attachments, error: attachmentsError },
         { data: activity, error: activityError },
         { data: comments, error: commentsError },
+        { data: allTags, error: allTagsError },
+        { data: taskTagRows, error: taskTagsError },
       ] = await Promise.all([
         tasksDb.from("statuses").select("*").eq("status_set_id", statusSetId).order("sort_order"),
         tasksDb.from("task_assignees").select("user_id").eq("task_id", taskId),
@@ -147,6 +152,8 @@ export function useTaskDetail(taskId: string | undefined) {
         supabase.from("attachments").select("*").eq("entity_type", "task").eq("entity_id", taskId).order("created_at", { ascending: false }),
         tasksDb.from("task_activity").select("*").eq("task_id", taskId).order("created_at", { ascending: false }),
         tasksDb.from("task_comments").select("*").eq("task_id", taskId).order("created_at", { ascending: true }),
+        tasksDb.from("tags").select("*").order("name"),
+        tasksDb.from("task_tags").select("tag_id").eq("task_id", taskId),
       ]);
       if (statusesError) throw statusesError;
       if (assigneeError) throw assigneeError;
@@ -165,6 +172,8 @@ export function useTaskDetail(taskId: string | undefined) {
       if (attachmentsError) throw attachmentsError;
       if (activityError) throw activityError;
       if (commentsError) throw commentsError;
+      if (allTagsError) throw allTagsError;
+      if (taskTagsError) throw taskTagsError;
 
       const referencedTaskIds = Array.from(
         new Set([
@@ -264,6 +273,8 @@ export function useTaskDetail(taskId: string | undefined) {
         attachments: attachments ?? [],
         activity: activity ?? [],
         comments: comments ?? [],
+        allTags: allTags ?? [],
+        tagIds: (taskTagRows ?? []).map((r) => r.tag_id),
       };
     },
   });
@@ -407,6 +418,37 @@ export function useTaskDetail(taskId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const addLink = useMutation({
+    mutationFn: async ({
+      recordType,
+      recordId,
+      linkMode,
+    }: {
+      recordType: Database["tasks"]["Enums"]["link_record_type"];
+      recordId: string;
+      linkMode: Database["tasks"]["Enums"]["link_mode"];
+    }) => {
+      if (!taskId || !user?.id) throw new Error("no authenticated user");
+      const { error } = await tasksDb.from("task_links").insert({
+        task_id: taskId,
+        record_type: recordType,
+        record_id: recordId,
+        link_mode: linkMode,
+        created_by: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const removeLink = useMutation({
+    mutationFn: async (linkId: string) => {
+      const { error } = await tasksDb.from("task_links").delete().eq("id", linkId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   const addComment = useMutation({
     mutationFn: async ({ text, parentCommentId }: { text: string; parentCommentId?: string | null }) => {
       if (!taskId || !user?.id) throw new Error("no authenticated user");
@@ -448,6 +490,20 @@ export function useTaskDetail(taskId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const toggleTag = useMutation({
+    mutationFn: async ({ tagId, attached }: { tagId: string; attached: boolean }) => {
+      if (!taskId) throw new Error("no task id");
+      if (attached) {
+        const { error } = await tasksDb.from("task_tags").insert({ task_id: taskId, tag_id: tagId });
+        if (error) throw error;
+      } else {
+        const { error } = await tasksDb.from("task_tags").delete().eq("task_id", taskId).eq("tag_id", tagId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   // Hard delete, matching this module's other "danger zone" actions
   // (useSpaceSettings.ts's deleteBoard) rather than soft-archiving —
   // tasks_parent_task_id_fkey is ON DELETE CASCADE, so this also removes
@@ -478,10 +534,13 @@ export function useTaskDetail(taskId: string | undefined) {
     addSubtask: addSubtask.mutate,
     addRelationship: addRelationship.mutate,
     removeRelationship: removeRelationship.mutate,
+    addLink: addLink.mutateAsync,
+    removeLink: removeLink.mutate,
     addComment: addComment.mutateAsync,
     editComment: editComment.mutateAsync,
     deleteComment: deleteComment.mutate,
     toggleCommentResolved: toggleCommentResolved.mutate,
+    toggleTag: toggleTag.mutate,
     deleteTask: deleteTask.mutateAsync,
     deletingTask: deleteTask.isPending,
   };

@@ -6,6 +6,7 @@ import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
 import AssigneeCell from "../board/AssigneeCell";
 import LinkedRecordCard from "./LinkedRecordCard";
+import LinkRecordPicker from "./LinkRecordPicker";
 import RequirementsSection from "./RequirementsSection";
 import DependenciesSection from "./DependenciesSection";
 import ChecklistsSection from "./ChecklistsSection";
@@ -13,6 +14,8 @@ import SubtasksSection from "./SubtasksSection";
 import RelationshipsSection from "./RelationshipsSection";
 import AttachmentsSection from "./AttachmentsSection";
 import ActivitySection from "./ActivitySection";
+import TagPicker from "./TagPicker";
+import RecurrenceSection from "./RecurrenceSection";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -55,10 +58,13 @@ export default function TaskDetailPanel() {
     addSubtask,
     addRelationship,
     removeRelationship,
+    addLink,
+    removeLink,
     addComment,
     editComment,
     deleteComment,
     toggleCommentResolved,
+    toggleTag,
     deleteTask,
     deletingTask,
   } = useTaskDetail(taskId);
@@ -133,6 +139,14 @@ export default function TaskDetailPanel() {
               }}
               className="w-full border-none text-lg font-semibold text-gray-900 outline-none"
             />
+
+            <div className="mt-1.5">
+              <TagPicker
+                allTags={data.allTags}
+                tagIds={data.tagIds}
+                onToggle={(tagId, attached) => toggleTag({ tagId, attached })}
+              />
+            </div>
 
             {/* description is JSON (build plan §4.7), not HTML — no rich-text
                 editor exists in this repo yet, so this stores {text: string}
@@ -225,8 +239,14 @@ export default function TaskDetailPanel() {
               </FieldRow>
             </div>
 
-            <Section title="السجل المرتبط" hidden={data.links.length === 0}>
-              <LinkedRecordCard links={data.links} />
+            <Section title="السجل المرتبط">
+              <div className="space-y-1.5">
+                <LinkedRecordCard links={data.links} onRemove={removeLink} />
+                <LinkRecordPicker
+                  projectId={data.task.project_id}
+                  onAdd={(input) => addLink({ recordType: input.recordType, recordId: input.recordId, linkMode: input.linkMode })}
+                />
+              </div>
             </Section>
 
             <Section title="" hidden={data.requirements.length === 0}>
@@ -287,6 +307,10 @@ export default function TaskDetailPanel() {
                 onDeleteComment={deleteComment}
                 onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
               />
+            </Section>
+
+            <Section title="التكرار">
+              <RecurrenceSection taskId={data.task.id} boardId={data.breadcrumb.boardId} />
             </Section>
 
             <Section title="منطقة الخطر">

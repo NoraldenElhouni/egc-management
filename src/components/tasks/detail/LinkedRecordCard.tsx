@@ -1,27 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { LinkIcon } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
+import { LinkIcon, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
-import type { Database } from "../../../lib/supabase";
+import { useLinkedRecordInfo, RECORD_TYPE_LABELS } from "../../../hooks/tasks/useLinkedRecord";
 import type { TaskLink } from "../../../hooks/tasks/useTaskDetail";
 
-type RecordType = Database["tasks"]["Enums"]["link_record_type"];
+// "The buyer taps شراء الرخام and lands in the actual order" (build plan
+// §4.14) — useLinkedRecordInfo resolves each link's real record and its
+// route per-type (see that hook's header for which types have a real
+// detail page today vs. a closest-available fallback).
 
-const RECORD_TYPE_LABELS: Record<RecordType, string> = {
-  shop_order: "طلب شراء",
-  work_request: "طلب عمل",
-  contract_round: "جولة عقد",
-  contract: "عقد",
-  payment_request: "طلب دفعة",
-  expense: "مصروف",
-  project_map: "خريطة المشروع",
-};
-
-// "The record closes the task. When shop_orders.status becomes arrived, a
-// trigger closes every task linked to it" (build plan §5.5 recipe 2) —
-// that recipe is the ONLY record type actually wired up so far (per
-// tasks-module-db-summary.md's own known-issues list), so a live status
-// badge is only fetched for shop_order; other types show the link with no
-// live status rather than pretending one exists.
 function useLiveStatus(link: TaskLink) {
   return useQuery({
     queryKey: ["task-link-status", link.id],
@@ -52,35 +40,54 @@ function useCoversMultiple(link: TaskLink) {
   });
 }
 
-function LinkedRecordRow({ link }: { link: TaskLink }) {
+function LinkedRecordRow({ link, onRemove }: { link: TaskLink; onRemove: (id: string) => void }) {
+  const { data: info } = useLinkedRecordInfo(link.record_type, link.record_id);
   const { data: liveStatus } = useLiveStatus(link);
   const { data: coversMultiple } = useCoversMultiple(link);
 
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2 text-sm">
+  const content = (
+    <>
       <LinkIcon className="h-3.5 w-3.5 shrink-0 text-blue-500" />
       <span className="flex-1 truncate text-blue-900">
         {RECORD_TYPE_LABELS[link.record_type]}
+        {info?.label ? ` — ${info.label}` : ""}
         {link.link_mode === "produces" ? " (تُنتج بهذه المهمة)" : " (مرجع)"}
       </span>
       {liveStatus && (
-        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs text-blue-700">
-          {liveStatus}
-        </span>
+        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs text-blue-700">{liveStatus}</span>
       )}
-      {coversMultiple && (
-        <span className="shrink-0 text-xs text-blue-400">تغطي عدة مهام</span>
+      {coversMultiple && <span className="shrink-0 text-xs text-blue-400">تغطي عدة مهام</span>}
+    </>
+  );
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2 text-sm">
+      {info?.url ? (
+        <RouterLink to={info.url} className="flex flex-1 items-center gap-2 overflow-hidden hover:underline">
+          {content}
+        </RouterLink>
+      ) : (
+        <div className="flex flex-1 items-center gap-2 overflow-hidden">{content}</div>
       )}
+      <button onClick={() => onRemove(link.id)} className="shrink-0 rounded p-0.5 text-blue-300 hover:bg-blue-100 hover:text-blue-600">
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
 
-export default function LinkedRecordCard({ links }: { links: TaskLink[] }) {
+export default function LinkedRecordCard({
+  links,
+  onRemove,
+}: {
+  links: TaskLink[];
+  onRemove: (id: string) => void;
+}) {
   if (links.length === 0) return null;
   return (
     <div className="space-y-1.5">
       {links.map((link) => (
-        <LinkedRecordRow key={link.id} link={link} />
+        <LinkedRecordRow key={link.id} link={link} onRemove={onRemove} />
       ))}
     </div>
   );

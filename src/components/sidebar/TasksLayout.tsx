@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import {
   Search,
   ChevronDown,
@@ -18,6 +19,8 @@ import {
   FileStack,
   Tag,
   Plus,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 import { supabase } from "../../lib/supabaseClient";
@@ -30,7 +33,52 @@ import {
 } from "../../hooks/tasks/useTasksSidebar";
 import { useCreateTaskEntities, useProjectZoneOptions, useCreateZone } from "../../hooks/tasks/useCreateTaskEntities";
 import { useClickOutside } from "../../hooks/tasks/useClickOutside";
+import { extractErrorMessage } from "../../hooks/tasks/extractErrorMessage";
+import { emitTaskError, setTaskErrorListener } from "../../hooks/tasks/taskErrorBus";
 import NewSpaceModal from "./NewSpaceModal";
+
+// A failed mutation anywhere in this module (most commonly the
+// completion-gate trigger rejecting a status change, or the reparent
+// cycle guard) used to fail completely silently — the click just did
+// nothing. Rather than add an onError to every one of the ~70
+// useMutation() calls across the module's hooks, this module gets its
+// own QueryClient (nested inside the app's real one, still hitting the
+// same Supabase client underneath) whose MutationCache reports every
+// mutation error to one toast, for free, with no per-call-site changes.
+const tasksQueryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onError: (error) => emitTaskError(extractErrorMessage(error)),
+  }),
+});
+
+function TaskErrorToast() {
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTaskErrorListener(setMessage);
+    return () => setTaskErrorListener(null);
+  }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
+  if (!message) return null;
+
+  return (
+    <div className="fixed bottom-4 left-1/2 z-[100] w-full max-w-sm -translate-x-1/2 px-4" dir="rtl">
+      <div className="flex items-start gap-2 rounded-lg bg-red-600 px-3.5 py-2.5 text-sm text-white shadow-2xl">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+        <span className="flex-1">{message}</span>
+        <button onClick={() => setMessage(null)} className="shrink-0 rounded p-0.5 hover:bg-white/20">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // =====================================================================
 // D1 — persistent Tasks sidebar (tasks/task-module-build-plan.md, Part 7).
@@ -423,7 +471,7 @@ function SpaceSection({ node }: { node: SpaceNode }) {
   );
 }
 
-const TasksLayout = () => {
+const TasksLayoutInner = () => {
   const { isCollapsed, toggle } = useSidebar();
   const { data, loading } = useTasksSidebar();
   const navigate = useNavigate();
@@ -697,5 +745,12 @@ const TasksLayout = () => {
     </div>
   );
 };
+
+const TasksLayout = () => (
+  <QueryClientProvider client={tasksQueryClient}>
+    <TasksLayoutInner />
+    <TaskErrorToast />
+  </QueryClientProvider>
+);
 
 export default TasksLayout;
