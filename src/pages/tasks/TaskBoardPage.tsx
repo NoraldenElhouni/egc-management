@@ -48,7 +48,7 @@ export default function TaskBoardPage() {
 
   return (
     <div className="flex h-full flex-col" dir="rtl">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
         <h1 className="text-base font-semibold text-gray-900">{data.board.name}</h1>
         <div className="flex items-center gap-2">
           <button

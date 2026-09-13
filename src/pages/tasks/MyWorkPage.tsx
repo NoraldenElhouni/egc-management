@@ -65,11 +65,11 @@ export default function MyWorkPage() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto" dir="rtl">
-      <div className="border-b border-gray-100 px-4 py-3">
+      <div className="border-b border-gray-100 px-6 py-4">
         <h1 className="text-base font-semibold text-gray-900">أعمالي</h1>
       </div>
 
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-6">
         {data.groups.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-200 p-8 text-center text-sm text-gray-400">
             لا توجد مهام مسندة إليك حالياً

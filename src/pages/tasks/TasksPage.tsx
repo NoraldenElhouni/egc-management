@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Loader2, Users, Building2, FolderKanban, Building, User } from "lucide-react";
+import { Loader2, Users, Building2, FolderKanban, Building, User, ListChecks } from "lucide-react";
 import { useTasksSidebar, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 
 // The /tasks index route — what shows before a space/board is picked.
@@ -22,14 +22,6 @@ const SPACE_TYPE_ICONS: Record<SpaceType, typeof FolderKanban> = {
   personal: User,
 };
 
-function firstBoardId(node: SpaceNode): string | null {
-  if (node.boards.length > 0) return node.boards[0].board.id;
-  for (const folder of node.folders) {
-    if (folder.boards.length > 0) return folder.boards[0].board.id;
-  }
-  return null;
-}
-
 function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
@@ -45,10 +37,12 @@ function SpaceCard({ node }: { node: SpaceNode }) {
   const openCount =
     node.boards.reduce((n, b) => n + b.openCount, 0) +
     node.folders.reduce((n, f) => n + f.boards.reduce((s, b) => s + b.openCount, 0), 0);
-  const boardId = firstBoardId(node);
 
-  const inner = (
-    <>
+  return (
+    <Link
+      to={`/tasks/space/${node.space.id}/tasks`}
+      className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
+    >
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-superLight text-primary">
           <Icon className="h-4.5 w-4.5" />
@@ -61,18 +55,6 @@ function SpaceCard({ node }: { node: SpaceNode }) {
         </span>
         <CountBadge count={openCount} />
       </div>
-    </>
-  );
-
-  if (!boardId) {
-    return <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 opacity-60">{inner}</div>;
-  }
-  return (
-    <Link
-      to={`/tasks/board/${boardId}`}
-      className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
-    >
-      {inner}
     </Link>
   );
 }
@@ -93,22 +75,37 @@ export default function TasksPage() {
     : [];
 
   return (
-    <div className="h-full overflow-y-auto p-4" dir="rtl">
+    <div className="h-full overflow-y-auto p-6" dir="rtl">
       <h1 className="mb-4 text-lg font-semibold text-gray-900">إدارة المهام</h1>
 
-      <Link
-        to="/tasks/my-work"
-        className="mb-5 flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
-      >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
-          <Users className="h-5 w-5" />
-        </span>
-        <div className="flex-1">
-          <div className="font-medium text-gray-800">أعمالي</div>
-          <div className="text-xs text-gray-400">المهام المسندة إليك عبر كل المشاريع</div>
-        </div>
-        <CountBadge count={data?.myWorkCount ?? 0} />
-      </Link>
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          to="/tasks/all-tasks"
+          className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-white">
+            <ListChecks className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <div className="font-medium text-gray-800">كل المهام</div>
+            <div className="text-xs text-gray-400">جميع المهام عبر كل المساحات واللوحات</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/tasks/my-work"
+          className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
+            <Users className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <div className="font-medium text-gray-800">أعمالي</div>
+            <div className="text-xs text-gray-400">المهام المسندة إليك عبر كل المشاريع</div>
+          </div>
+          <CountBadge count={data?.myWorkCount ?? 0} />
+        </Link>
+      </div>
 
       {!!data?.departments.length && (
         <div className="mb-5">

@@ -13,6 +13,7 @@ import {
   User,
   Layers,
   ListTodo,
+  ListChecks,
   Users,
   Loader2,
   Settings,
@@ -432,6 +433,13 @@ function SpaceSection({ node }: { node: SpaceNode }) {
           )}
         </div>
         <Link
+          to={`/tasks/space/${node.space.id}/tasks`}
+          className="shrink-0 rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
+          title="كل مهام المساحة"
+        >
+          <ListChecks className="h-3.5 w-3.5" />
+        </Link>
+        <Link
           to={`/tasks/space/${node.space.id}/settings`}
           className="shrink-0 rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
           title="إعدادات المساحة"
@@ -585,6 +593,13 @@ const TasksLayoutInner = () => {
               <span className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
             )}
           </Link>
+          <Link
+            to="/tasks/all-tasks"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            title="كل المهام"
+          >
+            <ListChecks className="h-5 w-5" />
+          </Link>
         </aside>
         <main className="mr-20 flex-1 overflow-y-auto scrollbar-hide">
           <Outlet />
@@ -704,7 +719,14 @@ const TasksLayoutInner = () => {
                 </div>
               )}
 
-              <div className="border-t border-gray-100 pt-3">
+              <div className="space-y-1 border-t border-gray-100 pt-3">
+                <Link
+                  to="/tasks/all-tasks"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100"
+                >
+                  <ListChecks className="h-4 w-4 shrink-0 text-gray-500" />
+                  <span className="flex-1 truncate">كل المهام</span>
+                </Link>
                 <Link
                   to="/tasks/my-work"
                   className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100"

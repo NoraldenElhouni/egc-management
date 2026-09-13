@@ -101,20 +101,20 @@ export default function DepartmentPage() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto" dir="rtl">
-      <div className="border-b border-gray-100 px-4 py-3">
+      <div className="border-b border-gray-100 px-6 py-4">
         <h1 className="text-base font-semibold text-gray-900">
           {data.department.name_ar ?? data.department.name}
         </h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 p-6 sm:grid-cols-4">
         <MetricCard label="مفتوحة" value={data.metrics.open} icon={<ListTodo className="h-4.5 w-4.5" />} tone="#3B82F6" />
         <MetricCard label="متأخرة" value={data.metrics.overdue} icon={<AlarmClock className="h-4.5 w-4.5" />} tone="#EF4444" />
         <MetricCard label="محظورة" value={data.metrics.blocked} icon={<Lock className="h-4.5 w-4.5" />} tone="#6B7280" />
         <MetricCard label="غير معينة" value={data.metrics.unassigned} icon={<UserX className="h-4.5 w-4.5" />} tone="#F59E0B" />
       </div>
 
-      <div className="flex-1 px-4 pb-4">
+      <div className="flex-1 px-6 pb-6">
         <div className="mb-2 text-xs font-semibold text-gray-500">المهام حسب المشروع</div>
         {data.projectGroups.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
@@ -196,7 +196,7 @@ export default function DepartmentPage() {
         )}
       </div>
 
-      <div className="border-t border-gray-100 px-4 py-4">
+      <div className="border-t border-gray-100 px-6 py-6">
         <div className="mb-2 text-xs font-semibold text-gray-500">توزيع العمل على الفريق</div>
         {data.teamLoad.length === 0 ? (
           <div className="text-sm text-gray-400">لا يوجد أعضاء في هذا القسم</div>
