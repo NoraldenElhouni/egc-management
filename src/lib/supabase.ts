@@ -1773,194 +1773,6 @@ export type Database = {
           },
         ]
       }
-      contract_milestones: {
-        Row: {
-          amount: number
-          completed_at: string | null
-          completed_by: string | null
-          contract_id: string
-          created_at: string
-          description: string | null
-          due_date: string | null
-          id: string
-          order_index: number
-          source_milestone_id: string | null
-          status: Database["public"]["Enums"]["milestone_status"]
-          title: string
-        }
-        Insert: {
-          amount: number
-          completed_at?: string | null
-          completed_by?: string | null
-          contract_id: string
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          order_index?: number
-          source_milestone_id?: string | null
-          status?: Database["public"]["Enums"]["milestone_status"]
-          title: string
-        }
-        Update: {
-          amount?: number
-          completed_at?: string | null
-          completed_by?: string | null
-          contract_id?: string
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          order_index?: number
-          source_milestone_id?: string | null
-          status?: Database["public"]["Enums"]["milestone_status"]
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contract_milestones_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_milestones_contract_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_milestones_source_milestone_id_fkey"
-            columns: ["source_milestone_id"]
-            isOneToOne: false
-            referencedRelation: "request_milestones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contractor_bid_items: {
-        Row: {
-          bid_id: string
-          id: string
-          notes: string | null
-          quantity: number
-          request_item_id: string
-          total_price: number
-          unit: string
-          unit_price: number
-        }
-        Insert: {
-          bid_id: string
-          id?: string
-          notes?: string | null
-          quantity: number
-          request_item_id: string
-          total_price: number
-          unit?: string
-          unit_price: number
-        }
-        Update: {
-          bid_id?: string
-          id?: string
-          notes?: string | null
-          quantity?: number
-          request_item_id?: string
-          total_price?: number
-          unit?: string
-          unit_price?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contractor_bid_items_bid_fkey"
-            columns: ["bid_id"]
-            isOneToOne: false
-            referencedRelation: "contractor_bids"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contractor_bid_items_request_item_fkey"
-            columns: ["request_item_id"]
-            isOneToOne: false
-            referencedRelation: "work_request_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contractor_bids: {
-        Row: {
-          contractor_id: string
-          days_needed: number
-          final_days: number | null
-          final_total: number | null
-          id: string
-          is_negotiating: boolean
-          negotiation_round: number
-          notes: string | null
-          request_id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["bid_status"]
-          submitted_at: string
-          total_price: number
-        }
-        Insert: {
-          contractor_id: string
-          days_needed: number
-          final_days?: number | null
-          final_total?: number | null
-          id?: string
-          is_negotiating?: boolean
-          negotiation_round?: number
-          notes?: string | null
-          request_id: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["bid_status"]
-          submitted_at?: string
-          total_price: number
-        }
-        Update: {
-          contractor_id?: string
-          days_needed?: number
-          final_days?: number | null
-          final_total?: number | null
-          id?: string
-          is_negotiating?: boolean
-          negotiation_round?: number
-          notes?: string | null
-          request_id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["bid_status"]
-          submitted_at?: string
-          total_price?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contractor_bids_contractor_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contractor_bids_request_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "work_requests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contractor_bids_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contractor_specialities: {
         Row: {
           contractor_id: string
@@ -2098,103 +1910,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contracts: {
-        Row: {
-          contractor_id: string
-          created_at: string
-          created_by: string
-          days_allocated: number
-          end_date: string | null
-          expense_id: string | null
-          id: string
-          notes: string | null
-          project_id: string
-          request_id: string
-          start_date: string | null
-          status: Database["public"]["Enums"]["contract_status"]
-          total_amount: number
-          updated_at: string
-          winning_bid_id: string
-        }
-        Insert: {
-          contractor_id: string
-          created_at?: string
-          created_by: string
-          days_allocated: number
-          end_date?: string | null
-          expense_id?: string | null
-          id?: string
-          notes?: string | null
-          project_id: string
-          request_id: string
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["contract_status"]
-          total_amount: number
-          updated_at?: string
-          winning_bid_id: string
-        }
-        Update: {
-          contractor_id?: string
-          created_at?: string
-          created_by?: string
-          days_allocated?: number
-          end_date?: string | null
-          expense_id?: string | null
-          id?: string
-          notes?: string | null
-          project_id?: string
-          request_id?: string
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["contract_status"]
-          total_amount?: number
-          updated_at?: string
-          winning_bid_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contracts_bid_fkey"
-            columns: ["winning_bid_id"]
-            isOneToOne: true
-            referencedRelation: "contractor_bids"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_contractor_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_expense_id_fkey"
-            columns: ["expense_id"]
-            isOneToOne: false
-            referencedRelation: "project_expenses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_project_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_request_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "work_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -2697,116 +2412,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      payment_requests: {
-        Row: {
-          amount: number
-          contract_id: string
-          contractor_id: string
-          created_at: string
-          decline_at: string | null
-          decline_reason: string | null
-          description: string | null
-          expense_id: string | null
-          id: string
-          milestone_id: string
-          payment_method: Database["public"]["Enums"]["payment_method"] | null
-          project_id: string
-          requested_by: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["payment_request_status"]
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          contract_id: string
-          contractor_id: string
-          created_at?: string
-          decline_at?: string | null
-          decline_reason?: string | null
-          description?: string | null
-          expense_id?: string | null
-          id?: string
-          milestone_id: string
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          project_id: string
-          requested_by: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["payment_request_status"]
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          contract_id?: string
-          contractor_id?: string
-          created_at?: string
-          decline_at?: string | null
-          decline_reason?: string | null
-          description?: string | null
-          expense_id?: string | null
-          id?: string
-          milestone_id?: string
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          project_id?: string
-          requested_by?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["payment_request_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_requests_contract_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_requests_contractor_fkey"
-            columns: ["contractor_id"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_requests_expense_fkey"
-            columns: ["expense_id"]
-            isOneToOne: false
-            referencedRelation: "project_expenses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_requests_milestone_fkey"
-            columns: ["milestone_id"]
-            isOneToOne: false
-            referencedRelation: "contract_milestones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_requests_project_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_requests_requested_by_fkey"
-            columns: ["requested_by"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_requests_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       payroll: {
         Row: {
@@ -6660,6 +6265,54 @@ export type Database = {
           },
         ]
       }
+      task_comments: {
+        Row: {
+          author_user_id: string
+          body: Json
+          created_at: string
+          id: string
+          is_resolved: boolean
+          parent_comment_id: string | null
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_user_id: string
+          body: Json
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          parent_comment_id?: string | null
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: Json
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          parent_comment_id?: string | null
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_dependencies: {
         Row: {
           blocked_task_id: string
@@ -6935,7 +6588,7 @@ export type Database = {
           occurrence_date: string | null
           parent_task_id: string | null
           priority: Database["tasks"]["Enums"]["priority"] | null
-          project_id: string
+          project_id: string | null
           recurrence_rule_id: string | null
           sort_order: number
           source_template_task_id: string | null
@@ -6962,7 +6615,7 @@ export type Database = {
           occurrence_date?: string | null
           parent_task_id?: string | null
           priority?: Database["tasks"]["Enums"]["priority"] | null
-          project_id: string
+          project_id?: string | null
           recurrence_rule_id?: string | null
           sort_order?: number
           source_template_task_id?: string | null
@@ -6989,7 +6642,7 @@ export type Database = {
           occurrence_date?: string | null
           parent_task_id?: string | null
           priority?: Database["tasks"]["Enums"]["priority"] | null
-          project_id?: string
+          project_id?: string | null
           recurrence_rule_id?: string | null
           sort_order?: number
           source_template_task_id?: string | null
@@ -7368,6 +7021,8 @@ export type Database = {
       }
       generate_recurrence_occurrences: { Args: never; Returns: undefined }
       recompute_overdue_flags: { Args: never; Returns: undefined }
+      resolve_status_set: { Args: { p_board_id: string }; Returns: string }
+      run_due_date_automations: { Args: never; Returns: undefined }
     }
     Enums: {
       access_level: "view" | "comment" | "edit" | "full"

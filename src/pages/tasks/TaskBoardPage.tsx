@@ -19,6 +19,12 @@ export default function TaskBoardPage() {
     updateDueDate,
     setAssignees,
     createTask,
+    setTaskValue,
+    attachField,
+    createAndAttachField,
+    detachColumn,
+    renameField,
+    moveTaskTo,
   } = useTaskBoard(boardId);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showZoneClone, setShowZoneClone] = useState(false);
@@ -77,12 +83,19 @@ export default function TaskBoardPage() {
           linkedTaskIds={data.linkedTaskIds}
           blockedTaskIds={data.blockedTaskIds}
           unmetRequirementTaskIds={data.unmetRequirementTaskIds}
+          customColumns={data.customColumns}
+          valuesByTask={data.valuesByTask}
           onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}
           onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
           onChangeDueDate={(taskId, dueDate) => updateDueDate({ taskId, dueDate })}
           onChangeAssignees={(taskId, userIds) => setAssignees({ taskId, userIds })}
           onCreateTask={(title, parentTaskId) => createTask({ title, parentTaskId })}
-          canCreateTask={!!data.projectId}
+          onChangeValue={(taskId, fieldDefinitionId, value) => setTaskValue({ taskId, fieldDefinitionId, value })}
+          onAttachField={attachField}
+          onCreateAndAttachField={createAndAttachField}
+          onDetachColumn={detachColumn}
+          onRenameField={(fieldDefinitionId, name_ar) => renameField({ fieldDefinitionId, name_ar })}
+          onMoveTaskTo={moveTaskTo}
         />
       </div>
 

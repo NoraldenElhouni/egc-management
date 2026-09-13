@@ -78,7 +78,7 @@ export function useMyWork() {
       if (tasksError) throw tasksError;
 
       const boardIds = Array.from(new Set((tasks ?? []).map((t) => t.board_id)));
-      const projectIds = Array.from(new Set((tasks ?? []).map((t) => t.project_id)));
+      const projectIds = Array.from(new Set((tasks ?? []).map((t) => t.project_id).filter(Boolean))) as string[];
       const zoneIds = Array.from(new Set((tasks ?? []).map((t) => t.zone_id).filter(Boolean))) as string[];
       const statusIds = Array.from(new Set((tasks ?? []).map((t) => t.status_id)));
       const templateTaskIds = Array.from(

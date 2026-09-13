@@ -99,7 +99,10 @@ function BoardRow({ item }: { item: BoardWithCount }) {
       }`}
     >
       <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-      <span className="flex-1 truncate">{item.board.name}</span>
+      <span className="flex-1 truncate">
+        {item.board.name}
+        {item.zoneName && <span className="text-xs text-gray-400"> ({item.zoneName})</span>}
+      </span>
       <CountBadge count={item.openCount} />
     </Link>
   );

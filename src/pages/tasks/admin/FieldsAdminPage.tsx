@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useAdminCatalog, type FieldType } from "../../../hooks/tasks/useAdminCatalog";
+import { Loader2, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { useAdminCatalog, type FieldType, type FieldOption, type FieldWithUsage } from "../../../hooks/tasks/useAdminCatalog";
+import type { Json } from "../../../lib/supabase";
+
+function randomId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+}
+
+const OPTION_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4", "#6B7280"];
 
 // D11 — Admin: fields, tags, task types (build plan Part 7). See
 // useAdminCatalog.ts's header for why deletes confirm with a usage
@@ -75,11 +82,16 @@ export default function FieldsAdminPage() {
   );
 }
 
+function isChoiceType(type: FieldType) {
+  return type === "select" || type === "multi_select";
+}
+
 function FieldsTab({ catalog }: { catalog: ReturnType<typeof useAdminCatalog> }) {
-  const { data, createField, deleteField } = catalog;
+  const { data, createField, deleteField, updateFieldConfig } = catalog;
   const [nameAr, setNameAr] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState<FieldType>("text");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   if (!data) return null;
 
   const handleCreate = async () => {
@@ -127,23 +139,102 @@ function FieldsTab({ catalog }: { catalog: ReturnType<typeof useAdminCatalog> })
           <div className="p-3 text-sm text-gray-400">لا توجد حقول بعد</div>
         ) : (
           data.fields.map((f) => (
-            <div key={f.id} className="flex items-center justify-between px-3 py-2 text-sm">
-              <div>
-                <span className="font-medium text-gray-800">{f.name_ar}</span>
-                <span className="ms-2 text-xs text-gray-400">{FIELD_TYPE_LABELS[f.type]}</span>
-                {f.is_system && <span className="ms-2 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">نظام</span>}
+            <div key={f.id}>
+              <div className="flex items-center justify-between px-3 py-2 text-sm">
+                <div className="flex items-center gap-1.5">
+                  {isChoiceType(f.type) && (
+                    <button onClick={() => setExpandedId(expandedId === f.id ? null : f.id)} className="text-gray-400 hover:text-gray-600">
+                      {expandedId === f.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />}
+                    </button>
+                  )}
+                  <span className="font-medium text-gray-800">{f.name_ar}</span>
+                  <span className="ms-2 text-xs text-gray-400">{FIELD_TYPE_LABELS[f.type]}</span>
+                  {f.is_system && <span className="ms-2 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">نظام</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">مستخدم في {f.boardCount} لوحة</span>
+                  {!f.is_system && (
+                    <button onClick={() => handleDelete(f.id, f.name_ar, f.boardCount)} className="text-gray-300 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400">مستخدم في {f.boardCount} لوحة</span>
-                {!f.is_system && (
-                  <button onClick={() => handleDelete(f.id, f.name_ar, f.boardCount)} className="text-gray-300 hover:text-red-500">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+              {expandedId === f.id && isChoiceType(f.type) && (
+                <FieldOptionsEditor field={f} onSave={(options) => updateFieldConfig({ id: f.id, config: { options } as unknown as Json })} />
+              )}
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+function FieldOptionsEditor({ field, onSave }: { field: FieldWithUsage; onSave: (options: FieldOption[]) => void }) {
+  const config = field.config as { options?: FieldOption[] } | null;
+  const [options, setOptions] = useState<FieldOption[]>(config?.options ?? []);
+  const [newLabel, setNewLabel] = useState("");
+
+  const commit = (next: FieldOption[]) => {
+    setOptions(next);
+    onSave(next);
+  };
+
+  const addOption = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    commit([...options, { id: randomId(), label_ar: label, color: OPTION_COLORS[options.length % OPTION_COLORS.length] }]);
+    setNewLabel("");
+  };
+
+  const move = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= options.length) return;
+    const next = [...options];
+    [next[index], next[target]] = [next[target], next[index]];
+    commit(next);
+  };
+
+  return (
+    <div className="mx-8 mb-2 space-y-1.5 rounded-md border border-gray-100 bg-gray-50/50 p-2">
+      {options.map((opt, i) => (
+        <div key={opt.id} className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={opt.color}
+            onChange={(e) => commit(options.map((o) => (o.id === opt.id ? { ...o, color: e.target.value } : o)))}
+            className="h-6 w-6 shrink-0 rounded border-0"
+          />
+          <input
+            defaultValue={opt.label_ar}
+            onBlur={(e) => {
+              const value = e.target.value.trim();
+              if (value && value !== opt.label_ar) commit(options.map((o) => (o.id === opt.id ? { ...o, label_ar: value } : o)));
+            }}
+            className="flex-1 rounded border border-gray-200 bg-white px-1.5 py-1 text-xs outline-none"
+          />
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button onClick={() => move(i, -1)} disabled={i === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-30">
+              <ChevronDown className="h-3 w-3 rotate-180" />
+            </button>
+            <button onClick={() => move(i, 1)} disabled={i === options.length - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-30">
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </div>
+          <button onClick={() => commit(options.filter((o) => o.id !== opt.id))} className="shrink-0 text-gray-300 hover:text-red-500">
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+      <div className="flex items-center gap-1.5">
+        <input
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addOption()}
+          placeholder="+ خيار جديد"
+          className="flex-1 rounded border border-dashed border-gray-300 bg-white px-1.5 py-1 text-xs outline-none"
+        />
       </div>
     </div>
   );

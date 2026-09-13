@@ -5,18 +5,24 @@ import {
   useSpaceSettings,
   DEFAULT_FEATURE_SETTINGS,
   type SpaceFeatureSettings,
+  type StatusRow,
 } from "../../../hooks/tasks/useSpaceSettings";
 import {
   useSpaceAutomations,
   type TriggerType,
   type ActionType,
+  type Automation,
 } from "../../../hooks/tasks/useSpaceAutomations";
-import type { Database } from "../../../lib/supabase";
+import { useDepartmentOptions, useProjectZoneOptions } from "../../../hooks/tasks/useCreateTaskEntities";
+import type { Priority } from "../../../hooks/tasks/useTaskBoard";
+import type { Database, Json } from "../../../lib/supabase";
 
 // D9 — Space settings + D10 — Automations (build plan Part 7). See
 // useSpaceSettings.ts and useSpaceAutomations.ts headers for scoping
-// decisions (status-set ownership, space-only automation scope, no
-// condition builder yet).
+// decisions (status-set ownership, space-only automation scope) and
+// useSpaceAutomations.ts's header for the big one: there is no
+// execution engine yet, so a rule created and turned on here is stored
+// correctly but nothing fires it today.
 
 type AccessLevel = Database["tasks"]["Enums"]["access_level"];
 type StatusCategory = Database["tasks"]["Enums"]["status_category"];
@@ -57,16 +63,24 @@ const ACTION_LABELS: Record<ActionType, string> = {
   apply_template: "تطبيق قالب",
 };
 
+const PRIORITY_LABELS: Record<Priority, string> = {
+  urgent: "عاجل",
+  high: "مرتفعة",
+  normal: "عادية",
+  low: "منخفضة",
+};
+
 const RUN_STATUS_STYLE: Record<Database["tasks"]["Enums"]["automation_run_status"], string> = {
   success: "bg-green-50 text-green-600",
   failed: "bg-red-50 text-red-600",
   skipped: "bg-gray-100 text-gray-500",
 };
 
-type Tab = "general" | "members" | "statuses" | "features" | "automations";
+type Tab = "general" | "boards" | "members" | "statuses" | "features" | "automations";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "general", label: "عام" },
+  { key: "boards", label: "اللوحات" },
   { key: "members", label: "الأعضاء" },
   { key: "statuses", label: "الحالات" },
   { key: "features", label: "الميزات" },
@@ -112,10 +126,11 @@ export default function SpaceSettingsPage() {
 
       <div className="flex-1 p-4">
         {tab === "general" && <GeneralTab settings={settings} />}
+        {tab === "boards" && <BoardsTab settings={settings} />}
         {tab === "members" && <MembersTab settings={settings} />}
         {tab === "statuses" && <StatusesTab settings={settings} />}
         {tab === "features" && <FeaturesTab settings={settings} />}
-        {tab === "automations" && spaceId && <AutomationsTab spaceId={spaceId} />}
+        {tab === "automations" && spaceId && <AutomationsTab spaceId={spaceId} statuses={data.statuses} />}
       </div>
     </div>
   );
@@ -162,6 +177,90 @@ function GeneralTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
         <span className="text-sm text-gray-700">مساحة عامة (يراها الجميع)</span>
       </label>
       {isPersonal && <p className="text-xs text-gray-400">المساحات الشخصية تبقى خاصة دائماً ولا تقبل أعضاء.</p>}
+    </div>
+  );
+}
+
+function BoardsTab({ settings }: { settings: ReturnType<typeof useSpaceSettings> }) {
+  const { data, updateBoard, deleteBoard } = settings;
+  const departments = useDepartmentOptions();
+  const zones = useProjectZoneOptions(data?.space.project_id);
+  if (!data) return null;
+
+  const handleDelete = (boardId: string, name: string, taskCount: number) => {
+    const warning = taskCount > 0 ? ` تحتوي على ${taskCount} مهمة ستُحذف معها.` : "";
+    if (confirm(`حذف لوحة "${name}"؟${warning}`)) deleteBoard(boardId);
+  };
+
+  return (
+    <div className="max-w-3xl space-y-2">
+      {data.boards.length === 0 ? (
+        <p className="text-sm text-gray-400">لا توجد لوحات في هذه المساحة بعد.</p>
+      ) : (
+        <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+          {data.boards.map((b) => (
+            <div key={b.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+              <input
+                defaultValue={b.name}
+                onBlur={(e) => {
+                  const value = e.target.value.trim();
+                  if (value && value !== b.name) updateBoard({ id: b.id, patch: { name: value } });
+                }}
+                className="min-w-[8rem] flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 font-medium text-gray-800 hover:border-gray-200 focus:border-gray-300 focus:outline-none"
+              />
+
+              {data.space.project_id ? (
+                <select
+                  value={b.zoneId ?? ""}
+                  onChange={(e) => updateBoard({ id: b.id, patch: { zone_id: e.target.value || null } })}
+                  className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
+                >
+                  <option value="">بدون منطقة</option>
+                  {zones.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs text-gray-300">—</span>
+              )}
+
+              <select
+                value={b.departmentId ?? ""}
+                onChange={(e) => updateBoard({ id: b.id, patch: { department_id: e.target.value || null } })}
+                className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
+              >
+                <option value="">بدون قسم افتراضي</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name_ar ?? d.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={b.folderId ?? ""}
+                onChange={(e) => updateBoard({ id: b.id, patch: { folder_id: e.target.value || null } })}
+                className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
+              >
+                <option value="">بدون مجلد</option>
+                {data.folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+
+              <span className="text-xs text-gray-400">{b.taskCount} مهمة</span>
+
+              <button onClick={() => handleDelete(b.id, b.name, b.taskCount)} className="text-gray-300 hover:text-red-500">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -387,12 +486,32 @@ function FeaturesTab({ settings }: { settings: ReturnType<typeof useSpaceSetting
   );
 }
 
-function AutomationsTab({ spaceId }: { spaceId: string }) {
+// Which extra fields to show for a given trigger/action type, and how to
+// read/write them into the flat string-keyed config map this form edits
+// before it's sent as trigger_config/action_config jsonb.
+const TRIGGER_CONFIG_FIELD: Partial<Record<TriggerType, "status" | "field">> = {
+  status_changed: "status",
+  field_changed: "field",
+};
+const ACTION_CONFIG_FIELD: Partial<Record<ActionType, "status" | "priority" | "employee" | "text" | "board" | "template">> = {
+  set_status: "status",
+  set_priority: "priority",
+  set_assignee: "employee",
+  post_comment: "text",
+  move_task: "board",
+  create_task: "text",
+  send_notification: "text",
+  apply_template: "template",
+};
+
+function AutomationsTab({ spaceId, statuses }: { spaceId: string; statuses: StatusRow[] }) {
   const { data, createAutomation, toggleActive, deleteAutomation } = useSpaceAutomations(spaceId);
   const [showNew, setShowNew] = useState(false);
   const [name, setName] = useState("");
   const [triggerType, setTriggerType] = useState<TriggerType>("status_changed");
   const [actionType, setActionType] = useState<ActionType>("set_status");
+  const [triggerValue, setTriggerValue] = useState("");
+  const [actionValue, setActionValue] = useState("");
 
   if (!data) {
     return (
@@ -402,18 +521,142 @@ function AutomationsTab({ spaceId }: { spaceId: string }) {
     );
   }
 
+  const triggerConfigKey: Record<string, string> = { status: "to_status_id", field: "field_definition_id" };
+  const actionConfigKey: Record<string, string> = {
+    status: "status_id",
+    priority: "priority",
+    employee: "user_id",
+    text: "text",
+    board: "board_id",
+    template: "template_id",
+  };
+
   const handleCreate = async () => {
     if (!name.trim()) return;
-    await createAutomation({ name: name.trim(), triggerType, triggerConfig: {}, actionType, actionConfig: {} });
+    const triggerField = TRIGGER_CONFIG_FIELD[triggerType];
+    const actionField = ACTION_CONFIG_FIELD[actionType];
+    const triggerConfig: Json = triggerField && triggerValue ? { [triggerConfigKey[triggerField]]: triggerValue } : {};
+    const actionConfig: Json = actionField && actionValue ? { [actionConfigKey[actionField]]: actionValue } : {};
+    await createAutomation({ name: name.trim(), triggerType, triggerConfig, actionType, actionConfig });
     setShowNew(false);
     setName("");
+    setTriggerValue("");
+    setActionValue("");
+  };
+
+  const renderConfigField = (
+    field: "status" | "field" | "priority" | "employee" | "text" | "board" | "template" | undefined,
+    value: string,
+    onChange: (v: string) => void,
+  ) => {
+    if (!field) return null;
+    if (field === "field") {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none">
+          <option value="">اختر الحقل...</option>
+          {data.pickers.fields.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name_ar}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field === "status") {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none">
+          <option value="">اختر الحالة...</option>
+          {statuses.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label_ar}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field === "priority") {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none">
+          <option value="">اختر الأولوية...</option>
+          {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
+            <option key={p} value={p}>
+              {PRIORITY_LABELS[p]}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field === "employee") {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none">
+          <option value="">اختر الموظف...</option>
+          {data.pickers.employees.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field === "board") {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none">
+          <option value="">اختر اللوحة...</option>
+          {data.pickers.boards.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field === "template") {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none">
+          <option value="">اختر القالب...</option>
+          {data.pickers.templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name_ar}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    return (
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="نص"
+        className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none"
+      />
+    );
+  };
+
+  const describeConfig = (a: Automation) => {
+    const t = a.trigger_config as Record<string, string> | null;
+    const ac = a.action_config as Record<string, string> | null;
+    const triggerDetail =
+      t?.to_status_id ? statuses.find((s) => s.id === t.to_status_id)?.label_ar : t?.field_definition_id ? data.pickers.fields.find((f) => f.id === t.field_definition_id)?.name_ar : null;
+    const actionDetail = ac?.status_id
+      ? statuses.find((s) => s.id === ac.status_id)?.label_ar
+      : ac?.priority
+        ? PRIORITY_LABELS[ac.priority as Priority]
+        : ac?.user_id
+          ? data.pickers.employees.find((e) => e.id === ac.user_id)?.name
+          : ac?.board_id
+            ? data.pickers.boards.find((b) => b.id === ac.board_id)?.name
+            : ac?.template_id
+              ? data.pickers.templates.find((tpl) => tpl.id === ac.template_id)?.name_ar
+              : ac?.text || null;
+    return `${TRIGGER_LABELS[a.trigger_type]}${triggerDetail ? ` (${triggerDetail})` : ""} ← ${ACTION_LABELS[a.action_type]}${actionDetail ? ` (${actionDetail})` : ""}`;
   };
 
   return (
     <div className="max-w-2xl space-y-4">
-      <p className="text-xs text-gray-400">
-        الشروط الإضافية (Conditions) غير مدعومة بعد — كل قاعدة تُنفَّذ عند كل حدث من نوع المُحفِّز المختار.
+      <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
+        لا يوجد محرك تنفيذ بعد — القاعدة تُحفظ بشكل صحيح وتُفعَّل/تُعطَّل، لكن لا شيء في قاعدة البيانات ينفّذها تلقائياً حالياً.
       </p>
+      <p className="text-xs text-gray-400">الشروط الإضافية (Conditions) غير مدعومة بعد — كل قاعدة تُنفَّذ عند كل حدث من نوع المُحفِّز المختار.</p>
 
       <button
         onClick={() => setShowNew((v) => !v)}
@@ -432,10 +675,13 @@ function AutomationsTab({ spaceId }: { spaceId: string }) {
             className="w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none"
           />
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">عند</span>
+            <span className="w-10 shrink-0 text-gray-500">عند</span>
             <select
               value={triggerType}
-              onChange={(e) => setTriggerType(e.target.value as TriggerType)}
+              onChange={(e) => {
+                setTriggerType(e.target.value as TriggerType);
+                setTriggerValue("");
+              }}
               className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 outline-none"
             >
               {(Object.keys(TRIGGER_LABELS) as TriggerType[]).map((t) => (
@@ -444,12 +690,16 @@ function AutomationsTab({ spaceId }: { spaceId: string }) {
                 </option>
               ))}
             </select>
+            {renderConfigField(TRIGGER_CONFIG_FIELD[triggerType], triggerValue, setTriggerValue)}
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">قم بـ</span>
+            <span className="w-10 shrink-0 text-gray-500">قم بـ</span>
             <select
               value={actionType}
-              onChange={(e) => setActionType(e.target.value as ActionType)}
+              onChange={(e) => {
+                setActionType(e.target.value as ActionType);
+                setActionValue("");
+              }}
               className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 outline-none"
             >
               {(Object.keys(ACTION_LABELS) as ActionType[]).map((a) => (
@@ -458,6 +708,7 @@ function AutomationsTab({ spaceId }: { spaceId: string }) {
                 </option>
               ))}
             </select>
+            {renderConfigField(ACTION_CONFIG_FIELD[actionType], actionValue, setActionValue)}
           </div>
           <button onClick={handleCreate} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white">
             إنشاء
@@ -473,9 +724,7 @@ function AutomationsTab({ spaceId }: { spaceId: string }) {
             <div key={a.id} className="flex items-center justify-between px-3 py-2 text-sm">
               <div>
                 <div className="font-medium text-gray-800">{a.name}</div>
-                <div className="text-xs text-gray-400">
-                  {TRIGGER_LABELS[a.trigger_type]} ← {ACTION_LABELS[a.action_type]}
-                </div>
+                <div className="text-xs text-gray-400">{describeConfig(a)}</div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="relative inline-flex cursor-pointer items-center">

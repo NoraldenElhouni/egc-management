@@ -35,12 +35,24 @@ export interface MemberLite {
   accessLevel: AccessLevel;
 }
 
+export interface BoardLite {
+  id: string;
+  name: string;
+  zoneId: string | null;
+  zoneName: string | null;
+  departmentId: string | null;
+  folderId: string | null;
+  taskCount: number;
+}
+
 export interface SpaceSettingsData {
   space: Space;
   members: MemberLite[];
   employees: { id: string; name: string }[];
   statuses: StatusRow[];
   statusSetIsSpaceOwned: boolean;
+  boards: BoardLite[];
+  folders: { id: string; name: string }[];
 }
 
 export function useSpaceSettings(spaceId: string | undefined) {
@@ -90,6 +102,38 @@ export function useSpaceSettings(spaceId: string | undefined) {
         .order("sort_order");
       if (statusesError) throw statusesError;
 
+      const [
+        { data: boardRows, error: boardsError },
+        { data: folderRows, error: foldersError },
+      ] = await Promise.all([
+        tasksDb.from("boards").select("id, name, zone_id, department_id, folder_id").eq("space_id", spaceId).eq("is_archived", false),
+        tasksDb.from("folders").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
+      ]);
+      if (boardsError) throw boardsError;
+      if (foldersError) throw foldersError;
+
+      const boardIds = (boardRows ?? []).map((b) => b.id);
+      const zoneIds = Array.from(new Set((boardRows ?? []).map((b) => b.zone_id).filter(Boolean))) as string[];
+      const [
+        { data: taskRows, error: tasksError },
+        { data: zoneRows, error: zoneError },
+      ] = await Promise.all([
+        boardIds.length
+          ? tasksDb.from("tasks").select("board_id").in("board_id", boardIds).eq("is_archived", false)
+          : Promise.resolve({ data: [], error: null }),
+        zoneIds.length
+          ? supabase.schema("boq").from("zones").select("id, name").in("id", zoneIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (tasksError) throw tasksError;
+      if (zoneError) throw zoneError;
+
+      const taskCountByBoard = new Map<string, number>();
+      for (const row of taskRows ?? []) {
+        taskCountByBoard.set(row.board_id, (taskCountByBoard.get(row.board_id) ?? 0) + 1);
+      }
+      const zoneNameById = new Map((zoneRows ?? []).map((z) => [z.id, z.name]));
+
       return {
         space,
         members: (memberRows ?? []).map((m) => ({
@@ -101,6 +145,16 @@ export function useSpaceSettings(spaceId: string | undefined) {
         employees: (employeeRows ?? []).map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name ?? ""}`.trim() })),
         statuses: statuses ?? [],
         statusSetIsSpaceOwned,
+        boards: (boardRows ?? []).map((b) => ({
+          id: b.id,
+          name: b.name,
+          zoneId: b.zone_id,
+          zoneName: b.zone_id ? (zoneNameById.get(b.zone_id) ?? null) : null,
+          departmentId: b.department_id,
+          folderId: b.folder_id,
+          taskCount: taskCountByBoard.get(b.id) ?? 0,
+        })),
+        folders: folderRows ?? [],
       };
     },
   });
@@ -211,6 +265,28 @@ export function useSpaceSettings(spaceId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const updateBoard = useMutation({
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Partial<{ name: string; zone_id: string | null; department_id: string | null; folder_id: string | null }>;
+    }) => {
+      const { error } = await tasksDb.from("boards").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteBoard = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await tasksDb.from("boards").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     data: query.data,
     loading: query.isPending,
@@ -225,5 +301,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
     addStatus: addStatus.mutateAsync,
     updateStatus: updateStatus.mutateAsync,
     deleteStatus: deleteStatus.mutateAsync,
+    updateBoard: updateBoard.mutateAsync,
+    deleteBoard: deleteBoard.mutateAsync,
   };
 }

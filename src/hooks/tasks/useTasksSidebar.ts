@@ -26,6 +26,7 @@ type StatusCategory = Database["tasks"]["Enums"]["status_category"];
 export interface BoardWithCount {
   board: BoardRow;
   openCount: number;
+  zoneName: string | null;
 }
 
 export interface FolderNode {
@@ -206,9 +207,17 @@ export function useTasksSidebar() {
 
       const myWorkCount = myOpenTaskStatusIds.filter(isOpen).length;
 
+      const zoneIds = Array.from(new Set((boards ?? []).map((b) => b.zone_id).filter(Boolean))) as string[];
+      const { data: zoneRows, error: zonesError } = zoneIds.length
+        ? await supabase.schema("boq").from("zones").select("id, name").in("id", zoneIds)
+        : { data: [], error: null };
+      if (zonesError) throw zonesError;
+      const zoneNameById = new Map((zoneRows ?? []).map((z) => [z.id, z.name]));
+
       const boardsWithCount: BoardWithCount[] = (boards ?? []).map((b) => ({
         board: b,
         openCount: openCountByBoard.get(b.id) ?? 0,
+        zoneName: b.zone_id ? (zoneNameById.get(b.zone_id) ?? null) : null,
       }));
 
       const spaceNodes: SpaceNode[] = visibleSpaces.map((space) => {

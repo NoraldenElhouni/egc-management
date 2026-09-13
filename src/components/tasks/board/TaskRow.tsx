@@ -1,19 +1,37 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Lock, Camera } from "lucide-react";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
 import AssigneeCell from "./AssigneeCell";
+import CustomFieldCell from "./CustomFieldCell";
 import type {
+  CustomColumn,
   EmployeeLite,
   StatusRow,
   TaskRow as TaskRowType,
   TaskTypeLite,
 } from "../../../hooks/tasks/useTaskBoard";
+import type { Json } from "../../../lib/supabase";
 
-export const ROW_GRID =
-  "grid grid-cols-[minmax(0,1fr)_120px_84px_96px_92px_100px_64px] items-center gap-2";
+const FIXED_COLUMNS = "minmax(0,1fr) 120px 84px 96px 92px 100px";
+
+// A dynamic grid template (custom columns vary per board) can't be a
+// static Tailwind class, so both the header (TaskTable) and every row
+// compute the same inline style from the same column count — they must
+// stay in sync or cells drift out from under their header.
+export function rowGridStyle(customColumnCount: number): CSSProperties {
+  const customCols = Array(customColumnCount).fill("120px").join(" ");
+  return {
+    display: "grid",
+    gridTemplateColumns: `${FIXED_COLUMNS}${customCols ? ` ${customCols}` : ""} 64px`,
+    alignItems: "center",
+    gap: "0.5rem",
+  };
+}
+
+type DropZone = "before" | "after" | "inside";
 
 interface TaskRowProps {
   task: TaskRowType;
@@ -31,11 +49,18 @@ interface TaskRowProps {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  customColumns: CustomColumn[];
+  valuesByTask: Map<string, Map<string, Json>>;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangePriority: (taskId: string, priority: TaskRowType["priority"]) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
   onCreateTask: (title: string, parentTaskId: string) => void;
+  onChangeValue: (taskId: string, fieldDefinitionId: string, value: Json) => void;
+  draggedId: string | null;
+  onDragStart: (id: string) => void;
+  onDragEnd: () => void;
+  onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
 }
 
 export default function TaskRow({
@@ -54,19 +79,46 @@ export default function TaskRow({
   linkedTaskIds,
   blockedTaskIds,
   unmetRequirementTaskIds,
+  customColumns,
+  valuesByTask,
   onChangeStatus,
   onChangePriority,
   onChangeDueDate,
   onChangeAssignees,
   onCreateTask,
+  onChangeValue,
+  draggedId,
+  onDragStart,
+  onDragEnd,
+  onMoveTaskTo,
 }: TaskRowProps) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const [addingChild, setAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState("");
+  const [dropZone, setDropZone] = useState<DropZone | null>(null);
   const children = childrenByParent.get(task.id) ?? [];
   const hasChildren = children.length > 0;
   const collapsed = collapsedIds.has(task.id) && !addingChild;
+  const siblings = childrenByParent.get(task.parent_task_id) ?? [];
+
+  const handleDrop = () => {
+    if (!draggedId || draggedId === task.id) return setDropZone(null);
+    if (dropZone === "inside") {
+      onMoveTaskTo({ id: draggedId, newParentId: task.id, beforeId: null });
+    } else if (dropZone === "before") {
+      onMoveTaskTo({ id: draggedId, newParentId: task.parent_task_id, beforeId: task.id });
+    } else if (dropZone === "after") {
+      const index = siblings.findIndex((s) => s.id === task.id);
+      const nextSibling = siblings[index + 1];
+      onMoveTaskTo({
+        id: draggedId,
+        newParentId: task.parent_task_id,
+        beforeId: nextSibling && nextSibling.id !== draggedId ? nextSibling.id : null,
+      });
+    }
+    setDropZone(null);
+  };
 
   const submitChild = () => {
     const title = childTitle.trim();
@@ -84,7 +136,25 @@ export default function TaskRow({
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`${ROW_GRID} min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50`}
+        onDragOver={(e) => {
+          if (!draggedId || draggedId === task.id) return;
+          e.preventDefault();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const ratio = (e.clientY - rect.top) / rect.height;
+          setDropZone(ratio < 0.25 ? "before" : ratio > 0.75 ? "after" : "inside");
+        }}
+        onDragLeave={() => setDropZone(null)}
+        onDrop={handleDrop}
+        style={rowGridStyle(customColumns.length)}
+        className={`min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50 ${
+          dropZone === "before"
+            ? "border-t-2 border-t-primary"
+            : dropZone === "after"
+              ? "border-b-2 border-b-primary"
+              : dropZone === "inside"
+                ? "bg-primary-superLight"
+                : ""
+        }`}
       >
         <div
           className="flex items-center gap-1 overflow-hidden"
@@ -92,7 +162,17 @@ export default function TaskRow({
         >
           <span className="w-4 shrink-0 text-gray-300">
             {hovered && (
-              <GripVertical className="h-3.5 w-3.5 cursor-grab" />
+              <span
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  onDragStart(task.id);
+                }}
+                onDragEnd={onDragEnd}
+                className="cursor-grab"
+              >
+                <GripVertical className="h-3.5 w-3.5" />
+              </span>
             )}
           </span>
 
@@ -168,6 +248,16 @@ export default function TaskRow({
           onChange={(date) => onChangeDueDate(task.id, date)}
         />
         <div className="truncate text-xs text-gray-400">{department ?? ""}</div>
+        {customColumns.map((col) => (
+          <CustomFieldCell
+            key={col.boardColumnId}
+            column={col}
+            value={valuesByTask.get(task.id)?.get(col.fieldDefinitionId)}
+            employeesById={employeesById}
+            allEmployees={allEmployees}
+            onChange={(value) => onChangeValue(task.id, col.fieldDefinitionId, value)}
+          />
+        ))}
         <div />
       </div>
 
@@ -191,11 +281,18 @@ export default function TaskRow({
               linkedTaskIds={linkedTaskIds}
               blockedTaskIds={blockedTaskIds}
               unmetRequirementTaskIds={unmetRequirementTaskIds}
+              customColumns={customColumns}
+              valuesByTask={valuesByTask}
               onChangeStatus={onChangeStatus}
               onChangePriority={onChangePriority}
               onChangeDueDate={onChangeDueDate}
               onChangeAssignees={onChangeAssignees}
               onCreateTask={onCreateTask}
+              onChangeValue={onChangeValue}
+              draggedId={draggedId}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveTaskTo={onMoveTaskTo}
             />
           ))}
 

@@ -12,22 +12,33 @@ import { useAuth } from "../useAuth";
 // navigated to it from yet. Space-scoped covers the common case; a
 // folder/board scope picker is a reasonable follow-up, not built now.
 //
-// "Conditions" (the plan's trigger → conditions → action) are not
-// editable here yet — every rule created here has an empty conditions
-// array, meaning "fires on every event of this trigger type" with no
-// extra filtering. Trigger/action *config* isn't editable either: every
-// rule is created with an empty {} config for whichever type is picked
-// (e.g. a "set_status" action with no target status yet configured) —
-// a real config editor per trigger/action type (a status picker for
-// status_changed/set_status, a field picker for field_changed, etc.) is
-// the natural next step, not built here. This screen's honest scope is
-// "name a rule, pick its shape, turn it on/off, watch it run" — the
-// fine-grained parameters currently need a direct DB edit.
+// Trigger/action config is now editable per-type (status_changed and
+// set_status get a real status picker, set_assignee an employee picker,
+// move_task a board picker, etc.) — the values below are genuinely saved
+// to trigger_config/action_config, not just labels.
+//
+// IMPORTANT — no execution engine exists yet. There is no generic
+// trigger anywhere in the DB that reads tasks.automations and actually
+// fires it; only three hard-coded "recipe" functions exist
+// (automation_all_subtasks_complete, automation_close_tasks_on_linked_record,
+// run_due_date_automations — build plan §5.5), none of which consult
+// user-created rows in this table. So a rule created and turned on here
+// is stored correctly and will run the moment an engine reads it, but
+// nothing fires it today. That's a deliberately separate, much bigger
+// and riskier piece of work (a live trigger touching every task write)
+// than this CRUD screen, and hasn't been built — flagged, not hidden.
 
 export type Automation = Database["tasks"]["Tables"]["automations"]["Row"];
 export type AutomationRun = Database["tasks"]["Tables"]["automation_runs"]["Row"];
 export type TriggerType = Database["tasks"]["Enums"]["automation_trigger_type"];
 export type ActionType = Database["tasks"]["Enums"]["automation_action_type"];
+
+export interface AutomationPickerData {
+  employees: { id: string; name: string }[];
+  boards: { id: string; name: string }[];
+  fields: { id: string; name_ar: string }[];
+  templates: { id: string; name_ar: string }[];
+}
 
 export function useSpaceAutomations(spaceId: string | undefined) {
   const { user } = useAuth();
@@ -39,16 +50,27 @@ export function useSpaceAutomations(spaceId: string | undefined) {
   const query = useQuery({
     queryKey,
     enabled: !!spaceId,
-    queryFn: async (): Promise<{ automations: Automation[]; runs: AutomationRun[] }> => {
+    queryFn: async (): Promise<{ automations: Automation[]; runs: AutomationRun[]; pickers: AutomationPickerData }> => {
       if (!spaceId) throw new Error("no space id");
 
-      const { data: automations, error: automationsError } = await tasksDb
-        .from("automations")
-        .select("*")
-        .eq("scope_type", "space")
-        .eq("scope_id", spaceId)
-        .order("created_at", { ascending: false });
+      const [
+        { data: automations, error: automationsError },
+        { data: employees, error: employeesError },
+        { data: boards, error: boardsError },
+        { data: fields, error: fieldsError },
+        { data: templates, error: templatesError },
+      ] = await Promise.all([
+        tasksDb.from("automations").select("*").eq("scope_type", "space").eq("scope_id", spaceId).order("created_at", { ascending: false }),
+        supabase.from("employees").select("id, first_name, last_name"),
+        tasksDb.from("boards").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
+        tasksDb.from("field_definitions").select("id, name_ar"),
+        tasksDb.from("templates").select("id, name_ar"),
+      ]);
       if (automationsError) throw automationsError;
+      if (employeesError) throw employeesError;
+      if (boardsError) throw boardsError;
+      if (fieldsError) throw fieldsError;
+      if (templatesError) throw templatesError;
 
       const automationIds = (automations ?? []).map((a) => a.id);
       const { data: runs, error: runsError } = automationIds.length
@@ -61,7 +83,16 @@ export function useSpaceAutomations(spaceId: string | undefined) {
         : { data: [], error: null };
       if (runsError) throw runsError;
 
-      return { automations: automations ?? [], runs: runs ?? [] };
+      return {
+        automations: automations ?? [],
+        runs: runs ?? [],
+        pickers: {
+          employees: (employees ?? []).map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name ?? ""}`.trim() })),
+          boards: boards ?? [],
+          fields: fields ?? [],
+          templates: templates ?? [],
+        },
+      };
     },
   });
 

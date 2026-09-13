@@ -1,15 +1,33 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
-import type { Database } from "../../lib/supabase";
+import type { Database, Json } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7, D2).
+//
+// Custom columns (board_columns → field_definitions → task_values) are
+// attach-existing-or-create-new, per §4.11's "define once, attach many" —
+// detaching a column (deleting its board_columns row) never touches
+// task_values, so it's non-destructive and the field can be reattached
+// later with its data intact. There's no "hidden columns" browser here
+// (is_visible exists on board_columns but this screen doesn't use it) —
+// "···" only offers rename-the-field (shared everywhere it's attached)
+// and detach-from-this-board, not hide/unhide.
 
 export type TaskRow = Database["tasks"]["Tables"]["tasks"]["Row"];
 export type StatusRow = Database["tasks"]["Tables"]["statuses"]["Row"];
 export type Priority = Database["tasks"]["Enums"]["priority"];
+export type FieldType = Database["tasks"]["Enums"]["field_type"];
+
+export interface CustomColumn {
+  boardColumnId: string;
+  fieldDefinitionId: string;
+  name_ar: string;
+  type: FieldType;
+  config: Json;
+}
 
 export interface EmployeeLite {
   id: string;
@@ -35,8 +53,22 @@ export interface TaskBoardData {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
-  /** null when the board's space has no project — task creation is disabled (see build plan Part 11 open decision on project_id). */
+  /** null when the board's space isn't a project space (department/company/personal) — tasks.project_id is nullable for exactly this case. */
   projectId: string | null;
+  customColumns: CustomColumn[];
+  valuesByTask: Map<string, Map<string, Json>>; // task_id -> field_definition_id -> value
+}
+
+export function useAllFieldDefinitions() {
+  const query = useQuery({
+    queryKey: ["all-field-definitions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.schema("tasks").from("field_definitions").select("id, name_ar, type, config").order("name_ar");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  return query.data ?? [];
 }
 
 export function useTaskBoard(boardId: string | undefined) {
@@ -212,6 +244,43 @@ export function useTaskBoard(boardId: string | undefined) {
         (requirementsResult.data ?? []).map((r) => r.task_id),
       );
 
+      const { data: boardColumnRows, error: boardColumnsError } = await tasksDb
+        .from("board_columns")
+        .select("id, field_definition_id, sort_order")
+        .eq("board_id", boardId)
+        .eq("is_visible", true)
+        .order("sort_order");
+      if (boardColumnsError) throw boardColumnsError;
+
+      const columnFieldIds = (boardColumnRows ?? []).map((c) => c.field_definition_id);
+      const [{ data: fieldDefRows, error: fieldDefsError }, { data: valueRows, error: valuesError }] = await Promise.all([
+        columnFieldIds.length
+          ? tasksDb.from("field_definitions").select("id, name_ar, type, config").in("id", columnFieldIds)
+          : Promise.resolve({ data: [], error: null }),
+        columnFieldIds.length && taskIds.length
+          ? tasksDb.from("task_values").select("task_id, field_definition_id, value").in("field_definition_id", columnFieldIds).in("task_id", taskIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (fieldDefsError) throw fieldDefsError;
+      if (valuesError) throw valuesError;
+
+      const fieldDefById = new Map((fieldDefRows ?? []).map((f) => [f.id, f]));
+      const customColumns: CustomColumn[] = (boardColumnRows ?? [])
+        .map((c) => {
+          const field = fieldDefById.get(c.field_definition_id);
+          return field
+            ? { boardColumnId: c.id, fieldDefinitionId: field.id, name_ar: field.name_ar, type: field.type, config: field.config }
+            : null;
+        })
+        .filter((c): c is CustomColumn => !!c);
+
+      const valuesByTask = new Map<string, Map<string, Json>>();
+      for (const row of valueRows ?? []) {
+        const forTask = valuesByTask.get(row.task_id) ?? new Map<string, Json>();
+        forTask.set(row.field_definition_id, row.value);
+        valuesByTask.set(row.task_id, forTask);
+      }
+
       return {
         board: {
           id: board.id,
@@ -230,6 +299,8 @@ export function useTaskBoard(boardId: string | undefined) {
         blockedTaskIds,
         unmetRequirementTaskIds,
         projectId: space.project_id,
+        customColumns,
+        valuesByTask,
       };
     },
   });
@@ -324,11 +395,6 @@ export function useTaskBoard(boardId: string | undefined) {
       parentTaskId: string | null;
     }) => {
       if (!boardId || !query.data) throw new Error("board not loaded");
-      if (!query.data.projectId) {
-        throw new Error(
-          "هذه اللوحة غير مرتبطة بمشروع بعد، لا يمكن إضافة مهام إليها",
-        );
-      }
       const firstOpenStatus =
         query.data.statuses.find((s) => s.category === "not_started") ??
         query.data.statuses[0];
@@ -352,6 +418,92 @@ export function useTaskBoard(boardId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const setTaskValue = useMutation({
+    mutationFn: async ({ taskId, fieldDefinitionId, value }: { taskId: string; fieldDefinitionId: string; value: Json }) => {
+      const { error } = await tasksDb
+        .from("task_values")
+        .upsert({ task_id: taskId, field_definition_id: fieldDefinitionId, value }, { onConflict: "task_id,field_definition_id" });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const attachField = useMutation({
+    mutationFn: async (fieldDefinitionId: string) => {
+      if (!boardId) throw new Error("no board id");
+      const maxSort = (query.data?.customColumns ?? []).length;
+      const { error } = await tasksDb.from("board_columns").insert({ board_id: boardId, field_definition_id: fieldDefinitionId, sort_order: maxSort });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const createAndAttachField = useMutation({
+    mutationFn: async (input: { name: string; name_ar: string; type: FieldType; config: Json }) => {
+      if (!boardId) throw new Error("no board id");
+      const { data: field, error: fieldError } = await tasksDb.from("field_definitions").insert(input).select("id").single();
+      if (fieldError) throw fieldError;
+      const maxSort = (query.data?.customColumns ?? []).length;
+      const { error } = await tasksDb.from("board_columns").insert({ board_id: boardId, field_definition_id: field.id, sort_order: maxSort });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const detachColumn = useMutation({
+    mutationFn: async (boardColumnId: string) => {
+      const { error } = await tasksDb.from("board_columns").delete().eq("id", boardColumnId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const renameField = useMutation({
+    mutationFn: async ({ fieldDefinitionId, name_ar }: { fieldDefinitionId: string; name_ar: string }) => {
+      const { error } = await tasksDb.from("field_definitions").update({ name_ar }).eq("id", fieldDefinitionId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  // Drag-and-drop reorder/reparent — same shape as useTemplateBuilder's
+  // moveTaskTo (native HTML5 DnD, no library). Cycle guard walks up from
+  // the drop target before writing anything.
+  const moveTaskTo = useMutation({
+    mutationFn: async ({
+      id,
+      newParentId,
+      beforeId,
+    }: {
+      id: string;
+      newParentId: string | null;
+      beforeId: string | null;
+    }) => {
+      if (!query.data) throw new Error("board not loaded");
+      const byId = new Map(query.data.tasks.map((t) => [t.id, t]));
+      let cursor: string | null = newParentId;
+      while (cursor) {
+        if (cursor === id) return; // would create a cycle
+        cursor = byId.get(cursor)?.parent_task_id ?? null;
+      }
+      const moved = byId.get(id);
+      if (!moved) return;
+      const siblings = query.data.tasks
+        .filter((t) => t.parent_task_id === newParentId && t.id !== id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const insertAt = beforeId ? siblings.findIndex((t) => t.id === beforeId) : -1;
+      siblings.splice(insertAt === -1 ? siblings.length : insertAt, 0, moved);
+      for (let i = 0; i < siblings.length; i++) {
+        const s = siblings[i];
+        const patch: Partial<TaskRow> = { sort_order: i };
+        if (s.id === id) patch.parent_task_id = newParentId;
+        const { error } = await tasksDb.from("tasks").update(patch).eq("id", s.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   const employeesById = useMemo(() => {
     return new Map((query.data?.employees ?? []).map((e) => [e.id, e]));
   }, [query.data?.employees]);
@@ -367,5 +519,11 @@ export function useTaskBoard(boardId: string | undefined) {
     setAssignees: setAssignees.mutate,
     createTask: createTask.mutate,
     createTaskError: createTask.error as Error | null,
+    setTaskValue: setTaskValue.mutate,
+    attachField: attachField.mutateAsync,
+    createAndAttachField: createAndAttachField.mutateAsync,
+    detachColumn: detachColumn.mutateAsync,
+    renameField: renameField.mutateAsync,
+    moveTaskTo: moveTaskTo.mutateAsync,
   };
 }

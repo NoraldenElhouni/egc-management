@@ -98,7 +98,9 @@ export default function MyWorkPage() {
 
                 {group.tasks.map((task) => {
                   const status = data.statusesById.get(task.status_id);
-                  const projectName = data.projectNamesById.get(task.project_id) ?? "مشروع";
+                  const projectName = task.project_id
+                    ? (data.projectNamesById.get(task.project_id) ?? "مشروع")
+                    : "بدون مشروع";
                   const zoneName = task.zone_id ? data.zoneNamesById.get(task.zone_id) : null;
                   const due = formatDate(task.due_date);
                   return (

@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Settings2, X } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Settings2,
+  X,
+  ChevronsDown,
+  ChevronsUp,
+  GripVertical,
+} from "lucide-react";
 import {
   useTemplateBuilder,
   type TemplateChecklist,
@@ -11,9 +24,13 @@ import {
 import type { TemplateTask } from "../../../hooks/tasks/useTemplatePicker";
 import type { Database } from "../../../lib/supabase";
 
-// D8 — Template builder (build plan Part 7). See useTemplateBuilder.ts's
-// header for why nesting uses move/indent/outdent buttons instead of
-// drag-and-drop.
+// D8 — Template builder (build plan Part 7). Drag-and-drop nesting uses
+// native HTML5 DnD (no library) — see useTemplateBuilder.ts's moveTaskTo
+// for the reparent/reorder logic and its cycle guard. The details panel
+// (department/specialization/checklists/requirements) is collapsed per
+// task by default; expandedIds is lifted to this page so "توسيع الكل" /
+// "طي الكل" can act on every task at once.
+type DropZone = "before" | "after" | "inside";
 
 type TaskType = Database["tasks"]["Tables"]["task_types"]["Row"];
 type DepartmentLite = { id: string; name_ar: string | null; name: string };
@@ -41,6 +58,8 @@ export default function TemplateBuilderPage() {
   const builder = useTemplateBuilder(templateId);
   const { data, loading, error } = builder;
   const [newRootTitle, setNewRootTitle] = useState("");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -68,15 +87,52 @@ export default function TemplateBuilderPage() {
     setNewRootTitle("");
   };
 
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
     <div className="flex h-full flex-col overflow-y-auto" dir="rtl">
-      <div className="border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <h1 className="text-base font-semibold text-gray-900">{data.template.name_ar}</h1>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setExpandedIds(new Set(data.tasks.map((t) => t.id)))}
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            <ChevronsDown className="h-3.5 w-3.5" />
+            توسيع الكل
+          </button>
+          <button
+            onClick={() => setExpandedIds(new Set())}
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            <ChevronsUp className="h-3.5 w-3.5" />
+            طي الكل
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 p-4">
         {roots.map((task) => (
-          <TaskNode key={task.id} task={task} depth={0} byParent={byParent} builder={builder} data={data} />
+          <TaskNode
+            key={task.id}
+            task={task}
+            depth={0}
+            byParent={byParent}
+            builder={builder}
+            data={data}
+            expandedIds={expandedIds}
+            onToggleExpand={toggleExpand}
+            draggedId={draggedId}
+            onDragStart={setDraggedId}
+            onDragEnd={() => setDraggedId(null)}
+          />
         ))}
 
         <div className="mt-2 flex items-center gap-1.5 px-1 py-1.5">
@@ -107,13 +163,31 @@ interface TaskNodeProps {
     checklistsByTask: Map<string, (TemplateChecklist & { items: TemplateChecklistItem[] })[]>;
     requirementsByTask: Map<string, TemplateRequirement[]>;
   };
+  expandedIds: Set<string>;
+  onToggleExpand: (id: string) => void;
+  draggedId: string | null;
+  onDragStart: (id: string) => void;
+  onDragEnd: () => void;
 }
 
-function TaskNode({ task, depth, byParent, builder, data }: TaskNodeProps) {
-  const [expanded, setExpanded] = useState(false);
+function TaskNode({
+  task,
+  depth,
+  byParent,
+  builder,
+  data,
+  expandedIds,
+  onToggleExpand,
+  draggedId,
+  onDragStart,
+  onDragEnd,
+}: TaskNodeProps) {
+  const expanded = expandedIds.has(task.id);
   const [addingChild, setAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [newChecklistName, setNewChecklistName] = useState("");
+  const [dropZone, setDropZone] = useState<DropZone | null>(null);
+  const siblings = (byParent.get(task.parent_template_task_id) ?? []).sort((a, b) => a.sort_order - b.sort_order);
   const children = (byParent.get(task.id) ?? []).sort((a, b) => a.sort_order - b.sort_order);
   const checklists = data.checklistsByTask.get(task.id) ?? [];
   const requirements = data.requirementsByTask.get(task.id) ?? [];
@@ -133,13 +207,61 @@ function TaskNode({ task, depth, byParent, builder, data }: TaskNodeProps) {
     setNewChecklistName("");
   };
 
+  const handleDrop = () => {
+    if (!draggedId || draggedId === task.id) return setDropZone(null);
+    if (dropZone === "inside") {
+      builder.moveTaskTo({ id: draggedId, newParentId: task.id, beforeId: null });
+    } else if (dropZone === "before") {
+      builder.moveTaskTo({ id: draggedId, newParentId: task.parent_template_task_id, beforeId: task.id });
+    } else if (dropZone === "after") {
+      const index = siblings.findIndex((s) => s.id === task.id);
+      const nextSibling = siblings[index + 1];
+      builder.moveTaskTo({
+        id: draggedId,
+        newParentId: task.parent_template_task_id,
+        beforeId: nextSibling && nextSibling.id !== draggedId ? nextSibling.id : null,
+      });
+    }
+    setDropZone(null);
+  };
+
   return (
     <div>
       <div
-        className="flex flex-wrap items-center gap-1.5 rounded-md py-1.5 hover:bg-gray-50"
+        onDragOver={(e) => {
+          if (!draggedId || draggedId === task.id) return;
+          e.preventDefault();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const ratio = (e.clientY - rect.top) / rect.height;
+          setDropZone(ratio < 0.25 ? "before" : ratio > 0.75 ? "after" : "inside");
+        }}
+        onDragLeave={() => setDropZone(null)}
+        onDrop={handleDrop}
+        className={`flex flex-wrap items-center gap-1.5 rounded-md py-1.5 hover:bg-gray-50 ${
+          dropZone === "before"
+            ? "border-t-2 border-primary"
+            : dropZone === "after"
+              ? "border-b-2 border-primary"
+              : dropZone === "inside"
+                ? "bg-primary-superLight"
+                : ""
+        }`}
         style={{ paddingRight: 4 + depth * 24 }}
       >
-        <button onClick={() => setExpanded((v) => !v)} className="shrink-0 text-gray-400 hover:text-gray-600">
+        <span
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = "move";
+            onDragStart(task.id);
+          }}
+          onDragEnd={onDragEnd}
+          className="shrink-0 cursor-grab text-gray-300 hover:text-gray-500"
+          title="اسحب لإعادة الترتيب أو التعشيش"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </span>
+
+        <button onClick={() => onToggleExpand(task.id)} className="shrink-0 text-gray-400 hover:text-gray-600">
           {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />}
         </button>
 
@@ -358,7 +480,19 @@ function TaskNode({ task, depth, byParent, builder, data }: TaskNodeProps) {
       )}
 
       {children.map((child) => (
-        <TaskNode key={child.id} task={child} depth={depth + 1} byParent={byParent} builder={builder} data={data} />
+        <TaskNode
+          key={child.id}
+          task={child}
+          depth={depth + 1}
+          byParent={byParent}
+          builder={builder}
+          data={data}
+          expandedIds={expandedIds}
+          onToggleExpand={onToggleExpand}
+          draggedId={draggedId}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        />
       ))}
 
       {addingChild && (

@@ -6,13 +6,12 @@ import type { Template, TemplateTask } from "./useTemplatePicker";
 // =====================================================================
 // D8 — Template builder (build plan Part 7).
 // =====================================================================
-// "Drag-and-drop nesting" per the build plan is replaced here with
-// explicit move-up/move-down/indent/outdent buttons — a real, honest
-// simplification (no DnD library pulled in for one screen) rather than
-// a half-built drag interaction. Reordering swaps sort_order between
-// adjacent siblings; indent/outdent re-parents onto the previous
-// sibling or the parent's own parent, per ClickUp's own "tab to nest"
-// keyboard alternative to dragging.
+// Real drag-and-drop nesting (moveTaskTo) using native HTML5 DnD — no
+// library pulled in, TemplateBuilderPage.tsx wires the drag events and
+// calls this with a drop zone (before/after/inside a target row). The
+// move-up/move-down/indent/outdent mutations stay as a keyboard-only,
+// no-mouse-required alternative to the same operation, same as
+// ClickUp's own "Tab to nest" is an alternative to dragging.
 
 type TaskType = Database["tasks"]["Tables"]["task_types"]["Row"];
 type DepartmentLite = { id: string; name_ar: string | null; name: string };
@@ -197,6 +196,49 @@ export function useTemplateBuilder(templateId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  // Drag-and-drop entry point. `newParentId`/`beforeId` describe the drop
+  // target: insert as a sibling right before `beforeId` under `newParentId`
+  // (or at the end of that parent's children when `beforeId` is null).
+  const moveTaskTo = useMutation({
+    mutationFn: async ({
+      id,
+      newParentId,
+      beforeId,
+    }: {
+      id: string;
+      newParentId: string | null;
+      beforeId: string | null;
+    }) => {
+      if (!query.data) throw new Error("template not loaded");
+      const byId = new Map(query.data.tasks.map((t) => [t.id, t]));
+
+      // Refuse to drop a task onto itself or into its own subtree — that
+      // would create a cycle copy_task_tree's recursive walk can't handle.
+      let cursor: string | null = newParentId;
+      while (cursor) {
+        if (cursor === id) return;
+        cursor = byId.get(cursor)?.parent_template_task_id ?? null;
+      }
+
+      const siblings = query.data.tasks
+        .filter((t) => t.parent_template_task_id === newParentId && t.id !== id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const moved = byId.get(id);
+      if (!moved) return;
+      const insertAt = beforeId ? siblings.findIndex((t) => t.id === beforeId) : -1;
+      siblings.splice(insertAt === -1 ? siblings.length : insertAt, 0, moved);
+
+      for (let i = 0; i < siblings.length; i++) {
+        const s = siblings[i];
+        const patch: Partial<TemplateTask> = { sort_order: i };
+        if (s.id === id) patch.parent_template_task_id = newParentId;
+        const { error } = await tasksDb.from("template_tasks").update(patch).eq("id", s.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   const addChecklist = useMutation({
     mutationFn: async ({ taskId, name }: { taskId: string; name: string }) => {
       const existing = query.data?.checklistsByTask.get(taskId) ?? [];
@@ -262,6 +304,7 @@ export function useTemplateBuilder(templateId: string | undefined) {
     moveTask: moveTask.mutateAsync,
     indentTask: indentTask.mutateAsync,
     outdentTask: outdentTask.mutateAsync,
+    moveTaskTo: moveTaskTo.mutateAsync,
     addChecklist: addChecklist.mutateAsync,
     deleteChecklist: deleteChecklist.mutateAsync,
     addChecklistItem: addChecklistItem.mutateAsync,

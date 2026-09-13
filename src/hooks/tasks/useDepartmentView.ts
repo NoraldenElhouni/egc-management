@@ -112,7 +112,7 @@ export function useDepartmentView(departmentId: string | undefined) {
       if (tasksError) throw tasksError;
 
       const taskIds = (tasks ?? []).map((t) => t.id);
-      const projectIds = Array.from(new Set((tasks ?? []).map((t) => t.project_id)));
+      const projectIds = Array.from(new Set((tasks ?? []).map((t) => t.project_id).filter(Boolean))) as string[];
       const zoneIds = Array.from(new Set((tasks ?? []).map((t) => t.zone_id).filter(Boolean))) as string[];
       const statusIds = Array.from(new Set((tasks ?? []).map((t) => t.status_id)));
 
@@ -220,18 +220,20 @@ export function useDepartmentView(departmentId: string | undefined) {
 
       const projectNameById = new Map((projectRows ?? []).map((p) => [p.id, p.name]));
       const zoneNameById = new Map((zoneRows ?? []).map((z) => [z.id, z.name]));
+      const NO_PROJECT_KEY = "__no_project__";
 
       const byProject = new Map<string, Map<string | null, TaskLite[]>>();
       for (const t of taskList) {
-        const zoneMap = byProject.get(t.project_id) ?? new Map<string | null, TaskLite[]>();
+        const projectKey = t.project_id ?? NO_PROJECT_KEY;
+        const zoneMap = byProject.get(projectKey) ?? new Map<string | null, TaskLite[]>();
         const list = zoneMap.get(t.zone_id) ?? [];
         list.push(t);
         zoneMap.set(t.zone_id, list);
-        byProject.set(t.project_id, zoneMap);
+        byProject.set(projectKey, zoneMap);
       }
       const projectGroups: ProjectGroup[] = Array.from(byProject.entries()).map(([projectId, zoneMap]) => ({
         projectId,
-        projectName: projectNameById.get(projectId) ?? "مشروع",
+        projectName: projectId === NO_PROJECT_KEY ? "بدون مشروع" : (projectNameById.get(projectId) ?? "مشروع"),
         zoneGroups: Array.from(zoneMap.entries()).map(([zoneId, tasksInZone]) => ({
           zoneId,
           zoneName: zoneId ? (zoneNameById.get(zoneId) ?? null) : null,

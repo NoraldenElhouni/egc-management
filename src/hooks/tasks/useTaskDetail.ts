@@ -8,16 +8,18 @@ import type { EmployeeLite, StatusRow, TaskRow } from "./useTaskBoard";
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
 // =====================================================================
-// tasks.task_comments does NOT exist in the live schema (confirmed via
-// `supabase gen types` — only task_activity does). The build plan's own
-// db summary already flags this ("4.16 and 4.17 were never sent"), so
-// the activity feed here shows system activity only; no user comments.
+// tasks.task_comments was added per build plan §4.17 (id, task_id,
+// parent_comment_id, author_user_id, body jsonb, created_at, updated_at,
+// is_resolved) — see the migration this hook now assumes exists. `body`
+// stores `{ text: string }`, the same plain shape `description` already
+// uses (build plan §4.7 — jsonb, not HTML, no rich-text editor yet).
 
 export type Requirement = Database["tasks"]["Tables"]["task_requirements"]["Row"];
 export type Checklist = Database["tasks"]["Tables"]["checklists"]["Row"];
 export type ChecklistItem = Database["tasks"]["Tables"]["checklist_items"]["Row"];
 export type Relationship = Database["tasks"]["Tables"]["task_relationships"]["Row"];
 export type Activity = Database["tasks"]["Tables"]["task_activity"]["Row"];
+export type Comment = Database["tasks"]["Tables"]["task_comments"]["Row"];
 export type TaskLink = Database["tasks"]["Tables"]["task_links"]["Row"];
 export type Attachment = Database["public"]["Tables"]["attachments"]["Row"];
 
@@ -55,6 +57,7 @@ export interface TaskDetailData {
   relationships: (Relationship & { relatedTitle: string })[];
   attachments: Attachment[];
   activity: Activity[];
+  comments: Comment[];
 }
 
 export function useTaskDetail(taskId: string | undefined) {
@@ -85,7 +88,9 @@ export function useTaskDetail(taskId: string | undefined) {
 
       const [statusSetId, projectRow, zoneRow, parentRow] = await Promise.all([
         resolveStatusSetId(board.status_set_id, board.space_id),
-        supabase.from("projects").select("name").eq("id", task.project_id).maybeSingle(),
+        task.project_id
+          ? supabase.from("projects").select("name").eq("id", task.project_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
         task.zone_id
           ? supabase.schema("boq").from("zones").select("name").eq("id", task.zone_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -114,6 +119,7 @@ export function useTaskDetail(taskId: string | undefined) {
         { data: relationshipRows, error: relationshipsError },
         { data: attachments, error: attachmentsError },
         { data: activity, error: activityError },
+        { data: comments, error: commentsError },
       ] = await Promise.all([
         tasksDb.from("statuses").select("*").eq("status_set_id", statusSetId).order("sort_order"),
         tasksDb.from("task_assignees").select("user_id").eq("task_id", taskId),
@@ -140,6 +146,7 @@ export function useTaskDetail(taskId: string | undefined) {
         tasksDb.from("task_relationships").select("*").eq("task_id", taskId),
         supabase.from("attachments").select("*").eq("entity_type", "task").eq("entity_id", taskId).order("created_at", { ascending: false }),
         tasksDb.from("task_activity").select("*").eq("task_id", taskId).order("created_at", { ascending: false }),
+        tasksDb.from("task_comments").select("*").eq("task_id", taskId).order("created_at", { ascending: true }),
       ]);
       if (statusesError) throw statusesError;
       if (assigneeError) throw assigneeError;
@@ -157,6 +164,7 @@ export function useTaskDetail(taskId: string | undefined) {
       if (relationshipsError) throw relationshipsError;
       if (attachmentsError) throw attachmentsError;
       if (activityError) throw activityError;
+      if (commentsError) throw commentsError;
 
       const referencedTaskIds = Array.from(
         new Set([
@@ -255,6 +263,7 @@ export function useTaskDetail(taskId: string | undefined) {
         relationships,
         attachments: attachments ?? [],
         activity: activity ?? [],
+        comments: comments ?? [],
       };
     },
   });
@@ -398,6 +407,47 @@ export function useTaskDetail(taskId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const addComment = useMutation({
+    mutationFn: async ({ text, parentCommentId }: { text: string; parentCommentId?: string | null }) => {
+      if (!taskId || !user?.id) throw new Error("no authenticated user");
+      const { error } = await tasksDb.from("task_comments").insert({
+        task_id: taskId,
+        parent_comment_id: parentCommentId ?? null,
+        author_user_id: user.id,
+        body: { text },
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const editComment = useMutation({
+    mutationFn: async ({ id, text }: { id: string; text: string }) => {
+      const { error } = await tasksDb
+        .from("task_comments")
+        .update({ body: { text }, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteComment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await tasksDb.from("task_comments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const toggleCommentResolved = useMutation({
+    mutationFn: async ({ id, resolved }: { id: string; resolved: boolean }) => {
+      const { error } = await tasksDb.from("task_comments").update({ is_resolved: resolved }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     data: query.data,
     loading: query.isPending,
@@ -412,5 +462,9 @@ export function useTaskDetail(taskId: string | undefined) {
     addSubtask: addSubtask.mutate,
     addRelationship: addRelationship.mutate,
     removeRelationship: removeRelationship.mutate,
+    addComment: addComment.mutateAsync,
+    editComment: editComment.mutateAsync,
+    deleteComment: deleteComment.mutate,
+    toggleCommentResolved: toggleCommentResolved.mutate,
   };
 }

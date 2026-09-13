@@ -48,6 +48,10 @@ export default function TaskDetailPanel() {
     addSubtask,
     addRelationship,
     removeRelationship,
+    addComment,
+    editComment,
+    deleteComment,
+    toggleCommentResolved,
   } = useTaskDetail(taskId);
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
@@ -252,7 +256,15 @@ export default function TaskDetailPanel() {
             </Section>
 
             <Section title="النشاط">
-              <ActivitySection activity={data.activity} employeesById={data.employeesById} />
+              <ActivitySection
+                activity={data.activity}
+                comments={data.comments}
+                employeesById={data.employeesById}
+                onAddComment={(text) => addComment({ text })}
+                onEditComment={(id, text) => editComment({ id, text })}
+                onDeleteComment={deleteComment}
+                onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
+              />
             </Section>
           </div>
         )}

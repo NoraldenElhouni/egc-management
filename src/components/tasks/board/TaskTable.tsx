@@ -1,13 +1,18 @@
 import { useMemo, useRef, useState } from "react";
-import { Plus, MoreHorizontal } from "lucide-react";
-import TaskRow, { ROW_GRID } from "./TaskRow";
+import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp } from "lucide-react";
+import TaskRow, { rowGridStyle } from "./TaskRow";
+import ColumnEditorModal from "./ColumnEditorModal";
+import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import type {
+  CustomColumn,
   EmployeeLite,
+  FieldType,
   Priority,
   StatusRow,
   TaskRow as TaskRowType,
   TaskTypeLite,
 } from "../../../hooks/tasks/useTaskBoard";
+import type { Json } from "../../../lib/supabase";
 
 type GroupBy = "none" | "department" | "assignee" | "task_type" | "zone";
 
@@ -33,12 +38,19 @@ interface TaskTableProps {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  customColumns: CustomColumn[];
+  valuesByTask: Map<string, Map<string, Json>>;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangePriority: (taskId: string, priority: Priority | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
   onCreateTask: (title: string, parentTaskId: string | null) => void;
-  canCreateTask: boolean;
+  onChangeValue: (taskId: string, fieldDefinitionId: string, value: Json) => void;
+  onAttachField: (fieldDefinitionId: string) => void;
+  onCreateAndAttachField: (input: { name: string; name_ar: string; type: FieldType; config: Json }) => void;
+  onDetachColumn: (boardColumnId: string) => void;
+  onRenameField: (fieldDefinitionId: string, name_ar: string) => void;
+  onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
 }
 
 function computeDepths(tasks: TaskRowType[]): Map<string, number> {
@@ -73,17 +85,26 @@ export default function TaskTable({
   linkedTaskIds,
   blockedTaskIds,
   unmetRequirementTaskIds,
+  customColumns,
+  valuesByTask,
   onChangeStatus,
   onChangePriority,
   onChangeDueDate,
   onChangeAssignees,
   onCreateTask,
-  canCreateTask,
+  onChangeValue,
+  onAttachField,
+  onCreateAndAttachField,
+  onDetachColumn,
+  onRenameField,
+  onMoveTaskTo,
 }: TaskTableProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const hasSeededCollapse = useRef(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [showColumnEditor, setShowColumnEditor] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string | null, TaskRowType[]>();
@@ -120,6 +141,11 @@ export default function TaskTable({
       return next;
     });
   };
+
+  const collapseAll = () => {
+    setCollapsedIds(new Set(tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id)));
+  };
+  const expandAll = () => setCollapsedIds(new Set());
 
   const topLevel = childrenByParent.get(null) ?? [];
 
@@ -188,22 +214,65 @@ export default function TaskTable({
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={expandAll}
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            <ChevronsDown className="h-3.5 w-3.5" />
+            توسيع الكل
+          </button>
+          <button
+            onClick={collapseAll}
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            <ChevronsUp className="h-3.5 w-3.5" />
+            طي الكل
+          </button>
+        </div>
       </div>
 
-      <div className={`${ROW_GRID} sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-2 py-2 text-xs font-semibold text-gray-500`}>
+      <div
+        style={rowGridStyle(customColumns.length)}
+        className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-2 py-2 text-xs font-semibold text-gray-500"
+      >
         <div>عنوان المهمة</div>
-        <HeaderCell label="الحالة" />
-        <HeaderCell label="الأولوية" />
-        <HeaderCell label="الفريق" />
-        <HeaderCell label="الاستحقاق" />
-        <HeaderCell label="القسم" />
+        <div>الحالة</div>
+        <div>الأولوية</div>
+        <div>الفريق</div>
+        <div>الاستحقاق</div>
+        <div>القسم</div>
+        {customColumns.map((col) => (
+          <CustomColumnHeader
+            key={col.boardColumnId}
+            column={col}
+            onRename={(name_ar) => onRenameField(col.fieldDefinitionId, name_ar)}
+            onDetach={() => onDetachColumn(col.boardColumnId)}
+          />
+        ))}
         <button
-          title="إضافة عمود — محرر الأعمدة قادم قريباً"
+          onClick={() => setShowColumnEditor(true)}
+          title="إضافة عمود"
           className="flex items-center justify-center text-gray-300 hover:text-gray-500"
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      {showColumnEditor && (
+        <ColumnEditorModal
+          attachedFieldIds={new Set(customColumns.map((c) => c.fieldDefinitionId))}
+          onAttach={(fieldId) => {
+            onAttachField(fieldId);
+            setShowColumnEditor(false);
+          }}
+          onCreate={(input) => {
+            onCreateAndAttachField({ ...input, config: input.config as Json });
+            setShowColumnEditor(false);
+          }}
+          onClose={() => setShowColumnEditor(false)}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {groups.map((group) => (
@@ -232,11 +301,18 @@ export default function TaskTable({
                 linkedTaskIds={linkedTaskIds}
                 blockedTaskIds={blockedTaskIds}
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
+                customColumns={customColumns}
+                valuesByTask={valuesByTask}
                 onChangeStatus={onChangeStatus}
                 onChangePriority={onChangePriority}
                 onChangeDueDate={onChangeDueDate}
                 onChangeAssignees={onChangeAssignees}
                 onCreateTask={onCreateTask}
+                onChangeValue={onChangeValue}
+                draggedId={draggedId}
+                onDragStart={setDraggedId}
+                onDragEnd={() => setDraggedId(null)}
+                onMoveTaskTo={onMoveTaskTo}
               />
             ))}
           </div>
@@ -248,41 +324,88 @@ export default function TaskTable({
           </div>
         )}
 
-        {canCreateTask ? (
-          <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-            <Plus className="h-3.5 w-3.5 text-gray-400" />
-            <input
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") submitNewTask();
-                if (e.key === "Escape") setNewTaskTitle("");
-              }}
-              onBlur={submitNewTask}
-              placeholder="إضافة مهمة..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-            />
-          </div>
-        ) : (
-          <div className="px-3 py-2 text-xs text-gray-400">
-            هذه اللوحة غير مرتبطة بمشروع بعد، لا يمكن إضافة مهام إليها
-          </div>
-        )}
+        <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
+          <Plus className="h-3.5 w-3.5 text-gray-400" />
+          <input
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitNewTask();
+              if (e.key === "Escape") setNewTaskTitle("");
+            }}
+            onBlur={submitNewTask}
+            placeholder="إضافة مهمة..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-function HeaderCell({ label }: { label: string }) {
+// The fixed built-in columns (status/priority/assignee/date/department)
+// aren't backed by field_definitions, so there's nothing for a "···" on
+// them to actually edit/hide/delete — only attached custom columns get
+// one, and it does something real (rename the shared field, or detach
+// this column from just this board, which build plan §4.11 confirms is
+// non-destructive since task_values survive it).
+function CustomColumnHeader({
+  column,
+  onRename,
+  onDetach,
+}: {
+  column: CustomColumn;
+  onRename: (name_ar: string) => void;
+  onDetach: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState(column.name_ar);
+  const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, () => {
+    setOpen(false);
+    setRenaming(false);
+  });
+
+  if (renaming) {
+    return (
+      <input
+        autoFocus
+        value={nameDraft}
+        onChange={(e) => setNameDraft(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        onBlur={() => {
+          const value = nameDraft.trim();
+          if (value && value !== column.name_ar) onRename(value);
+          setRenaming(false);
+        }}
+        className="w-full rounded border border-gray-300 bg-white px-1 py-0.5 text-xs outline-none"
+      />
+    );
+  }
+
   return (
-    <div className="flex items-center justify-between">
-      <span>{label}</span>
-      <button
-        title={`قريباً — تعديل/إخفاء/حذف حقل "${label}"`}
-        className="text-gray-300 hover:text-gray-500"
-      >
+    <div ref={ref} className="relative flex items-center justify-between">
+      <span className="truncate">{column.name_ar}</span>
+      <button onClick={() => setOpen((v) => !v)} className="shrink-0 text-gray-300 hover:text-gray-500">
         <MoreHorizontal className="h-3 w-3" />
       </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-32 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          <button
+            onClick={() => {
+              setRenaming(true);
+              setOpen(false);
+            }}
+            className="block w-full px-3 py-1.5 text-right text-xs hover:bg-gray-50"
+          >
+            تعديل الاسم
+          </button>
+          <button onClick={onDetach} className="block w-full px-3 py-1.5 text-right text-xs text-red-500 hover:bg-red-50">
+            إزالة العمود
+          </button>
+        </div>
+      )}
     </div>
   );
 }
