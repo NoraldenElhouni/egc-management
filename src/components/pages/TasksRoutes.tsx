@@ -11,10 +11,13 @@ import TemplateBuilderPage from "../../pages/tasks/admin/TemplateBuilderPage";
 import SpaceSettingsPage from "../../pages/tasks/admin/SpaceSettingsPage";
 import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
 
-// No RequirePermission here yet — permission keys for this module are
-// Part 6 of the build plan (tasks/task-module-build-plan.md), deliberately
-// skipped for now. Wire tasks.* keys into permission_catalog and gate this
-// section the same way HR/Finance/etc. do before this ships for real.
+// App.tsx gates the whole /tasks/* mount point behind one section-level
+// permission (view_tasks_section, Admin only for now, while the module is
+// in testing). Nothing inside this file is gated per-screen or per-action
+// yet — that's Part 6 of the build plan (tasks/task-module-build-plan.md),
+// deliberately on hold. Wire tasks.* keys into permission_catalog and gate
+// individual routes/actions here the same way HR/Finance/etc. do before
+// this ships to more than Admin.
 //
 // board/:id (D2), department/:id (D6), and my-work (D7) each mount D3's
 // slide-over as their own nested task/:id route. TaskDetailPanel reads no

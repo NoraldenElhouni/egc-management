@@ -162,8 +162,15 @@ const AppRouter = () => {
               />
             </Route>
 
-            {/* Tasks — no RequirePermission yet, see TasksRoutes.tsx */}
-            <Route path="/tasks/*" element={<TasksRoutes />} />
+            {/* Tasks — section-level gate only (view_tasks_section,
+                granted to Admin only while the module is in testing).
+                Per-screen/action permissions inside it are still on hold,
+                see TasksRoutes.tsx and task-module-build-plan.md Part 12. */}
+            <Route
+              element={<RequirePermission permission="view_tasks_section" />}
+            >
+              <Route path="/tasks/*" element={<TasksRoutes />} />
+            </Route>
           </Route>
         </Route>
       )}

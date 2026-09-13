@@ -76,13 +76,14 @@ const MainMenu = () => {
       permission: "view_execution_section",
     },
     {
-      // Part 6 (permissions) is deliberately skipped for now — no
-      // `permission` key here means it's public, same as omitting it for
-      // any other public item. Add tasks.* keys and a view_tasks_section
-      // gate before this ships for real (see task-module-build-plan.md).
+      // Section-level gate only (view_tasks_section) — granted to Admin
+      // only for now, while the module is in testing. Part 6's full
+      // per-screen/per-action permission wiring inside the module is
+      // still on hold (see task-module-build-plan.md Part 12).
       label: "المهام",
       icon: ListTodo,
       path: "/tasks",
+      permission: "view_tasks_section",
     },
     {
       label: "الإعدادات",
