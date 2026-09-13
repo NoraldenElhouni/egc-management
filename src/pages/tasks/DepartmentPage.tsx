@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { Loader2, ListTodo, AlarmClock, Lock, UserX, ChevronDown, ChevronLeft } from "lucide-react";
 import { useDepartmentView } from "../../hooks/tasks/useDepartmentView";
 import Badge, { type BadgeVariant } from "../../components/ui/Badge";
+import Tooltip from "../../components/ui/Tooltip";
 import type { Priority } from "../../hooks/tasks/useTaskBoard";
 
 // D6 — Department view (build plan Part 7). Everything here is read-only
@@ -172,14 +173,14 @@ export default function DepartmentPage() {
                                     const employee = data.employeesById.get(id);
                                     const name = employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "";
                                     return (
-                                      <span
-                                        key={id}
-                                        className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
-                                        style={{ background: colorFor(id) }}
-                                        title={name}
-                                      >
-                                        {initialsOf(name || "?")}
-                                      </span>
+                                      <Tooltip key={id} label={name || null}>
+                                        <span
+                                          className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
+                                          style={{ background: colorFor(id) }}
+                                        >
+                                          {initialsOf(name || "?")}
+                                        </span>
+                                      </Tooltip>
                                     );
                                   })
                                 )}

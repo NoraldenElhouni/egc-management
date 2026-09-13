@@ -118,6 +118,24 @@ const SPACE_TYPE_ICONS: Record<SpaceType, typeof FolderKanban> = {
   personal: User,
 };
 
+// Which spaces are expanded is per-user UI state, not app data — same
+// posture as SidebarContext's own "sidebarCollapsed" key. Spaces default
+// collapsed (a space not yet in this set reads as closed) since with
+// several spaces open at once the sidebar became one long wall of boards
+// with no way to tell where one space ended and the next began.
+const OPEN_SPACES_STORAGE_KEY = "tasksSidebarOpenSpaces";
+
+function loadOpenSpaceIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(OPEN_SPACES_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 interface SearchHit {
   id: string;
   title: string;
@@ -368,8 +386,15 @@ function FolderSection({
   );
 }
 
-function SpaceSection({ node }: { node: SpaceNode }) {
-  const [isOpen, setIsOpen] = useState(true);
+function SpaceSection({
+  node,
+  isOpen,
+  onToggle,
+}: {
+  node: SpaceNode;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addMode, setAddMode] = useState<"board" | "folder" | null>(null);
   const addMenuRef = useRef<HTMLDivElement>(null);
@@ -386,7 +411,7 @@ function SpaceSection({ node }: { node: SpaceNode }) {
     <div className="group/space">
       <div className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
         <button
-          onClick={() => setIsOpen((v) => !v)}
+          onClick={onToggle}
           className="flex flex-1 items-center gap-2 overflow-hidden text-right"
         >
           <ChevronDown
@@ -401,7 +426,7 @@ function SpaceSection({ node }: { node: SpaceNode }) {
         <div ref={addMenuRef} className="relative shrink-0">
           <button
             onClick={() => {
-              setIsOpen(true);
+              if (!isOpen) onToggle();
               setAddMenuOpen((v) => !v);
             }}
             className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
@@ -484,6 +509,29 @@ const TasksLayoutInner = () => {
   const { data, loading } = useTasksSidebar();
   const navigate = useNavigate();
   const [showNewSpace, setShowNewSpace] = useState(false);
+
+  const [openSpaceIds, setOpenSpaceIds] = useState<Set<string>>(loadOpenSpaceIds);
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPEN_SPACES_STORAGE_KEY, JSON.stringify(Array.from(openSpaceIds)));
+    } catch {
+      // private window / storage blocked — collapse state just won't persist
+    }
+  }, [openSpaceIds]);
+  const toggleSpace = (spaceId: string) => {
+    setOpenSpaceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(spaceId)) next.delete(spaceId);
+      else next.add(spaceId);
+      return next;
+    });
+  };
+  const allSpaceIds = useMemo(() => {
+    if (!data) return [];
+    return SPACE_TYPE_ORDER.flatMap((type) => data.spacesByType[type].map((n) => n.space.id));
+  }, [data]);
+  const allSpacesOpen = allSpaceIds.length > 0 && allSpaceIds.every((id) => openSpaceIds.has(id));
+  const toggleAllSpaces = () => setOpenSpaceIds(allSpacesOpen ? new Set() : new Set(allSpaceIds));
 
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
@@ -682,13 +730,33 @@ const TasksLayoutInner = () => {
             </div>
           ) : (
             <>
+              {spaceGroups.length > 0 && (
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-xs font-semibold text-gray-400">المساحات</span>
+                  <button
+                    onClick={toggleAllSpaces}
+                    className="text-xs text-gray-400 underline hover:text-gray-600"
+                  >
+                    {allSpacesOpen ? "طي الكل" : "توسيع الكل"}
+                  </button>
+                </div>
+              )}
               {spaceGroups.map((group) => (
-                <div key={group.type} className="space-y-1">
+                <div key={group.type} className="space-y-1.5">
                   <div className="px-2 text-xs font-semibold text-gray-400">
                     {SPACE_TYPE_LABELS[group.type]}
                   </div>
                   {group.nodes.map((node) => (
-                    <SpaceSection key={node.space.id} node={node} />
+                    <div
+                      key={node.space.id}
+                      className="border-b border-gray-50 pb-1.5 last:border-b-0 last:pb-0"
+                    >
+                      <SpaceSection
+                        node={node}
+                        isOpen={openSpaceIds.has(node.space.id)}
+                        onToggle={() => toggleSpace(node.space.id)}
+                      />
+                    </div>
                   ))}
                 </div>
               ))}

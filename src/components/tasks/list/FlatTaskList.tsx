@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, ArrowUpDown, X, ExternalLink } from "lucide-react";
 import Badge, { type BadgeVariant } from "../../ui/Badge";
+import Tooltip from "../../ui/Tooltip";
 import type { EmployeeLite, Priority, StatusRow, TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
 import type { Database } from "../../../lib/supabase";
 
@@ -491,14 +492,14 @@ export default function FlatTaskList({
                       const employee = employeesById.get(id);
                       const name = employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "";
                       return (
-                        <span
-                          key={id}
-                          className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
-                          style={{ background: colorFor(id) }}
-                          title={name}
-                        >
-                          {initialsOf(name || "?")}
-                        </span>
+                        <Tooltip key={id} label={name || null}>
+                          <span
+                            className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
+                            style={{ background: colorFor(id) }}
+                          >
+                            {initialsOf(name || "?")}
+                          </span>
+                        </Tooltip>
                       );
                     })
                   )}

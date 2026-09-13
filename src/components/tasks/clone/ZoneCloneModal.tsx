@@ -7,6 +7,7 @@ import {
   type CloneSourceTask,
 } from "../../../hooks/tasks/useZoneClone";
 import type { EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
+import Tooltip from "../../ui/Tooltip";
 
 // =====================================================================
 // D5 — Clone zone (build plan Part 7). Same layout shape as D4's
@@ -356,14 +357,14 @@ function CloneNode({
             {assignees.slice(0, 3).map((id) => {
               const employee = employeesById.get(id);
               return (
-                <span
-                  key={id}
-                  className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
-                  style={{ background: colorFor(id) }}
-                  title={employee ? `${employee.first_name} ${employee.last_name ?? ""}` : ""}
-                >
-                  {employee ? initials(employee) : "?"}
-                </span>
+                <Tooltip key={id} label={employee ? `${employee.first_name} ${employee.last_name ?? ""}` : null}>
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
+                    style={{ background: colorFor(id) }}
+                  >
+                    {employee ? initials(employee) : "?"}
+                  </span>
+                </Tooltip>
               );
             })}
           </div>

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import type { EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
+import Tooltip from "../../ui/Tooltip";
 
 // Stacked circular avatars, overflow collapses to "+N" — clickup-task-ui
 // skill's "Assignee cell" rule. No shared avatar component exists in this
@@ -71,23 +72,19 @@ export default function AssigneeCell({
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex items-center -space-x-2 rtl:space-x-reverse"
-        title="تعيين"
+        title={assigneeIds.length === 0 ? "تعيين" : undefined}
       >
         {visible.map((id) => {
           const employee = employeesById.get(id);
           return (
-            <span
-              key={id}
-              className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-white"
-              style={{ background: colorFor(id) }}
-              title={
-                employee
-                  ? `${employee.first_name} ${employee.last_name ?? ""}`
-                  : ""
-              }
-            >
-              {employee ? initials(employee) : "?"}
-            </span>
+            <Tooltip key={id} label={employee ? `${employee.first_name} ${employee.last_name ?? ""}` : null}>
+              <span
+                className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-white"
+                style={{ background: colorFor(id) }}
+              >
+                {employee ? initials(employee) : "?"}
+              </span>
+            </Tooltip>
           );
         })}
         {overflow > 0 && (

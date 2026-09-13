@@ -58,24 +58,6 @@ interface TaskTableProps {
   onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
 }
 
-function computeDepths(tasks: TaskRowType[]): Map<string, number> {
-  const byId = new Map(tasks.map((t) => [t.id, t]));
-  const depths = new Map<string, number>();
-  const depthOf = (id: string, seen = new Set<string>()): number => {
-    const cached = depths.get(id);
-    if (cached !== undefined) return cached;
-    if (seen.has(id)) return 0; // guards a corrupt/cyclical parent chain
-    seen.add(id);
-    const task = byId.get(id);
-    const parentId = task?.parent_task_id ?? null;
-    const depth = parentId && byId.has(parentId) ? depthOf(parentId, seen) + 1 : 0;
-    depths.set(id, depth);
-    return depth;
-  };
-  for (const t of tasks) depthOf(t.id);
-  return depths;
-}
-
 export default function TaskTable({
   boardId,
   boardZoneId,
@@ -127,18 +109,16 @@ export default function TaskTable({
   }, [tasks]);
 
   // Seed the collapsed set exactly once per board (the parent remounts
-  // this component with key={boardId}) — collapsed by default beyond 1
-  // level, per clickup-task-ui. Guarded by a ref rather than "is
-  // collapsedIds empty" so that a user expanding every row back to an
-  // empty set doesn't get re-collapsed by the next mutation's refetch.
+  // this component with key={boardId}) — every task with subtasks starts
+  // collapsed, at every depth, not just nested ones: a top-level task's
+  // own subtasks used to show open by default, which made a board full
+  // of them just as noisy as no collapsing at all. Guarded by a ref
+  // rather than "is collapsedIds empty" so that a user expanding every
+  // row back to an empty set doesn't get re-collapsed by the next
+  // mutation's refetch.
   if (!hasSeededCollapse.current && tasks.length > 0) {
     hasSeededCollapse.current = true;
-    const depths = computeDepths(tasks);
-    const initial = new Set(
-      tasks
-        .filter((t) => (depths.get(t.id) ?? 0) >= 1 && childrenByParent.has(t.id))
-        .map((t) => t.id),
-    );
+    const initial = new Set(tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id));
     if (initial.size > 0) setCollapsedIds(initial);
   }
 
