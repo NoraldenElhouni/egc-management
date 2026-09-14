@@ -1,53 +1,38 @@
-import { useCallback } from "react";
+import { useMemo } from "react";
 import { Outlet, useNavigate, useParams, Link } from "react-router-dom";
-import { Loader2, Settings, Folder, Layers } from "lucide-react";
+import { Loader2, Settings } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSpaceTasksView } from "../../hooks/tasks/useSpaceTasksView";
-import FlatTaskList, { type FlatTaskRow, type TreeNode } from "../../components/tasks/list/FlatTaskList";
+import FlatTaskList, { type GroupByOption } from "../../components/tasks/list/FlatTaskList";
 
-// "Space tasks" — every task across every board (and folder) of one
-// space, grouped as a collapsible folder (optional) > board > tasks
-// tree — one level shallower than AllTasksPage.tsx since the space
-// itself is already the context (build plan Part 7 follow-up).
+// "Space tasks" — every task across every board of one space,
+// filterable/sortable/grouped (default: by Status) — one level
+// shallower than AllTasksPage.tsx since the space itself is already the
+// context, so there's no "group by space" option here.
 export default function SpaceTasksPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data, loading, error } = useSpaceTasksView(spaceId);
 
-  const buildTree = useCallback(
-    (filteredTasks: FlatTaskRow[]): TreeNode[] => {
-      if (!data) return [];
+  const boardNameById = useMemo(() => new Map((data?.boards ?? []).map((b) => [b.id, b.name])), [data?.boards]);
+  const folderNameById = useMemo(() => new Map((data?.folders ?? []).map((f) => [f.id, f.name])), [data?.folders]);
+  const folderIdByBoard = useMemo(() => new Map((data?.boards ?? []).map((b) => [b.id, b.folder_id])), [data?.boards]);
 
-      const tasksByBoard = new Map<string, FlatTaskRow[]>();
-      for (const t of filteredTasks) {
-        const list = tasksByBoard.get(t.board_id) ?? [];
-        list.push(t);
-        tasksByBoard.set(t.board_id, list);
-      }
-
-      const boardNode = (board: (typeof data.boards)[number]): TreeNode => ({
-        id: board.id,
-        label: board.name,
-        icon: <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
-        children: [],
-        tasks: tasksByBoard.get(board.id) ?? [],
-        onOpenExternal: () => navigate(`/tasks/board/${board.id}`),
-      });
-
-      const folderNodes: TreeNode[] = data.folders.map((folder) => ({
-        id: folder.id,
-        label: folder.name,
-        icon: <Folder className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
-        children: data.boards.filter((b) => b.folder_id === folder.id).map(boardNode),
-        tasks: [],
-      }));
-      const directBoardNodes = data.boards.filter((b) => !b.folder_id).map(boardNode);
-
-      return [...folderNodes, ...directBoardNodes];
+  const extraGroupOptions = useMemo((): GroupByOption[] => [
+    {
+      value: "board",
+      label: "اللوحة",
+      keyForTask: (t) => t.board_id,
+      labelForKey: (key) => boardNameById.get(key) ?? "—",
     },
-    [data, navigate],
-  );
+    {
+      value: "folder",
+      label: "المجلد",
+      keyForTask: (t) => folderIdByBoard.get(t.board_id) ?? "none",
+      labelForKey: (key) => (key === "none" ? "بدون مجلد" : (folderNameById.get(key) ?? "—")),
+    },
+  ], [boardNameById, folderIdByBoard, folderNameById]);
 
   if (loading) {
     return (
@@ -91,9 +76,10 @@ export default function SpaceTasksPage() {
           taskTypes={data.taskTypes}
           subtaskProgressByTask={data.subtaskProgressByTask}
           projectNameById={data.projectNameById}
-          buildTree={buildTree}
-          treeStorageKey="tasksTreeOpenNodes"
+          extraGroupOptions={extraGroupOptions}
+          secondaryLabelForTask={(task) => boardNameById.get(task.board_id)}
           onOpenTask={(taskId) => navigate(`/tasks/space/${spaceId}/tasks/task/${taskId}`)}
+          onOpenBoard={(boardId) => navigate(`/tasks/board/${boardId}`)}
           currentUserId={user?.id}
           emptyLabel="لا توجد مهام في هذه المساحة بعد"
         />

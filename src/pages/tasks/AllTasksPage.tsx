@@ -1,73 +1,46 @@
-import { useCallback } from "react";
+import { useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Loader2, FolderKanban, Building2, Building, User, Folder, Layers } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { useAllTasksView, type TreeSpace } from "../../hooks/tasks/useAllTasksView";
-import FlatTaskList, { type FlatTaskRow, type TreeNode } from "../../components/tasks/list/FlatTaskList";
+import { useAllTasksView } from "../../hooks/tasks/useAllTasksView";
+import FlatTaskList, { type GroupByOption } from "../../components/tasks/list/FlatTaskList";
 
 // "All tasks" — every task across every board/space the user can see,
-// grouped as a collapsible space > folder (optional) > board > tasks
-// tree, ClickUp's own "Everything" view (build plan Part 7 follow-up).
-// Private spaces are excluded unless the current user owns/is a member
-// of them — see useAllTasksView.ts's header for the exact rule.
-
-const SPACE_TYPE_ICONS: Record<TreeSpace["space_type"], typeof FolderKanban> = {
-  project: FolderKanban,
-  department: Building2,
-  company: Building,
-  personal: User,
-};
-
+// filterable/sortable/grouped (default: by Status, ClickUp's own
+// default for a cross-scope view — confirmed via research, see
+// FlatTaskList.tsx's header). Private spaces are excluded unless the
+// current user owns/is a member of them — see useAllTasksView.ts.
 export default function AllTasksPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data, loading, error } = useAllTasksView();
 
-  const buildTree = useCallback(
-    (filteredTasks: FlatTaskRow[]): TreeNode[] => {
-      if (!data) return [];
+  const boardNameById = useMemo(() => new Map((data?.boards ?? []).map((b) => [b.id, b.name])), [data?.boards]);
+  const spaceNameById = useMemo(() => new Map((data?.spaces ?? []).map((s) => [s.id, s.name])), [data?.spaces]);
+  const spaceIdByBoard = useMemo(() => new Map((data?.boards ?? []).map((b) => [b.id, b.space_id])), [data?.boards]);
+  const folderNameById = useMemo(() => new Map((data?.folders ?? []).map((f) => [f.id, f.name])), [data?.folders]);
+  const folderIdByBoard = useMemo(() => new Map((data?.boards ?? []).map((b) => [b.id, b.folder_id])), [data?.boards]);
 
-      const tasksByBoard = new Map<string, FlatTaskRow[]>();
-      for (const t of filteredTasks) {
-        const list = tasksByBoard.get(t.board_id) ?? [];
-        list.push(t);
-        tasksByBoard.set(t.board_id, list);
-      }
-
-      const boardNode = (board: (typeof data.boards)[number]): TreeNode => ({
-        id: board.id,
-        label: board.name,
-        icon: <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
-        children: [],
-        tasks: tasksByBoard.get(board.id) ?? [],
-        onOpenExternal: () => navigate(`/tasks/board/${board.id}`),
-      });
-
-      return data.spaces.map((space): TreeNode => {
-        const spaceBoards = data.boards.filter((b) => b.space_id === space.id);
-        const spaceFolders = data.folders.filter((f) => f.space_id === space.id);
-        const Icon = SPACE_TYPE_ICONS[space.space_type];
-
-        const folderNodes: TreeNode[] = spaceFolders.map((folder) => ({
-          id: folder.id,
-          label: folder.name,
-          icon: <Folder className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
-          children: spaceBoards.filter((b) => b.folder_id === folder.id).map(boardNode),
-          tasks: [],
-        }));
-        const directBoardNodes = spaceBoards.filter((b) => !b.folder_id).map(boardNode);
-
-        return {
-          id: space.id,
-          label: space.name,
-          icon: <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />,
-          children: [...folderNodes, ...directBoardNodes],
-          tasks: [],
-        };
-      });
+  const extraGroupOptions = useMemo((): GroupByOption[] => [
+    {
+      value: "space",
+      label: "المساحة",
+      keyForTask: (t) => spaceIdByBoard.get(t.board_id) ?? "",
+      labelForKey: (key) => spaceNameById.get(key) ?? "—",
     },
-    [data, navigate],
-  );
+    {
+      value: "board",
+      label: "اللوحة",
+      keyForTask: (t) => t.board_id,
+      labelForKey: (key) => boardNameById.get(key) ?? "—",
+    },
+    {
+      value: "folder",
+      label: "المجلد",
+      keyForTask: (t) => folderIdByBoard.get(t.board_id) ?? "none",
+      labelForKey: (key) => (key === "none" ? "بدون مجلد" : (folderNameById.get(key) ?? "—")),
+    },
+  ], [spaceIdByBoard, spaceNameById, boardNameById, folderIdByBoard, folderNameById]);
 
   if (loading) {
     return (
@@ -102,9 +75,15 @@ export default function AllTasksPage() {
           taskTypes={data.taskTypes}
           subtaskProgressByTask={data.subtaskProgressByTask}
           projectNameById={data.projectNameById}
-          buildTree={buildTree}
-          treeStorageKey="tasksTreeOpenNodes"
+          extraGroupOptions={extraGroupOptions}
+          secondaryLabelForTask={(task) => {
+            const spaceId = spaceIdByBoard.get(task.board_id);
+            const spaceName = spaceId ? spaceNameById.get(spaceId) : undefined;
+            const boardName = boardNameById.get(task.board_id);
+            return [spaceName, boardName].filter(Boolean).join(" · ") || undefined;
+          }}
           onOpenTask={(taskId) => navigate(`/tasks/all-tasks/task/${taskId}`)}
+          onOpenBoard={(boardId) => navigate(`/tasks/board/${boardId}`)}
           currentUserId={user?.id}
           emptyLabel="لا توجد مهام بعد"
         />
