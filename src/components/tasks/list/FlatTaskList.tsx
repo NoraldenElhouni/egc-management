@@ -1,32 +1,32 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Search, SlidersHorizontal, ArrowUpDown, X, ExternalLink } from "lucide-react";
-import Badge, { type BadgeVariant } from "../../ui/Badge";
-import Tooltip from "../../ui/Tooltip";
+import { Search, SlidersHorizontal, X, ChevronDown, ChevronsDown, ChevronsUp, ArrowUpDown } from "lucide-react";
 import BoardTaskCard from "./BoardTaskCard";
+import { usePersistedOpenSet } from "../../../hooks/tasks/usePersistedOpenSet";
 import type { EmployeeLite, Priority, StatusRow, TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
 import type { Database } from "../../../lib/supabase";
 
-// Shared filterable/sortable/grouped task list used by the "all tasks"
-// and "space tasks" cross-board views (build plan Part 7 follow-up).
+// Shared filterable, selectably-nested task tree used by the "all
+// tasks" and "space tasks" cross-board views (build plan Part 7
+// follow-up).
 //
-// Matches ClickUp's actual default for a cross-scope view (confirmed via
-// research, 2026-09-14): NOT a forced Space>Folder>Board tree (that was
-// this component's first version, rejected) — a flat task list grouped
-// by a single "Group by" dimension, defaulting to Status, switchable to
-// Space/Board/Priority/Assignee/Type. Groups are static headers with a
-// count, not individually collapsible, same as D2's own TaskTable.tsx
-// groupBy (the sidebar tree is ClickUp's — and this app's — real
-// navigator; clicking a board there already opens a flat, ungrouped
-// single-board table, so this component's job is only the merged
-// multi-board view).
-//
-// D2's TaskTable is additionally board-scoped and per-board-custom-field
-// aware; grouping by anything else here stays deliberately simpler (only
-// fields every task has) since those groupings mix tasks from boards
-// that may not share a custom-field schema at all. Grouping by Board is
-// the exception — every task in a board-group DOES share one schema, so
-// that one grouping renders each group as the real, fully-editable D2
-// board table (BoardTaskCard.tsx) instead of a plain row list.
+// The page supplies a fixed `structuralChain` reflecting real
+// containment — [project, space, folder, board] for All Tasks,
+// [project, folder, board] for one Space (already scoped, so no space
+// level) — always ending in "board". Picking a level from the "تجميع"
+// dropdown either (a) starts the tree partway down that chain (pick
+// "space" -> space>folder>board; pick "board" -> a flat board list), or
+// (b) for a non-structural dimension (status/priority/assignee/type)
+// wraps the WHOLE chain under one extra outer layer (pick "assignee" ->
+// assignee>project>space>folder>board). Either way the tree always
+// bottoms out at Board, which is the one level where "what columns/
+// order does this table have" is unambiguous — so every leaf renders as
+// the real, fully-editable D2 board table (BoardTaskCard.tsx: same
+// TaskTable + useTaskBoard combo the actual board page uses, complete
+// with custom columns, drag-reorder, and add-task), never a flat row.
+// This is what makes editing coherent under every possible grouping,
+// including ones that mix tasks from boards with different schemas —
+// you're never asked to edit across boards in one table, only within
+// one, however many collapsible layers you drilled through to get there.
 
 export interface FlatTaskRow {
   id: string;
@@ -42,14 +42,88 @@ export interface FlatTaskRow {
   created_at: string;
 }
 
-export interface GroupByOption {
-  value: string;
+export interface TreeLevelDef {
+  id: string;
   label: string;
   keyForTask: (task: FlatTaskRow) => string;
   labelForKey: (key: string) => string;
   colorForKey?: (key: string) => string | null;
+  iconForKey?: (key: string) => ReactNode;
   /** Custom ordering of the groups that end up on screen; default is alphabetical (ar). */
   orderKeys?: (keys: string[]) => string[];
+  /** Keys that shouldn't get their own header — e.g. "no folder" boards attach straight to their parent instead of sitting under an empty "بدون مجلد" wrapper, matching ClickUp's own "Folders are optional" behavior. */
+  skipKeys?: string[];
+}
+
+interface CountedTreeNode {
+  id: string;
+  label: string;
+  icon: ReactNode | null;
+  color: string | null;
+  isBoard: boolean;
+  boardId?: string;
+  taskCount: number;
+  children: CountedTreeNode[];
+}
+
+type SortMode = "default" | "label" | "count";
+
+// "default" respects each level's own natural order (status by
+// sort_order, priority by severity) where one is defined, alphabetical
+// otherwise — same as before there was a user-facing sort control.
+// "label"/"count" override that at every level once picked.
+function orderGroupKeys(level: TreeLevelDef, keys: string[], byKey: Map<string, FlatTaskRow[]>, sortMode: SortMode, sortDir: "asc" | "desc"): string[] {
+  const dir = sortDir === "asc" ? 1 : -1;
+  if (sortMode === "count") {
+    return [...keys].sort((a, b) => ((byKey.get(a)?.length ?? 0) - (byKey.get(b)?.length ?? 0)) * dir);
+  }
+  if (sortMode === "label") {
+    return [...keys].sort((a, b) => level.labelForKey(a).localeCompare(level.labelForKey(b), "ar") * dir);
+  }
+  return level.orderKeys ? level.orderKeys(keys) : [...keys].sort((a, b) => level.labelForKey(a).localeCompare(level.labelForKey(b), "ar"));
+}
+
+function buildTree(tasks: FlatTaskRow[], levels: TreeLevelDef[], sortMode: SortMode, sortDir: "asc" | "desc"): CountedTreeNode[] {
+  if (levels.length === 0 || tasks.length === 0) return [];
+  const [level, ...rest] = levels;
+
+  const byKey = new Map<string, FlatTaskRow[]>();
+  for (const t of tasks) {
+    const key = level.keyForTask(t);
+    const list = byKey.get(key) ?? [];
+    list.push(t);
+    byKey.set(key, list);
+  }
+
+  const orderedKeys = orderGroupKeys(level, Array.from(byKey.keys()), byKey, sortMode, sortDir);
+
+  const result: CountedTreeNode[] = [];
+  for (const key of orderedKeys) {
+    const groupTasks = byKey.get(key) ?? [];
+    if (level.skipKeys?.includes(key)) {
+      // No header for this key — its own children attach straight to
+      // this level's parent instead, so a board with no folder shows up
+      // directly under its space rather than under an empty wrapper.
+      result.push(...buildTree(groupTasks, rest, sortMode, sortDir));
+      continue;
+    }
+    const isBoard = level.id === "board";
+    result.push({
+      id: `${level.id}:${key}`,
+      label: level.labelForKey(key),
+      icon: level.iconForKey?.(key) ?? null,
+      color: level.colorForKey?.(key) ?? null,
+      isBoard,
+      boardId: isBoard ? key : undefined,
+      taskCount: groupTasks.length,
+      children: isBoard ? [] : buildTree(groupTasks, rest, sortMode, sortDir),
+    });
+  }
+  return result;
+}
+
+function collectAllNodeIds(nodes: CountedTreeNode[]): string[] {
+  return nodes.flatMap((n) => [n.id, ...collectAllNodeIds(n.children)]);
 }
 
 type StatusCategory = Database["tasks"]["Enums"]["status_category"];
@@ -60,13 +134,8 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   normal: "عادية",
   low: "منخفضة",
 };
-const PRIORITY_VARIANTS: Record<Priority, BadgeVariant> = {
-  urgent: "danger",
-  high: "warning",
-  normal: "info",
-  low: "default",
-};
 export const PRIORITY_ORDER: Record<Priority, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+const PRIORITY_COLORS: Record<Priority, string> = { urgent: "#EF4444", high: "#F59E0B", normal: "#3B82F6", low: "#6B7280" };
 
 const STATUS_CATEGORY_LABELS: Record<StatusCategory, string> = {
   not_started: "لم تبدأ",
@@ -74,75 +143,6 @@ const STATUS_CATEGORY_LABELS: Record<StatusCategory, string> = {
   done: "منجزة",
   closed: "مغلقة",
 };
-const STATUS_CATEGORY_ORDER: Record<StatusCategory, number> = { not_started: 0, active: 1, done: 2, closed: 3 };
-
-type SortKey = "due_date" | "priority" | "title" | "created_at" | "status";
-const SORT_LABELS: Record<SortKey, string> = {
-  due_date: "تاريخ الاستحقاق",
-  priority: "الأولوية",
-  title: "العنوان",
-  created_at: "تاريخ الإنشاء",
-  status: "الحالة",
-};
-
-const AVATAR_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4"];
-function colorFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
-}
-function pillStyle(hex: string | null) {
-  const color = hex ?? "#6B7280";
-  return { background: `${color}1A`, color, border: `1px solid ${color}55` };
-}
-function formatDate(date: string | null): string | null {
-  if (!date) return null;
-  return new Date(date).toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "short" });
-}
-
-function dayWord(n: number): string {
-  if (n === 1) return "يوم واحد";
-  if (n === 2) return "يومين";
-  if (n <= 10) return `${n} أيام`;
-  return `${n} يوماً`;
-}
-
-// "متبقي 3 أيام" / "اليوم" / "متأخر يومين" next to the due date — the
-// date alone didn't answer the question people actually look at a due
-// date to answer ("how soon"), and made them do the subtraction by eye.
-function daysRemainingLabel(dueDate: string): { text: string; tone: "overdue" | "today" | "upcoming" } {
-  const due = new Date(dueDate);
-  const dueMidnight = new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime();
-  const now = new Date();
-  const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const diffDays = Math.round((dueMidnight - nowMidnight) / 86_400_000);
-
-  if (diffDays === 0) return { text: "اليوم", tone: "today" };
-  if (diffDays > 0) return { text: `متبقي ${dayWord(diffDays)}`, tone: "upcoming" };
-  return { text: `متأخر ${dayWord(Math.abs(diffDays))}`, tone: "overdue" };
-}
-
-// Groups the row's meta chunks with a thin vertical separator between
-// whichever ones actually render — filtering nulls first means the
-// separators land only between real content, never next to a gap left
-// by a missing project/priority/etc.
-function withSeparators(nodes: ReactNode[]): ReactNode[] {
-  const visible = nodes.filter((n) => n !== null && n !== undefined && n !== false);
-  const result: ReactNode[] = [];
-  visible.forEach((node, i) => {
-    if (i > 0) result.push(<span key={`sep-${i}`} className="h-3.5 w-px shrink-0 bg-gray-200" />);
-    result.push(
-      <span key={`item-${i}`} className="flex shrink-0 items-center">
-        {node}
-      </span>,
-    );
-  });
-  return result;
-}
 
 function FilterChip({
   active,
@@ -181,14 +181,9 @@ export interface FlatTaskListProps {
   employeesById: Map<string, EmployeeLite>;
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
-  subtaskProgressByTask: Map<string, { done: number; total: number }>;
-  projectNameById?: Map<string, string>;
-  /** Page-specific grouping dimensions (e.g. "space", "board") appended after the built-in status/priority/assignee/type/none ones. */
-  extraGroupOptions?: GroupByOption[];
-  /** Small "board · space" style context shown per row, regardless of the active grouping. */
-  secondaryLabelForTask?: (task: FlatTaskRow) => string | undefined;
-  onOpenTask: (taskId: string) => void;
-  onOpenBoard?: (boardId: string) => void;
+  /** Real containment order, always ending in "board" — e.g. [project, space, folder, board]. */
+  structuralChain: TreeLevelDef[];
+  treeStorageKey: string;
   currentUserId: string | undefined;
   emptyLabel: string;
 }
@@ -200,12 +195,8 @@ export default function FlatTaskList({
   employeesById,
   assigneesByTask,
   taskTypes,
-  subtaskProgressByTask,
-  projectNameById,
-  extraGroupOptions,
-  secondaryLabelForTask,
-  onOpenTask,
-  onOpenBoard,
+  structuralChain,
+  treeStorageKey,
   currentUserId,
   emptyLabel,
 }: FlatTaskListProps) {
@@ -216,40 +207,30 @@ export default function FlatTaskList({
   const [taskTypeFilter, setTaskTypeFilter] = useState<Set<string>>(new Set());
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all"); // all | mine | unassigned | <userId>
   const [overdueOnly, setOverdueOnly] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("due_date");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const { isOpen, toggle, openAll, closeAll } = usePersistedOpenSet(treeStorageKey);
 
-  const groupOptions = useMemo((): GroupByOption[] => {
-    const builtIn: GroupByOption[] = [
+  const dimensionLevels = useMemo((): TreeLevelDef[] => {
+    const levels: TreeLevelDef[] = [
       {
-        value: "status",
+        id: "status",
         label: "الحالة",
         keyForTask: (t) => t.status_id,
         labelForKey: (key) => statusesById.get(key)?.label_ar ?? "—",
         colorForKey: (key) => statusesById.get(key)?.color ?? null,
         orderKeys: (keys) => [...keys].sort((a, b) => (statusesById.get(a)?.sort_order ?? 0) - (statusesById.get(b)?.sort_order ?? 0)),
       },
-    ];
-    const projectOption: GroupByOption[] = projectNameById
-      ? [
-          {
-            value: "project",
-            label: "المشروع",
-            keyForTask: (t) => t.project_id ?? "none",
-            labelForKey: (key) => (key === "none" ? "بدون مشروع" : (projectNameById.get(key) ?? "مشروع")),
-          },
-        ]
-      : [];
-    const trailing: GroupByOption[] = [
       {
-        value: "priority",
+        id: "priority",
         label: "الأولوية",
         keyForTask: (t) => t.priority ?? "none",
         labelForKey: (key) => (key === "none" ? "بدون أولوية" : PRIORITY_LABELS[key as Priority]),
+        colorForKey: (key) => (key === "none" ? null : PRIORITY_COLORS[key as Priority]),
         orderKeys: (keys) => [...keys].sort((a, b) => (a === "none" ? 99 : PRIORITY_ORDER[a as Priority]) - (b === "none" ? 99 : PRIORITY_ORDER[b as Priority])),
       },
       {
-        value: "assignee",
+        id: "assignee",
         label: "المسؤول",
         keyForTask: (t) => assigneesByTask.get(t.id)?.[0] ?? "unassigned",
         labelForKey: (key) => {
@@ -259,24 +240,24 @@ export default function FlatTaskList({
         },
       },
       {
-        value: "task_type",
+        id: "task_type",
         label: "نوع المهمة",
         keyForTask: (t) => t.task_type_id,
         labelForKey: (key) => taskTypes.get(key)?.name_ar ?? "نوع",
         colorForKey: (key) => taskTypes.get(key)?.color ?? null,
       },
-      {
-        value: "none",
-        label: "بدون تجميع",
-        keyForTask: () => "all",
-        labelForKey: () => "",
-      },
     ];
-    return [...builtIn, ...(extraGroupOptions ?? []), ...projectOption, ...trailing];
-  }, [statusesById, employeesById, assigneesByTask, taskTypes, extraGroupOptions, projectNameById]);
+    return levels;
+  }, [statusesById, employeesById, assigneesByTask, taskTypes]);
 
-  const [groupBy, setGroupBy] = useState<string>("status");
-  const activeGroupOption = groupOptions.find((g) => g.value === groupBy) ?? groupOptions[0];
+  const [groupBy, setGroupBy] = useState<string>("project");
+
+  const activeLevels = useMemo((): TreeLevelDef[] => {
+    const structIdx = structuralChain.findIndex((l) => l.id === groupBy);
+    if (structIdx !== -1) return structuralChain.slice(structIdx);
+    const dimension = dimensionLevels.find((l) => l.id === groupBy);
+    return dimension ? [dimension, ...structuralChain] : structuralChain;
+  }, [groupBy, structuralChain, dimensionLevels]);
 
   const hasActiveFilters =
     statusFilter.size > 0 || priorityFilter.size > 0 || taskTypeFilter.size > 0 || assigneeFilter !== "all" || overdueOnly;
@@ -312,62 +293,70 @@ export default function FlatTaskList({
     });
   }, [tasks, search, statusFilter, priorityFilter, taskTypeFilter, overdueOnly, assigneeFilter, assigneesByTask, statusesById, currentUserId]);
 
-  const sorted = useMemo(() => {
-    const list = [...filtered];
-    const dir = sortDir === "asc" ? 1 : -1;
-    list.sort((a, b) => {
-      switch (sortKey) {
-        case "title":
-          return a.title.localeCompare(b.title, "ar") * dir;
-        case "priority": {
-          const av = a.priority ? PRIORITY_ORDER[a.priority] : 99;
-          const bv = b.priority ? PRIORITY_ORDER[b.priority] : 99;
-          return (av - bv) * dir;
-        }
-        case "status": {
-          const ac = statusesById.get(a.status_id)?.category;
-          const bc = statusesById.get(b.status_id)?.category;
-          const av = ac ? STATUS_CATEGORY_ORDER[ac] : 99;
-          const bv = bc ? STATUS_CATEGORY_ORDER[bc] : 99;
-          return (av - bv) * dir;
-        }
-        case "created_at":
-          return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
-        case "due_date":
-        default: {
-          const av = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-          const bv = b.due_date ? new Date(b.due_date).getTime() : Infinity;
-          return (av - bv) * dir;
-        }
-      }
-    });
-    return list;
-  }, [filtered, sortKey, sortDir, statusesById]);
-
-  const groups = useMemo(() => {
-    const byKey = new Map<string, FlatTaskRow[]>();
-    for (const t of sorted) {
-      const key = activeGroupOption.keyForTask(t);
-      const list = byKey.get(key) ?? [];
-      list.push(t);
-      byKey.set(key, list);
-    }
-    const keys = Array.from(byKey.keys());
-    const orderedKeys = activeGroupOption.orderKeys
-      ? activeGroupOption.orderKeys(keys)
-      : keys.sort((a, b) => activeGroupOption.labelForKey(a).localeCompare(activeGroupOption.labelForKey(b), "ar"));
-    return orderedKeys.map((key) => ({
-      key,
-      label: activeGroupOption.labelForKey(key),
-      color: activeGroupOption.colorForKey?.(key) ?? null,
-      tasks: byKey.get(key) ?? [],
-    }));
-  }, [sorted, activeGroupOption]);
+  const tree = useMemo(
+    () => buildTree(filtered, activeLevels, sortMode, sortDir),
+    [filtered, activeLevels, sortMode, sortDir],
+  );
+  const allNodeIds = useMemo(() => collectAllNodeIds(tree), [tree]);
+  const allExpanded = allNodeIds.length > 0 && allNodeIds.every((id) => isOpen(id));
 
   const taskTypeOptions = Array.from(taskTypes.values());
+  const dropdownOptions = [...structuralChain, ...dimensionLevels];
+
+  const renderNode = (node: CountedTreeNode, depth: number): ReactNode => {
+    // Deliberately no per-depth indent — ClickUp's own grouped view (see
+    // the reference screenshot) keeps every level flush to the same
+    // starting edge regardless of nesting; the card boundary and stacking
+    // order communicate hierarchy instead of a cascading margin/padding
+    // that shifts each level further in and leaves a growing gap.
+    if (node.isBoard) {
+      return (
+        <div key={node.id} className={depth === 0 ? "px-6 mb-3" : "px-6 mb-2"}>
+          <BoardTaskCard
+            boardId={node.boardId ?? ""}
+            boardName={node.label}
+            taskCount={node.taskCount}
+            open={isOpen(node.id)}
+            onToggle={() => toggle(node.id)}
+          />
+        </div>
+      );
+    }
+    const open = isOpen(node.id);
+    return (
+      <div key={node.id} className={depth === 0 ? "mb-1" : ""}>
+        <button
+          onClick={() => toggle(node.id)}
+          className="flex w-full items-center gap-2 bg-white px-6 py-2 text-right hover:bg-gray-50"
+        >
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${open ? "" : "-rotate-90"}`} />
+          {node.icon}
+          {node.color ? (
+            <>
+              <span
+                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
+                style={{ background: `${node.color}1A`, color: node.color, border: `1px solid ${node.color}55` }}
+              >
+                {node.label}
+              </span>
+              <span className="flex-1" />
+            </>
+          ) : (
+            <span
+              className={`flex-1 truncate text-right ${depth === 0 ? "text-sm font-semibold text-gray-800" : "text-sm font-medium text-gray-600"}`}
+            >
+              {node.label}
+            </span>
+          )}
+          <span className="text-xs font-normal text-gray-400">{node.taskCount}</span>
+        </button>
+        {open && <div>{node.children.map((child) => renderNode(child, depth + 1))}</div>}
+      </div>
+    );
+  };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-white">
       <div className="flex-shrink-0 space-y-2 border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-2">
           <div className="flex flex-1 items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
@@ -392,8 +381,8 @@ export default function FlatTaskList({
               onChange={(e) => setGroupBy(e.target.value)}
               className="bg-transparent text-xs text-gray-600 outline-none"
             >
-              {groupOptions.map((g) => (
-                <option key={g.value} value={g.value}>
+              {dropdownOptions.map((g) => (
+                <option key={g.id} value={g.id}>
                   {g.label}
                 </option>
               ))}
@@ -403,24 +392,32 @@ export default function FlatTaskList({
           <div className="flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1.5">
             <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
             <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
               className="bg-transparent text-xs text-gray-600 outline-none"
             >
-              {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-                <option key={k} value={k}>
-                  {SORT_LABELS[k]}
-                </option>
-              ))}
+              <option value="default">ترتيب افتراضي</option>
+              <option value="label">الاسم</option>
+              <option value="count">عدد المهام</option>
             </select>
-            <button
-              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-              className="text-xs text-gray-400 hover:text-gray-600"
-              title={sortDir === "asc" ? "تصاعدي" : "تنازلي"}
-            >
-              {sortDir === "asc" ? "↑" : "↓"}
-            </button>
+            {sortMode !== "default" && (
+              <button
+                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                className="text-xs text-gray-400 hover:text-gray-600"
+                title={sortDir === "asc" ? "تصاعدي" : "تنازلي"}
+              >
+                {sortDir === "asc" ? "↑" : "↓"}
+              </button>
+            )}
           </div>
+
+          <button
+            onClick={() => (allExpanded ? closeAll(allNodeIds) : openAll())}
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+          >
+            {allExpanded ? <ChevronsUp className="h-3.5 w-3.5" /> : <ChevronsDown className="h-3.5 w-3.5" />}
+            {allExpanded ? "طي الكل" : "توسيع الكل"}
+          </button>
 
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -499,137 +496,15 @@ export default function FlatTaskList({
         )}
 
         <div className="text-xs text-gray-400">
-          {sorted.length} من {tasks.length} مهمة
+          {filtered.length} من {tasks.length} مهمة
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {sorted.length === 0 ? (
+      <div className="flex-1 overflow-y-auto py-2">
+        {tree.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">{tasks.length === 0 ? emptyLabel : "لا توجد نتائج مطابقة للفلاتر"}</div>
-        ) : groupBy === "board" ? (
-          // Grouped by board is the one grouping where every task in a
-          // group shares the same schema (that board's own custom
-          // columns) — real inline editing only makes sense there, so
-          // each group becomes the real, fully-editable board table
-          // instead of a plain row list. Collapsed by default: several
-          // boards' full data fetched at once just to show headers would
-          // be wasteful (see BoardTaskCard.tsx).
-          <div className="py-2">
-            {groups.map((group) => (
-              <BoardTaskCard key={group.key} boardId={group.key} boardName={group.label} taskCount={group.tasks.length} />
-            ))}
-          </div>
         ) : (
-          groups.map((group) => (
-            <div key={group.key}>
-              {group.label && (
-                <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50/70 px-6 py-1.5 text-xs font-medium text-gray-500">
-                  {group.color && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: group.color }} />}
-                  {group.label} <span className="text-gray-400">({group.tasks.length})</span>
-                </div>
-              )}
-              {group.tasks.map((task) => {
-                const status = statusesById.get(task.status_id);
-                const taskType = taskTypes.get(task.task_type_id);
-                const assignees = assigneesByTask.get(task.id) ?? [];
-                const due = formatDate(task.due_date);
-                const remaining = task.due_date ? daysRemainingLabel(task.due_date) : null;
-                const progress = subtaskProgressByTask.get(task.id);
-                const projectName = task.project_id ? projectNameById?.get(task.project_id) : undefined;
-                const secondary = secondaryLabelForTask?.(task);
-
-                return (
-                  <div
-                    key={task.id}
-                    className="flex w-full items-center gap-2.5 border-b border-gray-50 px-6 py-2.5 text-right text-sm hover:bg-gray-50"
-                  >
-                    <button onClick={() => onOpenTask(task.id)} className="flex flex-1 items-center gap-2 overflow-hidden text-right">
-                      {taskType && (
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ background: taskType.color ?? "#9CA3AF" }}
-                          title={taskType.name_ar}
-                        />
-                      )}
-                      <span className="flex-1 truncate text-gray-700">{task.title}</span>
-                      {progress && progress.total > 0 && (
-                        <span
-                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                            progress.done === progress.total ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {progress.done}/{progress.total}
-                        </span>
-                      )}
-                    </button>
-
-                    <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                      {withSeparators([
-                        projectName && <span className="text-xs text-gray-400">{projectName}</span>,
-                        secondary && <span className="text-xs text-gray-400">{secondary}</span>,
-                        task.priority && <Badge label={PRIORITY_LABELS[task.priority]} variant={PRIORITY_VARIANTS[task.priority]} size="sm" />,
-                        <span
-                          style={pillStyle(status?.color ?? null)}
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-                        >
-                          {status?.label_ar ?? "—"}
-                        </span>,
-                        due && (
-                          <span className="flex items-center gap-1 whitespace-nowrap">
-                            <span className={`text-xs ${task.is_overdue ? "font-medium text-red-500" : "text-gray-500"}`}>{due}</span>
-                            {remaining && (
-                              <span
-                                className={`text-[10px] ${
-                                  remaining.tone === "overdue"
-                                    ? "font-medium text-red-500"
-                                    : remaining.tone === "today"
-                                      ? "font-medium text-amber-500"
-                                      : "text-gray-400"
-                                }`}
-                              >
-                                ({remaining.text})
-                              </span>
-                            )}
-                          </span>
-                        ),
-                      ])}
-                    </div>
-
-                    <div className="flex shrink-0 items-center -space-x-1.5 rtl:space-x-reverse">
-                      {assignees.length === 0 ? (
-                        <span className="text-xs text-gray-300">غير معين</span>
-                      ) : (
-                        assignees.slice(0, 3).map((id) => {
-                          const employee = employeesById.get(id);
-                          const name = employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "";
-                          return (
-                            <Tooltip key={id} label={name || null}>
-                              <span
-                                className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
-                                style={{ background: colorFor(id) }}
-                              >
-                                {initialsOf(name || "?")}
-                              </span>
-                            </Tooltip>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    {onOpenBoard && (
-                      <button
-                        onClick={() => onOpenBoard(task.board_id)}
-                        className="shrink-0 rounded p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-500"
-                        title="فتح اللوحة"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))
+          tree.map((node) => renderNode(node, 0))
         )}
       </div>
     </div>

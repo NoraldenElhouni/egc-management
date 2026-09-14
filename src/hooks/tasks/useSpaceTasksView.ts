@@ -4,7 +4,7 @@ import type { EmployeeLite, Priority, StatusRow, TaskTypeLite } from "./useTaskB
 
 // =====================================================================
 // "Space tasks" — every task across every board (and folder) of ONE
-// space, one flat filterable/sortable list instead of picking a board
+// space, one filterable/nested-grouped list instead of picking a board
 // first (build plan Part 7 follow-up, pairs with useAllTasksView.ts).
 //
 // No extra visibility filtering inside: reaching this page at all
@@ -13,6 +13,12 @@ import type { EmployeeLite, Priority, StatusRow, TaskTypeLite } from "./useTaskB
 // useTasksSidebar.ts). Same posture as D6/D9 — nothing in this module is
 // route-guarded per-screen yet (Part 6 is on hold), only the outer
 // view_tasks_section gate exists (TasksRoutes.tsx).
+//
+// No editing here: FlatTaskList's tree (its own consumer) always bottoms
+// out at a Board node, which renders the real board table via
+// BoardTaskCard.tsx — that owns its own useTaskBoard(boardId) fetch and
+// mutations. This hook only needs enough to build the tree's upper
+// levels (folder/board/project) and label things.
 
 export interface FlatTaskRow {
   id: string;
@@ -49,7 +55,6 @@ export interface SpaceTasksViewData {
   employeesById: Map<string, EmployeeLite>;
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
-  subtaskProgressByTask: Map<string, { done: number; total: number }>;
 }
 
 export function useSpaceTasksView(spaceId: string | undefined) {
@@ -61,15 +66,12 @@ export function useSpaceTasksView(spaceId: string | undefined) {
     queryFn: async (): Promise<SpaceTasksViewData> => {
       if (!spaceId) throw new Error("no space id");
 
-      const [
-        { data: space, error: spaceError },
-        { data: boards, error: boardsError },
-        { data: folders, error: foldersError },
-      ] = await Promise.all([
-        tasksDb.from("spaces").select("id, name").eq("id", spaceId).single(),
-        tasksDb.from("boards").select("id, name, folder_id").eq("space_id", spaceId).eq("is_archived", false),
-        tasksDb.from("folders").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
-      ]);
+      const [{ data: space, error: spaceError }, { data: boards, error: boardsError }, { data: folders, error: foldersError }] =
+        await Promise.all([
+          tasksDb.from("spaces").select("id, name").eq("id", spaceId).single(),
+          tasksDb.from("boards").select("id, name, folder_id").eq("space_id", spaceId).eq("is_archived", false),
+          tasksDb.from("folders").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
+        ]);
       if (spaceError) throw spaceError;
       if (boardsError) throw boardsError;
       if (foldersError) throw foldersError;
@@ -124,17 +126,6 @@ export function useSpaceTasksView(spaceId: string | undefined) {
         assigneesByTask.set(row.task_id, list);
       }
 
-      const categoryByStatusId = new Map((statusRows ?? []).map((s) => [s.id, s.category]));
-      const subtaskProgressByTask = new Map<string, { done: number; total: number }>();
-      for (const t of tasks ?? []) {
-        if (!t.parent_task_id) continue;
-        const progress = subtaskProgressByTask.get(t.parent_task_id) ?? { done: 0, total: 0 };
-        progress.total += 1;
-        const category = categoryByStatusId.get(t.status_id);
-        if (category === "done" || category === "closed") progress.done += 1;
-        subtaskProgressByTask.set(t.parent_task_id, progress);
-      }
-
       return {
         space,
         boards: boards ?? [],
@@ -146,7 +137,6 @@ export function useSpaceTasksView(spaceId: string | undefined) {
         employeesById: new Map((employees ?? []).map((e) => [e.id, e])),
         assigneesByTask,
         taskTypes: new Map((taskTypeRows ?? []).map((t) => [t.id, t])),
-        subtaskProgressByTask,
       };
     },
   });

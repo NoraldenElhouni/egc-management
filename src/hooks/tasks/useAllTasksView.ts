@@ -17,6 +17,13 @@ import type { Database } from "../../lib/supabase";
 // screen in this module (D2, D6, D7 all fetch everything relevant once
 // and filter/sort in memory) rather than a paginated/server-filtered
 // query — fine at this app's data volume, revisit if it ever isn't.
+//
+// No editing here: FlatTaskList's tree (its own consumer) always bottoms
+// out at a Board node, which renders the real board table via
+// BoardTaskCard.tsx — that owns its own useTaskBoard(boardId) fetch and
+// mutations. This hook only needs enough to build the tree's upper
+// levels (space/folder/board/project) and label things (status,
+// employee, task type names).
 
 export interface FlatTaskRow {
   id: string;
@@ -60,7 +67,6 @@ export interface AllTasksViewData {
   employeesById: Map<string, EmployeeLite>;
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
-  subtaskProgressByTask: Map<string, { done: number; total: number }>;
 }
 
 export function useAllTasksView() {
@@ -149,30 +155,17 @@ export function useAllTasksView() {
         assigneesByTask.set(row.task_id, list);
       }
 
-      const statusesById = new Map((statusRows ?? []).map((s) => [s.id, s]));
-      const categoryByStatusId = new Map((statusRows ?? []).map((s) => [s.id, s.category]));
-      const subtaskProgressByTask = new Map<string, { done: number; total: number }>();
-      for (const t of tasks ?? []) {
-        if (!t.parent_task_id) continue;
-        const progress = subtaskProgressByTask.get(t.parent_task_id) ?? { done: 0, total: 0 };
-        progress.total += 1;
-        const category = categoryByStatusId.get(t.status_id);
-        if (category === "done" || category === "closed") progress.done += 1;
-        subtaskProgressByTask.set(t.parent_task_id, progress);
-      }
-
       return {
         tasks: tasks ?? [],
         spaces: visibleSpaces.map((s) => ({ id: s.id, name: s.name, space_type: s.space_type })),
         folders: folders ?? [],
         boards: boards ?? [],
         projectNameById: new Map((projectRows ?? []).map((p) => [p.id, p.name])),
-        statusesById,
+        statusesById: new Map((statusRows ?? []).map((s) => [s.id, s])),
         employees: employees ?? [],
         employeesById: new Map((employees ?? []).map((e) => [e.id, e])),
         assigneesByTask,
         taskTypes: new Map((taskTypeRows ?? []).map((t) => [t.id, t])),
-        subtaskProgressByTask,
       };
     },
   });
