@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
 import type { EmployeeLite, Priority, StatusRow, TaskTypeLite } from "./useTaskBoard";
+import type { Database } from "../../lib/supabase";
 
 // =====================================================================
 // "All tasks" — a single company-wide, cross-board, cross-space list
@@ -31,11 +32,28 @@ export interface FlatTaskRow {
   created_at: string;
 }
 
+export interface TreeSpace {
+  id: string;
+  name: string;
+  space_type: Database["tasks"]["Enums"]["space_type"];
+}
+export interface TreeFolder {
+  id: string;
+  name: string;
+  space_id: string;
+}
+export interface TreeBoard {
+  id: string;
+  name: string;
+  space_id: string;
+  folder_id: string | null;
+}
+
 export interface AllTasksViewData {
   tasks: FlatTaskRow[];
-  spaces: { id: string; name: string }[];
-  spaceByTask: Map<string, string>; // task_id -> space_id
-  boardNameById: Map<string, string>;
+  spaces: TreeSpace[];
+  folders: TreeFolder[];
+  boards: TreeBoard[];
   projectNameById: Map<string, string>;
   statusesById: Map<string, StatusRow>;
   employees: EmployeeLite[];
@@ -60,7 +78,7 @@ export function useAllTasksView() {
         { data: spaceRows, error: spacesError },
         { data: memberRows, error: membersError },
       ] = await Promise.all([
-        tasksDb.from("spaces").select("id, name, visibility, owner_user_id").eq("is_archived", false),
+        tasksDb.from("spaces").select("id, name, space_type, visibility, owner_user_id").eq("is_archived", false),
         tasksDb.from("space_members").select("space_id").eq("user_id", userId),
       ]);
       if (spacesError) throw spacesError;
@@ -72,13 +90,16 @@ export function useAllTasksView() {
       );
       const visibleSpaceIds = visibleSpaces.map((s) => s.id);
 
-      const { data: boards, error: boardsError } = visibleSpaceIds.length
-        ? await tasksDb.from("boards").select("id, name, space_id").in("space_id", visibleSpaceIds).eq("is_archived", false)
-        : { data: [], error: null };
+      const [{ data: boards, error: boardsError }, { data: folders, error: foldersError }] = visibleSpaceIds.length
+        ? await Promise.all([
+            tasksDb.from("boards").select("id, name, space_id, folder_id").in("space_id", visibleSpaceIds).eq("is_archived", false),
+            tasksDb.from("folders").select("id, name, space_id").in("space_id", visibleSpaceIds).eq("is_archived", false),
+          ])
+        : [{ data: [], error: null }, { data: [], error: null }];
       if (boardsError) throw boardsError;
+      if (foldersError) throw foldersError;
 
       const boardIds = (boards ?? []).map((b) => b.id);
-      const spaceByBoard = new Map((boards ?? []).map((b) => [b.id, b.space_id]));
 
       const { data: tasks, error: tasksError } = boardIds.length
         ? await tasksDb
@@ -140,17 +161,11 @@ export function useAllTasksView() {
         subtaskProgressByTask.set(t.parent_task_id, progress);
       }
 
-      const spaceByTask = new Map<string, string>();
-      for (const t of tasks ?? []) {
-        const spaceId = spaceByBoard.get(t.board_id);
-        if (spaceId) spaceByTask.set(t.id, spaceId);
-      }
-
       return {
         tasks: tasks ?? [],
-        spaces: visibleSpaces.map((s) => ({ id: s.id, name: s.name })),
-        spaceByTask,
-        boardNameById: new Map((boards ?? []).map((b) => [b.id, b.name])),
+        spaces: visibleSpaces.map((s) => ({ id: s.id, name: s.name, space_type: s.space_type })),
+        folders: folders ?? [],
+        boards: boards ?? [],
         projectNameById: new Map((projectRows ?? []).map((p) => [p.id, p.name])),
         statusesById,
         employees: employees ?? [],

@@ -28,9 +28,20 @@ export interface FlatTaskRow {
   created_at: string;
 }
 
+export interface TreeFolder {
+  id: string;
+  name: string;
+}
+export interface TreeBoard {
+  id: string;
+  name: string;
+  folder_id: string | null;
+}
+
 export interface SpaceTasksViewData {
   space: { id: string; name: string };
-  boards: { id: string; name: string }[];
+  folders: TreeFolder[];
+  boards: TreeBoard[];
   tasks: FlatTaskRow[];
   projectNameById: Map<string, string>;
   statusesById: Map<string, StatusRow>;
@@ -50,12 +61,18 @@ export function useSpaceTasksView(spaceId: string | undefined) {
     queryFn: async (): Promise<SpaceTasksViewData> => {
       if (!spaceId) throw new Error("no space id");
 
-      const [{ data: space, error: spaceError }, { data: boards, error: boardsError }] = await Promise.all([
+      const [
+        { data: space, error: spaceError },
+        { data: boards, error: boardsError },
+        { data: folders, error: foldersError },
+      ] = await Promise.all([
         tasksDb.from("spaces").select("id, name").eq("id", spaceId).single(),
-        tasksDb.from("boards").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
+        tasksDb.from("boards").select("id, name, folder_id").eq("space_id", spaceId).eq("is_archived", false),
+        tasksDb.from("folders").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
       ]);
       if (spaceError) throw spaceError;
       if (boardsError) throw boardsError;
+      if (foldersError) throw foldersError;
 
       const boardIds = (boards ?? []).map((b) => b.id);
 
@@ -121,6 +138,7 @@ export function useSpaceTasksView(spaceId: string | undefined) {
       return {
         space,
         boards: boards ?? [],
+        folders: folders ?? [],
         tasks: tasks ?? [],
         projectNameById: new Map((projectRows ?? []).map((p) => [p.id, p.name])),
         statusesById: new Map((statusRows ?? []).map((s) => [s.id, s])),

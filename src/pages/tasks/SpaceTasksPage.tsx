@@ -1,17 +1,53 @@
+import { useCallback } from "react";
 import { Outlet, useNavigate, useParams, Link } from "react-router-dom";
-import { Loader2, Settings } from "lucide-react";
+import { Loader2, Settings, Folder, Layers } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSpaceTasksView } from "../../hooks/tasks/useSpaceTasksView";
-import FlatTaskList from "../../components/tasks/list/FlatTaskList";
+import FlatTaskList, { type FlatTaskRow, type TreeNode } from "../../components/tasks/list/FlatTaskList";
 
-// "Space tasks" — every task across every board of one space, one
-// filterable/sortable list instead of picking a board first (build plan
-// Part 7 follow-up, pairs with AllTasksPage.tsx).
+// "Space tasks" — every task across every board (and folder) of one
+// space, grouped as a collapsible folder (optional) > board > tasks
+// tree — one level shallower than AllTasksPage.tsx since the space
+// itself is already the context (build plan Part 7 follow-up).
 export default function SpaceTasksPage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data, loading, error } = useSpaceTasksView(spaceId);
+
+  const buildTree = useCallback(
+    (filteredTasks: FlatTaskRow[]): TreeNode[] => {
+      if (!data) return [];
+
+      const tasksByBoard = new Map<string, FlatTaskRow[]>();
+      for (const t of filteredTasks) {
+        const list = tasksByBoard.get(t.board_id) ?? [];
+        list.push(t);
+        tasksByBoard.set(t.board_id, list);
+      }
+
+      const boardNode = (board: (typeof data.boards)[number]): TreeNode => ({
+        id: board.id,
+        label: board.name,
+        icon: <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
+        children: [],
+        tasks: tasksByBoard.get(board.id) ?? [],
+        onOpenExternal: () => navigate(`/tasks/board/${board.id}`),
+      });
+
+      const folderNodes: TreeNode[] = data.folders.map((folder) => ({
+        id: folder.id,
+        label: folder.name,
+        icon: <Folder className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
+        children: data.boards.filter((b) => b.folder_id === folder.id).map(boardNode),
+        tasks: [],
+      }));
+      const directBoardNodes = data.boards.filter((b) => !b.folder_id).map(boardNode);
+
+      return [...folderNodes, ...directBoardNodes];
+    },
+    [data, navigate],
+  );
 
   if (loading) {
     return (
@@ -55,11 +91,9 @@ export default function SpaceTasksPage() {
           taskTypes={data.taskTypes}
           subtaskProgressByTask={data.subtaskProgressByTask}
           projectNameById={data.projectNameById}
-          groupOptions={data.boards.map((b) => ({ id: b.id, label: b.name }))}
-          groupIdForTask={(task) => task.board_id}
-          groupColumnLabel="اللوحة"
+          buildTree={buildTree}
+          treeStorageKey="tasksTreeOpenNodes"
           onOpenTask={(taskId) => navigate(`/tasks/space/${spaceId}/tasks/task/${taskId}`)}
-          onOpenBoard={(boardId) => navigate(`/tasks/board/${boardId}`)}
           currentUserId={user?.id}
           emptyLabel="لا توجد مهام في هذه المساحة بعد"
         />

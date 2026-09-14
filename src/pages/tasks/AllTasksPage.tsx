@@ -1,17 +1,73 @@
+import { useCallback } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, FolderKanban, Building2, Building, User, Folder, Layers } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { useAllTasksView } from "../../hooks/tasks/useAllTasksView";
-import FlatTaskList from "../../components/tasks/list/FlatTaskList";
+import { useAllTasksView, type TreeSpace } from "../../hooks/tasks/useAllTasksView";
+import FlatTaskList, { type FlatTaskRow, type TreeNode } from "../../components/tasks/list/FlatTaskList";
 
-// "All tasks" — every task across every board/space the user can see, in
-// one filterable/sortable list (build plan Part 7 follow-up). Private
-// spaces are excluded unless the current user owns/is a member of them —
-// see useAllTasksView.ts's header for the exact rule.
+// "All tasks" — every task across every board/space the user can see,
+// grouped as a collapsible space > folder (optional) > board > tasks
+// tree, ClickUp's own "Everything" view (build plan Part 7 follow-up).
+// Private spaces are excluded unless the current user owns/is a member
+// of them — see useAllTasksView.ts's header for the exact rule.
+
+const SPACE_TYPE_ICONS: Record<TreeSpace["space_type"], typeof FolderKanban> = {
+  project: FolderKanban,
+  department: Building2,
+  company: Building,
+  personal: User,
+};
+
 export default function AllTasksPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data, loading, error } = useAllTasksView();
+
+  const buildTree = useCallback(
+    (filteredTasks: FlatTaskRow[]): TreeNode[] => {
+      if (!data) return [];
+
+      const tasksByBoard = new Map<string, FlatTaskRow[]>();
+      for (const t of filteredTasks) {
+        const list = tasksByBoard.get(t.board_id) ?? [];
+        list.push(t);
+        tasksByBoard.set(t.board_id, list);
+      }
+
+      const boardNode = (board: (typeof data.boards)[number]): TreeNode => ({
+        id: board.id,
+        label: board.name,
+        icon: <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
+        children: [],
+        tasks: tasksByBoard.get(board.id) ?? [],
+        onOpenExternal: () => navigate(`/tasks/board/${board.id}`),
+      });
+
+      return data.spaces.map((space): TreeNode => {
+        const spaceBoards = data.boards.filter((b) => b.space_id === space.id);
+        const spaceFolders = data.folders.filter((f) => f.space_id === space.id);
+        const Icon = SPACE_TYPE_ICONS[space.space_type];
+
+        const folderNodes: TreeNode[] = spaceFolders.map((folder) => ({
+          id: folder.id,
+          label: folder.name,
+          icon: <Folder className="h-3.5 w-3.5 shrink-0 text-gray-400" />,
+          children: spaceBoards.filter((b) => b.folder_id === folder.id).map(boardNode),
+          tasks: [],
+        }));
+        const directBoardNodes = spaceBoards.filter((b) => !b.folder_id).map(boardNode);
+
+        return {
+          id: space.id,
+          label: space.name,
+          icon: <Icon className="h-3.5 w-3.5 shrink-0 text-gray-500" />,
+          children: [...folderNodes, ...directBoardNodes],
+          tasks: [],
+        };
+      });
+    },
+    [data, navigate],
+  );
 
   if (loading) {
     return (
@@ -46,12 +102,9 @@ export default function AllTasksPage() {
           taskTypes={data.taskTypes}
           subtaskProgressByTask={data.subtaskProgressByTask}
           projectNameById={data.projectNameById}
-          groupOptions={data.spaces.map((s) => ({ id: s.id, label: s.name }))}
-          groupIdForTask={(task) => data.spaceByTask.get(task.id)}
-          groupColumnLabel="المساحة"
-          secondaryLabelForTask={(task) => data.boardNameById.get(task.board_id)}
+          buildTree={buildTree}
+          treeStorageKey="tasksTreeOpenNodes"
           onOpenTask={(taskId) => navigate(`/tasks/all-tasks/task/${taskId}`)}
-          onOpenBoard={(boardId) => navigate(`/tasks/board/${boardId}`)}
           currentUserId={user?.id}
           emptyLabel="لا توجد مهام بعد"
         />

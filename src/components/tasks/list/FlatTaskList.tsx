@@ -1,15 +1,24 @@
-import { useMemo, useState } from "react";
-import { Search, SlidersHorizontal, ArrowUpDown, X, ExternalLink } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Search, SlidersHorizontal, ArrowUpDown, X, ExternalLink, ChevronDown, ChevronsDown, ChevronsUp } from "lucide-react";
 import Badge, { type BadgeVariant } from "../../ui/Badge";
 import Tooltip from "../../ui/Tooltip";
+import { usePersistedOpenSet } from "../../../hooks/tasks/usePersistedOpenSet";
 import type { EmployeeLite, Priority, StatusRow, TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
 import type { Database } from "../../../lib/supabase";
 
-// Shared flat, filterable/sortable task list used by the "all tasks" and
-// "space tasks" cross-board views (build plan Part 7 follow-up). D2's
-// TaskTable is board-scoped and per-board-custom-field aware; this is
-// deliberately simpler (only the fields every task has, regardless of
-// board) since it spans boards that may not share a schema of custom
+// Shared filterable/sortable/collapsible task TREE used by the "all
+// tasks" and "space tasks" cross-board views (build plan Part 7
+// follow-up) — ClickUp's own "Everything"/space view: space (all tasks
+// only) > folder (optional) > board > tasks, each level collapsible and
+// collapsed by default. The page supplies `buildTree`, which turns the
+// filtered/sorted flat task array into that nesting (its shape differs
+// per page — all-tasks has a space level, a single space's view
+// doesn't) — this component only renders whatever tree it's handed and
+// owns the collapse/expand state (persisted, see usePersistedOpenSet).
+//
+// D2's TaskTable is board-scoped and per-board-custom-field aware; this
+// stays deliberately simpler (only the fields every task has, regardless
+// of board) since it spans boards that may not share a schema of custom
 // columns at all.
 
 export interface FlatTaskRow {
@@ -24,6 +33,37 @@ export interface FlatTaskRow {
   task_type_id: string;
   parent_task_id: string | null;
   created_at: string;
+}
+
+export interface TreeNode {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  children: TreeNode[];
+  tasks: FlatTaskRow[]; // only leaf (board) nodes carry tasks
+  onOpenExternal?: () => void;
+}
+
+interface CountedTreeNode extends Omit<TreeNode, "children"> {
+  children: CountedTreeNode[];
+  totalCount: number;
+}
+
+// Drops any branch left with zero tasks after filtering (an empty board
+// section is just noise) and computes each node's rollup count for its
+// badge in the same pass.
+function pruneAndCount(nodes: TreeNode[]): CountedTreeNode[] {
+  return nodes
+    .map((n) => {
+      const children = pruneAndCount(n.children);
+      const totalCount = n.tasks.length + children.reduce((sum, c) => sum + c.totalCount, 0);
+      return { ...n, children, totalCount };
+    })
+    .filter((n) => n.totalCount > 0);
+}
+
+function collectIds(nodes: CountedTreeNode[]): string[] {
+  return nodes.flatMap((n) => [n.id, ...collectIds(n.children)]);
 }
 
 type StatusCategory = Database["tasks"]["Enums"]["status_category"];
@@ -104,9 +144,9 @@ function daysRemainingLabel(dueDate: string): { text: string; tone: "overdue" | 
 // whichever ones actually render — filtering nulls first means the
 // separators land only between real content, never next to a gap left
 // by a missing project/priority/etc.
-function withSeparators(nodes: React.ReactNode[]): React.ReactNode[] {
+function withSeparators(nodes: ReactNode[]): ReactNode[] {
   const visible = nodes.filter((n) => n !== null && n !== undefined && n !== false);
-  const result: React.ReactNode[] = [];
+  const result: ReactNode[] = [];
   visible.forEach((node, i) => {
     if (i > 0) result.push(<span key={`sep-${i}`} className="h-3.5 w-px shrink-0 bg-gray-200" />);
     result.push(
@@ -125,7 +165,7 @@ function FilterChip({
 }: {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
@@ -157,12 +197,11 @@ export interface FlatTaskListProps {
   taskTypes: Map<string, TaskTypeLite>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   projectNameById?: Map<string, string>;
-  groupOptions: { id: string; label: string }[];
-  groupIdForTask: (task: FlatTaskRow) => string | undefined;
-  groupColumnLabel: string;
-  secondaryLabelForTask?: (task: FlatTaskRow) => string | undefined;
+  /** Turns the filtered+sorted flat task array into the collapsible tree — shape (space>folder>board vs folder>board) is the page's call. */
+  buildTree: (tasks: FlatTaskRow[]) => TreeNode[];
+  /** Storage key for persisted expand/collapse state — share one across pages only if their node ids can never collide (they can't: real UUIDs). */
+  treeStorageKey: string;
   onOpenTask: (taskId: string) => void;
-  onOpenBoard?: (boardId: string) => void;
   currentUserId: string | undefined;
   emptyLabel: string;
 }
@@ -176,12 +215,9 @@ export default function FlatTaskList({
   taskTypes,
   subtaskProgressByTask,
   projectNameById,
-  groupOptions,
-  groupIdForTask,
-  groupColumnLabel,
-  secondaryLabelForTask,
+  buildTree,
+  treeStorageKey,
   onOpenTask,
-  onOpenBoard,
   currentUserId,
   emptyLabel,
 }: FlatTaskListProps) {
@@ -190,25 +226,19 @@ export default function FlatTaskList({
   const [statusFilter, setStatusFilter] = useState<Set<StatusCategory>>(new Set());
   const [priorityFilter, setPriorityFilter] = useState<Set<Priority>>(new Set());
   const [taskTypeFilter, setTaskTypeFilter] = useState<Set<string>>(new Set());
-  const [groupFilter, setGroupFilter] = useState<Set<string>>(new Set());
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all"); // all | mine | unassigned | <userId>
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("due_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const { isOpen, toggle, openAll, closeAll } = usePersistedOpenSet(treeStorageKey);
 
   const hasActiveFilters =
-    statusFilter.size > 0 ||
-    priorityFilter.size > 0 ||
-    taskTypeFilter.size > 0 ||
-    groupFilter.size > 0 ||
-    assigneeFilter !== "all" ||
-    overdueOnly;
+    statusFilter.size > 0 || priorityFilter.size > 0 || taskTypeFilter.size > 0 || assigneeFilter !== "all" || overdueOnly;
 
   const clearFilters = () => {
     setStatusFilter(new Set());
     setPriorityFilter(new Set());
     setTaskTypeFilter(new Set());
-    setGroupFilter(new Set());
     setAssigneeFilter("all");
     setOverdueOnly(false);
   };
@@ -225,10 +255,6 @@ export default function FlatTaskList({
         if (!t.priority || !priorityFilter.has(t.priority)) return false;
       }
       if (taskTypeFilter.size > 0 && !taskTypeFilter.has(t.task_type_id)) return false;
-      if (groupFilter.size > 0) {
-        const groupId = groupIdForTask(t);
-        if (!groupId || !groupFilter.has(groupId)) return false;
-      }
       if (overdueOnly && !t.is_overdue) return false;
       if (assigneeFilter !== "all") {
         const assignees = assigneesByTask.get(t.id) ?? [];
@@ -238,7 +264,7 @@ export default function FlatTaskList({
       }
       return true;
     });
-  }, [tasks, search, statusFilter, priorityFilter, taskTypeFilter, groupFilter, overdueOnly, assigneeFilter, assigneesByTask, statusesById, groupIdForTask, currentUserId]);
+  }, [tasks, search, statusFilter, priorityFilter, taskTypeFilter, overdueOnly, assigneeFilter, assigneesByTask, statusesById, currentUserId]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
@@ -272,7 +298,135 @@ export default function FlatTaskList({
     return list;
   }, [filtered, sortKey, sortDir, statusesById]);
 
+  const tree = useMemo(() => pruneAndCount(buildTree(sorted)), [buildTree, sorted]);
+  const allNodeIds = useMemo(() => collectIds(tree), [tree]);
+  const allExpanded = allNodeIds.length > 0 && allNodeIds.every((id) => isOpen(id));
+
   const taskTypeOptions = Array.from(taskTypes.values());
+
+  const renderTaskRow = (task: FlatTaskRow, depth: number) => {
+    const status = statusesById.get(task.status_id);
+    const taskType = taskTypes.get(task.task_type_id);
+    const assignees = assigneesByTask.get(task.id) ?? [];
+    const due = formatDate(task.due_date);
+    const remaining = task.due_date ? daysRemainingLabel(task.due_date) : null;
+    const progress = subtaskProgressByTask.get(task.id);
+    const projectName = task.project_id ? projectNameById?.get(task.project_id) : undefined;
+
+    return (
+      <div
+        key={task.id}
+        style={{ paddingRight: `${1.5 + depth * 1.25}rem` }}
+        className="flex w-full items-center gap-2.5 border-b border-gray-50 py-2.5 pl-6 text-right text-sm hover:bg-gray-50"
+      >
+        <button onClick={() => onOpenTask(task.id)} className="flex flex-1 items-center gap-2 overflow-hidden text-right">
+          {taskType && (
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ background: taskType.color ?? "#9CA3AF" }}
+              title={taskType.name_ar}
+            />
+          )}
+          <span className="flex-1 truncate text-gray-700">{task.title}</span>
+          {progress && progress.total > 0 && (
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                progress.done === progress.total ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {progress.done}/{progress.total}
+            </span>
+          )}
+        </button>
+
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          {withSeparators([
+            projectName && <span className="text-xs text-gray-400">{projectName}</span>,
+            task.priority && <Badge label={PRIORITY_LABELS[task.priority]} variant={PRIORITY_VARIANTS[task.priority]} size="sm" />,
+            <span
+              style={pillStyle(status?.color ?? null)}
+              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
+            >
+              {status?.label_ar ?? "—"}
+            </span>,
+            due && (
+              <span className="flex items-center gap-1 whitespace-nowrap">
+                <span className={`text-xs ${task.is_overdue ? "font-medium text-red-500" : "text-gray-500"}`}>{due}</span>
+                {remaining && (
+                  <span
+                    className={`text-[10px] ${
+                      remaining.tone === "overdue"
+                        ? "font-medium text-red-500"
+                        : remaining.tone === "today"
+                          ? "font-medium text-amber-500"
+                          : "text-gray-400"
+                    }`}
+                  >
+                    ({remaining.text})
+                  </span>
+                )}
+              </span>
+            ),
+          ])}
+        </div>
+
+        <div className="flex shrink-0 items-center -space-x-1.5 rtl:space-x-reverse">
+          {assignees.length === 0 ? (
+            <span className="text-xs text-gray-300">غير معين</span>
+          ) : (
+            assignees.slice(0, 3).map((id) => {
+              const employee = employeesById.get(id);
+              const name = employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "";
+              return (
+                <Tooltip key={id} label={name || null}>
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
+                    style={{ background: colorFor(id) }}
+                  >
+                    {initialsOf(name || "?")}
+                  </span>
+                </Tooltip>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTreeNode = (node: CountedTreeNode, depth: number): ReactNode => {
+    const open = isOpen(node.id);
+    return (
+      <div key={node.id}>
+        <div
+          style={{ paddingRight: `${1.5 + depth * 1.25}rem` }}
+          className="flex w-full items-center gap-2 border-b border-gray-100 bg-gray-50/70 py-2 pl-4"
+        >
+          <button onClick={() => toggle(node.id)} className="flex flex-1 items-center gap-2 overflow-hidden text-right">
+            <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${open ? "" : "-rotate-90"}`} />
+            {node.icon}
+            <span className="flex-1 truncate text-sm font-medium text-gray-700">{node.label}</span>
+            <span className="text-xs font-normal text-gray-400">{node.totalCount}</span>
+          </button>
+          {node.onOpenExternal && (
+            <button
+              onClick={node.onOpenExternal}
+              className="shrink-0 rounded p-1 text-gray-300 hover:bg-gray-200 hover:text-gray-600"
+              title="فتح اللوحة"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {open && (
+          <div>
+            {node.children.map((child) => renderTreeNode(child, depth + 1))}
+            {node.tasks.map((task) => renderTaskRow(task, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -314,6 +468,14 @@ export default function FlatTaskList({
               {sortDir === "asc" ? "↑" : "↓"}
             </button>
           </div>
+
+          <button
+            onClick={() => (allExpanded ? closeAll() : openAll(allNodeIds))}
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+          >
+            {allExpanded ? <ChevronsUp className="h-3.5 w-3.5" /> : <ChevronsDown className="h-3.5 w-3.5" />}
+            {allExpanded ? "طي الكل" : "توسيع الكل"}
+          </button>
 
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -360,17 +522,6 @@ export default function FlatTaskList({
               </div>
             )}
 
-            {groupOptions.length > 1 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-gray-400">{groupColumnLabel}:</span>
-                {groupOptions.map((g) => (
-                  <FilterChip key={g.id} active={groupFilter.has(g.id)} onClick={() => setGroupFilter((s) => toggleInSet(s, g.id))}>
-                    {g.label}
-                  </FilterChip>
-                ))}
-              </div>
-            )}
-
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-400">المسؤول:</span>
               <select
@@ -408,115 +559,10 @@ export default function FlatTaskList({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {sorted.length === 0 ? (
+        {tree.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">{tasks.length === 0 ? emptyLabel : "لا توجد نتائج مطابقة للفلاتر"}</div>
         ) : (
-          sorted.map((task) => {
-            const status = statusesById.get(task.status_id);
-            const taskType = taskTypes.get(task.task_type_id);
-            const assignees = assigneesByTask.get(task.id) ?? [];
-            const due = formatDate(task.due_date);
-            const remaining = task.due_date ? daysRemainingLabel(task.due_date) : null;
-            const progress = subtaskProgressByTask.get(task.id);
-            const groupLabel = groupOptions.find((g) => g.id === groupIdForTask(task))?.label;
-            const secondary = secondaryLabelForTask?.(task);
-            const projectName = task.project_id ? projectNameById?.get(task.project_id) : undefined;
-
-            return (
-              <div
-                key={task.id}
-                className="flex w-full items-center gap-2.5 border-b border-gray-50 px-6 py-2.5 text-right text-sm hover:bg-gray-50"
-              >
-                <button onClick={() => onOpenTask(task.id)} className="flex flex-1 items-center gap-2 overflow-hidden text-right">
-                  {taskType && (
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: taskType.color ?? "#9CA3AF" }}
-                      title={taskType.name_ar}
-                    />
-                  )}
-                  <span className="flex-1 truncate text-gray-700">{task.title}</span>
-                  {progress && progress.total > 0 && (
-                    <span
-                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                        progress.done === progress.total ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {progress.done}/{progress.total}
-                    </span>
-                  )}
-                </button>
-
-                <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                  {withSeparators([
-                    projectName && <span className="text-xs text-gray-400">{projectName}</span>,
-                    (groupLabel || secondary) && (
-                      <span className="text-xs text-gray-400">
-                        {groupLabel}
-                        {secondary ? ` · ${secondary}` : ""}
-                      </span>
-                    ),
-                    task.priority && <Badge label={PRIORITY_LABELS[task.priority]} variant={PRIORITY_VARIANTS[task.priority]} size="sm" />,
-                    <span
-                      style={pillStyle(status?.color ?? null)}
-                      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-                    >
-                      {status?.label_ar ?? "—"}
-                    </span>,
-                    due && (
-                      <span className="flex items-center gap-1 whitespace-nowrap">
-                        <span className={`text-xs ${task.is_overdue ? "font-medium text-red-500" : "text-gray-500"}`}>{due}</span>
-                        {remaining && (
-                          <span
-                            className={`text-[10px] ${
-                              remaining.tone === "overdue"
-                                ? "font-medium text-red-500"
-                                : remaining.tone === "today"
-                                  ? "font-medium text-amber-500"
-                                  : "text-gray-400"
-                            }`}
-                          >
-                            ({remaining.text})
-                          </span>
-                        )}
-                      </span>
-                    ),
-                  ])}
-                </div>
-
-                <div className="flex shrink-0 items-center -space-x-1.5 rtl:space-x-reverse">
-                  {assignees.length === 0 ? (
-                    <span className="text-xs text-gray-300">غير معين</span>
-                  ) : (
-                    assignees.slice(0, 3).map((id) => {
-                      const employee = employeesById.get(id);
-                      const name = employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "";
-                      return (
-                        <Tooltip key={id} label={name || null}>
-                          <span
-                            className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold text-white"
-                            style={{ background: colorFor(id) }}
-                          >
-                            {initialsOf(name || "?")}
-                          </span>
-                        </Tooltip>
-                      );
-                    })
-                  )}
-                </div>
-
-                {onOpenBoard && (
-                  <button
-                    onClick={() => onOpenBoard(task.board_id)}
-                    className="shrink-0 rounded p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-500"
-                    title="فتح اللوحة"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            );
-          })
+          tree.map((node) => renderTreeNode(node, 0))
         )}
       </div>
     </div>
