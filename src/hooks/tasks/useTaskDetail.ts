@@ -6,6 +6,7 @@ import { resolveStatusSetId } from "./resolveStatusSetId";
 import type { EmployeeLite, StatusRow, TaskRow, CustomColumn } from "./useTaskBoard";
 import type { Tag } from "./useAdminCatalog";
 import { extractMentionedTaskIds } from "./mentionUtils";
+import { notifyUsers } from "../../services/notifications/pushNotifications";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -359,6 +360,18 @@ export function useTaskDetail(taskId: string | undefined) {
           toAdd.map((userId) => ({ task_id: taskId, user_id: userId, assigned_by: user.id })),
         );
         if (error) throw error;
+
+        // Best-effort: a failed push shouldn't fail the assignment
+        // itself, so this isn't awaited into the mutation's own error
+        // path. Skips the assigner themselves — no need to notify
+        // someone they assigned the task to themselves.
+        const recipients = toAdd.filter((id) => id !== user.id);
+        if (recipients.length > 0) {
+          const taskTitle = query.data?.task.title ?? "مهمة";
+          void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, {
+            url: `/tasks/${taskId}`,
+          });
+        }
       }
     },
     onSuccess: invalidate,

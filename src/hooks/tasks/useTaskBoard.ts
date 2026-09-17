@@ -5,6 +5,7 @@ import type { Database, Json } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { DEFAULT_FEATURE_SETTINGS, type SpaceFeatureSettings } from "./useSpaceSettings";
+import { notifyUsers } from "../../services/notifications/pushNotifications";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7, D2).
 //
@@ -428,6 +429,16 @@ export function useTaskBoard(boardId: string | undefined) {
           })),
         );
         if (error) throw error;
+
+        // Best-effort, not awaited into the mutation's own error path —
+        // see the identical note in useTaskDetail.ts's setAssignees.
+        const recipients = toAdd.filter((id) => id !== user.id);
+        if (recipients.length > 0) {
+          const taskTitle = query.data?.tasks.find((t) => t.id === taskId)?.title ?? "مهمة";
+          void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, {
+            url: `/tasks/${taskId}`,
+          });
+        }
       }
     },
     onSuccess: invalidate,
