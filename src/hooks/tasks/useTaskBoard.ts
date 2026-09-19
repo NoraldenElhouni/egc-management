@@ -43,6 +43,12 @@ export interface TaskTypeLite {
   color: string | null;
 }
 
+export interface TagLite {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 export interface TaskBoardData {
   board: { id: string; name: string; space_id: string; zone_id: string | null };
   zoneName: string | null;
@@ -57,6 +63,7 @@ export interface TaskBoardData {
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
+  tagsByTask: Map<string, TagLite[]>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   /** null when the board's space isn't a project space (department/company/personal) — tasks.project_id is nullable for exactly this case. */
   projectId: string | null;
@@ -157,6 +164,7 @@ export function useTaskBoard(boardId: string | undefined) {
         requirementsResult,
         attachmentsResult,
         commentsResult,
+        taskTagsResult,
       ] = await Promise.all([
         taskIds.length
           ? tasksDb
@@ -194,6 +202,9 @@ export function useTaskBoard(boardId: string | undefined) {
         taskIds.length
           ? tasksDb.from("task_comments").select("task_id").in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
+        taskIds.length
+          ? tasksDb.from("task_tags").select("task_id, tag_id").in("task_id", taskIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (assigneeError) throw assigneeError;
       if (employeesError) throw employeesError;
@@ -204,6 +215,28 @@ export function useTaskBoard(boardId: string | undefined) {
       if (requirementsResult.error) throw requirementsResult.error;
       if (attachmentsResult.error) throw attachmentsResult.error;
       if (commentsResult.error) throw commentsResult.error;
+      if (taskTagsResult.error) throw taskTagsResult.error;
+
+      // Which tags exist isn't known until task_tags resolves, so this is
+      // a follow-up query rather than part of the Promise.all above (same
+      // shape as the blocking-tasks lookup further down) — only the tags
+      // actually attached to this board's tasks, not the full company
+      // catalog (unlike TaskTypeCell's popover, this is read-only display).
+      const attachedTagIds = Array.from(new Set((taskTagsResult.data ?? []).map((r) => r.tag_id)));
+      const { data: tagRows, error: tagsError } = attachedTagIds.length
+        ? await tasksDb.from("tags").select("id, name, color").in("id", attachedTagIds)
+        : { data: [], error: null };
+      if (tagsError) throw tagsError;
+
+      const tagById = new Map((tagRows ?? []).map((t) => [t.id, t]));
+      const tagsByTask = new Map<string, TagLite[]>();
+      for (const row of taskTagsResult.data ?? []) {
+        const tag = tagById.get(row.tag_id);
+        if (!tag) continue;
+        const list = tagsByTask.get(row.task_id) ?? [];
+        list.push(tag);
+        tagsByTask.set(row.task_id, list);
+      }
 
       const assigneesByTask = new Map<string, string[]>();
       for (const row of assigneeRows ?? []) {
@@ -355,6 +388,7 @@ export function useTaskBoard(boardId: string | undefined) {
         unmetRequirementTaskIds,
         attachedTaskIds,
         commentedTaskIds,
+        tagsByTask,
         subtaskProgressByTask,
         projectId: space.project_id,
         customColumns,

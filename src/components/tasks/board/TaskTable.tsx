@@ -11,6 +11,7 @@ import type {
   StatusRow,
   TaskRow as TaskRowType,
   TaskTypeLite,
+  TagLite,
 } from "../../../hooks/tasks/useTaskBoard";
 import type { SpaceFeatureSettings } from "../../../hooks/tasks/useSpaceSettings";
 import type { Json } from "../../../lib/supabase";
@@ -41,6 +42,7 @@ interface TaskTableProps {
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
+  tagsByTask: Map<string, TagLite[]>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   hiddenColumns: CustomColumn[];
@@ -78,6 +80,7 @@ export default function TaskTable({
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
+  tagsByTask,
   subtaskProgressByTask,
   customColumns,
   hiddenColumns,
@@ -306,6 +309,7 @@ export default function TaskTable({
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
                 attachedTaskIds={attachedTaskIds}
                 commentedTaskIds={commentedTaskIds}
+                tagsByTask={tagsByTask}
                 subtaskProgressByTask={subtaskProgressByTask}
                 customColumns={customColumns}
                 valuesByTask={valuesByTask}

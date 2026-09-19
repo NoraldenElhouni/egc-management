@@ -15,6 +15,7 @@ import type {
   StatusRow,
   TaskRow as TaskRowType,
   TaskTypeLite,
+  TagLite,
 } from "../../../hooks/tasks/useTaskBoard";
 import type { Json } from "../../../lib/supabase";
 
@@ -58,6 +59,7 @@ interface TaskRowProps {
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
+  tagsByTask: Map<string, TagLite[]>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
@@ -95,6 +97,7 @@ export default function TaskRow({
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
+  tagsByTask,
   subtaskProgressByTask,
   customColumns,
   valuesByTask,
@@ -154,6 +157,7 @@ export default function TaskRow({
   // description is JSON, { text: string } (build plan §4.7) — see
   // TaskDetailPanel.tsx's own read of the same field.
   const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
+  const tags = tagsByTask.get(task.id) ?? [];
 
   return (
     <>
@@ -234,6 +238,22 @@ export default function TaskRow({
             >
               {task.title}
             </button>
+
+            {tags.length > 0 && (
+              <span
+                className="shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                style={{ background: `${tags[0].color ?? "#6B7280"}1A`, color: tags[0].color ?? "#6B7280" }}
+              >
+                {tags[0].name}
+              </span>
+            )}
+            {tags.length > 1 && (
+              <Tooltip label={tags.slice(1).map((t) => t.name).join("، ")}>
+                <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                  +{tags.length - 1}
+                </span>
+              </Tooltip>
+            )}
 
             {progress && (
               <span
@@ -353,6 +373,7 @@ export default function TaskRow({
               unmetRequirementTaskIds={unmetRequirementTaskIds}
               attachedTaskIds={attachedTaskIds}
               commentedTaskIds={commentedTaskIds}
+              tagsByTask={tagsByTask}
               subtaskProgressByTask={subtaskProgressByTask}
               customColumns={customColumns}
               valuesByTask={valuesByTask}

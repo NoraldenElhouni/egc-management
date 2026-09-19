@@ -88,6 +88,7 @@ export default function TaskBoardPage() {
           unmetRequirementTaskIds={data.unmetRequirementTaskIds}
           attachedTaskIds={data.attachedTaskIds}
           commentedTaskIds={data.commentedTaskIds}
+          tagsByTask={data.tagsByTask}
           subtaskProgressByTask={data.subtaskProgressByTask}
           customColumns={data.customColumns}
           hiddenColumns={data.hiddenColumns}

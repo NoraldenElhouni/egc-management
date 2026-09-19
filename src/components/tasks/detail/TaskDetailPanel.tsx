@@ -17,6 +17,7 @@ import SubtasksSection from "./SubtasksSection";
 import RelationshipsSection from "./RelationshipsSection";
 import AttachmentsSection from "./AttachmentsSection";
 import CommentsSection from "./CommentsSection";
+import CommentComposer from "./CommentComposer";
 import ActivitySection from "./ActivitySection";
 import TagPicker from "./TagPicker";
 import RecurrenceSection from "./RecurrenceSection";
@@ -188,10 +189,6 @@ export default function TaskDetailPanel() {
                 comments={data.comments}
                 employeesById={data.employeesById}
                 excludeTaskId={data.task.id}
-                onAddComment={async (text) => {
-                  await addComment({ text });
-                  syncMentions(text);
-                }}
                 onEditComment={async (id, text) => {
                   await editComment({ id, text });
                   syncMentions(text);
@@ -344,6 +341,16 @@ export default function TaskDetailPanel() {
                 taskId={data.task.id}
                 attachments={data.attachments}
                 onUploaded={() => refetch()}
+              />
+            </Section>
+
+            <Section title="إضافة تعليق">
+              <CommentComposer
+                excludeTaskId={data.task.id}
+                onAddComment={async (text) => {
+                  await addComment({ text });
+                  syncMentions(text);
+                }}
               />
             </Section>
 
