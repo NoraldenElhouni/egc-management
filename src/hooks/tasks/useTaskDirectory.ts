@@ -2,29 +2,32 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
+import { resolveStatusSetId } from "./resolveStatusSetId";
 import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 
 // =====================================================================
-// Shared data + mutations for the three company-wide "directory" views —
-// AssigneeViewPage (grouped by who's assigned), TaskTypeViewPage
-// (grouped by task type), and ProjectViewPage (grouped by project, then
-// zone). All three need the SAME full inline-edit power the single-board
-// table has (useTaskBoard.ts), but scoped across every board/space
-// instead of one — so this is a sibling of useTaskBoard.ts, not an
-// extension of it: same mutation shapes (copied from useTaskBoard.ts's
-// updateStatus/updateTaskType/updatePriority/updateStartDate/
-// updateDueDate/setAssignees), but its own fetch and its own query key,
-// since there's no single boardId to key or invalidate by.
+// Shared data + mutations for the "directory" views — AssigneeViewPage
+// (grouped by who's assigned), TaskTypeViewPage (grouped by task type),
+// ProjectViewPage (grouped by project, then zone), all company-wide, and
+// SpaceTasksPage (grouped by board, scoped to ONE space via the
+// `spaceId` option below). All of them need the SAME full inline-edit
+// power the single-board table has (useTaskBoard.ts) — so this is a
+// sibling of useTaskBoard.ts, not an extension of it: same mutation
+// shapes (copied from useTaskBoard.ts's updateStatus/updateTaskType/
+// updatePriority/updateStartDate/updateDueDate/setAssignees), but its
+// own fetch and its own query key, since there's no single boardId to
+// key or invalidate by.
 //
-// Visibility scoping (which spaces count) is the same P8 rule
-// useDepartmentView.ts already uses — duplicated here rather than
-// shared, matching that file's own stated convention of small per-screen
-// query blocks over a shared primitive.
+// Visibility scoping (which spaces count, when no spaceId narrows it to
+// one already-chosen space) is the same P8 rule useDepartmentView.ts
+// already uses — duplicated here rather than shared, matching that
+// file's own stated convention of small per-screen query blocks over a
+// shared primitive.
 //
 // Grouping is deliberately NOT done here — "by assignee" (a task can
-// land in more than one bucket), "by task type" and "by project" (each
-// exactly one bucket, project nested one level further by zone) are
-// different enough that each page groups this hook's flat task list
+// land in more than one bucket), "by task type"/"by project"/"by board"
+// (each exactly one bucket, project nested one level further by zone)
+// are different enough that each page groups this hook's flat task list
 // itself.
 //
 // Every fetched task is returned as-is (no open/closed split here) —
@@ -46,6 +49,7 @@ export interface TaskDirectoryData {
   parentTitleByTask: Map<string, string>;
   projectNamesById: Map<string, string>;
   zoneNamesById: Map<string, string>;
+  boardNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
@@ -53,11 +57,12 @@ export interface TaskDirectoryData {
   commentedTaskIds: Set<string>;
 }
 
-export function useTaskDirectory() {
+export function useTaskDirectory(options?: { spaceId?: string }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const tasksDb = supabase.schema("tasks");
-  const queryKey = ["task-directory", user?.id];
+  const spaceId = options?.spaceId;
+  const queryKey = ["task-directory", user?.id, spaceId ?? null];
 
   const query = useQuery({
     queryKey,
@@ -65,23 +70,40 @@ export function useTaskDirectory() {
     queryFn: async (): Promise<TaskDirectoryData> => {
       if (!user?.id) throw new Error("no user");
 
-      const [{ data: spaces, error: spacesError }, { data: memberRows, error: membersError }] = await Promise.all([
-        tasksDb.from("spaces").select("id, visibility, owner_user_id").eq("is_archived", false),
-        tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
-      ]);
-      if (spacesError) throw spacesError;
-      if (membersError) throw membersError;
+      let boards: { id: string; name: string }[];
+      if (spaceId) {
+        // Scoped to one already-chosen space — no visibility resolution
+        // needed, and boards.space_id covers folder-nested boards too
+        // (folder_id is a separate, optional column; every board still
+        // carries its own space_id directly, same as useTasksSidebar.ts's
+        // own boards query relies on).
+        const { data, error } = await tasksDb
+          .from("boards")
+          .select("id, name")
+          .eq("space_id", spaceId)
+          .eq("is_archived", false);
+        if (error) throw error;
+        boards = data ?? [];
+      } else {
+        const [{ data: spaces, error: spacesError }, { data: memberRows, error: membersError }] = await Promise.all([
+          tasksDb.from("spaces").select("id, visibility, owner_user_id").eq("is_archived", false),
+          tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
+        ]);
+        if (spacesError) throw spacesError;
+        if (membersError) throw membersError;
 
-      const memberSpaceIds = new Set((memberRows ?? []).map((r) => r.space_id));
-      const visibleSpaceIds = (spaces ?? [])
-        .filter((s) => s.visibility === "public" || s.owner_user_id === user.id || memberSpaceIds.has(s.id))
-        .map((s) => s.id);
+        const memberSpaceIds = new Set((memberRows ?? []).map((r) => r.space_id));
+        const visibleSpaceIds = (spaces ?? [])
+          .filter((s) => s.visibility === "public" || s.owner_user_id === user.id || memberSpaceIds.has(s.id))
+          .map((s) => s.id);
 
-      const { data: boards, error: boardsError } = visibleSpaceIds.length
-        ? await tasksDb.from("boards").select("id").in("space_id", visibleSpaceIds).eq("is_archived", false)
-        : { data: [], error: null };
-      if (boardsError) throw boardsError;
-      const boardIds = (boards ?? []).map((b) => b.id);
+        const { data, error } = visibleSpaceIds.length
+          ? await tasksDb.from("boards").select("id, name").in("space_id", visibleSpaceIds).eq("is_archived", false)
+          : { data: [], error: null };
+        if (error) throw error;
+        boards = data ?? [];
+      }
+      const boardIds = boards.map((b) => b.id);
 
       const { data: allTasks, error: tasksError } = boardIds.length
         ? await tasksDb.from("tasks").select("*").in("board_id", boardIds).eq("is_archived", false)
@@ -230,6 +252,7 @@ export function useTaskDirectory() {
         parentTitleByTask,
         projectNamesById: new Map((projectRowsResult.data ?? []).map((p) => [p.id, p.name])),
         zoneNamesById: new Map((zoneRowsResult.data ?? []).map((z) => [z.id, z.name])),
+        boardNamesById: new Map(boards.map((b) => [b.id, b.name])),
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
         blockedTaskIds,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),
@@ -307,6 +330,59 @@ export function useTaskDirectory() {
     onSuccess: invalidate,
   });
 
+  // Unlike useTaskBoard.ts's own createTask, this can't lean on
+  // query.data.statuses to find the board's "not started" status —
+  // TaskDirectoryData.statuses only holds statuses actually used by
+  // tasks already fetched, which is empty or partial for a board with
+  // few or zero tasks. Resolves the board's own status set fresh instead
+  // (same fallback chain resolveStatusSetId.ts already shares with
+  // useTaskBoard.ts/useTaskDetail.ts).
+  const createTask = useMutation({
+    mutationFn: async ({ boardId, title }: { boardId: string; title: string }) => {
+      if (!user?.id) throw new Error("no user");
+
+      const { data: board, error: boardError } = await tasksDb
+        .from("boards")
+        .select("id, space_id, status_set_id")
+        .eq("id", boardId)
+        .single();
+      if (boardError) throw boardError;
+
+      const statusSetId = await resolveStatusSetId(board.status_set_id, board.space_id);
+      const { data: statusRows, error: statusesError } = await tasksDb
+        .from("statuses")
+        .select("id, category")
+        .eq("status_set_id", statusSetId)
+        .order("sort_order", { ascending: true });
+      if (statusesError) throw statusesError;
+      const firstOpenStatus = (statusRows ?? []).find((s) => s.category === "not_started") ?? statusRows?.[0];
+      if (!firstOpenStatus) throw new Error("لا توجد حالات معرّفة لهذه اللوحة");
+
+      const { data: space, error: spaceError } = await tasksDb
+        .from("spaces")
+        .select("project_id")
+        .eq("id", board.space_id)
+        .single();
+      if (spaceError) throw spaceError;
+
+      const maxSort = (query.data?.tasks ?? [])
+        .filter((t) => t.board_id === boardId && !t.parent_task_id)
+        .reduce((max, t) => Math.max(max, t.sort_order), -1);
+
+      const { error } = await tasksDb.from("tasks").insert({
+        board_id: boardId,
+        parent_task_id: null,
+        title,
+        status_id: firstOpenStatus.id,
+        project_id: space.project_id,
+        created_by: user.id,
+        sort_order: maxSort + 1,
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     data: query.data,
     loading: query.isPending,
@@ -317,5 +393,6 @@ export function useTaskDirectory() {
     onChangeStartDate: (taskId: string, startDate: string | null) => updateStartDate.mutate({ taskId, startDate }),
     onChangeDueDate: (taskId: string, dueDate: string | null) => updateDueDate.mutate({ taskId, dueDate }),
     onChangeAssignees: (taskId: string, userIds: string[]) => setAssignees.mutate({ taskId, userIds }),
+    onCreateTask: (boardId: string, title: string) => createTask.mutate({ boardId, title }),
   };
 }

@@ -34,7 +34,10 @@ export default function InvoiceButtonSummed({
   function sumByName(
     rows: { name: string | null; total_price: number }[],
   ): { name: string | null; total_price: number }[] {
-    const merged = new Map<string, { name: string | null; total_price: number }>();
+    const merged = new Map<
+      string,
+      { name: string | null; total_price: number }
+    >();
 
     for (const row of rows) {
       const key = row.name ?? "";
@@ -88,7 +91,8 @@ export default function InvoiceButtonSummed({
     const refundPercentageLogsTotal = r(
       (project.project_percentage_logs ?? [])
         .filter(
-          (log) => log.type === "refund" && lydRefundIds.has(log.refund_id ?? ""),
+          (log) =>
+            log.type === "refund" && lydRefundIds.has(log.refund_id ?? ""),
         )
         .reduce((acc, log) => acc + (log.amount ?? 0), 0),
     );
@@ -117,24 +121,73 @@ export default function InvoiceButtonSummed({
         .reduce((acc, i) => acc + (i.amount ?? 0), 0),
     );
 
+    const projectMaps = (project.project_maps ?? [])
+      .filter((map) => map.amount != null && map.date != null)
+      .sort((a, b) => (a.serial_number ?? 0) - (b.serial_number ?? 0));
+    const totalMaps = r(
+      projectMaps.reduce((acc, map) => acc + Number(map.amount ?? 0), 0),
+    );
+
     const remaingAmount = r(
       lydBalances.reduce((acc, a) => acc + (a.balance ?? 0), 0),
     );
-    const totalAmount = r(totalMetrials + totalLabors);
+    // totalAmount = materials + labor + company percentage + maps - refund
+    const totalAmount = r(
+      totalMetrials +
+        totalLabors +
+        totalCompanyPercentage +
+        totalMaps -
+        totalRefund,
+    );
 
     const today = new Date().toISOString().split("T")[0];
+
+    const allRelevantDates = [
+      ...lydExpenses.map((e) => e.expense_date).filter(Boolean),
+      ...project.project_refund
+        .filter((rf) => rf.currency === "LYD")
+        .map((rf) => rf.income_date)
+        .filter(Boolean),
+      ...project.project_incomes
+        .filter((i) => i.currency === "LYD")
+        .map((i) => i.income_date)
+        .filter(Boolean),
+      ...projectMaps.map((map) => map.date).filter(Boolean),
+    ].filter((date): date is string => {
+      if (!date) return false;
+      const parsed = new Date(date);
+      return !Number.isNaN(parsed.getTime());
+    });
+
+    const start_date =
+      allRelevantDates.length > 0
+        ? allRelevantDates.reduce((min, current) =>
+            new Date(current) < new Date(min) ? current : min,
+          )
+        : today;
+
+    const end_date =
+      allRelevantDates.length > 0
+        ? allRelevantDates.reduce((max, current) =>
+            new Date(current) > new Date(max) ? current : max,
+          )
+        : today;
 
     return {
       serial_number: project.serial_number,
       invoice_date: today,
       project_name: project.name,
       project_location: project.address,
-      start_date: today,
-      end_date: today,
+      start_date,
+      end_date,
 
       finance_invoice: {
         total_metrial: totalMetrials,
         total_labor: totalLabors,
+        total_labor_and_metrial_and_percentage_and_maps: r(
+          totalMetrials + totalLabors + totalCompanyPercentage + totalMaps,
+        ),
+        total_maps: totalMaps,
         total_not_paid: totalNotPaid,
         total_refund: totalRefund,
         total_company_percentage: totalCompanyPercentage,
@@ -160,6 +213,12 @@ export default function InvoiceButtonSummed({
             total_price: r(e.total_amount ?? 0),
           })),
       ),
+      maps: projectMaps.map((map) => ({
+        name: map.description,
+        serial_number: map.serial_number,
+        total_price: r(map.amount ?? 0),
+        date: map.date,
+      })),
 
       refund: project.project_refund
         .filter((rf) => rf.currency === "LYD")

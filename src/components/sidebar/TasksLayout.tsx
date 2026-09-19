@@ -418,18 +418,23 @@ function SpaceSection({
       >
         <button
           onClick={onToggle}
-          className="flex flex-1 items-center gap-2 overflow-hidden text-right"
+          className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+          title={isOpen ? "طي" : "توسيع"}
         >
           <ChevronDown
-            className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${
-              isOpen ? "" : "-rotate-90"
-            }`}
+            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "" : "-rotate-90"}`}
           />
+        </button>
+        <Link
+          to={`/tasks/space/${node.space.id}`}
+          className="flex flex-1 items-center gap-2 overflow-hidden text-right hover:underline"
+          title="عرض كل مهام المساحة"
+        >
           <Icon className="h-4 w-4 shrink-0 text-gray-500" style={color ? { color } : undefined} />
           <span className="flex-1 truncate text-right" style={color ? { color } : undefined}>
             {node.space.name}
           </span>
-        </button>
+        </Link>
         <CountBadge count={totalOpen} />
         <div ref={addMenuRef} className="relative shrink-0">
           <button

@@ -146,8 +146,8 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       finance_invoice: {
         total_metrial: totalMetrials,
         total_labor: totalLabors,
-        total_labor_and_metrial: r(
-          totalMetrials + totalLabors + totalCompanyPercentage,
+        total_labor_and_metrial_and_percentage_and_maps: r(
+          totalMetrials + totalLabors + totalCompanyPercentage + totalMaps,
         ),
         total_maps: totalMaps,
         total_not_paid: totalNotPaid,

@@ -68,10 +68,12 @@ function SpaceCard({ node }: { node: SpaceNode }) {
   const openCount =
     node.boards.reduce((n, b) => n + b.openCount, 0) +
     node.folders.reduce((n, f) => n + f.boards.reduce((s, b) => s + b.openCount, 0), 0);
-  const firstBoardId = node.boards[0]?.board.id ?? node.folders.flatMap((f) => f.boards)[0]?.board.id;
 
-  const content = (
-    <>
+  return (
+    <Link
+      to={`/tasks/space/${node.space.id}`}
+      className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
+    >
       <div className="flex items-center gap-2">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-superLight text-primary"
@@ -87,19 +89,6 @@ function SpaceCard({ node }: { node: SpaceNode }) {
         </span>
         <CountBadge count={openCount} />
       </div>
-    </>
-  );
-
-  if (!firstBoardId) {
-    return <div className="rounded-lg border border-gray-100 p-3">{content}</div>;
-  }
-
-  return (
-    <Link
-      to={`/tasks/board/${firstBoardId}`}
-      className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
-    >
-      {content}
     </Link>
   );
 }

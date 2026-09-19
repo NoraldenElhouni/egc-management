@@ -1,6 +1,7 @@
 import { supabase } from "../../lib/supabaseClient";
 
-// Shared by useTaskBoard and useTaskDetail. resolve_status_set(board_id) is
+// Shared by useTaskBoard, useTaskDetail, and useTaskDirectory (its own
+// createTask mutation). resolve_status_set(board_id) is
 // documented in the build plan (§4.3) but does NOT appear in the live
 // schema's RPC surface (confirmed via `supabase gen types` against the
 // linked project) — replicated here client-side instead of calling a
