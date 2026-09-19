@@ -145,6 +145,12 @@ export default function TasksPage() {
             label="حسب نوع المهمة"
             subtitle="كل المهام مجمّعة حسب نوع المهمة"
           />
+          <ViewCard
+            to="/tasks/by-project"
+            icon={FolderKanban}
+            label="حسب المشروع"
+            subtitle="كل المهام مجمّعة حسب المشروع والمنطقة"
+          />
         </div>
       </div>
 

@@ -5,15 +5,16 @@ import { notifyUsers } from "../../services/notifications/pushNotifications";
 import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 
 // =====================================================================
-// Shared data + mutations for the two company-wide "directory" views —
-// AssigneeViewPage (grouped by who's assigned) and TaskTypeViewPage
-// (grouped by task type). Both need the SAME full inline-edit power the
-// single-board table has (useTaskBoard.ts), but scoped across every
-// board/space instead of one — so this is a sibling of useTaskBoard.ts,
-// not an extension of it: same mutation shapes (copied from
-// useTaskBoard.ts's updateStatus/updateTaskType/updatePriority/
-// updateStartDate/updateDueDate/setAssignees), but its own fetch and its
-// own query key, since there's no single boardId to key or invalidate by.
+// Shared data + mutations for the three company-wide "directory" views —
+// AssigneeViewPage (grouped by who's assigned), TaskTypeViewPage
+// (grouped by task type), and ProjectViewPage (grouped by project, then
+// zone). All three need the SAME full inline-edit power the single-board
+// table has (useTaskBoard.ts), but scoped across every board/space
+// instead of one — so this is a sibling of useTaskBoard.ts, not an
+// extension of it: same mutation shapes (copied from useTaskBoard.ts's
+// updateStatus/updateTaskType/updatePriority/updateStartDate/
+// updateDueDate/setAssignees), but its own fetch and its own query key,
+// since there's no single boardId to key or invalidate by.
 //
 // Visibility scoping (which spaces count) is the same P8 rule
 // useDepartmentView.ts already uses — duplicated here rather than
@@ -21,8 +22,9 @@ import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite 
 // query blocks over a shared primitive.
 //
 // Grouping is deliberately NOT done here — "by assignee" (a task can
-// land in more than one bucket) and "by task type" (exactly one bucket)
-// are different enough that each page groups this hook's flat task list
+// land in more than one bucket), "by task type" and "by project" (each
+// exactly one bucket, project nested one level further by zone) are
+// different enough that each page groups this hook's flat task list
 // itself.
 //
 // Every fetched task is returned as-is (no open/closed split here) —
@@ -43,6 +45,7 @@ export interface TaskDirectoryData {
   tagsByTask: Map<string, TagLite[]>;
   parentTitleByTask: Map<string, string>;
   projectNamesById: Map<string, string>;
+  zoneNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
@@ -96,6 +99,7 @@ export function useTaskDirectory() {
 
       const parentIds = Array.from(new Set(tasks.map((t) => t.parent_task_id).filter((id): id is string => !!id)));
       const projectIds = Array.from(new Set(tasks.map((t) => t.project_id).filter((id): id is string => !!id)));
+      const zoneIds = Array.from(new Set(tasks.map((t) => t.zone_id).filter((id): id is string => !!id)));
 
       const [
         { data: assigneeRows, error: assigneeError },
@@ -109,6 +113,7 @@ export function useTaskDirectory() {
         taskTagsResult,
         parentRowsResult,
         projectRowsResult,
+        zoneRowsResult,
       ] = await Promise.all([
         taskIds.length
           ? tasksDb.from("task_assignees").select("task_id, user_id").in("task_id", taskIds)
@@ -139,6 +144,9 @@ export function useTaskDirectory() {
         projectIds.length
           ? supabase.from("projects").select("id, name").in("id", projectIds)
           : Promise.resolve({ data: [], error: null }),
+        zoneIds.length
+          ? supabase.schema("boq").from("zones").select("id, name").in("id", zoneIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (assigneeError) throw assigneeError;
       if (employeesError) throw employeesError;
@@ -151,6 +159,7 @@ export function useTaskDirectory() {
       if (taskTagsResult.error) throw taskTagsResult.error;
       if (parentRowsResult.error) throw parentRowsResult.error;
       if (projectRowsResult.error) throw projectRowsResult.error;
+      if (zoneRowsResult.error) throw zoneRowsResult.error;
 
       const attachedTagIds = Array.from(new Set((taskTagsResult.data ?? []).map((r) => r.tag_id)));
       const { data: tagRows, error: tagsError } = attachedTagIds.length
@@ -220,6 +229,7 @@ export function useTaskDirectory() {
         tagsByTask,
         parentTitleByTask,
         projectNamesById: new Map((projectRowsResult.data ?? []).map((p) => [p.id, p.name])),
+        zoneNamesById: new Map((zoneRowsResult.data ?? []).map((z) => [z.id, z.name])),
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
         blockedTaskIds,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),

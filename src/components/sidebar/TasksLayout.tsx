@@ -656,6 +656,13 @@ const TasksLayoutInner = () => {
           >
             <Shapes className="h-5 w-5" />
           </Link>
+          <Link
+            to="/tasks/by-project"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            title="حسب المشروع"
+          >
+            <FolderKanban className="h-5 w-5" />
+          </Link>
         </aside>
         <main className="mr-20 flex-1 overflow-y-auto scrollbar-hide">
           <Outlet />
@@ -817,6 +824,13 @@ const TasksLayoutInner = () => {
                 >
                   <Shapes className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                   <span className="flex-1 truncate">حسب نوع المهمة</span>
+                </Link>
+                <Link
+                  to="/tasks/by-project"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  <FolderKanban className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="flex-1 truncate">حسب المشروع</span>
                 </Link>
               </div>
 
