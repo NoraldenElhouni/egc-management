@@ -4,8 +4,6 @@ import TasksPage from "../../pages/tasks/TasksPage";
 import TaskBoardPage from "../../pages/tasks/TaskBoardPage";
 import DepartmentPage from "../../pages/tasks/DepartmentPage";
 import MyWorkPage from "../../pages/tasks/MyWorkPage";
-import AllTasksPage from "../../pages/tasks/AllTasksPage";
-import SpaceTasksPage from "../../pages/tasks/SpaceTasksPage";
 import TaskRedirect from "../../pages/tasks/TaskRedirect";
 import TaskDetailPanel from "../tasks/detail/TaskDetailPanel";
 import TemplatesAdminPage from "../../pages/tasks/admin/TemplatesAdminPage";
@@ -26,16 +24,11 @@ import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
 // boardId param — it derives its "base path" from the current URL, so
 // closing or following a breadcrumb/subtask link returns to whichever
 // list opened it (previously every list navigated away to the task's
-// board instead of staying put). all-tasks (cross-space) and
-// space/:id/tasks (cross-board within one space) don't need their own
-// nested task/:id — their tree (useAllTasksView.ts, useSpaceTasksView.ts
-// + FlatTaskList.tsx) always bottoms out at a real board table
-// (BoardTaskCard.tsx), whose task rows already navigate to board/:id's
-// own task/:id. Separate from space/:id/settings (D9, which also holds
-// D10's automations tab). admin/templates[/:id] (D8) and admin/fields
-// (D11) are also real; task/:id without a list context (D1's search,
-// etc.) goes through TaskRedirect so the panel is never opened without a
-// list mounted behind it.
+// board instead of staying put). Separate from space/:id/settings (D9,
+// which also holds D10's automations tab). admin/templates[/:id] (D8)
+// and admin/fields (D11) are also real; task/:id without a list context
+// (D1's search, etc.) goes through TaskRedirect so the panel is never
+// opened without a list mounted behind it.
 export default function TasksRoutes() {
   return (
     <Routes>
@@ -50,8 +43,6 @@ export default function TasksRoutes() {
         <Route path="my-work" element={<MyWorkPage />}>
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
-        <Route path="all-tasks" element={<AllTasksPage />} />
-        <Route path="space/:spaceId/tasks" element={<SpaceTasksPage />} />
         <Route path="admin/templates" element={<TemplatesAdminPage />} />
         <Route path="admin/templates/:templateId" element={<TemplateBuilderPage />} />
         <Route path="admin/fields" element={<FieldsAdminPage />} />

@@ -5,6 +5,8 @@ import { useTaskDetail } from "../../../hooks/tasks/useTaskDetail";
 import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
 import AssigneeCell from "../board/AssigneeCell";
+import StartDateCell from "../board/StartDateCell";
+import DateCell from "../board/DateCell";
 import CustomFieldCell from "../board/CustomFieldCell";
 import LinkedRecordCard from "./LinkedRecordCard";
 import LinkRecordPicker from "./LinkRecordPicker";
@@ -14,6 +16,7 @@ import ChecklistsSection from "./ChecklistsSection";
 import SubtasksSection from "./SubtasksSection";
 import RelationshipsSection from "./RelationshipsSection";
 import AttachmentsSection from "./AttachmentsSection";
+import CommentsSection from "./CommentsSection";
 import ActivitySection from "./ActivitySection";
 import TagPicker from "./TagPicker";
 import RecurrenceSection from "./RecurrenceSection";
@@ -180,6 +183,25 @@ export default function TaskDetailPanel() {
               className="mt-2 w-full resize-none rounded-md border-none text-sm text-gray-600 outline-none placeholder:text-gray-300"
             />
 
+            <Section title="التعليقات">
+              <CommentsSection
+                comments={data.comments}
+                employeesById={data.employeesById}
+                excludeTaskId={data.task.id}
+                onAddComment={async (text) => {
+                  await addComment({ text });
+                  syncMentions(text);
+                }}
+                onEditComment={async (id, text) => {
+                  await editComment({ id, text });
+                  syncMentions(text);
+                }}
+                onDeleteComment={deleteComment}
+                onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
+                onNavigateToTask={(id) => navigate(`${basePath}/task/${id}`)}
+              />
+            </Section>
+
             <div className="mt-3 divide-y divide-gray-50 border-y border-gray-100">
               <FieldRow label="الحالة">
                 <StatusCell
@@ -234,19 +256,18 @@ export default function TaskDetailPanel() {
                 />
               </FieldRow>
               <FieldRow label="تاريخ البدء">
-                <input
-                  type="date"
-                  value={data.task.start_date?.slice(0, 10) ?? ""}
-                  onChange={(e) => updateField({ start_date: e.target.value || null })}
-                  className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+                <StartDateCell
+                  startDate={data.task.start_date}
+                  onChange={(date) => updateField({ start_date: date })}
+                  align="left"
                 />
               </FieldRow>
               <FieldRow label="تاريخ الاستحقاق">
-                <input
-                  type="date"
-                  value={data.task.due_date?.slice(0, 10) ?? ""}
-                  onChange={(e) => updateField({ due_date: e.target.value || null })}
-                  className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+                <DateCell
+                  dueDate={data.task.due_date}
+                  isOverdue={data.task.is_overdue}
+                  onChange={(date) => updateField({ due_date: date })}
+                  align="left"
                 />
               </FieldRow>
               {/* The board's attached custom fields (D2's "+" column
@@ -327,23 +348,7 @@ export default function TaskDetailPanel() {
             </Section>
 
             <Section title="النشاط">
-              <ActivitySection
-                activity={data.activity}
-                comments={data.comments}
-                employeesById={data.employeesById}
-                excludeTaskId={data.task.id}
-                onAddComment={async (text) => {
-                  await addComment({ text });
-                  syncMentions(text);
-                }}
-                onEditComment={async (id, text) => {
-                  await editComment({ id, text });
-                  syncMentions(text);
-                }}
-                onDeleteComment={deleteComment}
-                onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
-                onNavigateToTask={(id) => navigate(`${basePath}/task/${id}`)}
-              />
+              <ActivitySection activity={data.activity} employeesById={data.employeesById} />
             </Section>
 
             <Section title="التكرار">

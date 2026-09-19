@@ -55,6 +55,8 @@ export interface TaskBoardData {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  attachedTaskIds: Set<string>;
+  commentedTaskIds: Set<string>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   /** null when the board's space isn't a project space (department/company/personal) — tasks.project_id is nullable for exactly this case. */
   projectId: string | null;
@@ -144,9 +146,6 @@ export function useTaskBoard(boardId: string | undefined) {
       const departmentIds = Array.from(
         new Set((tasks ?? []).map((t) => t.department_id).filter(Boolean)),
       ) as string[];
-      const taskTypeIds = Array.from(
-        new Set((tasks ?? []).map((t) => t.task_type_id)),
-      );
 
       const [
         { data: assigneeRows, error: assigneeError },
@@ -156,6 +155,8 @@ export function useTaskBoard(boardId: string | undefined) {
         linksResult,
         dependenciesResult,
         requirementsResult,
+        attachmentsResult,
+        commentsResult,
       ] = await Promise.all([
         taskIds.length
           ? tasksDb
@@ -164,12 +165,10 @@ export function useTaskBoard(boardId: string | undefined) {
               .in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
         supabase.from("employees").select("id, first_name, last_name"),
-        taskTypeIds.length
-          ? tasksDb
-              .from("task_types")
-              .select("id, name_ar, color")
-              .in("id", taskTypeIds)
-          : Promise.resolve({ data: [], error: null }),
+        // The full company-wide catalog, not just the types already used on
+        // this board's tasks — TaskTypeCell's popover needs every type as a
+        // pickable option, same reasoning as useAllFieldDefinitions.
+        tasksDb.from("task_types").select("id, name_ar, color").order("name_ar"),
         departmentIds.length
           ? supabase.from("departments").select("id, name_ar, name").in("id", departmentIds)
           : Promise.resolve({ data: [], error: null }),
@@ -189,6 +188,12 @@ export function useTaskBoard(boardId: string | undefined) {
               .in("task_id", taskIds)
               .eq("is_satisfied", false)
           : Promise.resolve({ data: [], error: null }),
+        taskIds.length
+          ? supabase.from("attachments").select("entity_id").eq("entity_type", "task").in("entity_id", taskIds)
+          : Promise.resolve({ data: [], error: null }),
+        taskIds.length
+          ? tasksDb.from("task_comments").select("task_id").in("task_id", taskIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (assigneeError) throw assigneeError;
       if (employeesError) throw employeesError;
@@ -197,6 +202,8 @@ export function useTaskBoard(boardId: string | undefined) {
       if (linksResult.error) throw linksResult.error;
       if (dependenciesResult.error) throw dependenciesResult.error;
       if (requirementsResult.error) throw requirementsResult.error;
+      if (attachmentsResult.error) throw attachmentsResult.error;
+      if (commentsResult.error) throw commentsResult.error;
 
       const assigneesByTask = new Map<string, string[]>();
       for (const row of assigneeRows ?? []) {
@@ -259,6 +266,9 @@ export function useTaskBoard(boardId: string | undefined) {
       const unmetRequirementTaskIds = new Set(
         (requirementsResult.data ?? []).map((r) => r.task_id),
       );
+
+      const attachedTaskIds = new Set((attachmentsResult.data ?? []).map((a) => a.entity_id));
+      const commentedTaskIds = new Set((commentsResult.data ?? []).map((c) => c.task_id));
 
       // Subtask progress (Part 11 open decision #5) — plain completed-count,
       // not weighted by time_estimate_minutes: most ad-hoc tasks never get
@@ -343,6 +353,8 @@ export function useTaskBoard(boardId: string | undefined) {
         linkedTaskIds,
         blockedTaskIds,
         unmetRequirementTaskIds,
+        attachedTaskIds,
+        commentedTaskIds,
         subtaskProgressByTask,
         projectId: space.project_id,
         customColumns,
@@ -360,6 +372,17 @@ export function useTaskBoard(boardId: string | undefined) {
       const { error } = await tasksDb
         .from("tasks")
         .update({ status_id: statusId })
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateTaskType = useMutation({
+    mutationFn: async ({ taskId, taskTypeId }: { taskId: string; taskTypeId: string }) => {
+      const { error } = await tasksDb
+        .from("tasks")
+        .update({ task_type_id: taskTypeId })
         .eq("id", taskId);
       if (error) throw error;
     },
@@ -394,6 +417,23 @@ export function useTaskBoard(boardId: string | undefined) {
       const { error } = await tasksDb
         .from("tasks")
         .update({ due_date: dueDate })
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateStartDate = useMutation({
+    mutationFn: async ({
+      taskId,
+      startDate,
+    }: {
+      taskId: string;
+      startDate: string | null;
+    }) => {
+      const { error } = await tasksDb
+        .from("tasks")
+        .update({ start_date: startDate })
         .eq("id", taskId);
       if (error) throw error;
     },
@@ -580,8 +620,10 @@ export function useTaskBoard(boardId: string | undefined) {
     error: query.error,
     employeesById,
     updateStatus: updateStatus.mutate,
+    updateTaskType: updateTaskType.mutate,
     updatePriority: updatePriority.mutate,
     updateDueDate: updateDueDate.mutate,
+    updateStartDate: updateStartDate.mutate,
     setAssignees: setAssignees.mutate,
     createTask: createTask.mutate,
     createTaskError: createTask.error as Error | null,

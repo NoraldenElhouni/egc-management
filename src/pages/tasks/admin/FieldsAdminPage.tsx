@@ -340,8 +340,7 @@ function TaskTypesTab({ catalog }: { catalog: ReturnType<typeof useAdminCatalog>
               type="color"
               defaultValue={tt.color ?? "#9CA3AF"}
               onBlur={(e) => updateTaskType({ id: tt.id, patch: { color: e.target.value } })}
-              disabled={tt.is_system}
-              className="h-6 w-6 shrink-0 rounded border-0 disabled:opacity-50"
+              className="h-6 w-6 shrink-0 rounded border-0"
             />
             <input
               defaultValue={tt.name_ar}

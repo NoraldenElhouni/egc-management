@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Loader2, Users, Building2, FolderKanban, Building, User, ListChecks } from "lucide-react";
+import { Loader2, Users, Building2, FolderKanban, Building, User } from "lucide-react";
 import { useTasksSidebar, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 
 // The /tasks index route — what shows before a space/board is picked.
@@ -37,14 +37,15 @@ function SpaceCard({ node }: { node: SpaceNode }) {
   const openCount =
     node.boards.reduce((n, b) => n + b.openCount, 0) +
     node.folders.reduce((n, f) => n + f.boards.reduce((s, b) => s + b.openCount, 0), 0);
+  const firstBoardId = node.boards[0]?.board.id ?? node.folders.flatMap((f) => f.boards)[0]?.board.id;
 
-  return (
-    <Link
-      to={`/tasks/space/${node.space.id}/tasks`}
-      className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
-    >
+  const content = (
+    <>
       <div className="flex items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-superLight text-primary">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-superLight text-primary"
+          style={node.space.color ? { backgroundColor: `${node.space.color}1A`, color: node.space.color } : undefined}
+        >
           <Icon className="h-4.5 w-4.5" />
         </span>
         <span className="flex-1 truncate font-medium text-gray-800">{node.space.name}</span>
@@ -55,6 +56,19 @@ function SpaceCard({ node }: { node: SpaceNode }) {
         </span>
         <CountBadge count={openCount} />
       </div>
+    </>
+  );
+
+  if (!firstBoardId) {
+    return <div className="rounded-lg border border-gray-100 p-3">{content}</div>;
+  }
+
+  return (
+    <Link
+      to={`/tasks/board/${firstBoardId}`}
+      className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
+    >
+      {content}
     </Link>
   );
 }
@@ -78,23 +92,10 @@ export default function TasksPage() {
     <div className="h-full overflow-y-auto p-6" dir="rtl">
       <h1 className="mb-4 text-lg font-semibold text-gray-900">إدارة المهام</h1>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Link
-          to="/tasks/all-tasks"
-          className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
-        >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-white">
-            <ListChecks className="h-5 w-5" />
-          </span>
-          <div className="flex-1">
-            <div className="font-medium text-gray-800">كل المهام</div>
-            <div className="text-xs text-gray-400">جميع المهام عبر كل المساحات واللوحات</div>
-          </div>
-        </Link>
-
+      <div className="mb-5">
         <Link
           to="/tasks/my-work"
-          className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
+          className="flex max-w-sm items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
             <Users className="h-5 w-5" />

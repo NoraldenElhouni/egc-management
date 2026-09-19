@@ -43,6 +43,7 @@ export interface BoardLite {
   departmentId: string | null;
   folderId: string | null;
   taskCount: number;
+  sortOrder: number;
 }
 
 export interface FolderLite {
@@ -112,7 +113,12 @@ export function useSpaceSettings(spaceId: string | undefined) {
         { data: boardRows, error: boardsError },
         { data: folderRows, error: foldersError },
       ] = await Promise.all([
-        tasksDb.from("boards").select("id, name, zone_id, department_id, folder_id").eq("space_id", spaceId).eq("is_archived", false),
+        tasksDb
+          .from("boards")
+          .select("id, name, zone_id, department_id, folder_id, sort_order")
+          .eq("space_id", spaceId)
+          .eq("is_archived", false)
+          .order("sort_order"),
         tasksDb.from("folders").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
       ]);
       if (boardsError) throw boardsError;
@@ -165,6 +171,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
           departmentId: b.department_id,
           folderId: b.folder_id,
           taskCount: taskCountByBoard.get(b.id) ?? 0,
+          sortOrder: b.sort_order,
         })),
         folders: (folderRows ?? []).map((f) => ({
           id: f.id,
@@ -176,7 +183,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
   });
 
   const updateSpace = useMutation({
-    mutationFn: async (patch: Partial<Pick<Space, "name" | "description" | "visibility">>) => {
+    mutationFn: async (patch: Partial<Pick<Space, "name" | "description" | "visibility" | "color">>) => {
       if (!spaceId) throw new Error("no space id");
       const { error } = await tasksDb.from("spaces").update(patch).eq("id", spaceId);
       if (error) throw error;
@@ -341,6 +348,17 @@ export function useSpaceSettings(spaceId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const reorderBoards = useMutation({
+    mutationFn: async (boards: { id: string; sortOrder: number }[]) => {
+      const results = await Promise.all(
+        boards.map(({ id, sortOrder }) => tasksDb.from("boards").update({ sort_order: sortOrder }).eq("id", id)),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     data: query.data,
     loading: query.isPending,
@@ -358,6 +376,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
     deleteStatus: deleteStatus.mutateAsync,
     updateBoard: updateBoard.mutateAsync,
     deleteBoard: deleteBoard.mutateAsync,
+    reorderBoards: reorderBoards.mutateAsync,
     renameFolder: renameFolder.mutateAsync,
     archiveFolder: archiveFolder.mutateAsync,
   };

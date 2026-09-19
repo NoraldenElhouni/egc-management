@@ -39,13 +39,17 @@ interface TaskTableProps {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  attachedTaskIds: Set<string>;
+  commentedTaskIds: Set<string>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   hiddenColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
   featureSettings: SpaceFeatureSettings;
   onChangeStatus: (taskId: string, statusId: string) => void;
+  onChangeTaskType: (taskId: string, taskTypeId: string) => void;
   onChangePriority: (taskId: string, priority: Priority | null) => void;
+  onChangeStartDate: (taskId: string, date: string | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
   onCreateTask: (title: string, parentTaskId: string | null) => void;
@@ -72,13 +76,17 @@ export default function TaskTable({
   linkedTaskIds,
   blockedTaskIds,
   unmetRequirementTaskIds,
+  attachedTaskIds,
+  commentedTaskIds,
   subtaskProgressByTask,
   customColumns,
   hiddenColumns,
   valuesByTask,
   featureSettings,
   onChangeStatus,
+  onChangeTaskType,
   onChangePriority,
+  onChangeStartDate,
   onChangeDueDate,
   onChangeAssignees,
   onCreateTask,
@@ -231,6 +239,7 @@ export default function TaskTable({
         <div>الحالة</div>
         {featureSettings.priorities && <div>الأولوية</div>}
         <div>الفريق</div>
+        <div>تاريخ البدء</div>
         <div>الاستحقاق</div>
         <div>القسم</div>
         {customColumns.map((col) => (
@@ -295,13 +304,17 @@ export default function TaskTable({
                 linkedTaskIds={linkedTaskIds}
                 blockedTaskIds={blockedTaskIds}
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
+                attachedTaskIds={attachedTaskIds}
+                commentedTaskIds={commentedTaskIds}
                 subtaskProgressByTask={subtaskProgressByTask}
                 customColumns={customColumns}
                 valuesByTask={valuesByTask}
                 showPriority={featureSettings.priorities}
                 showTaskType={featureSettings.task_types}
                 onChangeStatus={onChangeStatus}
+                onChangeTaskType={onChangeTaskType}
                 onChangePriority={onChangePriority}
+                onChangeStartDate={onChangeStartDate}
                 onChangeDueDate={onChangeDueDate}
                 onChangeAssignees={onChangeAssignees}
                 onCreateTask={onCreateTask}

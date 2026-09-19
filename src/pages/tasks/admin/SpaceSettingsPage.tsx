@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
+import { DndContext, type DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import SortableRow from "../../../components/operations/boq/SortableRow";
 import {
   useSpaceSettings,
   DEFAULT_FEATURE_SETTINGS,
@@ -69,6 +72,11 @@ const PRIORITY_LABELS: Record<Priority, string> = {
   normal: "عادية",
   low: "منخفضة",
 };
+
+// Same palette FieldsAdminPage's OPTION_COLORS uses for field/tag options —
+// kept as its own local copy rather than a shared import since every other
+// screen in this module already keeps its default-color set to itself.
+const SPACE_COLOR_PRESETS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4", "#EC4899", "#6B7280"];
 
 const RUN_STATUS_STYLE: Record<Database["tasks"]["Enums"]["automation_run_status"], string> = {
   success: "bg-green-50 text-green-600",
@@ -175,6 +183,41 @@ function GeneralTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
           {{ project: "مشروع", department: "قسم", company: "شركة", personal: "شخصية" }[data.space.space_type]}
         </span>
       </div>
+      <div>
+        <span className="mb-1 block text-xs font-semibold text-gray-500">اللون</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {SPACE_COLOR_PRESETS.map((hex) => (
+            <button
+              key={hex}
+              type="button"
+              onClick={() => updateSpace({ color: hex })}
+              style={{ background: hex }}
+              title={hex}
+              className={`h-6 w-6 shrink-0 rounded-full transition-transform hover:scale-110 ${
+                data.space.color === hex ? "ring-2 ring-offset-2 ring-gray-400" : ""
+              }`}
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            key={data.space.color ?? "none"}
+            type="color"
+            defaultValue={data.space.color ?? "#64748B"}
+            onBlur={(e) => e.target.value !== data.space.color && updateSpace({ color: e.target.value })}
+            className="h-8 w-8 shrink-0 cursor-pointer rounded border-0"
+          />
+          {data.space.color && (
+            <button
+              type="button"
+              onClick={() => updateSpace({ color: null })}
+              className="text-xs text-gray-400 hover:text-gray-600"
+            >
+              إزالة اللون
+            </button>
+          )}
+        </div>
+      </div>
       <label className="flex items-center gap-2">
         <input
           type="checkbox"
@@ -236,14 +279,25 @@ function FoldersList({ settings }: { settings: ReturnType<typeof useSpaceSetting
 }
 
 function BoardsTab({ settings }: { settings: ReturnType<typeof useSpaceSettings> }) {
-  const { data, updateBoard, deleteBoard } = settings;
+  const { data, updateBoard, deleteBoard, reorderBoards } = settings;
   const departments = useDepartmentOptions();
   const zones = useProjectZoneOptions(data?.space.project_id);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   if (!data) return null;
 
   const handleDelete = (boardId: string, name: string, taskCount: number) => {
     const warning = taskCount > 0 ? ` تحتوي على ${taskCount} مهمة ستُحذف معها.` : "";
     if (confirm(`حذف لوحة "${name}"؟${warning}`)) deleteBoard(boardId);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = data.boards.findIndex((b) => b.id === active.id);
+    const newIndex = data.boards.findIndex((b) => b.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(data.boards, oldIndex, newIndex);
+    reorderBoards(reordered.map((b, i) => ({ id: b.id, sortOrder: i })));
   };
 
   return (
@@ -252,69 +306,75 @@ function BoardsTab({ settings }: { settings: ReturnType<typeof useSpaceSettings>
       {data.boards.length === 0 ? (
         <p className="text-sm text-gray-400">لا توجد لوحات في هذه المساحة بعد.</p>
       ) : (
-        <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
-          {data.boards.map((b) => (
-            <div key={b.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-              <input
-                defaultValue={b.name}
-                onBlur={(e) => {
-                  const value = e.target.value.trim();
-                  if (value && value !== b.name) updateBoard({ id: b.id, patch: { name: value } });
-                }}
-                className="min-w-[8rem] flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 font-medium text-gray-800 hover:border-gray-200 focus:border-gray-300 focus:outline-none"
-              />
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={data.boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+              {data.boards.map((b) => (
+                <SortableRow key={b.id} id={b.id} className="px-1 py-1">
+                  <div className="flex flex-wrap items-center gap-2 px-2 py-1 text-sm">
+                    <input
+                      defaultValue={b.name}
+                      onBlur={(e) => {
+                        const value = e.target.value.trim();
+                        if (value && value !== b.name) updateBoard({ id: b.id, patch: { name: value } });
+                      }}
+                      className="min-w-[8rem] flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 font-medium text-gray-800 hover:border-gray-200 focus:border-gray-300 focus:outline-none"
+                    />
 
-              {data.space.project_id ? (
-                <select
-                  value={b.zoneId ?? ""}
-                  onChange={(e) => updateBoard({ id: b.id, patch: { zone_id: e.target.value || null } })}
-                  className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
-                >
-                  <option value="">بدون منطقة</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-xs text-gray-300">—</span>
-              )}
+                    {data.space.project_id ? (
+                      <select
+                        value={b.zoneId ?? ""}
+                        onChange={(e) => updateBoard({ id: b.id, patch: { zone_id: e.target.value || null } })}
+                        className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
+                      >
+                        <option value="">بدون منطقة</option>
+                        {zones.map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
 
-              <select
-                value={b.departmentId ?? ""}
-                onChange={(e) => updateBoard({ id: b.id, patch: { department_id: e.target.value || null } })}
-                className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
-              >
-                <option value="">بدون قسم افتراضي</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name_ar ?? d.name}
-                  </option>
-                ))}
-              </select>
+                    <select
+                      value={b.departmentId ?? ""}
+                      onChange={(e) => updateBoard({ id: b.id, patch: { department_id: e.target.value || null } })}
+                      className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
+                    >
+                      <option value="">بدون قسم افتراضي</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name_ar ?? d.name}
+                        </option>
+                      ))}
+                    </select>
 
-              <select
-                value={b.folderId ?? ""}
-                onChange={(e) => updateBoard({ id: b.id, patch: { folder_id: e.target.value || null } })}
-                className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
-              >
-                <option value="">بدون مجلد</option>
-                {data.folders.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
+                    <select
+                      value={b.folderId ?? ""}
+                      onChange={(e) => updateBoard({ id: b.id, patch: { folder_id: e.target.value || null } })}
+                      className="rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-600"
+                    >
+                      <option value="">بدون مجلد</option>
+                      {data.folders.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
 
-              <span className="text-xs text-gray-400">{b.taskCount} مهمة</span>
+                    <span className="text-xs text-gray-400">{b.taskCount} مهمة</span>
 
-              <button onClick={() => handleDelete(b.id, b.name, b.taskCount)} className="text-gray-300 hover:text-red-500">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+                    <button onClick={() => handleDelete(b.id, b.name, b.taskCount)} className="text-gray-300 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </SortableRow>
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );

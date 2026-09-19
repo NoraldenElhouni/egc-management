@@ -23,6 +23,7 @@ import {
 } from "../../../hooks/tasks/useTemplateBuilder";
 import type { TemplateTask } from "../../../hooks/tasks/useTemplatePicker";
 import type { Database } from "../../../lib/supabase";
+import TaskTypeCell from "../../../components/tasks/board/TaskTypeCell";
 
 // D8 — Template builder (build plan Part 7). Drag-and-drop nesting uses
 // native HTML5 DnD (no library) — see useTemplateBuilder.ts's moveTaskTo
@@ -79,6 +80,7 @@ export default function TemplateBuilderPage() {
     byParent.set(t.parent_template_task_id, list);
   }
   const roots = (byParent.get(null) ?? []).sort((a, b) => a.sort_order - b.sort_order);
+  const taskTypesById = new Map(data.taskTypes.map((tt) => [tt.id, tt]));
 
   const submitRoot = async () => {
     const title = newRootTitle.trim();
@@ -127,6 +129,7 @@ export default function TemplateBuilderPage() {
             byParent={byParent}
             builder={builder}
             data={data}
+            taskTypesById={taskTypesById}
             expandedIds={expandedIds}
             onToggleExpand={toggleExpand}
             draggedId={draggedId}
@@ -157,12 +160,12 @@ interface TaskNodeProps {
   byParent: Map<string | null, TemplateTask[]>;
   builder: ReturnType<typeof useTemplateBuilder>;
   data: {
-    taskTypes: TaskType[];
     departments: DepartmentLite[];
     specializations: SpecializationLite[];
     checklistsByTask: Map<string, (TemplateChecklist & { items: TemplateChecklistItem[] })[]>;
     requirementsByTask: Map<string, TemplateRequirement[]>;
   };
+  taskTypesById: Map<string, TaskType>;
   expandedIds: Set<string>;
   onToggleExpand: (id: string) => void;
   draggedId: string | null;
@@ -176,6 +179,7 @@ function TaskNode({
   byParent,
   builder,
   data,
+  taskTypesById,
   expandedIds,
   onToggleExpand,
   draggedId,
@@ -274,17 +278,12 @@ function TaskNode({
           className="min-w-[8rem] flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm text-gray-800 hover:border-gray-200 focus:border-gray-300 focus:bg-white focus:outline-none"
         />
 
-        <select
-          value={task.task_type_id}
-          onChange={(e) => builder.updateTask({ id: task.id, patch: { task_type_id: e.target.value } })}
-          className="shrink-0 rounded border border-gray-200 bg-white px-1 py-0.5 text-xs text-gray-600"
-        >
-          {data.taskTypes.map((tt) => (
-            <option key={tt.id} value={tt.id}>
-              {tt.name_ar}
-            </option>
-          ))}
-        </select>
+        <TaskTypeCell
+          taskTypes={taskTypesById}
+          currentTaskTypeId={task.task_type_id}
+          onChange={(taskTypeId) => builder.updateTask({ id: task.id, patch: { task_type_id: taskTypeId } })}
+          align="left"
+        />
 
         <div className="flex shrink-0 items-center gap-0.5">
           <button onClick={() => builder.moveTask({ id: task.id, direction: "up" })} className="text-gray-300 hover:text-gray-600" title="أعلى">
@@ -487,6 +486,7 @@ function TaskNode({
           byParent={byParent}
           builder={builder}
           data={data}
+          taskTypesById={taskTypesById}
           expandedIds={expandedIds}
           onToggleExpand={onToggleExpand}
           draggedId={draggedId}

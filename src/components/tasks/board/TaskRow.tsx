@@ -1,11 +1,14 @@
 import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Lock, Camera } from "lucide-react";
+import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Lock, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
+import StartDateCell from "./StartDateCell";
 import AssigneeCell from "./AssigneeCell";
 import CustomFieldCell from "./CustomFieldCell";
+import TaskTypeCell from "./TaskTypeCell";
+import Tooltip from "../../ui/Tooltip";
 import type {
   CustomColumn,
   EmployeeLite,
@@ -15,8 +18,8 @@ import type {
 } from "../../../hooks/tasks/useTaskBoard";
 import type { Json } from "../../../lib/supabase";
 
-const FIXED_COLUMNS_WITH_PRIORITY = "minmax(0,1fr) 120px 84px 96px 92px 100px";
-const FIXED_COLUMNS_NO_PRIORITY = "minmax(0,1fr) 120px 96px 92px 100px";
+const FIXED_COLUMNS_WITH_PRIORITY = "minmax(0,1fr) 120px 84px 96px 92px 92px 100px";
+const FIXED_COLUMNS_NO_PRIORITY = "minmax(0,1fr) 120px 96px 92px 92px 100px";
 
 // A dynamic grid template (custom columns vary per board) can't be a
 // static Tailwind class, so both the header (TaskTable) and every row
@@ -53,13 +56,17 @@ interface TaskRowProps {
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
+  attachedTaskIds: Set<string>;
+  commentedTaskIds: Set<string>;
   subtaskProgressByTask: Map<string, { done: number; total: number }>;
   customColumns: CustomColumn[];
   valuesByTask: Map<string, Map<string, Json>>;
   showPriority: boolean;
   showTaskType: boolean;
   onChangeStatus: (taskId: string, statusId: string) => void;
+  onChangeTaskType: (taskId: string, taskTypeId: string) => void;
   onChangePriority: (taskId: string, priority: TaskRowType["priority"]) => void;
+  onChangeStartDate: (taskId: string, date: string | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
   onCreateTask: (title: string, parentTaskId: string) => void;
@@ -86,13 +93,17 @@ export default function TaskRow({
   linkedTaskIds,
   blockedTaskIds,
   unmetRequirementTaskIds,
+  attachedTaskIds,
+  commentedTaskIds,
   subtaskProgressByTask,
   customColumns,
   valuesByTask,
   showPriority,
   showTaskType,
   onChangeStatus,
+  onChangeTaskType,
   onChangePriority,
+  onChangeStartDate,
   onChangeDueDate,
   onChangeAssignees,
   onCreateTask,
@@ -136,11 +147,13 @@ export default function TaskRow({
     setChildTitle("");
     setAddingChild(false);
   };
-  const taskType = taskTypes.get(task.task_type_id);
   const department = task.department_id
     ? departmentNamesById.get(task.department_id)
     : null;
   const progress = subtaskProgressByTask.get(task.id);
+  // description is JSON, { text: string } (build plan §4.7) — see
+  // TaskDetailPanel.tsx's own read of the same field.
+  const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
 
   return (
     <>
@@ -168,7 +181,7 @@ export default function TaskRow({
         }`}
       >
         <div
-          className="flex items-center gap-1 overflow-hidden"
+          className="flex min-w-0 items-center gap-1"
           style={{ paddingRight: depth * 20 }}
         >
           <span className="w-4 shrink-0 text-gray-300">
@@ -202,53 +215,80 @@ export default function TaskRow({
             <span className="w-3.5 shrink-0" />
           )}
 
-          {showTaskType && taskType && (
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ background: taskType.color ?? "#9CA3AF" }}
-              title={taskType.name_ar}
+          {showTaskType && (
+            <TaskTypeCell
+              taskTypes={taskTypes}
+              currentTaskTypeId={task.task_type_id}
+              onChange={(taskTypeId) => onChangeTaskType(task.id, taskTypeId)}
             />
           )}
 
-          <button
-            onClick={() => navigate(`/tasks/board/${boardId}/task/${task.id}`)}
-            className="truncate text-sm text-gray-800 hover:underline"
-          >
-            {task.title}
-          </button>
-
-          {progress && (
-            <span
-              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                progress.done === progress.total
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-              title="المهام الفرعية المكتملة"
-            >
-              {progress.done}/{progress.total}
-            </span>
-          )}
-
-          {linkedTaskIds.has(task.id) && (
-            <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
-          )}
-          {blockedTaskIds.has(task.id) && (
-            <Lock className="h-3 w-3 shrink-0 text-gray-400" aria-label="محظورة" />
-          )}
-          {unmetRequirementTaskIds.has(task.id) && (
-            <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />
-          )}
-
-          {hovered && !addingChild && (
+          {/* Separate overflow-hidden wrapper from TaskTypeCell above: its
+              popover is position:absolute off a `relative` ancestor inside
+              here, and an overflow-hidden ancestor clips absolutely
+              positioned descendants too, not just overflowing text. */}
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
             <button
-              onClick={() => setAddingChild(true)}
-              className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-              title="إضافة مهمة فرعية"
+              onClick={() => navigate(`/tasks/board/${boardId}/task/${task.id}`)}
+              className="truncate text-sm text-gray-800 hover:underline"
             >
-              <Plus className="h-3.5 w-3.5" />
+              {task.title}
             </button>
-          )}
+
+            {progress && (
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                  progress.done === progress.total
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+                title="المهام الفرعية المكتملة"
+              >
+                {progress.done}/{progress.total}
+              </span>
+            )}
+
+            {linkedTaskIds.has(task.id) && (
+              <Tooltip label="مرتبطة بسجل">
+                <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
+              </Tooltip>
+            )}
+            {blockedTaskIds.has(task.id) && (
+              <Tooltip label="محظورة">
+                <Lock className="h-3 w-3 shrink-0 text-gray-400" aria-label="محظورة" />
+              </Tooltip>
+            )}
+            {unmetRequirementTaskIds.has(task.id) && (
+              <Tooltip label="متطلبات غير مكتملة">
+                <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />
+              </Tooltip>
+            )}
+            {hasDescription && (
+              <Tooltip label="تحتوي على وصف">
+                <AlignLeft className="h-3 w-3 shrink-0 text-blue-500" aria-label="تحتوي على وصف" />
+              </Tooltip>
+            )}
+            {attachedTaskIds.has(task.id) && (
+              <Tooltip label="تحتوي على مرفقات">
+                <Paperclip className="h-3 w-3 shrink-0 text-blue-500" aria-label="تحتوي على مرفقات" />
+              </Tooltip>
+            )}
+            {commentedTaskIds.has(task.id) && (
+              <Tooltip label="تحتوي على تعليقات">
+                <MessageSquare className="h-3 w-3 shrink-0 text-blue-500" aria-label="تحتوي على تعليقات" />
+              </Tooltip>
+            )}
+
+            {hovered && !addingChild && (
+              <button
+                onClick={() => setAddingChild(true)}
+                className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                title="إضافة مهمة فرعية"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         <StatusCell
@@ -267,6 +307,10 @@ export default function TaskRow({
           employeesById={employeesById}
           allEmployees={allEmployees}
           onChange={(userIds) => onChangeAssignees(task.id, userIds)}
+        />
+        <StartDateCell
+          startDate={task.start_date}
+          onChange={(date) => onChangeStartDate(task.id, date)}
         />
         <DateCell
           dueDate={task.due_date}
@@ -307,13 +351,17 @@ export default function TaskRow({
               linkedTaskIds={linkedTaskIds}
               blockedTaskIds={blockedTaskIds}
               unmetRequirementTaskIds={unmetRequirementTaskIds}
+              attachedTaskIds={attachedTaskIds}
+              commentedTaskIds={commentedTaskIds}
               subtaskProgressByTask={subtaskProgressByTask}
               customColumns={customColumns}
               valuesByTask={valuesByTask}
               showPriority={showPriority}
               showTaskType={showTaskType}
               onChangeStatus={onChangeStatus}
+              onChangeTaskType={onChangeTaskType}
               onChangePriority={onChangePriority}
+              onChangeStartDate={onChangeStartDate}
               onChangeDueDate={onChangeDueDate}
               onChangeAssignees={onChangeAssignees}
               onCreateTask={onCreateTask}

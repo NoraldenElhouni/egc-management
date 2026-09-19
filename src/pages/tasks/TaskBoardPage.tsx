@@ -15,7 +15,9 @@ export default function TaskBoardPage() {
     error,
     employeesById,
     updateStatus,
+    updateTaskType,
     updatePriority,
+    updateStartDate,
     updateDueDate,
     setAssignees,
     createTask,
@@ -84,13 +86,17 @@ export default function TaskBoardPage() {
           linkedTaskIds={data.linkedTaskIds}
           blockedTaskIds={data.blockedTaskIds}
           unmetRequirementTaskIds={data.unmetRequirementTaskIds}
+          attachedTaskIds={data.attachedTaskIds}
+          commentedTaskIds={data.commentedTaskIds}
           subtaskProgressByTask={data.subtaskProgressByTask}
           customColumns={data.customColumns}
           hiddenColumns={data.hiddenColumns}
           valuesByTask={data.valuesByTask}
           featureSettings={data.featureSettings}
           onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}
+          onChangeTaskType={(taskId, taskTypeId) => updateTaskType({ taskId, taskTypeId })}
           onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
+          onChangeStartDate={(taskId, startDate) => updateStartDate({ taskId, startDate })}
           onChangeDueDate={(taskId, dueDate) => updateDueDate({ taskId, dueDate })}
           onChangeAssignees={(taskId, userIds) => setAssignees({ taskId, userIds })}
           onCreateTask={(title, parentTaskId) => createTask({ title, parentTaskId })}
