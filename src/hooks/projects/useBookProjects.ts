@@ -42,6 +42,7 @@ export function useBookProject(projectId: string) {
         project_incomes(*),
         project_balances(*),
         project_refund(*),
+        project_percentage_logs(*),
         accounts(*),
         project_maps(*)
       `,

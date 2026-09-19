@@ -75,18 +75,40 @@ export default function InvoiceButtonSummed({
       ),
     );
 
+    const lydRefundIds = new Set(
+      project.project_refund
+        .filter((rf) => rf.currency === "LYD")
+        .map((rf) => rf.id),
+    );
+
+    // Refund percentage logs are stored as negative amounts (the company's
+    // cut given back on a refund). Moving that amount out of the company
+    // percentage and into the refund total means subtracting this negative
+    // sum, which adds its absolute value to whichever side it's added to.
+    const refundPercentageLogsTotal = r(
+      (project.project_percentage_logs ?? [])
+        .filter(
+          (log) => log.type === "refund" && lydRefundIds.has(log.refund_id ?? ""),
+        )
+        .reduce((acc, log) => acc + (log.amount ?? 0), 0),
+    );
+
     const totalRefund = r(
       project.project_refund
         .filter((rf) => rf.currency === "LYD")
-        .reduce((acc, rf) => acc + (rf.amount ?? 0), 0),
+        .reduce((acc, rf) => acc + (rf.amount ?? 0), 0) -
+        refundPercentageLogsTotal,
     );
 
     const lydBalances = project.project_balances.filter(
       (a) => a.currency === "LYD",
     );
 
+    // Excludes the refund-type deduction so this reflects only the
+    // percentage earned from expenses, not netted down by refunds.
     const totalCompanyPercentage = r(
-      lydBalances.reduce((acc, a) => acc + (a.total_percentage ?? 0), 0),
+      lydBalances.reduce((acc, a) => acc + (a.total_percentage ?? 0), 0) -
+        refundPercentageLogsTotal,
     );
 
     const totalDeposit = r(

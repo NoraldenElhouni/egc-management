@@ -40,18 +40,41 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
       ),
     );
 
+    const lydRefundIds = new Set(
+      project.project_refund
+        .filter((rf) => rf.currency === "LYD")
+        .map((rf) => rf.id),
+    );
+
+    // Refund percentage logs are stored as negative amounts (the company's
+    // cut given back on a refund). Moving that amount out of the company
+    // percentage and into the refund total means subtracting this negative
+    // sum, which adds its absolute value to whichever side it's added to.
+    const refundPercentageLogsTotal = r(
+      (project.project_percentage_logs ?? [])
+        .filter(
+          (log) =>
+            log.type === "refund" && lydRefundIds.has(log.refund_id ?? ""),
+        )
+        .reduce((acc, log) => acc + (log.amount ?? 0), 0),
+    );
+
     const totalRefund = r(
       project.project_refund
         .filter((rf) => rf.currency === "LYD")
-        .reduce((acc, rf) => acc + (rf.amount ?? 0), 0),
+        .reduce((acc, rf) => acc + (rf.amount ?? 0), 0) -
+        refundPercentageLogsTotal,
     );
 
     const lydBalances = project.project_balances.filter(
       (a) => a.currency === "LYD",
     );
 
+    // Excludes the refund-type deduction so this reflects only the
+    // percentage earned from expenses, not netted down by refunds.
     const totalCompanyPercentage = r(
-      lydBalances.reduce((acc, a) => acc + (a.total_percentage ?? 0), 0),
+      lydBalances.reduce((acc, a) => acc + (a.total_percentage ?? 0), 0) -
+        refundPercentageLogsTotal,
     );
 
     const totalDeposit = r(
@@ -70,22 +93,60 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
     const remaingAmount = r(
       lydBalances.reduce((acc, a) => acc + (a.balance ?? 0), 0),
     );
-    // ✅ FIX 2: totalAmount = materials + labor (not same as remaingAmount)
-    const totalAmount = r(totalMetrials + totalLabors);
+    // totalAmount = materials + labor + company percentage + maps - refund
+    const totalAmount = r(
+      totalMetrials +
+        totalLabors +
+        totalCompanyPercentage +
+        totalMaps -
+        totalRefund,
+    );
 
     const today = new Date().toISOString().split("T")[0];
+
+    const allRelevantDates = [
+      ...lydExpenses.map((e) => e.expense_date).filter(Boolean),
+      ...project.project_refund
+        .filter((rf) => rf.currency === "LYD")
+        .map((rf) => rf.income_date)
+        .filter(Boolean),
+      ...project.project_incomes
+        .filter((i) => i.currency === "LYD")
+        .map((i) => i.income_date)
+        .filter(Boolean),
+      ...projectMaps.map((map) => map.date).filter(Boolean),
+    ].filter((date): date is string => {
+      if (!date) return false;
+      const parsed = new Date(date);
+      return !Number.isNaN(parsed.getTime());
+    });
+
+    const start_date =
+      allRelevantDates.length > 0
+        ? allRelevantDates.reduce((min, current) =>
+            new Date(current) < new Date(min) ? current : min,
+          )
+        : today;
+
+    const end_date =
+      allRelevantDates.length > 0
+        ? allRelevantDates.reduce((max, current) =>
+            new Date(current) > new Date(max) ? current : max,
+          )
+        : today;
 
     return {
       serial_number: project.serial_number,
       invoice_date: today,
       project_name: project.name,
       project_location: project.address,
-      start_date: today,
-      end_date: today,
+      start_date,
+      end_date,
 
       finance_invoice: {
         total_metrial: totalMetrials,
         total_labor: totalLabors,
+        total_labor_and_metrial: r(totalMetrials + totalLabors),
         total_maps: totalMaps,
         total_not_paid: totalNotPaid,
         total_refund: totalRefund,

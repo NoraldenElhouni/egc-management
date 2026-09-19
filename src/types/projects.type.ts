@@ -6,6 +6,7 @@ import {
   ProjectIncome,
   ProjectMaps,
   ProjectPercentage,
+  ProjectPercentageLogs,
   ProjectRefund,
   Projects,
 } from "./global.type";
@@ -23,6 +24,7 @@ export interface ProjectWithDetailsForBook extends Projects {
   project_balances: ProjectBalances[];
   project_refund: ProjectRefund[];
   project_maps: ProjectMaps[];
+  project_percentage_logs: ProjectPercentageLogs[];
 }
 
 export interface ProjectWithIncome extends Projects {
