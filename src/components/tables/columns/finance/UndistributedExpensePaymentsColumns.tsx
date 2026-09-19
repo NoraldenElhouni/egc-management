@@ -13,23 +13,33 @@ export const undistributedExpensePaymentsColumns: ColumnDef<UndistributedExpense
       id: "expense",
       header: "المصروف",
       accessorFn: (row) => row.expenseDescription ?? "",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          {row.original.logType === "refund" && (
-            <span className="flex-shrink-0 rounded-full bg-amber-50 text-amber-700 text-xs font-medium px-2 py-0.5">
-              استرداد
+      cell: ({ row }) => {
+        const description = row.original.expenseDescription;
+        return (
+          <div className="flex items-center gap-2">
+            {row.original.logType === "refund" && (
+              <span className="flex-shrink-0 rounded-full bg-amber-50 text-amber-700 text-xs font-medium px-2 py-0.5">
+                استرداد
+              </span>
+            )}
+            <span
+              className="font-medium text-gray-900"
+              title={description || undefined}
+            >
+              {description && description.length > 0
+                ? description.length > 30
+                  ? `${description.slice(0, 30)}…`
+                  : description
+                : "—"}
             </span>
-          )}
-          <span className="font-medium text-gray-900">
-            {row.original.expenseDescription || "—"}
-          </span>
-          {row.original.expenseSerial != null && (
-            <span className="text-gray-400 font-mono text-xs">
-              #{String(row.original.expenseSerial).padStart(3, "0")}
-            </span>
-          )}
-        </div>
-      ),
+            {row.original.expenseSerial != null && (
+              <span className="text-gray-400 font-mono text-xs">
+                #{String(row.original.expenseSerial).padStart(3, "0")}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "party",
@@ -84,9 +94,7 @@ export const undistributedExpensePaymentsColumns: ColumnDef<UndistributedExpense
       cell: ({ row }) => (
         <span
           className={`font-semibold whitespace-nowrap ${
-            row.original.percentageAmount < 0
-              ? "text-red-600"
-              : "text-blue-700"
+            row.original.percentageAmount < 0 ? "text-red-600" : "text-blue-700"
           }`}
         >
           {formatCurrency(row.original.percentageAmount, row.original.currency)}

@@ -157,6 +157,7 @@ const ContractorPaymentsPage = () => {
                   onRowSelectionChange={setSelectedPayments}
                   clearSelectionSignal={clearSelectionSignal}
                   emptyMessage="لا توجد دفعات لعرضها."
+                  pageSize={10}
                   searchAdornment={(table) => (
                     <ContractorPaymentsFiltersDialog
                       table={table}
@@ -191,6 +192,7 @@ const ContractorPaymentsPage = () => {
                   enableFiltering
                   enablePagination
                   showGlobalFilter
+                  pageSize={10}
                   emptyMessage="لا توجد جزاءات لعرضها."
                   searchAdornment={(table) => (
                     <ContractorPaymentsFiltersDialog
