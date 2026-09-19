@@ -1,9 +1,21 @@
 import { useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Loader2, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, Loader2, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
+import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
 import { colorFor, initials } from "../../components/tasks/board/employeeAvatar";
+import {
+  countActiveFilters,
+  createDefaultFilters,
+  DEFAULT_SORT,
+  filterDirectoryTasks,
+  sortDirectoryGroups,
+  sortDirectoryTasks,
+  ASSIGNEE_NONE_KEY,
+  type DirectoryFilterState,
+  type DirectorySortState,
+} from "../../components/tasks/board/directoryFilters";
 import type { EmployeeLite, TaskRow } from "../../hooks/tasks/useTaskBoard";
 
 // Assignee view — company-wide, cross-space (build plan Part 7's
@@ -15,28 +27,32 @@ import type { EmployeeLite, TaskRow } from "../../hooks/tasks/useTaskBoard";
 // board/TaskTable.tsx's own group-by-assignee, which only needs one
 // bucket per task for a single flat table).
 
-const UNASSIGNED_KEY = "__unassigned__";
-
 interface AssigneeGroup {
   key: string;
+  label: string;
   employee: EmployeeLite | null;
   tasks: TaskRow[];
 }
 
 export default function AssigneeViewPage() {
   const navigate = useNavigate();
-  const { data, loading, error, includeClosed, setIncludeClosed, ...mutations } = useTaskDirectory();
+  const { data, loading, error, ...mutations } = useTaskDirectory();
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<DirectoryFilterState>(createDefaultFilters());
+  const [sort, setSort] = useState<DirectorySortState>(DEFAULT_SORT);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
   const searching = search.trim().length > 0;
 
   const groups = useMemo<AssigneeGroup[]>(() => {
     if (!data) return [];
     const term = search.trim().toLowerCase();
+    const filtered = filterDirectoryTasks(data.tasks, filters, data);
+
     const byEmployee = new Map<string, TaskRow[]>();
     const unassigned: TaskRow[] = [];
 
-    for (const task of data.tasks) {
+    for (const task of filtered) {
       if (term && !task.title.toLowerCase().includes(term)) continue;
       const assigneeIds = data.assigneesByTask.get(task.id) ?? [];
       if (assigneeIds.length === 0) {
@@ -50,15 +66,27 @@ export default function AssigneeViewPage() {
       }
     }
 
-    const employeeGroups: AssigneeGroup[] = Array.from(byEmployee.entries())
-      .map(([userId, tasks]) => ({ key: userId, employee: data.employeesById.get(userId) ?? null, tasks }))
-      .sort((a, b) => b.tasks.length - a.tasks.length);
+    const employeeGroups: AssigneeGroup[] = Array.from(byEmployee.entries()).map(([userId, tasks]) => {
+      const employee = data.employeesById.get(userId) ?? null;
+      return {
+        key: userId,
+        label: employee ? `${employee.first_name} ${employee.last_name ?? ""}`.trim() : "موظف",
+        employee,
+        tasks: sortDirectoryTasks(tasks, sort.taskSort, data),
+      };
+    });
 
     if (unassigned.length > 0) {
-      employeeGroups.push({ key: UNASSIGNED_KEY, employee: null, tasks: unassigned });
+      employeeGroups.push({
+        key: ASSIGNEE_NONE_KEY,
+        label: "غير معين",
+        employee: null,
+        tasks: sortDirectoryTasks(unassigned, sort.taskSort, data),
+      });
     }
-    return employeeGroups;
-  }, [data, search]);
+
+    return sortDirectoryGroups(employeeGroups, sort.groupSort, ASSIGNEE_NONE_KEY);
+  }, [data, search, filters, sort]);
 
   const toggle = (key: string) => {
     setCollapsedKeys((prev) => {
@@ -85,12 +113,14 @@ export default function AssigneeViewPage() {
     );
   }
 
+  const activeFilterCount = countActiveFilters(filters);
+
   return (
     <div className="flex h-full flex-col" dir="rtl">
       <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
         <h1 className="shrink-0 text-base font-semibold text-gray-900">المهام حسب الموظف</h1>
-        <div className="flex items-center gap-3">
-          <div className="flex w-56 items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
+        <div className="flex items-center gap-2">
+          <div className="flex w-56 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" />
             <input
               type="search"
@@ -101,29 +131,40 @@ export default function AssigneeViewPage() {
               aria-label="بحث عن مهمة"
             />
           </div>
-          <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
-            <input
-              type="checkbox"
-              checked={includeClosed}
-              onChange={(e) => setIncludeClosed(e.target.checked)}
-              className="h-3.5 w-3.5"
-            />
-            إظهار المكتملة
-          </label>
+          <button
+            onClick={() => setShowFilterDialog(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            فلترة وترتيب
+            {activeFilterCount > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
+
+      {showFilterDialog && (
+        <DirectoryFilterSortPopover
+          filters={filters}
+          onChangeFilters={setFilters}
+          sort={sort}
+          onChangeSort={setSort}
+          data={data}
+          onClose={() => setShowFilterDialog(false)}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {groups.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-400">
-            {searching ? "لا توجد مهام مطابقة" : "لا توجد مهام"}
+            {searching || activeFilterCount > 0 ? "لا توجد مهام مطابقة" : "لا توجد مهام"}
           </div>
         ) : (
           groups.map((group) => {
             const collapsed = !searching && collapsedKeys.has(group.key);
-            const name = group.employee
-              ? `${group.employee.first_name} ${group.employee.last_name ?? ""}`.trim()
-              : "غير معين";
             return (
               <div key={group.key} className="border-b border-gray-100">
                 <button
@@ -139,7 +180,7 @@ export default function AssigneeViewPage() {
                       {initials(group.employee)}
                     </span>
                   ) : null}
-                  <span>{name}</span>
+                  <span>{group.label}</span>
                   <span className="text-xs font-normal text-gray-400">({group.tasks.length})</span>
                 </button>
 

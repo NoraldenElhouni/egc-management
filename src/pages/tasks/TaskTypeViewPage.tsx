@@ -1,8 +1,19 @@
 import { useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Loader2, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, Loader2, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
+import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
+import {
+  countActiveFilters,
+  createDefaultFilters,
+  DEFAULT_SORT,
+  filterDirectoryTasks,
+  sortDirectoryGroups,
+  sortDirectoryTasks,
+  type DirectoryFilterState,
+  type DirectorySortState,
+} from "../../components/tasks/board/directoryFilters";
 import type { TaskRow, TaskTypeLite } from "../../hooks/tasks/useTaskBoard";
 
 // Task Type view — same company-wide/cross-space scope and full inline
@@ -12,31 +23,46 @@ import type { TaskRow, TaskTypeLite } from "../../hooks/tasks/useTaskBoard";
 
 interface TaskTypeGroup {
   key: string;
+  label: string;
   taskType: TaskTypeLite | null;
   tasks: TaskRow[];
 }
 
 export default function TaskTypeViewPage() {
   const navigate = useNavigate();
-  const { data, loading, error, includeClosed, setIncludeClosed, ...mutations } = useTaskDirectory();
+  const { data, loading, error, ...mutations } = useTaskDirectory();
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<DirectoryFilterState>(createDefaultFilters());
+  const [sort, setSort] = useState<DirectorySortState>(DEFAULT_SORT);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
   const searching = search.trim().length > 0;
 
   const groups = useMemo<TaskTypeGroup[]>(() => {
     if (!data) return [];
     const term = search.trim().toLowerCase();
+    const filtered = filterDirectoryTasks(data.tasks, filters, data);
+
     const byType = new Map<string, TaskRow[]>();
-    for (const task of data.tasks) {
+    for (const task of filtered) {
       if (term && !task.title.toLowerCase().includes(term)) continue;
       const list = byType.get(task.task_type_id) ?? [];
       list.push(task);
       byType.set(task.task_type_id, list);
     }
-    return Array.from(byType.entries())
-      .map(([typeId, tasks]) => ({ key: typeId, taskType: data.taskTypes.get(typeId) ?? null, tasks }))
-      .sort((a, b) => b.tasks.length - a.tasks.length);
-  }, [data, search]);
+
+    const typeGroups: TaskTypeGroup[] = Array.from(byType.entries()).map(([typeId, tasks]) => {
+      const taskType = data.taskTypes.get(typeId) ?? null;
+      return {
+        key: typeId,
+        label: taskType?.name_ar ?? "نوع",
+        taskType,
+        tasks: sortDirectoryTasks(tasks, sort.taskSort, data),
+      };
+    });
+
+    return sortDirectoryGroups(typeGroups, sort.groupSort);
+  }, [data, search, filters, sort]);
 
   const toggle = (key: string) => {
     setCollapsedKeys((prev) => {
@@ -63,12 +89,14 @@ export default function TaskTypeViewPage() {
     );
   }
 
+  const activeFilterCount = countActiveFilters(filters);
+
   return (
     <div className="flex h-full flex-col" dir="rtl">
       <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
         <h1 className="shrink-0 text-base font-semibold text-gray-900">المهام حسب نوع المهمة</h1>
-        <div className="flex items-center gap-3">
-          <div className="flex w-56 items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
+        <div className="flex items-center gap-2">
+          <div className="flex w-56 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" />
             <input
               type="search"
@@ -79,27 +107,40 @@ export default function TaskTypeViewPage() {
               aria-label="بحث عن مهمة"
             />
           </div>
-          <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
-            <input
-              type="checkbox"
-              checked={includeClosed}
-              onChange={(e) => setIncludeClosed(e.target.checked)}
-              className="h-3.5 w-3.5"
-            />
-            إظهار المكتملة
-          </label>
+          <button
+            onClick={() => setShowFilterDialog(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            فلترة وترتيب
+            {activeFilterCount > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
+
+      {showFilterDialog && (
+        <DirectoryFilterSortPopover
+          filters={filters}
+          onChangeFilters={setFilters}
+          sort={sort}
+          onChangeSort={setSort}
+          data={data}
+          onClose={() => setShowFilterDialog(false)}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {groups.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-400">
-            {searching ? "لا توجد مهام مطابقة" : "لا توجد مهام"}
+            {searching || activeFilterCount > 0 ? "لا توجد مهام مطابقة" : "لا توجد مهام"}
           </div>
         ) : (
           groups.map((group) => {
             const collapsed = !searching && collapsedKeys.has(group.key);
-            const name = group.taskType?.name_ar ?? "نوع";
             return (
               <div key={group.key} className="border-b border-gray-100">
                 <button
@@ -108,7 +149,7 @@ export default function TaskTypeViewPage() {
                 >
                   {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: group.taskType?.color ?? "#9CA3AF" }} />
-                  <span>{name}</span>
+                  <span>{group.label}</span>
                   <span className="text-xs font-normal text-gray-400">({group.tasks.length})</span>
                 </button>
 

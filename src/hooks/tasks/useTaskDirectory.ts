@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
 import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
@@ -26,9 +24,14 @@ import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite 
 // land in more than one bucket) and "by task type" (exactly one bucket)
 // are different enough that each page groups this hook's flat task list
 // itself.
+//
+// Every fetched task is returned as-is (no open/closed split here) —
+// "open tasks only" is the Status filter's default in
+// directoryFilters.ts, applied client-side by the pages against this
+// full fetch, so filtering is instant (no refetch) instead of a round
+// trip, the same "fetch everything, filter in JS" shape
+// useDepartmentView.ts already uses for its own metrics.
 // =====================================================================
-
-const OPEN_CATEGORIES: Database["tasks"]["Enums"]["status_category"][] = ["not_started", "active"];
 
 export interface TaskDirectoryData {
   tasks: TaskRow[];
@@ -39,6 +42,7 @@ export interface TaskDirectoryData {
   taskTypes: Map<string, TaskTypeLite>;
   tagsByTask: Map<string, TagLite[]>;
   parentTitleByTask: Map<string, string>;
+  projectNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
@@ -50,7 +54,6 @@ export function useTaskDirectory() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const tasksDb = supabase.schema("tasks");
-  const [includeClosed, setIncludeClosed] = useState(false);
   const queryKey = ["task-directory", user?.id];
 
   const query = useQuery({
@@ -88,19 +91,11 @@ export function useTaskDirectory() {
         : { data: [], error: null };
       if (statusesError) throw statusesError;
 
-      const statusesById = new Map((statusRows ?? []).map((s) => [s.id, s]));
-      const isOpen = (statusId: string) => {
-        const category = statusesById.get(statusId)?.category;
-        return !!category && OPEN_CATEGORIES.includes(category);
-      };
-
-      // Filtered client-side (not by query) — same "fetch, then check
-      // category" shape useDepartmentView.ts's own isOpen() uses, since
-      // status categories aren't known until statuses resolve.
-      const tasks = includeClosed ? (allTasks ?? []) : (allTasks ?? []).filter((t) => isOpen(t.status_id));
+      const tasks = allTasks ?? [];
       const taskIds = tasks.map((t) => t.id);
 
       const parentIds = Array.from(new Set(tasks.map((t) => t.parent_task_id).filter((id): id is string => !!id)));
+      const projectIds = Array.from(new Set(tasks.map((t) => t.project_id).filter((id): id is string => !!id)));
 
       const [
         { data: assigneeRows, error: assigneeError },
@@ -113,6 +108,7 @@ export function useTaskDirectory() {
         commentsResult,
         taskTagsResult,
         parentRowsResult,
+        projectRowsResult,
       ] = await Promise.all([
         taskIds.length
           ? tasksDb.from("task_assignees").select("task_id, user_id").in("task_id", taskIds)
@@ -140,6 +136,9 @@ export function useTaskDirectory() {
         parentIds.length
           ? tasksDb.from("tasks").select("id, title").in("id", parentIds)
           : Promise.resolve({ data: [], error: null }),
+        projectIds.length
+          ? supabase.from("projects").select("id, name").in("id", projectIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (assigneeError) throw assigneeError;
       if (employeesError) throw employeesError;
@@ -151,6 +150,7 @@ export function useTaskDirectory() {
       if (commentsResult.error) throw commentsResult.error;
       if (taskTagsResult.error) throw taskTagsResult.error;
       if (parentRowsResult.error) throw parentRowsResult.error;
+      if (projectRowsResult.error) throw projectRowsResult.error;
 
       const attachedTagIds = Array.from(new Set((taskTagsResult.data ?? []).map((r) => r.tag_id)));
       const { data: tagRows, error: tagsError } = attachedTagIds.length
@@ -219,6 +219,7 @@ export function useTaskDirectory() {
         taskTypes: new Map((taskTypeRows ?? []).map((t) => [t.id, t])),
         tagsByTask,
         parentTitleByTask,
+        projectNamesById: new Map((projectRowsResult.data ?? []).map((p) => [p.id, p.name])),
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
         blockedTaskIds,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),
@@ -300,8 +301,6 @@ export function useTaskDirectory() {
     data: query.data,
     loading: query.isPending,
     error: query.error,
-    includeClosed,
-    setIncludeClosed,
     onChangeStatus: (taskId: string, statusId: string) => updateStatus.mutate({ taskId, statusId }),
     onChangeTaskType: (taskId: string, taskTypeId: string) => updateTaskType.mutate({ taskId, taskTypeId }),
     onChangePriority: (taskId: string, priority: Priority | null) => updatePriority.mutate({ taskId, priority }),
