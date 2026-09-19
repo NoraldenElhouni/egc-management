@@ -3,31 +3,10 @@ import { Plus } from "lucide-react";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import type { EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
 import Tooltip from "../../ui/Tooltip";
+import { colorFor, initials } from "./employeeAvatar";
 
 // Stacked circular avatars, overflow collapses to "+N" — clickup-task-ui
-// skill's "Assignee cell" rule. No shared avatar component exists in this
-// app yet (each screen writes its own initials() helper); this one does
-// the same, scoped to this file.
-function initials(employee: EmployeeLite): string {
-  const a = employee.first_name?.[0] ?? "";
-  const b = employee.last_name?.[0] ?? "";
-  return (a + b).toUpperCase() || "?";
-}
-
-const AVATAR_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#06B6D4",
-];
-
-function colorFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+// skill's "Assignee cell" rule.
 
 interface AssigneeCellProps {
   assigneeIds: string[];

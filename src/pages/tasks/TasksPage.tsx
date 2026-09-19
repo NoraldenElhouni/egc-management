@@ -1,5 +1,6 @@
+import type { ComponentType, ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Users, Building2, FolderKanban, Building, User } from "lucide-react";
+import { Loader2, Users, UserCog, Shapes, Building2, FolderKanban, Building, User } from "lucide-react";
 import { useTasksSidebar, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 
 // The /tasks index route — what shows before a space/board is picked.
@@ -21,6 +22,36 @@ const SPACE_TYPE_ICONS: Record<SpaceType, typeof FolderKanban> = {
   company: Building,
   personal: User,
 };
+
+function ViewCard({
+  to,
+  icon: Icon,
+  label,
+  subtitle,
+  badge,
+}: {
+  to: string;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  subtitle: string;
+  badge?: ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-3 shadow-sm transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-superLight text-primary">
+        <Icon className="h-4.5 w-4.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium text-gray-800">{label}</div>
+        <div className="truncate text-xs text-gray-400">{subtitle}</div>
+      </div>
+      {badge}
+    </Link>
+  );
+}
 
 function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -93,19 +124,28 @@ export default function TasksPage() {
       <h1 className="mb-4 text-lg font-semibold text-gray-900">إدارة المهام</h1>
 
       <div className="mb-5">
-        <Link
-          to="/tasks/my-work"
-          className="flex max-w-sm items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-colors hover:border-primary/30"
-        >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
-            <Users className="h-5 w-5" />
-          </span>
-          <div className="flex-1">
-            <div className="font-medium text-gray-800">أعمالي</div>
-            <div className="text-xs text-gray-400">المهام المسندة إليك عبر كل المشاريع</div>
-          </div>
-          <CountBadge count={data?.myWorkCount ?? 0} />
-        </Link>
+        <div className="mb-2 text-xs font-semibold text-gray-500">طرق العرض</div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+          <ViewCard
+            to="/tasks/my-work"
+            icon={Users}
+            label="أعمالي"
+            subtitle="المهام المسندة إليك عبر كل المشاريع"
+            badge={<CountBadge count={data?.myWorkCount ?? 0} />}
+          />
+          <ViewCard
+            to="/tasks/by-assignee"
+            icon={UserCog}
+            label="حسب الموظف"
+            subtitle="كل المهام مجمّعة حسب الموظف المسؤول"
+          />
+          <ViewCard
+            to="/tasks/by-type"
+            icon={Shapes}
+            label="حسب نوع المهمة"
+            subtitle="كل المهام مجمّعة حسب نوع المهمة"
+          />
+        </div>
       </div>
 
       {!!data?.departments.length && (

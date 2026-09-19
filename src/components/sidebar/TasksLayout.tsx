@@ -14,6 +14,8 @@ import {
   Layers,
   ListTodo,
   Users,
+  UserCog,
+  Shapes,
   Loader2,
   Settings,
   FileStack,
@@ -640,6 +642,20 @@ const TasksLayoutInner = () => {
               <span className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
             )}
           </Link>
+          <Link
+            to="/tasks/by-assignee"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            title="حسب الموظف"
+          >
+            <UserCog className="h-5 w-5" />
+          </Link>
+          <Link
+            to="/tasks/by-type"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            title="حسب نوع المهمة"
+          >
+            <Shapes className="h-5 w-5" />
+          </Link>
         </aside>
         <main className="mr-20 flex-1 overflow-y-auto scrollbar-hide">
           <Outlet />
@@ -787,6 +803,20 @@ const TasksLayoutInner = () => {
                   <Users className="h-4 w-4 shrink-0 text-gray-500" />
                   <span className="flex-1 truncate">أعمالي</span>
                   <CountBadge count={data?.myWorkCount ?? 0} />
+                </Link>
+                <Link
+                  to="/tasks/by-assignee"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  <UserCog className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="flex-1 truncate">حسب الموظف</span>
+                </Link>
+                <Link
+                  to="/tasks/by-type"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  <Shapes className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="flex-1 truncate">حسب نوع المهمة</span>
                 </Link>
               </div>
 
