@@ -179,6 +179,7 @@ export default function TaskTypeViewPage() {
                         parentTitle={data.parentTitleByTask.get(task.id)}
                         linkedTaskIds={data.linkedTaskIds}
                         blockedTaskIds={data.blockedTaskIds}
+                        dependencyClearedTaskIds={data.dependencyClearedTaskIds}
                         unmetRequirementTaskIds={data.unmetRequirementTaskIds}
                         attachedTaskIds={data.attachedTaskIds}
                         commentedTaskIds={data.commentedTaskIds}

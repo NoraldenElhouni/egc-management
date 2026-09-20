@@ -67,6 +67,8 @@ export default function TaskDetailPanel() {
     addSubtask,
     addRelationship,
     removeRelationship,
+    addDependency,
+    removeDependency,
     syncMentions,
     addLink,
     removeLink,
@@ -303,11 +305,15 @@ export default function TaskDetailPanel() {
               />
             </Section>
 
-            <Section
-              title="الاعتماديات"
-              hidden={data.blocking.length === 0 && data.blockedByMe.length === 0}
-            >
-              <DependenciesSection blocking={data.blocking} blockedByMe={data.blockedByMe} />
+            <Section title="الاعتماديات">
+              <DependenciesSection
+                taskId={data.task.id}
+                spaceId={data.breadcrumb.spaceId}
+                blocking={data.blocking}
+                blockedByMe={data.blockedByMe}
+                onAdd={(relatedTaskId, direction) => addDependency({ relatedTaskId, direction })}
+                onRemove={(dependencyId) => removeDependency(dependencyId)}
+              />
             </Section>
 
             <Section title="الروابط">

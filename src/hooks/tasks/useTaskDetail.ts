@@ -9,6 +9,7 @@ import type { StatusRow, TaskRow, CustomColumn } from "./useTaskBoard";
 import type { Tag } from "./useAdminCatalog";
 import { extractMentionedTaskIds } from "./mentionUtils";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
+import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -32,6 +33,7 @@ export interface DependencyTaskRef {
   id: string;
   title: string;
   statusCategory: Database["tasks"]["Enums"]["status_category"];
+  dependencyId: string;
 }
 
 export interface Breadcrumb {
@@ -40,6 +42,7 @@ export interface Breadcrumb {
   parentTitle: string | null;
   parentId: string | null;
   boardId: string;
+  spaceId: string;
 }
 
 export interface TaskDetailData {
@@ -145,8 +148,8 @@ export function useTaskDetail(taskId: string | undefined) {
         supabase.from("specializations").select("id, name"),
         tasksDb.from("task_links").select("*").eq("task_id", taskId),
         tasksDb.from("task_requirements").select("*").eq("task_id", taskId),
-        tasksDb.from("task_dependencies").select("blocking_task_id").eq("blocked_task_id", taskId),
-        tasksDb.from("task_dependencies").select("blocked_task_id").eq("blocking_task_id", taskId),
+        tasksDb.from("task_dependencies").select("id, blocking_task_id").eq("blocked_task_id", taskId),
+        tasksDb.from("task_dependencies").select("id, blocked_task_id").eq("blocking_task_id", taskId),
         tasksDb.from("checklists").select("*, checklist_items(*)").eq("task_id", taskId).order("sort_order"),
         tasksDb
           .from("tasks")
@@ -215,21 +218,22 @@ export function useTaskDetail(taskId: string | undefined) {
         for (const s of extraStatuses ?? []) statusById.set(s.id, s);
       }
 
-      const toDependencyRef = (id: string): DependencyTaskRef | null => {
+      const toDependencyRef = (id: string, dependencyId: string): DependencyTaskRef | null => {
         const t = refTaskById.get(id);
         if (!t) return null;
         return {
           id: t.id,
           title: t.title,
           statusCategory: statusById.get(t.status_id)?.category ?? "not_started",
+          dependencyId,
         };
       };
 
       const blocking = (blockingDeps ?? [])
-        .map((d) => toDependencyRef(d.blocking_task_id))
+        .map((d) => toDependencyRef(d.blocking_task_id, d.id))
         .filter((x): x is DependencyTaskRef => !!x);
       const blockedByMe = (blockedDeps ?? [])
-        .map((d) => toDependencyRef(d.blocked_task_id))
+        .map((d) => toDependencyRef(d.blocked_task_id, d.id))
         .filter((x): x is DependencyTaskRef => !!x);
 
       const subtasks = (childTasks ?? []).map((t) => ({
@@ -286,6 +290,7 @@ export function useTaskDetail(taskId: string | undefined) {
           parentTitle: parentRow.data?.title ?? null,
           parentId: parentRow.data?.id ?? null,
           boardId: board.id,
+          spaceId: board.space_id,
         },
         statuses: statuses ?? [],
         // Real values merged in by the `data` memo below.
@@ -332,6 +337,31 @@ export function useTaskDetail(taskId: string | undefined) {
       if (!taskId) return;
       const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);
       if (error) throw error;
+
+      // Best-effort — a failed dependency check shouldn't fail the
+      // field update itself, same posture as setAssignees' own push.
+      if (patch.status_id) {
+        const category = query.data?.statuses.find((s) => s.id === patch.status_id)?.category;
+        if (category === "done") void notifyDependentAssignees(taskId);
+
+        // Any task that lists this one as a blocker has its own cached
+        // detail view keyed by ITS OWN taskId — a status change here
+        // doesn't touch that cache on its own, so its dependency badge
+        // (amber lock / green check, per DependencyRow's own per-item
+        // cleared check) would otherwise stay stale until something else
+        // happens to invalidate it.
+        const { data: dependents, error: dependentsError } = await tasksDb
+          .from("task_dependencies")
+          .select("blocked_task_id")
+          .eq("blocking_task_id", taskId);
+        if (dependentsError) {
+          console.error("Failed to look up dependent tasks to invalidate", dependentsError);
+        } else {
+          for (const dep of dependents ?? []) {
+            queryClient.invalidateQueries({ queryKey: ["task-detail", dep.blocked_task_id] });
+          }
+        }
+      }
     },
     onSuccess: invalidate,
   });
@@ -531,6 +561,47 @@ export function useTaskDetail(taskId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const addDependency = useMutation({
+    mutationFn: async ({
+      relatedTaskId,
+      direction,
+    }: {
+      relatedTaskId: string;
+      direction: "blocks" | "blockedBy";
+    }) => {
+      if (!taskId) return;
+      const blocking_task_id = direction === "blocks" ? taskId : relatedTaskId;
+      const blocked_task_id = direction === "blocks" ? relatedTaskId : taskId;
+
+      // Pre-check via the same cycle-detection logic the DB's BEFORE
+      // INSERT trigger (prevent_dependency_cycle) enforces, so a bad pick
+      // surfaces a clear Arabic message instead of a raw trigger error.
+      // The trigger remains the real backstop either way.
+      const { data: wouldCycle, error: checkError } = await tasksDb.rpc("dependency_would_cycle", {
+        p_blocking_task_id: blocking_task_id,
+        p_blocked_task_id: blocked_task_id,
+      });
+      if (checkError) throw checkError;
+      if (wouldCycle) throw new Error("هذا الربط سينشئ حلقة اعتماديات دائرية");
+
+      const { error } = await tasksDb.from("task_dependencies").insert({
+        blocking_task_id,
+        blocked_task_id,
+        created_by: user?.id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const removeDependency = useMutation({
+    mutationFn: async (dependencyId: string) => {
+      const { error } = await tasksDb.from("task_dependencies").delete().eq("id", dependencyId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   const addLink = useMutation({
     mutationFn: async ({
       recordType,
@@ -665,6 +736,8 @@ export function useTaskDetail(taskId: string | undefined) {
     addSubtask: addSubtask.mutate,
     addRelationship: addRelationship.mutate,
     removeRelationship: removeRelationship.mutate,
+    addDependency: addDependency.mutate,
+    removeDependency: removeDependency.mutate,
     syncMentions: syncMentions.mutate,
     addLink: addLink.mutateAsync,
     removeLink: removeLink.mutate,

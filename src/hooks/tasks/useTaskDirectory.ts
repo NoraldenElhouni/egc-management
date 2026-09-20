@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
+import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
 import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
@@ -56,6 +57,9 @@ export interface TaskDirectoryData {
   boardNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
+  // Had at least one blocking dependency, but every one of them is now
+  // done/closed — see useTaskBoard.ts's own field for the same reasoning.
+  dependencyClearedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -241,6 +245,11 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
       const blockedTaskIds = new Set(
         (dependenciesResult.data ?? []).filter((d) => openBlockingIds.has(d.blocking_task_id)).map((d) => d.blocked_task_id),
       );
+      const dependencyClearedTaskIds = new Set(
+        (dependenciesResult.data ?? [])
+          .map((d) => d.blocked_task_id)
+          .filter((id) => !blockedTaskIds.has(id)),
+      );
 
       return {
         tasks,
@@ -257,6 +266,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         boardNamesById: new Map(boards.map((b) => [b.id, b.name])),
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
         blockedTaskIds,
+        dependencyClearedTaskIds,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),
         attachedTaskIds: new Set((attachmentsResult.data ?? []).map((a) => a.entity_id)),
         commentedTaskIds: new Set((commentsResult.data ?? []).map((c) => c.task_id)),
@@ -270,6 +280,27 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     mutationFn: async ({ taskId, statusId }: { taskId: string; statusId: string }) => {
       const { error } = await tasksDb.from("tasks").update({ status_id: statusId }).eq("id", taskId);
       if (error) throw error;
+
+      // Best-effort — a failed dependency check shouldn't fail the
+      // status change itself, same posture as setAssignees' own push.
+      const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
+      if (category === "done") void notifyDependentAssignees(taskId);
+
+      // Any task that lists this one as a blocker has its own cached
+      // detail view keyed by ITS OWN taskId — invalidate those too, or
+      // an already-open dependent panel's dependency badge (amber/green)
+      // stays stale (see useTaskDetail.ts's updateField for the same fix).
+      const { data: dependents, error: dependentsError } = await tasksDb
+        .from("task_dependencies")
+        .select("blocked_task_id")
+        .eq("blocking_task_id", taskId);
+      if (dependentsError) {
+        console.error("Failed to look up dependent tasks to invalidate", dependentsError);
+      } else {
+        for (const dep of dependents ?? []) {
+          queryClient.invalidateQueries({ queryKey: ["task-detail", dep.blocked_task_id] });
+        }
+      }
     },
     onSuccess: invalidate,
   });

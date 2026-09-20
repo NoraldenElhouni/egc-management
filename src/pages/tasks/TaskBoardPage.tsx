@@ -85,6 +85,7 @@ export default function TaskBoardPage() {
           departmentNamesById={data.departmentNamesById}
           linkedTaskIds={data.linkedTaskIds}
           blockedTaskIds={data.blockedTaskIds}
+          dependencyClearedTaskIds={data.dependencyClearedTaskIds}
           unmetRequirementTaskIds={data.unmetRequirementTaskIds}
           attachedTaskIds={data.attachedTaskIds}
           commentedTaskIds={data.commentedTaskIds}

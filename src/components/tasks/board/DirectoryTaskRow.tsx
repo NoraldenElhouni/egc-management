@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Link2, Lock, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
+import { Link2, Lock, CheckCircle2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
@@ -37,6 +37,7 @@ interface DirectoryTaskRowProps {
   parentTitle?: string;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
+  dependencyClearedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -61,6 +62,7 @@ export default function DirectoryTaskRow({
   parentTitle,
   linkedTaskIds,
   blockedTaskIds,
+  dependencyClearedTaskIds,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -125,8 +127,16 @@ export default function DirectoryTaskRow({
             </Tooltip>
           )}
           {blockedTaskIds.has(task.id) && (
-            <Tooltip label="محظورة">
-              <Lock className="h-3 w-3 shrink-0 text-gray-400" aria-label="محظورة" />
+            <Tooltip label="محظورة — بانتظار مهمة أخرى">
+              <Lock className="h-3 w-3 shrink-0 text-orange-500" aria-label="محظورة — بانتظار مهمة أخرى" />
+            </Tooltip>
+          )}
+          {!blockedTaskIds.has(task.id) && dependencyClearedTaskIds.has(task.id) && (
+            <Tooltip label="تم تحرير الاعتمادية — جاهزة للبدء">
+              <CheckCircle2
+                className="h-3 w-3 shrink-0 text-emerald-500"
+                aria-label="تم تحرير الاعتمادية — جاهزة للبدء"
+              />
             </Tooltip>
           )}
           {unmetRequirementTaskIds.has(task.id) && (

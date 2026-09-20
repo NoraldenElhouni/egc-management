@@ -7,6 +7,7 @@ import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeopl
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { DEFAULT_FEATURE_SETTINGS, type SpaceFeatureSettings } from "./useSpaceSettings";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
+import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7, D2).
 //
@@ -64,6 +65,11 @@ export interface TaskBoardData {
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
+  // Had at least one blocking dependency, but every one of them is now
+  // done/closed — distinct from "never had a dependency at all", so the
+  // board row can show a cleared/green indicator instead of just letting
+  // the lock badge silently vanish.
+  dependencyClearedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -296,6 +302,11 @@ export function useTaskBoard(boardId: string | undefined) {
           .filter((d) => openBlockingIds.has(d.blocking_task_id))
           .map((d) => d.blocked_task_id),
       );
+      const dependencyClearedTaskIds = new Set(
+        (dependenciesResult.data ?? [])
+          .map((d) => d.blocked_task_id)
+          .filter((id) => !blockedTaskIds.has(id)),
+      );
 
       const unmetRequirementTaskIds = new Set(
         (requirementsResult.data ?? []).map((r) => r.task_id),
@@ -387,6 +398,7 @@ export function useTaskBoard(boardId: string | undefined) {
         departmentNamesById,
         linkedTaskIds,
         blockedTaskIds,
+        dependencyClearedTaskIds,
         unmetRequirementTaskIds,
         attachedTaskIds,
         commentedTaskIds,
@@ -410,6 +422,27 @@ export function useTaskBoard(boardId: string | undefined) {
         .update({ status_id: statusId })
         .eq("id", taskId);
       if (error) throw error;
+
+      // Best-effort — a failed dependency check shouldn't fail the
+      // status change itself, same posture as setAssignees' own push.
+      const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
+      if (category === "done") void notifyDependentAssignees(taskId);
+
+      // Any task that lists this one as a blocker has its own cached
+      // detail view keyed by ITS OWN taskId — invalidate those too, or
+      // an already-open dependent panel's dependency badge (amber/green)
+      // stays stale (see useTaskDetail.ts's updateField for the same fix).
+      const { data: dependents, error: dependentsError } = await tasksDb
+        .from("task_dependencies")
+        .select("blocked_task_id")
+        .eq("blocking_task_id", taskId);
+      if (dependentsError) {
+        console.error("Failed to look up dependent tasks to invalidate", dependentsError);
+      } else {
+        for (const dep of dependents ?? []) {
+          queryClient.invalidateQueries({ queryKey: ["task-detail", dep.blocked_task_id] });
+        }
+      }
     },
     onSuccess: invalidate,
   });

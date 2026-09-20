@@ -39,6 +39,7 @@ interface TaskTableProps {
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
+  dependencyClearedTaskIds: Set<string>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -77,6 +78,7 @@ export default function TaskTable({
   departmentNamesById,
   linkedTaskIds,
   blockedTaskIds,
+  dependencyClearedTaskIds,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -306,6 +308,7 @@ export default function TaskTable({
                 departmentNamesById={departmentNamesById}
                 linkedTaskIds={linkedTaskIds}
                 blockedTaskIds={blockedTaskIds}
+                dependencyClearedTaskIds={dependencyClearedTaskIds}
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
                 attachedTaskIds={attachedTaskIds}
                 commentedTaskIds={commentedTaskIds}
