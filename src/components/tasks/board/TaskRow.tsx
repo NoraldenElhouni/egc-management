@@ -11,12 +11,12 @@ import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
 import type {
   CustomColumn,
-  EmployeeLite,
   StatusRow,
   TaskRow as TaskRowType,
   TaskTypeLite,
   TagLite,
 } from "../../../hooks/tasks/useTaskBoard";
+import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import type { Json } from "../../../lib/supabase";
 
 const FIXED_COLUMNS_WITH_PRIORITY = "minmax(0,1fr) 120px 84px 96px 92px 92px 100px";
@@ -49,8 +49,8 @@ interface TaskRowProps {
   collapsedIds: Set<string>;
   onToggleCollapse: (taskId: string) => void;
   statuses: StatusRow[];
-  employeesById: Map<string, EmployeeLite>;
-  allEmployees: EmployeeLite[];
+  employeesById: Map<string, AssignablePerson>;
+  allEmployees: AssignablePerson[];
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
   departmentNamesById: Map<string, string>;

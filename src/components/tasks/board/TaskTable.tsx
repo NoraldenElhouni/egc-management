@@ -5,7 +5,6 @@ import ColumnEditorModal from "./ColumnEditorModal";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import type {
   CustomColumn,
-  EmployeeLite,
   FieldType,
   Priority,
   StatusRow,
@@ -13,6 +12,7 @@ import type {
   TaskTypeLite,
   TagLite,
 } from "../../../hooks/tasks/useTaskBoard";
+import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import type { SpaceFeatureSettings } from "../../../hooks/tasks/useSpaceSettings";
 import type { Json } from "../../../lib/supabase";
 
@@ -32,8 +32,8 @@ interface TaskTableProps {
   zoneName: string | null;
   tasks: TaskRowType[];
   statuses: StatusRow[];
-  employeesById: Map<string, EmployeeLite>;
-  allEmployees: EmployeeLite[];
+  employeesById: Map<string, AssignablePerson>;
+  allEmployees: AssignablePerson[];
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
   departmentNamesById: Map<string, string>;

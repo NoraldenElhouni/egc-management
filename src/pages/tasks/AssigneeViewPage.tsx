@@ -16,7 +16,8 @@ import {
   type DirectoryFilterState,
   type DirectorySortState,
 } from "../../components/tasks/board/directoryFilters";
-import type { EmployeeLite, TaskRow } from "../../hooks/tasks/useTaskBoard";
+import type { TaskRow } from "../../hooks/tasks/useTaskBoard";
+import type { AssignablePerson } from "../../hooks/tasks/useAssignablePeople";
 
 // Assignee view — company-wide, cross-space (build plan Part 7's
 // D6/D7 pattern extended to full inline edit, see task-module-build-plan
@@ -30,7 +31,7 @@ import type { EmployeeLite, TaskRow } from "../../hooks/tasks/useTaskBoard";
 interface AssigneeGroup {
   key: string;
   label: string;
-  employee: EmployeeLite | null;
+  employee: AssignablePerson | null;
   tasks: TaskRow[];
 }
 
@@ -181,6 +182,11 @@ export default function AssigneeViewPage() {
                     </span>
                   ) : null}
                   <span>{group.label}</span>
+                  {group.employee?.person_type === "contractor" && (
+                    <span className="shrink-0 rounded bg-amber-100 px-1 text-[9px] font-medium text-amber-700">
+                      مقاول
+                    </span>
+                  )}
                   <span className="text-xs font-normal text-gray-400">({group.tasks.length})</span>
                 </button>
 

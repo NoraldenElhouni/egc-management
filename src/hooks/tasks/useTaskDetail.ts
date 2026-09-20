@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database, Json } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { resolveStatusSetId } from "./resolveStatusSetId";
-import type { EmployeeLite, StatusRow, TaskRow, CustomColumn } from "./useTaskBoard";
+import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
+import type { StatusRow, TaskRow, CustomColumn } from "./useTaskBoard";
 import type { Tag } from "./useAdminCatalog";
 import { extractMentionedTaskIds } from "./mentionUtils";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
@@ -44,8 +46,10 @@ export interface TaskDetailData {
   task: TaskRow;
   breadcrumb: Breadcrumb;
   statuses: StatusRow[];
-  employees: EmployeeLite[];
-  employeesById: Map<string, EmployeeLite>;
+  // Populated from useAssignablePeople() at the hook level — see the
+  // `data` memo near the end of this file.
+  employees: AssignablePerson[];
+  employeesById: Map<string, AssignablePerson>;
   assigneeIds: string[];
   departmentNamesById: Map<string, string>;
   allDepartments: { id: string; label: string }[];
@@ -112,7 +116,6 @@ export function useTaskDetail(taskId: string | undefined) {
       const [
         { data: statuses, error: statusesError },
         { data: assigneeRows, error: assigneeError },
-        { data: employees, error: employeesError },
         { data: department, error: departmentError },
         { data: specialization, error: specializationError },
         { data: allDepartmentRows, error: allDepartmentsError },
@@ -132,7 +135,6 @@ export function useTaskDetail(taskId: string | undefined) {
       ] = await Promise.all([
         tasksDb.from("statuses").select("*").eq("status_set_id", statusSetId).order("sort_order"),
         tasksDb.from("task_assignees").select("user_id").eq("task_id", taskId),
-        supabase.from("employees").select("id, first_name, last_name"),
         task.department_id
           ? supabase.from("departments").select("id, name_ar, name").eq("id", task.department_id)
           : Promise.resolve({ data: [], error: null }),
@@ -161,7 +163,6 @@ export function useTaskDetail(taskId: string | undefined) {
       ]);
       if (statusesError) throw statusesError;
       if (assigneeError) throw assigneeError;
-      if (employeesError) throw employeesError;
       if (departmentError) throw departmentError;
       if (specializationError) throw specializationError;
       if (allDepartmentsError) throw allDepartmentsError;
@@ -287,8 +288,9 @@ export function useTaskDetail(taskId: string | undefined) {
           boardId: board.id,
         },
         statuses: statuses ?? [],
-        employees: employees ?? [],
-        employeesById: new Map((employees ?? []).map((e) => [e.id, e])),
+        // Real values merged in by the `data` memo below.
+        employees: [],
+        employeesById: new Map(),
         assigneeIds: (assigneeRows ?? []).map((a) => a.user_id),
         departmentNamesById: new Map(
           (department ?? []).map((d) => [d.id, d.name_ar ?? d.name]),
@@ -631,8 +633,23 @@ export function useTaskDetail(taskId: string | undefined) {
     },
   });
 
+  const assignablePeople = useAssignablePeople();
+
+  // assignablePeople is fetched by its own shared, cross-screen query
+  // (useAssignablePeople), not inside this task's queryFn — merge it in
+  // here so `data.employees`/`data.employeesById` keep working for
+  // existing consumers (TaskDetailPanel, AssigneeCell, ...).
+  const data = useMemo(() => {
+    if (!query.data) return query.data;
+    return {
+      ...query.data,
+      employees: assignablePeople,
+      employeesById: new Map(assignablePeople.map((e) => [e.id, e])),
+    };
+  }, [query.data, assignablePeople]);
+
   return {
-    data: query.data,
+    data,
     loading: query.isPending,
     error: query.error,
     refetch: query.refetch,

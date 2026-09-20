@@ -5112,7 +5112,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      assignable_people: {
+        Row: {
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          person_type: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_contract_payment: {
@@ -5157,6 +5165,7 @@ export type Database = {
         Args: { p_permission_name: string; p_project_id?: string }
         Returns: boolean
       }
+      delete_own_account: { Args: never; Returns: undefined }
       effective_permissions: {
         Args: { p_project_id?: string; p_user_id: string }
         Returns: {

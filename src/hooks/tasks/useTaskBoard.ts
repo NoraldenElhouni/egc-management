@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database, Json } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
+import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { DEFAULT_FEATURE_SETTINGS, type SpaceFeatureSettings } from "./useSpaceSettings";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
@@ -55,7 +56,10 @@ export interface TaskBoardData {
   statuses: StatusRow[];
   tasks: TaskRow[];
   assigneesByTask: Map<string, string[]>; // task_id -> user_id[]
-  employees: EmployeeLite[];
+  // Populated from useAssignablePeople() at the hook level, not fetched in
+  // queryFn (hooks aren't callable inside an async callback) — see the
+  // `data` memo below.
+  employees: AssignablePerson[];
   taskTypes: Map<string, TaskTypeLite>;
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
@@ -156,7 +160,6 @@ export function useTaskBoard(boardId: string | undefined) {
 
       const [
         { data: assigneeRows, error: assigneeError },
-        { data: employees, error: employeesError },
         { data: taskTypeRows, error: taskTypesError },
         { data: departmentRows, error: departmentsError },
         linksResult,
@@ -172,7 +175,6 @@ export function useTaskBoard(boardId: string | undefined) {
               .select("task_id, user_id")
               .in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
-        supabase.from("employees").select("id, first_name, last_name"),
         // The full company-wide catalog, not just the types already used on
         // this board's tasks — TaskTypeCell's popover needs every type as a
         // pickable option, same reasoning as useAllFieldDefinitions.
@@ -207,7 +209,6 @@ export function useTaskBoard(boardId: string | undefined) {
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (assigneeError) throw assigneeError;
-      if (employeesError) throw employeesError;
       if (taskTypesError) throw taskTypesError;
       if (departmentsError) throw departmentsError;
       if (linksResult.error) throw linksResult.error;
@@ -380,7 +381,8 @@ export function useTaskBoard(boardId: string | undefined) {
         statuses: statuses ?? [],
         tasks: tasks ?? [],
         assigneesByTask,
-        employees: employees ?? [],
+        // Real value merged in by the `data` memo below.
+        employees: [],
         taskTypes,
         departmentNamesById,
         linkedTaskIds,
@@ -644,12 +646,23 @@ export function useTaskBoard(boardId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const assignablePeople = useAssignablePeople();
+
   const employeesById = useMemo(() => {
-    return new Map((query.data?.employees ?? []).map((e) => [e.id, e]));
-  }, [query.data?.employees]);
+    return new Map(assignablePeople.map((e) => [e.id, e]));
+  }, [assignablePeople]);
+
+  // assignablePeople is fetched by its own shared, cross-screen query
+  // (useAssignablePeople), not inside this board's queryFn — merge it in
+  // here so `data.employees` keeps working for existing consumers
+  // (TaskBoardPage, TaskTable, AssigneeCell, ...).
+  const data = useMemo(() => {
+    if (!query.data) return query.data;
+    return { ...query.data, employees: assignablePeople };
+  }, [query.data, assignablePeople]);
 
   return {
-    data: query.data,
+    data,
     loading: query.isPending,
     error: query.error,
     employeesById,

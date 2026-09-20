@@ -1,17 +1,19 @@
 import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
-import type { EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
+import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import Tooltip from "../../ui/Tooltip";
 import { colorFor, initials } from "./employeeAvatar";
 
 // Stacked circular avatars, overflow collapses to "+N" — clickup-task-ui
-// skill's "Assignee cell" rule.
+// skill's "Assignee cell" rule. Lists both employees and linked
+// contractors (public.assignable_people) — contractors get a small badge
+// so they read as distinct from internal staff.
 
 interface AssigneeCellProps {
   assigneeIds: string[];
-  employeesById: Map<string, EmployeeLite>;
-  allEmployees: EmployeeLite[];
+  employeesById: Map<string, AssignablePerson>;
+  allEmployees: AssignablePerson[];
   onChange: (userIds: string[]) => void;
   /** See StatusCell's align prop — "left" for narrow contexts near the
    * screen's left edge (the D3 detail panel). */
@@ -55,8 +57,11 @@ export default function AssigneeCell({
       >
         {visible.map((id) => {
           const employee = employeesById.get(id);
+          const label = employee
+            ? `${employee.first_name} ${employee.last_name ?? ""}${employee.person_type === "contractor" ? " (مقاول)" : ""}`
+            : null;
           return (
-            <Tooltip key={id} label={employee ? `${employee.first_name} ${employee.last_name ?? ""}` : null}>
+            <Tooltip key={id} label={label}>
               <span
                 className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-white"
                 style={{ background: colorFor(id) }}
@@ -113,6 +118,11 @@ export default function AssigneeCell({
                 <span className="truncate">
                   {employee.first_name} {employee.last_name ?? ""}
                 </span>
+                {employee.person_type === "contractor" && (
+                  <span className="ms-auto shrink-0 rounded bg-amber-100 px-1 text-[9px] font-medium text-amber-700">
+                    مقاول
+                  </span>
+                )}
               </label>
             ))}
           </div>

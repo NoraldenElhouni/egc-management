@@ -59,11 +59,17 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
         .reduce((acc, log) => acc + (log.amount ?? 0), 0),
     );
 
-    const totalRefund = r(
+    const totalRefundWithPercentage = r(
       project.project_refund
         .filter((rf) => rf.currency === "LYD")
         .reduce((acc, rf) => acc + (rf.amount ?? 0), 0) -
         refundPercentageLogsTotal,
+    );
+
+    const totalRefund = r(
+      project.project_refund
+        .filter((rf) => rf.currency === "LYD")
+        .reduce((acc, rf) => acc + (rf.amount ?? 0), 0),
     );
 
     const lydBalances = project.project_balances.filter(
@@ -149,6 +155,7 @@ export default function InvoiceButton({ project }: InvoiceButtonProps) {
         total_labor_and_metrial_and_percentage_and_maps: r(
           totalMetrials + totalLabors + totalCompanyPercentage + totalMaps,
         ),
+        total_refund_with_percentage: totalRefundWithPercentage,
         total_maps: totalMaps,
         total_not_paid: totalNotPaid,
         total_refund: totalRefund,

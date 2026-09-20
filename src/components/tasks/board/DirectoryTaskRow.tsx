@@ -7,7 +7,8 @@ import StartDateCell from "./StartDateCell";
 import AssigneeCell from "./AssigneeCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
-import type { EmployeeLite, StatusRow, TaskRow as TaskRowType, TaskTypeLite, TagLite } from "../../../hooks/tasks/useTaskBoard";
+import type { StatusRow, TaskRow as TaskRowType, TaskTypeLite, TagLite } from "../../../hooks/tasks/useTaskBoard";
+import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 
 // A leaner sibling of board/TaskRow.tsx for the cross-board directory
 // views (AssigneeViewPage, TaskTypeViewPage) — same inline-edit cells
@@ -28,8 +29,8 @@ export function directoryRowGridStyle(showPriority = true): CSSProperties {
 interface DirectoryTaskRowProps {
   task: TaskRowType;
   statuses: StatusRow[];
-  employeesById: Map<string, EmployeeLite>;
-  allEmployees: EmployeeLite[];
+  employeesById: Map<string, AssignablePerson>;
+  allEmployees: AssignablePerson[];
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
   tagsByTask: Map<string, TagLite[]>;

@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
 import { resolveStatusSetId } from "./resolveStatusSetId";
-import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
+import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
+import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 
 // =====================================================================
 // Shared data + mutations for the "directory" views — AssigneeViewPage
@@ -41,8 +43,10 @@ import type { EmployeeLite, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite 
 export interface TaskDirectoryData {
   tasks: TaskRow[];
   statuses: StatusRow[];
-  employeesById: Map<string, EmployeeLite>;
-  allEmployees: EmployeeLite[];
+  // Populated from useAssignablePeople() at the hook level — see the
+  // `data` memo near the end of this file.
+  employeesById: Map<string, AssignablePerson>;
+  allEmployees: AssignablePerson[];
   assigneesByTask: Map<string, string[]>;
   taskTypes: Map<string, TaskTypeLite>;
   tagsByTask: Map<string, TagLite[]>;
@@ -125,7 +129,6 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
 
       const [
         { data: assigneeRows, error: assigneeError },
-        { data: employees, error: employeesError },
         { data: taskTypeRows, error: taskTypesError },
         linksResult,
         dependenciesResult,
@@ -140,7 +143,6 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         taskIds.length
           ? tasksDb.from("task_assignees").select("task_id, user_id").in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
-        supabase.from("employees").select("id, first_name, last_name"),
         tasksDb.from("task_types").select("id, name_ar, color").order("name_ar"),
         taskIds.length
           ? tasksDb.from("task_links").select("task_id").in("task_id", taskIds)
@@ -171,7 +173,6 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (assigneeError) throw assigneeError;
-      if (employeesError) throw employeesError;
       if (taskTypesError) throw taskTypesError;
       if (linksResult.error) throw linksResult.error;
       if (dependenciesResult.error) throw dependenciesResult.error;
@@ -244,8 +245,9 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
       return {
         tasks,
         statuses: statusRows ?? [],
-        employeesById: new Map((employees ?? []).map((e) => [e.id, e])),
-        allEmployees: employees ?? [],
+        // Real values merged in by the `data` memo below.
+        employeesById: new Map(),
+        allEmployees: [],
         assigneesByTask,
         taskTypes: new Map((taskTypeRows ?? []).map((t) => [t.id, t])),
         tagsByTask,
@@ -383,8 +385,23 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     onSuccess: invalidate,
   });
 
+  const assignablePeople = useAssignablePeople();
+
+  // assignablePeople is fetched by its own shared, cross-screen query
+  // (useAssignablePeople), not inside this directory's queryFn — merge it
+  // in here so `data.employeesById`/`data.allEmployees` keep working for
+  // existing consumers (AssigneeViewPage, DirectoryFilterSortPopover, ...).
+  const data = useMemo(() => {
+    if (!query.data) return query.data;
+    return {
+      ...query.data,
+      employeesById: new Map(assignablePeople.map((e) => [e.id, e])),
+      allEmployees: assignablePeople,
+    };
+  }, [query.data, assignablePeople]);
+
   return {
-    data: query.data,
+    data,
     loading: query.isPending,
     error: query.error,
     onChangeStatus: (taskId: string, statusId: string) => updateStatus.mutate({ taskId, statusId }),

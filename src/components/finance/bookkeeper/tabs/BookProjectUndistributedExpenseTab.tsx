@@ -19,6 +19,7 @@ interface ExpenseItem {
 interface ExpensesReport {
   report_title: string;
   report_date: string;
+  project_name: string;
   expenses: ExpenseItem[];
 }
 
@@ -35,6 +36,7 @@ const BookProjectUndistributedExpenseTab = ({
     const report: ExpensesReport = {
       report_title: "تقرير المصروفات غير الموزعة",
       report_date: new Date().toISOString().slice(0, 10),
+      project_name: rows.length > 0 ? rows[0].projectName : "مشروع غير معروف",
       expenses: rows.map((row: UndistributedExpensePaymentRow) => ({
         serial_number:
           row.expenseSerial != null
