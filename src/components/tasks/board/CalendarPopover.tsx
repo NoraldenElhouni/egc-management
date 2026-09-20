@@ -71,6 +71,42 @@ export default function CalendarPopover({ value, onChange, onClose, anchorRef, a
     });
   }, [anchorRef, align]);
 
+  // Clamp back inside the viewport once the popover has actually
+  // rendered and has a real size — the pass above only knows the
+  // trigger's own position, not this popover's height, so a trigger near
+  // the bottom or an edge of a long list (ProjectView/AssigneeView's
+  // directory tables especially, where a row can sit anywhere on a tall
+  // scrolled page) could otherwise open this partly or fully off-screen.
+  // Depends on `pos` itself so it re-measures after the pass above (and
+  // after its own correction below); it only calls setPos when a
+  // correction is actually needed, so this settles after one extra pass
+  // instead of looping.
+  useLayoutEffect(() => {
+    if (!pos) return;
+    const popover = popoverRef.current;
+    if (!popover) return;
+
+    const rect = popover.getBoundingClientRect();
+    const margin = 8;
+    let top = pos.top;
+    let left = pos.left;
+
+    if (rect.bottom > window.innerHeight - margin) {
+      const anchor = anchorRef.current;
+      const above = anchor ? anchor.getBoundingClientRect().top - rect.height - 4 : top;
+      top = above >= margin ? above : Math.max(margin, window.innerHeight - rect.height - margin);
+    }
+    if (rect.left < margin) {
+      left = margin;
+    } else if (rect.right > window.innerWidth - margin) {
+      left = window.innerWidth - rect.width - margin;
+    }
+
+    if (top !== pos.top || left !== pos.left) {
+      setPos({ top, left });
+    }
+  }, [pos, anchorRef]);
+
   const today = new Date();
   const parsedValue = value ? parseDateValue(value) : null;
   // Normalized "YYYY-MM-DD" for the incoming value — comparisons below use
