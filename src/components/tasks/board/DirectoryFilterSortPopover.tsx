@@ -149,6 +149,8 @@ export default function DirectoryFilterSortPopover({ filters, onChangeFilters, s
 
   const statusModeOptions: [DirectoryFilterState["statusMode"], string][] = [
     ["open", "المفتوحة فقط"],
+    ["done", "المكتملة"],
+    ["done_today", "اكتملت اليوم"],
     ["all", "الكل"],
     ["custom", "تحديد..."],
   ];
@@ -342,6 +344,7 @@ export default function DirectoryFilterSortPopover({ filters, onChangeFilters, s
                 className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 outline-none"
               >
                 <option value="due_date">المهام: الأقرب استحقاقاً أولاً</option>
+                <option value="completed_at">المهام: الأحدث إكمالاً</option>
                 <option value="priority">المهام: الأولوية</option>
                 <option value="title">المهام: العنوان (أ-ي)</option>
                 <option value="status">المهام: الحالة</option>

@@ -55,6 +55,10 @@ export interface TaskDirectoryData {
   projectNamesById: Map<string, string>;
   zoneNamesById: Map<string, string>;
   boardNamesById: Map<string, string>;
+  /** board_id → the name of the space that board lives in. Keyed by
+   * board rather than by space so the row can resolve a task's origin in
+   * one lookup off task.board_id, with no space_id hop in the component. */
+  spaceNameByBoardId: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   // Had at least one blocking dependency, but every one of them is now
@@ -78,27 +82,33 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     queryFn: async (): Promise<TaskDirectoryData> => {
       if (!user?.id) throw new Error("no user");
 
-      let boards: { id: string; name: string }[];
+      let boards: { id: string; name: string; space_id: string }[];
+      // space_id → space name, for the "where did this task come from"
+      // column. Both branches populate it; the scoped branch only ever
+      // has the one space in it.
+      let spaceNamesById = new Map<string, string>();
       if (spaceId) {
         // Scoped to one already-chosen space — no visibility resolution
         // needed, and boards.space_id covers folder-nested boards too
         // (folder_id is a separate, optional column; every board still
         // carries its own space_id directly, same as useTasksSidebar.ts's
         // own boards query relies on).
-        const { data, error } = await tasksDb
-          .from("boards")
-          .select("id, name")
-          .eq("space_id", spaceId)
-          .eq("is_archived", false);
+        const [{ data, error }, { data: spaceRow, error: spaceError }] = await Promise.all([
+          tasksDb.from("boards").select("id, name, space_id").eq("space_id", spaceId).eq("is_archived", false),
+          tasksDb.from("spaces").select("id, name").eq("id", spaceId).maybeSingle(),
+        ]);
         if (error) throw error;
+        if (spaceError) throw spaceError;
         boards = data ?? [];
+        if (spaceRow) spaceNamesById.set(spaceRow.id, spaceRow.name);
       } else {
         const [{ data: spaces, error: spacesError }, { data: memberRows, error: membersError }] = await Promise.all([
-          tasksDb.from("spaces").select("id, visibility, owner_user_id").eq("is_archived", false),
+          tasksDb.from("spaces").select("id, name, visibility, owner_user_id").eq("is_archived", false),
           tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
         ]);
         if (spacesError) throw spacesError;
         if (membersError) throw membersError;
+        spaceNamesById = new Map((spaces ?? []).map((s) => [s.id, s.name]));
 
         const memberSpaceIds = new Set((memberRows ?? []).map((r) => r.space_id));
         const visibleSpaceIds = (spaces ?? [])
@@ -106,7 +116,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
           .map((s) => s.id);
 
         const { data, error } = visibleSpaceIds.length
-          ? await tasksDb.from("boards").select("id, name").in("space_id", visibleSpaceIds).eq("is_archived", false)
+          ? await tasksDb.from("boards").select("id, name, space_id").in("space_id", visibleSpaceIds).eq("is_archived", false)
           : { data: [], error: null };
         if (error) throw error;
         boards = data ?? [];
@@ -264,6 +274,11 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         projectNamesById: new Map((projectRowsResult.data ?? []).map((p) => [p.id, p.name])),
         zoneNamesById: new Map((zoneRowsResult.data ?? []).map((z) => [z.id, z.name])),
         boardNamesById: new Map(boards.map((b) => [b.id, b.name])),
+        spaceNameByBoardId: new Map(
+          boards
+            .map((b) => [b.id, spaceNamesById.get(b.space_id)] as const)
+            .filter((pair): pair is readonly [string, string] => !!pair[1]),
+        ),
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
         blockedTaskIds,
         dependencyClearedTaskIds,

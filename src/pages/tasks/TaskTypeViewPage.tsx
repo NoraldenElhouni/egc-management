@@ -90,6 +90,10 @@ export default function TaskTypeViewPage() {
   }
 
   const activeFilterCount = countActiveFilters(filters);
+  // Same rule as AssigneeViewPage — the completion column appears only
+  // while you're looking at completed work, so the default view keeps its
+  // width.
+  const showCompleted = filters.statusMode === "done" || filters.statusMode === "done_today";
 
   return (
     <div className="flex h-full flex-col" dir="rtl">
@@ -156,15 +160,17 @@ export default function TaskTypeViewPage() {
                 {!collapsed && (
                   <>
                     <div
-                      style={directoryRowGridStyle(true)}
+                      style={directoryRowGridStyle({ showSource: true, showCompleted })}
                       className="border-b border-gray-100 bg-white px-2 py-1.5 text-xs font-semibold text-gray-500"
                     >
                       <div>عنوان المهمة</div>
+                      <div>المصدر</div>
                       <div>الحالة</div>
                       <div>الأولوية</div>
                       <div>الفريق</div>
                       <div>تاريخ البدء</div>
                       <div>الاستحقاق</div>
+                      {showCompleted && <div>وقت الإكمال</div>}
                     </div>
                     {group.tasks.map((task) => (
                       <DirectoryTaskRow
@@ -183,6 +189,10 @@ export default function TaskTypeViewPage() {
                         unmetRequirementTaskIds={data.unmetRequirementTaskIds}
                         attachedTaskIds={data.attachedTaskIds}
                         commentedTaskIds={data.commentedTaskIds}
+                        showSource
+                        boardNamesById={data.boardNamesById}
+                        spaceNameByBoardId={data.spaceNameByBoardId}
+                        showCompleted={showCompleted}
                         onOpenTask={(taskId) => navigate(`/tasks/by-type/task/${taskId}`)}
                         {...mutations}
                       />

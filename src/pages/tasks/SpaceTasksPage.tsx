@@ -209,7 +209,7 @@ export default function SpaceTasksPage() {
                 {!collapsed && (
                   <>
                     <div
-                      style={directoryRowGridStyle(true)}
+                      style={directoryRowGridStyle()}
                       className="border-b border-gray-100 bg-white px-2 py-1.5 text-xs font-semibold text-gray-500"
                     >
                       <div>عنوان المهمة</div>

@@ -1,5 +1,6 @@
 import type { Priority, TaskRow } from "../../../hooks/tasks/useTaskBoard";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
+import { isCompletedToday } from "./taskDates";
 
 // Pure filter/sort logic shared by AssigneeViewPage.tsx, TaskTypeViewPage.tsx,
 // and DirectoryFilterSortPopover.tsx — no JSX here so it's trivially unit-
@@ -11,8 +12,12 @@ export const ASSIGNEE_NONE_KEY = "__unassigned__";
 
 export interface DirectoryFilterState {
   /** "open" = not_started/active categories (today's old includeClosed
-   * default). "all" = no status filtering. "custom" = exactly customStatusIds. */
-  statusMode: "open" | "all" | "custom";
+   * default). "done" = the done category only — NOT `closed`, since the
+   * trigger that stamps tasks.completed_at only fires for `done`, so a
+   * combined mode would list cancelled tasks with no completion time.
+   * "done_today" = done AND completed_at falls in today (device-local).
+   * "all" = no status filtering. "custom" = exactly customStatusIds. */
+  statusMode: "open" | "done" | "done_today" | "all" | "custom";
   customStatusIds: Set<string>;
   /** Empty = every priority, including unset. */
   priorities: Set<Priority | "none">;
@@ -75,9 +80,19 @@ export function filterDirectoryTasks(tasks: TaskRow[], filters: DirectoryFilterS
   const openStatusIds = new Set(
     data.statuses.filter((s) => s.category === "not_started" || s.category === "active").map((s) => s.id),
   );
+  const doneStatusIds = new Set(data.statuses.filter((s) => s.category === "done").map((s) => s.id));
 
   return tasks.filter((task) => {
     if (filters.statusMode === "open" && !openStatusIds.has(task.status_id)) return false;
+    if (filters.statusMode === "done" && !doneStatusIds.has(task.status_id)) return false;
+    if (filters.statusMode === "done_today") {
+      // Both checks on purpose. completed_at alone would be enough while
+      // the trigger behaves, but checking the category too means a stale
+      // timestamp that somehow survived a reopen can't put an open task
+      // in a "completed" list.
+      if (!doneStatusIds.has(task.status_id)) return false;
+      if (!isCompletedToday(task.completed_at)) return false;
+    }
     if (filters.statusMode === "custom" && filters.customStatusIds.size > 0 && !filters.customStatusIds.has(task.status_id)) {
       return false;
     }
@@ -114,7 +129,7 @@ export function filterDirectoryTasks(tasks: TaskRow[], filters: DirectoryFilterS
   });
 }
 
-export type TaskSortKey = "due_date" | "priority" | "title" | "status";
+export type TaskSortKey = "due_date" | "completed_at" | "priority" | "title" | "status";
 export type GroupSortKey = "count" | "name";
 
 export interface DirectorySortState {
@@ -134,6 +149,17 @@ export function sortDirectoryTasks(tasks: TaskRow[], key: TaskSortKey, data: Tas
         const at = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
         const bt = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
         return at - bt;
+      });
+      break;
+    case "completed_at":
+      // Descending — most recently finished first, which is the order a
+      // "what got done today" list wants. Nulls (open tasks, and
+      // `closed` ones the trigger never stamped) sort last either way,
+      // hence -Infinity rather than the due_date case's +Infinity.
+      sorted.sort((a, b) => {
+        const at = a.completed_at ? new Date(a.completed_at).getTime() : Number.NEGATIVE_INFINITY;
+        const bt = b.completed_at ? new Date(b.completed_at).getTime() : Number.NEGATIVE_INFINITY;
+        return bt - at;
       });
       break;
     case "priority":

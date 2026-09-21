@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Calendar } from "lucide-react";
 import CalendarPopover from "./CalendarPopover";
 import Tooltip from "../../ui/Tooltip";
+import { formatSlashDate } from "./taskDates";
 
 // Relative badge, red if overdue, amber if due soon — clickup-task-ui
 // skill's "Date cell" rule. `isOverdue` comes from tasks.is_overdue
@@ -20,12 +21,6 @@ function relativeLabel(dueDate: string): string {
   if (diffDays === -1) return "أمس";
   if (diffDays > 1) return `خلال ${diffDays} يوم`;
   return `متأخر ${Math.abs(diffDays)} يوم`;
-}
-
-// "2026/1/1" — plain numeric, no leading zeros.
-function formatSlashDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 interface DateCellProps {

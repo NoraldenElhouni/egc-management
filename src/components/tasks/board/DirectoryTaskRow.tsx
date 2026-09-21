@@ -4,6 +4,8 @@ import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
 import StartDateCell from "./StartDateCell";
+import CompletedAtCell from "./CompletedAtCell";
+import TaskSourceCell from "./TaskSourceCell";
 import AssigneeCell from "./AssigneeCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
@@ -19,11 +21,44 @@ import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople"
 // so a subtask renders as its own row with a small parent-link instead
 // of nested under its parent.
 
-export function directoryRowGridStyle(showPriority = true): CSSProperties {
-  const fixed = showPriority
-    ? "minmax(0,1fr) 120px 84px 96px 92px 92px"
-    : "minmax(0,1fr) 120px 96px 92px 92px";
-  return { display: "grid", gridTemplateColumns: fixed, alignItems: "center", gap: "0.5rem" };
+// Every optional column is opt-in because four pages share this grid —
+// AssigneeViewPage, TaskTypeViewPage, ProjectViewPage and SpaceTasksPage
+// — and each renders its own hardcoded header-label row. Adding a track
+// unconditionally would silently knock the others' headers out of
+// alignment with their rows.
+//
+// Built as a track list rather than by concatenating strings because the
+// source column sits in the MIDDLE (right after the title), so position
+// matters and a `${fixed} 104px` suffix can't express it. The order here
+// must match the order the cells are rendered in below, and the order of
+// the <div> labels in each page's header row.
+export interface DirectoryColumnOptions {
+  showPriority?: boolean;
+  /** Space › board, for the cross-board views where a row's origin isn't
+   * implied by its grouping. */
+  showSource?: boolean;
+  /** Read-only completion time. */
+  showCompleted?: boolean;
+}
+
+export function directoryRowGridStyle({
+  showPriority = true,
+  showSource = false,
+  showCompleted = false,
+}: DirectoryColumnOptions = {}): CSSProperties {
+  const tracks = ["minmax(0,1fr)"]; // title
+  if (showSource) tracks.push("150px");
+  tracks.push("120px"); // status
+  if (showPriority) tracks.push("84px");
+  tracks.push("96px", "92px", "92px"); // team, start date, due date
+  if (showCompleted) tracks.push("104px");
+
+  return {
+    display: "grid",
+    gridTemplateColumns: tracks.join(" "),
+    alignItems: "center",
+    gap: "0.5rem",
+  };
 }
 
 interface DirectoryTaskRowProps {
@@ -42,6 +77,14 @@ interface DirectoryTaskRowProps {
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
   showPriority?: boolean;
+  /** Adds a read-only "space › board" column. Needs boardNamesById and
+   * spaceNameByBoardId to be passed too. */
+  showSource?: boolean;
+  /** Adds a read-only completion-time column. */
+  showCompleted?: boolean;
+  /** Both only read when showSource is set. */
+  boardNamesById?: Map<string, string>;
+  spaceNameByBoardId?: Map<string, string>;
   onOpenTask: (taskId: string) => void;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangeTaskType: (taskId: string, taskTypeId: string) => void;
@@ -67,6 +110,10 @@ export default function DirectoryTaskRow({
   attachedTaskIds,
   commentedTaskIds,
   showPriority = true,
+  showSource = false,
+  showCompleted = false,
+  boardNamesById,
+  spaceNameByBoardId,
   onOpenTask,
   onChangeStatus,
   onChangeTaskType,
@@ -80,7 +127,10 @@ export default function DirectoryTaskRow({
   const tags = tagsByTask.get(task.id) ?? [];
 
   return (
-    <div style={directoryRowGridStyle(showPriority)} className="min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50">
+    <div
+      style={directoryRowGridStyle({ showPriority, showSource, showCompleted })}
+      className="min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50"
+    >
       <div className="flex min-w-0 items-center gap-1">
         <TaskTypeCell
           taskTypes={taskTypes}
@@ -162,6 +212,13 @@ export default function DirectoryTaskRow({
         </div>
       </div>
 
+      {showSource && (
+        <TaskSourceCell
+          spaceName={spaceNameByBoardId?.get(task.board_id)}
+          boardName={boardNamesById?.get(task.board_id)}
+        />
+      )}
+
       <StatusCell
         statuses={statuses}
         currentStatusId={task.status_id}
@@ -178,6 +235,7 @@ export default function DirectoryTaskRow({
       />
       <StartDateCell startDate={task.start_date} onChange={(date) => onChangeStartDate(task.id, date)} />
       <DateCell dueDate={task.due_date} isOverdue={task.is_overdue} onChange={(date) => onChangeDueDate(task.id, date)} />
+      {showCompleted && <CompletedAtCell completedAt={task.completed_at} />}
     </div>
   );
 }

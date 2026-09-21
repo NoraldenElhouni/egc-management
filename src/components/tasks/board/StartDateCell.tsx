@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import CalendarPopover from "./CalendarPopover";
 import Tooltip from "../../ui/Tooltip";
+import { formatSlashDate } from "./taskDates";
 
 // Same popover as DateCell (due date), but no overdue/soon coloring —
 // a start date is neutral, there's no "late" concept for it. The pill
@@ -24,12 +25,6 @@ function daysPassedLabel(startDate: string): string {
   if (diffDays === -1) return "غداً";
   if (diffDays > 1) return `منذ ${diffDays} يوم`;
   return `يبدأ خلال ${Math.abs(diffDays)} يوم`;
-}
-
-// "2026/1/1" — plain numeric, no leading zeros.
-function formatSlashDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 interface StartDateCellProps {
