@@ -4,11 +4,14 @@ import { ChevronDown, ChevronLeft, Loader2, Search, SlidersHorizontal } from "lu
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
 import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
+import CollapseAllButtons from "../../components/tasks/board/CollapseAllButtons";
+import OverdueNotifyButton from "../../components/tasks/board/OverdueNotifyButton";
 import {
   countActiveFilters,
   createDefaultFilters,
   DEFAULT_SORT,
   filterDirectoryTasks,
+  searchDirectoryTasks,
   sortDirectoryGroups,
   sortDirectoryTasks,
   PROJECT_NONE_KEY,
@@ -50,14 +53,18 @@ export default function ProjectViewPage() {
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const searching = search.trim().length > 0;
 
+  // One definition of "what this page is showing" — shared with the
+  // overdue-notify button so its recipients match the visible list.
+  const visibleTasks = useMemo(
+    () => (data ? searchDirectoryTasks(filterDirectoryTasks(data.tasks, filters, data), search) : []),
+    [data, filters, search],
+  );
+
   const groups = useMemo<ProjectGroup[]>(() => {
     if (!data) return [];
-    const term = search.trim().toLowerCase();
-    const filtered = filterDirectoryTasks(data.tasks, filters, data);
 
     const byProject = new Map<string, TaskRow[]>();
-    for (const task of filtered) {
-      if (term && !task.title.toLowerCase().includes(term)) continue;
+    for (const task of visibleTasks) {
       const key = task.project_id ?? PROJECT_NONE_KEY;
       const list = byProject.get(key) ?? [];
       list.push(task);
@@ -88,7 +95,10 @@ export default function ProjectViewPage() {
     });
 
     return sortDirectoryGroups(projectGroups, sort.groupSort, PROJECT_NONE_KEY);
-  }, [data, search, filters, sort]);
+  }, [data, visibleTasks, sort]);
+
+  const expandAll = () => setCollapsedKeys(new Set());
+  const collapseAll = () => setCollapsedKeys(new Set(groups.map((g) => g.key)));
 
   const toggle = (key: string) => {
     setCollapsedKeys((prev) => {
@@ -133,6 +143,8 @@ export default function ProjectViewPage() {
               aria-label="بحث عن مهمة"
             />
           </div>
+          <CollapseAllButtons onExpandAll={expandAll} onCollapseAll={collapseAll} searching={searching} />
+          <OverdueNotifyButton visibleTasks={visibleTasks} data={data} filters={filters} searchTerm={search} />
           <button
             onClick={() => setShowFilterDialog(true)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
@@ -159,7 +171,7 @@ export default function ProjectViewPage() {
         />
       )}
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-3">
         {groups.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-400">
             {searching || activeFilterCount > 0 ? "لا توجد مهام مطابقة" : "لا توجد مهام"}
@@ -168,10 +180,10 @@ export default function ProjectViewPage() {
           groups.map((group) => {
             const collapsed = !searching && collapsedKeys.has(group.key);
             return (
-              <div key={group.key} className="border-b border-gray-100">
+              <div key={group.key} className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white last:mb-0">
                 <button
                   onClick={() => toggle(group.key)}
-                  className="flex w-full items-center gap-2 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  className="flex w-full items-center gap-2 border-b-2 border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200"
                 >
                   {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   <span>{group.label}</span>

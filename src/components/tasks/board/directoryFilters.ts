@@ -129,6 +129,20 @@ export function filterDirectoryTasks(tasks: TaskRow[], filters: DirectoryFilterS
   });
 }
 
+/** The free-text title match, extracted from the four pages' identical
+ *  inline `if (term && !task.title.toLowerCase().includes(term)) continue;`.
+ *
+ *  Paired with filterDirectoryTasks() below, this is the single
+ *  definition of "what the page is currently showing" — which the
+ *  overdue-notify button depends on, since its whole promise is that it
+ *  messages the people you can see. Deriving that list separately from
+ *  the one the page renders would let the two drift silently. */
+export function searchDirectoryTasks(tasks: TaskRow[], search: string): TaskRow[] {
+  const term = search.trim().toLowerCase();
+  if (!term) return tasks;
+  return tasks.filter((task) => task.title.toLowerCase().includes(term));
+}
+
 export type TaskSortKey = "due_date" | "completed_at" | "priority" | "title" | "status";
 export type GroupSortKey = "count" | "name";
 
