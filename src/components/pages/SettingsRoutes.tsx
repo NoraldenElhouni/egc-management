@@ -29,6 +29,7 @@ import SettingsDepartmentsPage from "../../pages/settings/departments/SettingsDe
 import DepartmentDetailPage from "../../pages/settings/departments/DepartmentDetailPage";
 import RolePermissionsListPage from "../../pages/settings/permissions/RolePermissionsListPage";
 import RolePermissionsDetailPage from "../../pages/settings/permissions/RolePermissionsDetailPage";
+import EvaluationSettingsPage from "../../pages/settings/evaluation/EvaluationSettingsPage";
 
 export default function SettingsRoutes() {
   return (
@@ -132,6 +133,15 @@ export default function SettingsRoutes() {
           <Route
             path="permissions/roles/:id"
             element={<RolePermissionsDetailPage />}
+          />
+        </Route>
+
+        <Route
+          element={<RequirePermission permission="manage_evaluation_settings" />}
+        >
+          <Route
+            path="evaluation-settings"
+            element={<EvaluationSettingsPage />}
           />
         </Route>
       </Route>

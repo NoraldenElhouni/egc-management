@@ -1376,6 +1376,359 @@ export type Database = {
       [_ in never]: never
     }
   }
+  hr: {
+    Tables: {
+      applicants: {
+        Row: {
+          application_source: string | null
+          application_status: string
+          applied_position: string | null
+          birth_date: string | null
+          created_at: string
+          current_employment_status: string | null
+          cv_file_url: string | null
+          experience_level: string | null
+          full_name: string
+          gender: string | null
+          general_notes: string | null
+          gpa_grade: string | null
+          graduation_year: number | null
+          hired_employee_id: string | null
+          id: string
+          phone_whatsapp: string | null
+          specialization: string | null
+          university: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_source?: string | null
+          application_status?: string
+          applied_position?: string | null
+          birth_date?: string | null
+          created_at?: string
+          current_employment_status?: string | null
+          cv_file_url?: string | null
+          experience_level?: string | null
+          full_name: string
+          gender?: string | null
+          general_notes?: string | null
+          gpa_grade?: string | null
+          graduation_year?: number | null
+          hired_employee_id?: string | null
+          id?: string
+          phone_whatsapp?: string | null
+          specialization?: string | null
+          university?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_source?: string | null
+          application_status?: string
+          applied_position?: string | null
+          birth_date?: string | null
+          created_at?: string
+          current_employment_status?: string | null
+          cv_file_url?: string | null
+          experience_level?: string | null
+          full_name?: string
+          gender?: string | null
+          general_notes?: string | null
+          gpa_grade?: string | null
+          graduation_year?: number | null
+          hired_employee_id?: string | null
+          id?: string
+          phone_whatsapp?: string | null
+          specialization?: string | null
+          university?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      evaluation_criteria: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name_ar: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name_ar: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name_ar?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      interview_evaluation_ratings: {
+        Row: {
+          committee_notes: string | null
+          criteria_id: string
+          evaluation_id: string
+          id: string
+          rating_id: string
+        }
+        Insert: {
+          committee_notes?: string | null
+          criteria_id: string
+          evaluation_id: string
+          id?: string
+          rating_id: string
+        }
+        Update: {
+          committee_notes?: string | null
+          criteria_id?: string
+          evaluation_id?: string
+          id?: string
+          rating_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_evaluation_ratings_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_evaluation_ratings_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "interview_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_evaluation_ratings_rating_id_fkey"
+            columns: ["rating_id"]
+            isOneToOne: false
+            referencedRelation: "rating_scale"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_evaluations: {
+        Row: {
+          additional_notes: string | null
+          applicant_id: string
+          created_at: string
+          evaluated_at: string
+          evaluator_employee_id: string | null
+          id: string
+          interview_round_id: string | null
+          recommendation: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          applicant_id: string
+          created_at?: string
+          evaluated_at?: string
+          evaluator_employee_id?: string | null
+          id?: string
+          interview_round_id?: string | null
+          recommendation?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          applicant_id?: string
+          created_at?: string
+          evaluated_at?: string
+          evaluator_employee_id?: string | null
+          id?: string
+          interview_round_id?: string | null
+          recommendation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_evaluations_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "applicants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_evaluations_interview_round_id_fkey"
+            columns: ["interview_round_id"]
+            isOneToOne: false
+            referencedRelation: "interview_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_rounds: {
+        Row: {
+          applicant_id: string
+          created_at: string
+          id: string
+          interview_type: string | null
+          interviewer_employee_id: string | null
+          location: string | null
+          round_number: number
+          scheduled_at: string | null
+          status: string
+        }
+        Insert: {
+          applicant_id: string
+          created_at?: string
+          id?: string
+          interview_type?: string | null
+          interviewer_employee_id?: string | null
+          location?: string | null
+          round_number?: number
+          scheduled_at?: string | null
+          status?: string
+        }
+        Update: {
+          applicant_id?: string
+          created_at?: string
+          id?: string
+          interview_type?: string | null
+          interviewer_employee_id?: string | null
+          location?: string | null
+          round_number?: number
+          scheduled_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_rounds_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "applicants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_review_ratings: {
+        Row: {
+          criteria_id: string
+          id: string
+          notes: string | null
+          rating_id: string
+          review_id: string
+        }
+        Insert: {
+          criteria_id: string
+          id?: string
+          notes?: string | null
+          rating_id: string
+          review_id: string
+        }
+        Update: {
+          criteria_id?: string
+          id?: string
+          notes?: string | null
+          rating_id?: string
+          review_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_review_ratings_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_review_ratings_rating_id_fkey"
+            columns: ["rating_id"]
+            isOneToOne: false
+            referencedRelation: "rating_scale"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_review_ratings_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "performance_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_reviews: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          overall_notes: string | null
+          overall_recommendation: string | null
+          reviewed_at: string
+          reviewer_employee_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          overall_notes?: string | null
+          overall_recommendation?: string | null
+          reviewed_at?: string
+          reviewer_employee_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          overall_notes?: string | null
+          overall_recommendation?: string | null
+          reviewed_at?: string
+          reviewer_employee_id?: string | null
+        }
+        Relationships: []
+      }
+      rating_scale: {
+        Row: {
+          category: string
+          id: string
+          is_active: boolean
+          label_ar: string
+          score: number
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          id?: string
+          is_active?: boolean
+          label_ar: string
+          score: number
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          id?: string
+          is_active?: boolean
+          label_ar?: string
+          score?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   lookups: {
     Tables: {
       banks: {
@@ -7425,6 +7778,9 @@ export const Constants = {
     },
   },
   graphql_public: {
+    Enums: {},
+  },
+  hr: {
     Enums: {},
   },
   lookups: {

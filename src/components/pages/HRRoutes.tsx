@@ -9,6 +9,9 @@ import AnnouncementsPage from "../../pages/hr/AnnouncementsPage";
 import RestPasswordPage from "../../pages/hr/RestPasswordPage";
 import EmployeesPage from "../../pages/hr/EmployeesPage";
 import EmployeeDetailsPage from "../../pages/hr/EmployeeDetailsPage";
+import ApplicantsPage from "../../pages/hr/ApplicantsPage";
+import NewApplicantPage from "../../pages/hr/NewApplicantPage";
+import ApplicantDetailsPage from "../../pages/hr/ApplicantDetailsPage";
 
 export default function HRRoutes() {
   return (
@@ -22,6 +25,14 @@ export default function HRRoutes() {
         </Route>
         <Route element={<RequirePermission permission="create_employee" />}>
           <Route path="employees/new" element={<NewEmployeePage />} />
+        </Route>
+
+        <Route element={<RequirePermission permission="view_applicants" />}>
+          <Route path="applicants" element={<ApplicantsPage />} />
+          <Route path="applicants/:id" element={<ApplicantDetailsPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="create_applicant" />}>
+          <Route path="applicants/new" element={<NewApplicantPage />} />
         </Route>
 
         <Route path="loans-advances" element={<LoansAdvancesPage />} />

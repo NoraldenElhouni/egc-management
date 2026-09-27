@@ -2,6 +2,7 @@ import {
   BookText,
   Box,
   Building2,
+  ClipboardCheck,
   Globe,
   KeyRound,
   Landmark,
@@ -98,5 +99,12 @@ export const SETTINGS_ITEMS: NavItem[] = [
     path: "/settings/website",
     description: "إعدادات الموقع",
     permission: "manage_website",
+  },
+  {
+    label: "إعدادات التقييم",
+    icon: ClipboardCheck,
+    path: "/settings/evaluation-settings",
+    description: "بنود وسلم تقييم المقابلات والأداء",
+    permission: "manage_evaluation_settings",
   },
 ];

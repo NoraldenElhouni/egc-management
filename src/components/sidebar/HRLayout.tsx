@@ -4,8 +4,12 @@ import { HR_ITEMS } from "../../config/navigation/hr";
 const isActivePath = (path: string, pathname: string) => {
   if (pathname === path) return true;
 
-  // For /hr/employees, only activate if not on the /new page
-  if (path === "/hr/employees" && pathname.startsWith("/hr/employees/")) {
+  // For /hr/employees and /hr/applicants, only activate the base item on
+  // its own path — sub-paths (new/:id) each have their own nav item or none.
+  if (
+    (path === "/hr/employees" && pathname.startsWith("/hr/employees/")) ||
+    (path === "/hr/applicants" && pathname.startsWith("/hr/applicants/"))
+  ) {
     return false;
   }
 

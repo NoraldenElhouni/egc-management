@@ -8,6 +8,7 @@ import { useMyPermissions } from "../../hooks/permissions/useCan";
 import EmployeeRole from "../../components/hr/employee/EmployeeRole";
 import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 import EmployeeOverridesTab from "../../components/permissions/EmployeeOverridesTab";
+import PerformanceReviews from "../../components/hr/employee/PerformanceReviews";
 // import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 
 export default function EmployeeDetailsPage() {
@@ -50,6 +51,12 @@ export default function EmployeeDetailsPage() {
           onUpdated={refetch}
         />
       ),
+    },
+    {
+      id: "performance-reviews",
+      label: "تقييم الأداء",
+      content: <PerformanceReviews employee={employee} onUpdated={refetch} />,
+      permission: "view_employee_performance",
     },
     {
       id: "employee-role",

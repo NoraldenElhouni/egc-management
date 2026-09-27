@@ -15,8 +15,19 @@ import { useDepartments } from "../../../hooks/permissions/useDepartments";
 import { ImageUploadField } from "../../ui/inputs/ImageUploadField";
 import { useNavigate } from "react-router-dom";
 import { EMPLOYEE_TYPE } from "../../../enum/employee";
+import { linkHiredEmployee } from "../../../services/hr/applicantsService";
 
-const NewEmployeeForm: React.FC = () => {
+interface NewEmployeeFormProps {
+  /** Prefills the form, e.g. when hiring a job applicant. */
+  initialValues?: Partial<UserFormValues>;
+  /** When set, the newly created employee is linked back to this applicant record. */
+  applicantId?: string;
+}
+
+const NewEmployeeForm: React.FC<NewEmployeeFormProps> = ({
+  initialValues,
+  applicantId,
+}) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { specializations, roles, managers } = useUtils();
@@ -47,6 +58,7 @@ const NewEmployeeForm: React.FC = () => {
       roleId: "212424d8-219a-4899-a24b-5d5bf05546e8",
       salaryType: "fixed",
       status: "active",
+      ...initialValues,
     },
   });
 
@@ -59,9 +71,21 @@ const NewEmployeeForm: React.FC = () => {
         alert("خطأ في إنشاء الموظف: " + response.message);
         throw new Error(response.message);
       }
+
+      const newEmployeeId = "data" in response ? response.data.user?.id : undefined;
+      if (applicantId && newEmployeeId) {
+        const { error: linkError } = await linkHiredEmployee(
+          applicantId,
+          newEmployeeId,
+        );
+        if (linkError) {
+          console.error("Error linking hired employee to applicant:", linkError);
+        }
+      }
+
       setSuccess("تم اضافة الموظف بنجاح");
       reset();
-      navigate("/hr/employees");
+      navigate(applicantId ? `/hr/applicants/${applicantId}` : "/hr/employees");
     } catch (error) {
       console.error("Unexpected error creating employee:", error);
       alert("حدث خطأ غير متوقع أثناء إنشاء الموظف.");
