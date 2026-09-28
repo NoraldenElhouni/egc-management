@@ -1378,6 +1378,48 @@ export type Database = {
   }
   hr: {
     Tables: {
+      applicant_answers: {
+        Row: {
+          answer_text: string | null
+          applicant_id: string
+          created_at: string
+          id: string
+          job_request_question_id: string
+          selected_option_ids: string[] | null
+        }
+        Insert: {
+          answer_text?: string | null
+          applicant_id: string
+          created_at?: string
+          id?: string
+          job_request_question_id: string
+          selected_option_ids?: string[] | null
+        }
+        Update: {
+          answer_text?: string | null
+          applicant_id?: string
+          created_at?: string
+          id?: string
+          job_request_question_id?: string
+          selected_option_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applicant_answers_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "applicants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applicant_answers_job_request_question_id_fkey"
+            columns: ["job_request_question_id"]
+            isOneToOne: false
+            referencedRelation: "job_request_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applicants: {
         Row: {
           application_source: string | null
@@ -1395,6 +1437,7 @@ export type Database = {
           graduation_year: number | null
           hired_employee_id: string | null
           id: string
+          job_request_id: string | null
           phone_whatsapp: string | null
           specialization: string | null
           university: string | null
@@ -1416,6 +1459,7 @@ export type Database = {
           graduation_year?: number | null
           hired_employee_id?: string | null
           id?: string
+          job_request_id?: string | null
           phone_whatsapp?: string | null
           specialization?: string | null
           university?: string | null
@@ -1437,12 +1481,21 @@ export type Database = {
           graduation_year?: number | null
           hired_employee_id?: string | null
           id?: string
+          job_request_id?: string | null
           phone_whatsapp?: string | null
           specialization?: string | null
           university?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "applicants_job_request_id_fkey"
+            columns: ["job_request_id"]
+            isOneToOne: false
+            referencedRelation: "job_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       evaluation_criteria: {
         Row: {
@@ -1612,6 +1665,122 @@ export type Database = {
           },
         ]
       }
+      job_request_question_options: {
+        Row: {
+          id: string
+          job_request_question_id: string
+          option_text: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          job_request_question_id: string
+          option_text: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          job_request_question_id?: string
+          option_text?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_request_question_options_job_request_question_id_fkey"
+            columns: ["job_request_question_id"]
+            isOneToOne: false
+            referencedRelation: "job_request_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_request_questions: {
+        Row: {
+          bank_question_id: string | null
+          config: Json
+          created_at: string
+          id: string
+          is_required: boolean
+          job_request_id: string
+          question_text: string
+          question_type: string
+          sort_order: number
+        }
+        Insert: {
+          bank_question_id?: string | null
+          config?: Json
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          job_request_id: string
+          question_text: string
+          question_type: string
+          sort_order?: number
+        }
+        Update: {
+          bank_question_id?: string | null
+          config?: Json
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          job_request_id?: string
+          question_text?: string
+          question_type?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_request_questions_bank_question_id_fkey"
+            columns: ["bank_question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_request_questions_job_request_id_fkey"
+            columns: ["job_request_id"]
+            isOneToOne: false
+            referencedRelation: "job_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_requests: {
+        Row: {
+          created_at: string
+          department: string | null
+          id: string
+          justification: string | null
+          position_title: string
+          positions_count: number
+          requested_by_employee_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          justification?: string | null
+          position_title: string
+          positions_count?: number
+          requested_by_employee_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          justification?: string | null
+          position_title?: string
+          positions_count?: number
+          requested_by_employee_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_review_ratings: {
         Row: {
           criteria_id: string
@@ -1688,6 +1857,71 @@ export type Database = {
         }
         Relationships: []
       }
+      question_bank: {
+        Row: {
+          config: Json
+          created_at: string
+          department: string | null
+          id: string
+          is_active: boolean
+          is_required_default: boolean
+          question_text: string
+          question_type: string
+          sort_order: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_active?: boolean
+          is_required_default?: boolean
+          question_text: string
+          question_type: string
+          sort_order?: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_active?: boolean
+          is_required_default?: boolean
+          question_text?: string
+          question_type?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      question_bank_options: {
+        Row: {
+          bank_question_id: string
+          id: string
+          option_text: string
+          sort_order: number
+        }
+        Insert: {
+          bank_question_id: string
+          id?: string
+          option_text: string
+          sort_order?: number
+        }
+        Update: {
+          bank_question_id?: string
+          id?: string
+          option_text?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_options_bank_question_id_fkey"
+            columns: ["bank_question_id"]
+            isOneToOne: false
+            referencedRelation: "question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rating_scale: {
         Row: {
           category: string
@@ -1720,7 +1954,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      copy_bank_question_to_job_request: {
+        Args: {
+          p_bank_question_id: string
+          p_job_request_id: string
+          p_sort_order?: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

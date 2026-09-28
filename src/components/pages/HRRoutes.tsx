@@ -12,6 +12,9 @@ import EmployeeDetailsPage from "../../pages/hr/EmployeeDetailsPage";
 import ApplicantsPage from "../../pages/hr/ApplicantsPage";
 import NewApplicantPage from "../../pages/hr/NewApplicantPage";
 import ApplicantDetailsPage from "../../pages/hr/ApplicantDetailsPage";
+import JobRequestsPage from "../../pages/hr/JobRequestsPage";
+import NewJobRequestPage from "../../pages/hr/NewJobRequestPage";
+import JobRequestDetailsPage from "../../pages/hr/JobRequestDetailsPage";
 
 export default function HRRoutes() {
   return (
@@ -33,6 +36,14 @@ export default function HRRoutes() {
         </Route>
         <Route element={<RequirePermission permission="create_applicant" />}>
           <Route path="applicants/new" element={<NewApplicantPage />} />
+        </Route>
+
+        <Route element={<RequirePermission permission="view_job_requests" />}>
+          <Route path="job-requests" element={<JobRequestsPage />} />
+          <Route path="job-requests/:id" element={<JobRequestDetailsPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="manage_job_requests" />}>
+          <Route path="job-requests/new" element={<NewJobRequestPage />} />
         </Route>
 
         <Route path="loans-advances" element={<LoansAdvancesPage />} />

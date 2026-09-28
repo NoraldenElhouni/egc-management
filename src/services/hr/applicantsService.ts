@@ -11,6 +11,21 @@ const normalize = (v?: string | null) => {
 };
 
 export const createApplicant = async (data: ApplicantFormValues) => {
+  const { data: jobRequest, error: jobRequestError } = await hrDb()
+    .from("job_requests")
+    .select("position_title")
+    .eq("id", data.jobRequestId)
+    .single();
+
+  if (jobRequestError || !jobRequest) {
+    console.error("Error resolving job request:", jobRequestError);
+    return {
+      success: false,
+      error: jobRequestError,
+      message: "الوظيفة الشاغرة المختارة غير موجودة",
+    };
+  }
+
   const { data: applicant, error } = await hrDb()
     .from("applicants")
     .insert({
@@ -22,7 +37,8 @@ export const createApplicant = async (data: ApplicantFormValues) => {
       university: normalize(data.university),
       gpa_grade: normalize(data.gpaGrade),
       graduation_year: data.graduationYear ?? null,
-      applied_position: normalize(data.appliedPosition),
+      job_request_id: data.jobRequestId,
+      applied_position: jobRequest.position_title,
       experience_level: data.experienceLevel ?? null,
       current_employment_status: data.currentEmploymentStatus ?? null,
       application_source: normalize(data.applicationSource),

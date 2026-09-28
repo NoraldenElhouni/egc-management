@@ -13,7 +13,7 @@ export const applicantSchema = z.object({
   university: z.string().optional(),
   gpaGrade: z.string().optional(),
   graduationYear: optionalNumber({ min: 1950, max: 2100 }),
-  appliedPosition: z.string().trim().min(1, "الوظيفة المتقدم عليها مطلوبة"),
+  jobRequestId: z.string().min(1, "يجب اختيار وظيفة شاغرة"),
   experienceLevel: z.preprocess(
     emptyToUndefined,
     z.enum(["none", "1_3", "3_5", "5_plus"]).optional(),

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -9,13 +9,17 @@ import { SelectField } from "../../ui/inputs/SelectField";
 import { DateField } from "../../ui/inputs/DateField";
 import { NumberField } from "../../ui/inputs/NumberField";
 import { TextAreaField } from "../../ui/inputs/TextAreaField";
+import DynamicQuestionField, {
+  DynamicAnswerValue,
+} from "../shared/DynamicQuestionField";
 import {
   applicantSchema,
   ApplicantFormValues,
 } from "../../../types/schema/applicant.schema";
 import { createApplicant } from "../../../services/hr/applicantsService";
-import { useUtils } from "../../../hooks/useUtils";
-import { roleTranslations } from "../../../utils/translations";
+import { submitAnswers } from "../../../services/hr/applicantAnswersService";
+import { useJobRequests } from "../../../hooks/hr/useJobRequests";
+import { useJobRequestQuestions } from "../../../hooks/hr/useJobRequestQuestions";
 import {
   APPLICANT_GENDER_OPTIONS,
   APPLICATION_SOURCE_OPTIONS,
@@ -25,36 +29,65 @@ import {
   UNIVERSITY_OPTIONS,
 } from "../../../types/hr.type";
 
-const NON_HIRING_ROLES = ["client", "contractor", "supplier"];
-
 const ApplicantForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { roles } = useUtils();
+  const { jobRequests, loading: jobRequestsLoading } = useJobRequests(true);
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ApplicantFormValues>({
     resolver: zodResolver(applicantSchema) as unknown as Resolver<ApplicantFormValues>,
   });
 
-  const positionOptions = roles
-    .filter((role) => !NON_HIRING_ROLES.includes((role.name || "").toLowerCase()))
-    .map((role) => {
-      const label = roleTranslations[role.code] || role.name;
-      return { value: label, label };
-    });
+  const jobRequestId = useWatch({ control, name: "jobRequestId" });
+  const { questions } = useJobRequestQuestions(jobRequestId || undefined);
+
+  const [answers, setAnswers] = useState<Record<string, DynamicAnswerValue>>(
+    {},
+  );
+
+  const handleAnswerChange = (questionId: string, value: DynamicAnswerValue) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  };
 
   const onSubmit = async (data: ApplicantFormValues) => {
+    const unanswered = questions.filter((q) => {
+      if (!q.is_required) return false;
+      const a = answers[q.id];
+      if (!a) return true;
+      return !a.answerText && (!a.selectedOptionIds || a.selectedOptionIds.length === 0);
+    });
+    if (unanswered.length > 0) {
+      alert("يرجى الإجابة على جميع الأسئلة الإجبارية قبل الإرسال");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await createApplicant(data);
-      if (!response.success) {
+      if (!response.success || !("data" in response) || !response.data) {
         alert("خطأ في تسجيل بيانات المتقدم: " + response.message);
         return;
       }
+
+      if (questions.length > 0) {
+        const { success, message } = await submitAnswers(
+          response.data.id,
+          questions.map((q) => ({
+            jobRequestQuestionId: q.id,
+            answerText: answers[q.id]?.answerText,
+            selectedOptionIds: answers[q.id]?.selectedOptionIds,
+          })),
+        );
+        if (!success) {
+          alert(message ?? "تم تسجيل البيانات لكن فشل حفظ إجابات الاستبيان");
+        }
+      }
+
       navigate("/hr/applicants");
     } catch (error) {
       console.error("Unexpected error creating applicant:", error);
@@ -77,11 +110,23 @@ const ApplicantForm: React.FC = () => {
         noValidate
       >
         <SelectField
-          id="appliedPosition"
+          id="jobRequestId"
           label="الوظيفة المتقدم عليها"
-          options={positionOptions}
-          register={register("appliedPosition")}
-          error={errors.appliedPosition}
+          options={jobRequests.map((jr) => ({
+            value: jr.id,
+            label: jr.department
+              ? `${jr.position_title} (${jr.department})`
+              : jr.position_title,
+          }))}
+          register={register("jobRequestId")}
+          error={errors.jobRequestId}
+          placeholder={
+            jobRequestsLoading
+              ? "جاري التحميل..."
+              : jobRequests.length === 0
+                ? "لا توجد وظائف شاغرة حالياً"
+                : "-- اختر --"
+          }
         />
 
         <TextField
@@ -180,6 +225,22 @@ const ApplicantForm: React.FC = () => {
         <p className="md:col-span-2 text-xs text-gray-500">
           يمكن رفع السيرة الذاتية لاحقاً من صفحة المتقدم بعد التسجيل.
         </p>
+
+        {questions.length > 0 && (
+          <div className="md:col-span-2 pt-4 border-t space-y-4">
+            <h2 className="text-md font-medium text-gray-800">
+              أسئلة إضافية عن هذه الوظيفة
+            </h2>
+            {questions.map((q) => (
+              <DynamicQuestionField
+                key={q.id}
+                question={q}
+                value={answers[q.id] ?? {}}
+                onChange={(value) => handleAnswerChange(q.id, value)}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="md:col-span-2 flex justify-end mt-3">
           <Button loading={loading} type="submit">

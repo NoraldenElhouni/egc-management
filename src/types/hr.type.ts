@@ -31,6 +31,66 @@ export interface PerformanceReviewWithRatings extends PerformanceReview {
   reviewer_name?: string | null;
 }
 
+export type JobRequest = Database["hr"]["Tables"]["job_requests"]["Row"];
+
+export type QuestionBank = Database["hr"]["Tables"]["question_bank"]["Row"];
+export type QuestionBankOption =
+  Database["hr"]["Tables"]["question_bank_options"]["Row"];
+
+export interface QuestionBankWithOptions extends QuestionBank {
+  question_bank_options: QuestionBankOption[];
+}
+
+export type JobRequestQuestion =
+  Database["hr"]["Tables"]["job_request_questions"]["Row"];
+export type JobRequestQuestionOption =
+  Database["hr"]["Tables"]["job_request_question_options"]["Row"];
+
+export interface JobRequestQuestionWithOptions extends JobRequestQuestion {
+  job_request_question_options: JobRequestQuestionOption[];
+}
+
+export type ApplicantAnswer =
+  Database["hr"]["Tables"]["applicant_answers"]["Row"];
+
+export interface ApplicantAnswerWithQuestion extends ApplicantAnswer {
+  job_request_questions: JobRequestQuestionWithOptions | null;
+}
+
+export const JOB_REQUEST_STATUS_OPTIONS = [
+  { value: "draft", label: "مسودة" },
+  { value: "open", label: "مفتوح" },
+  { value: "closed", label: "مغلق" },
+  { value: "filled", label: "تم الشغل" },
+  { value: "cancelled", label: "ملغى" },
+] as const;
+export type JobRequestStatus =
+  (typeof JOB_REQUEST_STATUS_OPTIONS)[number]["value"];
+
+export const QUESTION_TYPE_OPTIONS = [
+  { value: "text", label: "نص قصير" },
+  { value: "textarea", label: "نص طويل" },
+  { value: "number", label: "رقم" },
+  { value: "single_choice", label: "اختيار واحد" },
+  { value: "multi_choice", label: "اختيار متعدد" },
+  { value: "checkbox", label: "مربعات اختيار" },
+  { value: "rating", label: "تقييم رقمي" },
+  { value: "yes_no", label: "نعم / لا" },
+] as const;
+export type QuestionType = (typeof QUESTION_TYPE_OPTIONS)[number]["value"];
+
+/** question_type values whose answer is one or more picked options. */
+export const CHOICE_QUESTION_TYPES: QuestionType[] = [
+  "single_choice",
+  "multi_choice",
+  "checkbox",
+];
+/** question_type values that let the applicant pick more than one option. */
+export const MULTI_SELECT_QUESTION_TYPES: QuestionType[] = [
+  "multi_choice",
+  "checkbox",
+];
+
 // ── option lists / labels for every check-constraint enum ──────────────
 
 export const APPLICATION_STATUS_OPTIONS = [
@@ -151,3 +211,7 @@ export const recommendationLabel = (value: string | null | undefined) =>
   labelFrom(RECOMMENDATION_OPTIONS, value);
 export const overallRecommendationLabel = (value: string | null | undefined) =>
   labelFrom(OVERALL_RECOMMENDATION_OPTIONS, value);
+export const jobRequestStatusLabel = (value: string | null | undefined) =>
+  labelFrom(JOB_REQUEST_STATUS_OPTIONS, value);
+export const questionTypeLabel = (value: string | null | undefined) =>
+  labelFrom(QUESTION_TYPE_OPTIONS, value);

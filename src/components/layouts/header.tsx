@@ -12,6 +12,8 @@ const Header = () => {
     if (path.startsWith("/hr/employees/new")) return "إضافة موظف جديد";
     if (path.startsWith("/hr/applicants/new")) return "إضافة متقدم جديد";
     if (path.startsWith("/hr/applicants")) return "المتقدمين للوظائف";
+    if (path.startsWith("/hr/job-requests/new")) return "طلب توظيف جديد";
+    if (path.startsWith("/hr/job-requests")) return "طلبات التوظيف";
     if (path.startsWith("/hr")) return "إدارة الموارد البشرية";
     if (path.startsWith("/crm")) return "إدارة علاقات العملاء";
     if (path.startsWith("/supply-chain")) return "سلسلة التوريد";
@@ -20,6 +22,7 @@ const Header = () => {
     if (path.startsWith("/finance")) return "المالية";
     if (path.startsWith("/profile")) return "الملف الشخصي";
     if (path.startsWith("/settings/evaluation-settings")) return "إعدادات التقييم";
+    if (path.startsWith("/settings/question-bank")) return "بنك الأسئلة";
     if (path.startsWith("/settings")) return "الإعدادات";
     if (path.startsWith("/tasks")) return "إدارة المهام";
     if (path.startsWith("/website")) return "إدارة الموقع";
@@ -41,7 +44,9 @@ const Header = () => {
     employee: "الموظف",
     applicants: "المتقدمين للوظائف",
     applicant: "المتقدم",
+    "job-requests": "طلبات التوظيف",
     "evaluation-settings": "إعدادات التقييم",
+    "question-bank": "بنك الأسئلة",
     crm: "إدارة علاقات العملاء",
     "supply-chain": "سلسلة التوريد",
     projects: "المشاريع",

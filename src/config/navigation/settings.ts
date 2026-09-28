@@ -4,6 +4,7 @@ import {
   Building2,
   ClipboardCheck,
   Globe,
+  HelpCircle,
   KeyRound,
   Landmark,
   Logs,
@@ -106,5 +107,12 @@ export const SETTINGS_ITEMS: NavItem[] = [
     path: "/settings/evaluation-settings",
     description: "بنود وسلم تقييم المقابلات والأداء",
     permission: "manage_evaluation_settings",
+  },
+  {
+    label: "بنك الأسئلة",
+    icon: HelpCircle,
+    path: "/settings/question-bank",
+    description: "مكتبة أسئلة استبيانات طلبات التوظيف",
+    permission: "manage_question_bank",
   },
 ];

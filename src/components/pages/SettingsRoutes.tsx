@@ -30,6 +30,7 @@ import DepartmentDetailPage from "../../pages/settings/departments/DepartmentDet
 import RolePermissionsListPage from "../../pages/settings/permissions/RolePermissionsListPage";
 import RolePermissionsDetailPage from "../../pages/settings/permissions/RolePermissionsDetailPage";
 import EvaluationSettingsPage from "../../pages/settings/evaluation/EvaluationSettingsPage";
+import QuestionBankPage from "../../pages/settings/questionBank/QuestionBankPage";
 
 export default function SettingsRoutes() {
   return (
@@ -143,6 +144,12 @@ export default function SettingsRoutes() {
             path="evaluation-settings"
             element={<EvaluationSettingsPage />}
           />
+        </Route>
+
+        <Route
+          element={<RequirePermission permission="manage_question_bank" />}
+        >
+          <Route path="question-bank" element={<QuestionBankPage />} />
         </Route>
       </Route>
     </Routes>

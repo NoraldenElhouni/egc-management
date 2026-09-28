@@ -5,10 +5,12 @@ import HireApplicantButton from "../../components/hr/applicants/HireApplicantBut
 import InterviewRoundsSection from "../../components/hr/applicants/InterviewRoundsSection";
 import InterviewEvaluationForm from "../../components/hr/applicants/InterviewEvaluationForm";
 import InterviewEvaluationHistory from "../../components/hr/applicants/InterviewEvaluationHistory";
+import ApplicantAnswersCard from "../../components/hr/applicants/ApplicantAnswersCard";
 import { useApplicant } from "../../hooks/hr/useApplicant";
 import { useInterviewRounds } from "../../hooks/hr/useInterviewRounds";
 import { useInterviewEvaluations } from "../../hooks/hr/useInterviewEvaluations";
 import { useEvaluationConfig } from "../../hooks/hr/useEvaluationConfig";
+import { useApplicantAnswers } from "../../hooks/hr/useApplicantAnswers";
 import { useCan } from "../../hooks/permissions/useCan";
 
 const ApplicantDetailsPage = () => {
@@ -19,6 +21,7 @@ const ApplicantDetailsPage = () => {
   const roundsState = useInterviewRounds(applicantId);
   const { evaluations } = useInterviewEvaluations(applicantId);
   const { criteria, ratingScale } = useEvaluationConfig("interview");
+  const { answers } = useApplicantAnswers(applicantId);
   const { can: canEvaluate } = useCan("evaluate_applicants");
 
   if (loading) return <div className="p-6">جاري التحميل...</div>;
@@ -37,6 +40,15 @@ const ApplicantDetailsPage = () => {
       </div>
 
       <ApplicantPersonalInfoCard applicant={applicant} onUpdated={refetch} />
+
+      {answers.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-6 border">
+          <h3 className="text-md font-medium text-gray-800 mb-4">
+            إجابات استبيان الوظيفة
+          </h3>
+          <ApplicantAnswersCard answers={answers} />
+        </div>
+      )}
 
       <InterviewRoundsSection
         rounds={roundsState.rounds}

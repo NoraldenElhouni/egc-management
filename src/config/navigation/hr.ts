@@ -1,4 +1,11 @@
-import { UserPlus, Users, ClipboardList, UserSearch } from "lucide-react";
+import {
+  UserPlus,
+  Users,
+  ClipboardList,
+  UserSearch,
+  Briefcase,
+  FilePlus2,
+} from "lucide-react";
 import type { NavItem } from "./types";
 
 export const HR_ITEMS: NavItem[] = [
@@ -29,5 +36,19 @@ export const HR_ITEMS: NavItem[] = [
     path: "/hr/applicants/new",
     description: "تسجيل بيانات متقدم جديد",
     permission: "create_applicant",
+  },
+  {
+    label: "طلبات التوظيف",
+    icon: Briefcase,
+    path: "/hr/job-requests",
+    description: "إدارة طلبات فتح الوظائف واستبياناتها",
+    permission: "view_job_requests",
+  },
+  {
+    label: "طلب توظيف جديد",
+    icon: FilePlus2,
+    path: "/hr/job-requests/new",
+    description: "تسجيل طلب فتح وظيفة جديدة",
+    permission: "manage_job_requests",
   },
 ];
