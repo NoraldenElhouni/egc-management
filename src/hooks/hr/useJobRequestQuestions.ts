@@ -66,7 +66,7 @@ export function useJobRequestQuestions(jobRequestId: string | undefined) {
   );
 
   const update = useCallback(
-    async (id: string, fields: { question_text?: string; is_required?: boolean }) => {
+    async (id: string, fields: Parameters<typeof updateJobRequestQuestion>[1]) => {
       const { error } = await updateJobRequestQuestion(id, fields);
       if (error) return { success: false };
       await refetch();
@@ -101,7 +101,11 @@ export function useJobRequestQuestions(jobRequestId: string | undefined) {
   );
 
   const addOption = useCallback(
-    async (jobRequestQuestionId: string, optionText: string) => {
+    async (
+      jobRequestQuestionId: string,
+      optionText: string,
+      score: number,
+    ) => {
       const question = questions.find((q) => q.id === jobRequestQuestionId);
       const nextSortOrder =
         (question?.job_request_question_options ?? []).reduce(
@@ -112,6 +116,7 @@ export function useJobRequestQuestions(jobRequestId: string | undefined) {
         jobRequestQuestionId,
         optionText,
         nextSortOrder,
+        score,
       );
       if (error) return { success: false };
       await refetch();
@@ -121,10 +126,11 @@ export function useJobRequestQuestions(jobRequestId: string | undefined) {
   );
 
   const editOption = useCallback(
-    async (optionId: string, optionText: string) => {
+    async (optionId: string, optionText: string, score: number) => {
       const { error } = await updateJobRequestQuestionOption(
         optionId,
         optionText,
+        score,
       );
       if (error) return { success: false };
       await refetch();

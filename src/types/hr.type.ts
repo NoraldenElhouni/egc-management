@@ -57,6 +57,14 @@ export interface ApplicantAnswerWithQuestion extends ApplicantAnswer {
   job_request_questions: JobRequestQuestionWithOptions | null;
 }
 
+export type UniversityTier =
+  Database["hr"]["Tables"]["university_tiers"]["Row"];
+export type University = Database["hr"]["Tables"]["universities"]["Row"];
+export type GpaTier = Database["hr"]["Tables"]["gpa_tiers"]["Row"];
+export type ExperienceLevelScore =
+  Database["hr"]["Tables"]["experience_level_scores"]["Row"];
+export type ApplicantScore = Database["hr"]["Views"]["applicant_scores"]["Row"];
+
 export const JOB_REQUEST_STATUS_OPTIONS = [
   { value: "draft", label: "مسودة" },
   { value: "open", label: "مفتوح" },
@@ -117,8 +125,8 @@ export const CURRENT_EMPLOYMENT_STATUS_OPTIONS = [
   { value: "working", label: "أعمل حالياً" },
 ] as const;
 
-// Starter lists for the applicant form's specialization/university/source
-// dropdowns — placeholders until a real list is provided.
+// Starter lists for the applicant form's specialization/source
+// dropdowns (universities and GPA tiers now come from the hr scoring catalog) — placeholders until a real list is provided.
 export const SPECIALIZATION_OPTIONS = [
   { value: "هندسة مدنية", label: "هندسة مدنية" },
   { value: "هندسة كهربائية", label: "هندسة كهربائية" },
@@ -129,18 +137,6 @@ export const SPECIALIZATION_OPTIONS = [
   { value: "علوم حاسوب / تقنية معلومات", label: "علوم حاسوب / تقنية معلومات" },
   { value: "اقتصاد", label: "اقتصاد" },
   { value: "قانون", label: "قانون" },
-  { value: "أخرى", label: "أخرى" },
-] as const;
-
-export const UNIVERSITY_OPTIONS = [
-  { value: "جامعة طرابلس", label: "جامعة طرابلس" },
-  { value: "جامعة بنغازي", label: "جامعة بنغازي" },
-  { value: "الجامعة الأسمرية", label: "الجامعة الأسمرية" },
-  { value: "جامعة مصراتة", label: "جامعة مصراتة" },
-  { value: "جامعة الزاوية", label: "جامعة الزاوية" },
-  { value: "جامعة سبها", label: "جامعة سبها" },
-  { value: "جامعة عمر المختار", label: "جامعة عمر المختار" },
-  { value: "المعهد العالي للعلوم والتقنية", label: "المعهد العالي للعلوم والتقنية" },
   { value: "أخرى", label: "أخرى" },
 ] as const;
 

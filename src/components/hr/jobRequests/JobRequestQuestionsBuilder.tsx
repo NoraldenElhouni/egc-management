@@ -17,6 +17,11 @@ import Button from "../../ui/Button";
 import ConfirmDialog from "../../ui/ConfirmDialog";
 import SortableConfigRow from "../settings/SortableConfigRow";
 import QuestionOptionsEditor from "../shared/QuestionOptionsEditor";
+import QuestionScoringFields, {
+  DEFAULT_SCORING_VALUE,
+  buildScoringConfig,
+  type QuestionScoringValue,
+} from "../shared/QuestionScoringFields";
 import { useJobRequestQuestions } from "../../../hooks/hr/useJobRequestQuestions";
 import { useQuestionBank } from "../../../hooks/hr/useQuestionBank";
 import { useCan } from "../../../hooks/permissions/useCan";
@@ -26,6 +31,12 @@ import {
   QuestionType,
   questionTypeLabel,
 } from "../../../types/hr.type";
+
+interface NewOption {
+  text: string;
+  score: string;
+}
+const EMPTY_OPTION: NewOption = { text: "", score: "0" };
 
 interface JobRequestQuestionsBuilderProps {
   jobRequestId: string;
@@ -57,7 +68,10 @@ const JobRequestQuestionsBuilder: React.FC<JobRequestQuestionsBuilderProps> = ({
   const [newText, setNewText] = useState("");
   const [newType, setNewType] = useState<QuestionType>("text");
   const [newRequired, setNewRequired] = useState(true);
-  const [newOptions, setNewOptions] = useState<string[]>([""]);
+  const [newOptions, setNewOptions] = useState<NewOption[]>([EMPTY_OPTION]);
+  const [newScoring, setNewScoring] = useState<QuestionScoringValue>(
+    DEFAULT_SCORING_VALUE,
+  );
   const [saving, setSaving] = useState(false);
 
   const sensors = useSensors(
@@ -89,8 +103,12 @@ const JobRequestQuestionsBuilder: React.FC<JobRequestQuestionsBuilderProps> = ({
         questionText: newText,
         questionType: newType,
         isRequired: newRequired,
+        weight: Number(newScoring.weight) || 0,
+        config: buildScoringConfig(newType, newScoring),
         options: isChoice
-          ? newOptions.map((o) => o.trim()).filter(Boolean)
+          ? newOptions
+              .map((o) => ({ text: o.text.trim(), score: Number(o.score) || 0 }))
+              .filter((o) => o.text)
           : undefined,
       });
       if (!result.success) {
@@ -100,7 +118,8 @@ const JobRequestQuestionsBuilder: React.FC<JobRequestQuestionsBuilderProps> = ({
       setNewText("");
       setNewType("text");
       setNewRequired(true);
-      setNewOptions([""]);
+      setNewOptions([EMPTY_OPTION]);
+      setNewScoring(DEFAULT_SCORING_VALUE);
       setShowNewForm(false);
     } finally {
       setSaving(false);
@@ -200,19 +219,40 @@ const JobRequestQuestionsBuilder: React.FC<JobRequestQuestionsBuilderProps> = ({
             </label>
           </div>
 
+          <QuestionScoringFields
+            type={newType}
+            value={newScoring}
+            onChange={setNewScoring}
+          />
+
           {isChoiceType && (
             <div className="space-y-1.5">
               {newOptions.map((opt, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input
-                    value={opt}
+                    value={opt.text}
                     onChange={(e) =>
                       setNewOptions((prev) =>
-                        prev.map((o, i) => (i === index ? e.target.value : o)),
+                        prev.map((o, i) =>
+                          i === index ? { ...o, text: e.target.value } : o,
+                        ),
                       )
                     }
                     placeholder={`خيار ${index + 1}`}
                     className="flex-1 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
+                  />
+                  <input
+                    type="number"
+                    value={opt.score}
+                    onChange={(e) =>
+                      setNewOptions((prev) =>
+                        prev.map((o, i) =>
+                          i === index ? { ...o, score: e.target.value } : o,
+                        ),
+                      )
+                    }
+                    title="الدرجة"
+                    className="w-16 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
                   />
                   <button
                     type="button"
@@ -227,7 +267,7 @@ const JobRequestQuestionsBuilder: React.FC<JobRequestQuestionsBuilderProps> = ({
               ))}
               <button
                 type="button"
-                onClick={() => setNewOptions((prev) => [...prev, ""])}
+                onClick={() => setNewOptions((prev) => [...prev, EMPTY_OPTION])}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> إضافة خيار
@@ -273,14 +313,19 @@ const JobRequestQuestionsBuilder: React.FC<JobRequestQuestionsBuilderProps> = ({
                       {q.is_required && (
                         <span className="text-xs text-error">إجباري</span>
                       )}
+                      <span className="text-xs text-gray-400">
+                        الوزن: {q.weight}
+                      </span>
                     </div>
                     {CHOICE_QUESTION_TYPES.includes(
                       q.question_type as QuestionType,
                     ) && (
                       <QuestionOptionsEditor
                         options={q.job_request_question_options}
-                        onAdd={(text) => addOption(q.id, text)}
-                        onUpdate={(id, text) => editOption(id, text)}
+                        onAdd={(text, score) => addOption(q.id, text, score)}
+                        onUpdate={(id, text, score) =>
+                          editOption(id, text, score)
+                        }
                         onDelete={(id) => removeOption(id)}
                       />
                     )}

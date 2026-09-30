@@ -20,19 +20,20 @@ import { createApplicant } from "../../../services/hr/applicantsService";
 import { submitAnswers } from "../../../services/hr/applicantAnswersService";
 import { useJobRequests } from "../../../hooks/hr/useJobRequests";
 import { useJobRequestQuestions } from "../../../hooks/hr/useJobRequestQuestions";
+import { useScoringConfig } from "../../../hooks/hr/useScoringConfig";
 import {
   APPLICANT_GENDER_OPTIONS,
   APPLICATION_SOURCE_OPTIONS,
   CURRENT_EMPLOYMENT_STATUS_OPTIONS,
   EXPERIENCE_LEVEL_OPTIONS,
   SPECIALIZATION_OPTIONS,
-  UNIVERSITY_OPTIONS,
 } from "../../../types/hr.type";
 
 const ApplicantForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { jobRequests, loading: jobRequestsLoading } = useJobRequests(true);
+  const { universities, gpaTiers } = useScoringConfig();
 
   const {
     register,
@@ -68,7 +69,16 @@ const ApplicantForm: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await createApplicant(data);
+      // Keep the free-text columns populated from the catalog choice so
+      // existing screens that show `university` / `gpa_grade` keep working.
+      const response = await createApplicant({
+        ...data,
+        university:
+          universities.find((u) => u.id === data.universityId)?.name ??
+          data.university,
+        gpaGrade:
+          gpaTiers.find((g) => g.id === data.gpaTierId)?.label ?? data.gpaGrade,
+      });
       if (!response.success || !("data" in response) || !response.data) {
         alert("خطأ في تسجيل بيانات المتقدم: " + response.message);
         return;
@@ -167,18 +177,19 @@ const ApplicantForm: React.FC = () => {
         />
 
         <SelectField
-          id="university"
+          id="universityId"
           label="الجامعة / المعهد"
-          options={UNIVERSITY_OPTIONS.map((o) => ({ ...o }))}
-          register={register("university")}
-          error={errors.university}
+          options={universities.map((u) => ({ value: u.id, label: u.name }))}
+          register={register("universityId")}
+          error={errors.universityId}
         />
 
-        <TextField
-          id="gpaGrade"
+        <SelectField
+          id="gpaTierId"
           label="المعدل / التقدير"
-          register={register("gpaGrade")}
-          error={errors.gpaGrade}
+          options={gpaTiers.map((g) => ({ value: g.id, label: g.label }))}
+          register={register("gpaTierId")}
+          error={errors.gpaTierId}
         />
 
         <NumberField

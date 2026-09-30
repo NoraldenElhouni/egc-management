@@ -1,4 +1,5 @@
 import {
+  Award,
   BookText,
   Box,
   Building2,
@@ -106,6 +107,13 @@ export const SETTINGS_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     path: "/settings/evaluation-settings",
     description: "بنود وسلم تقييم المقابلات والأداء",
+    permission: "manage_evaluation_settings",
+  },
+  {
+    label: "درجات المتقدمين",
+    icon: Award,
+    path: "/settings/scoring-settings",
+    description: "درجات الجامعات والمعدل وسنوات الخبرة",
     permission: "manage_evaluation_settings",
   },
   {

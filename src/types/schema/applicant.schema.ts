@@ -11,7 +11,9 @@ export const applicantSchema = z.object({
   phoneWhatsapp: z.string().trim().min(8, "رقم الهاتف مطلوب"),
   specialization: z.string().optional(),
   university: z.string().optional(),
+  universityId: z.string().optional(),
   gpaGrade: z.string().optional(),
+  gpaTierId: z.string().optional(),
   graduationYear: optionalNumber({ min: 1950, max: 2100 }),
   jobRequestId: z.string().min(1, "يجب اختيار وظيفة شاغرة"),
   experienceLevel: z.preprocess(

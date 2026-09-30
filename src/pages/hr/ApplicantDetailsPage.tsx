@@ -6,11 +6,14 @@ import InterviewRoundsSection from "../../components/hr/applicants/InterviewRoun
 import InterviewEvaluationForm from "../../components/hr/applicants/InterviewEvaluationForm";
 import InterviewEvaluationHistory from "../../components/hr/applicants/InterviewEvaluationHistory";
 import ApplicantAnswersCard from "../../components/hr/applicants/ApplicantAnswersCard";
+import ApplicantScoreCard from "../../components/hr/applicants/ApplicantScoreCard";
 import { useApplicant } from "../../hooks/hr/useApplicant";
 import { useInterviewRounds } from "../../hooks/hr/useInterviewRounds";
 import { useInterviewEvaluations } from "../../hooks/hr/useInterviewEvaluations";
 import { useEvaluationConfig } from "../../hooks/hr/useEvaluationConfig";
 import { useApplicantAnswers } from "../../hooks/hr/useApplicantAnswers";
+import { useApplicantScore } from "../../hooks/hr/useApplicantScore";
+import { setAnswerScore } from "../../services/hr/applicantAnswersService";
 import { useCan } from "../../hooks/permissions/useCan";
 
 const ApplicantDetailsPage = () => {
@@ -21,8 +24,18 @@ const ApplicantDetailsPage = () => {
   const roundsState = useInterviewRounds(applicantId);
   const { evaluations } = useInterviewEvaluations(applicantId);
   const { criteria, ratingScale } = useEvaluationConfig("interview");
-  const { answers } = useApplicantAnswers(applicantId);
+  const { answers, refetch: refetchAnswers } = useApplicantAnswers(applicantId);
+  const { score, refetch: refetchScore } = useApplicantScore(applicantId);
   const { can: canEvaluate } = useCan("evaluate_applicants");
+
+  const handleScoreAnswer = async (answerId: string, value: number | null) => {
+    const { error: scoreError } = await setAnswerScore(answerId, value);
+    if (scoreError) {
+      alert("فشل في حفظ الدرجة");
+      return;
+    }
+    await Promise.all([refetchAnswers(), refetchScore()]);
+  };
 
   if (loading) return <div className="p-6">جاري التحميل...</div>;
   if (error || !applicant)
@@ -41,12 +54,17 @@ const ApplicantDetailsPage = () => {
 
       <ApplicantPersonalInfoCard applicant={applicant} onUpdated={refetch} />
 
+      <ApplicantScoreCard score={score} />
+
       {answers.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-6 border">
           <h3 className="text-md font-medium text-gray-800 mb-4">
             إجابات استبيان الوظيفة
           </h3>
-          <ApplicantAnswersCard answers={answers} />
+          <ApplicantAnswersCard
+            answers={answers}
+            onScore={canEvaluate ? handleScoreAnswer : undefined}
+          />
         </div>
       )}
 

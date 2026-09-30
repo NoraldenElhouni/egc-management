@@ -17,7 +17,8 @@ export interface CreateBankQuestionInput {
   questionType: QuestionType;
   isRequiredDefault: boolean;
   config?: Json;
-  options?: string[];
+  weight?: number;
+  options?: { text: string; score: number }[];
 }
 
 export const createBankQuestion = async (input: CreateBankQuestionInput) => {
@@ -36,6 +37,7 @@ export const createBankQuestion = async (input: CreateBankQuestionInput) => {
       question_type: input.questionType,
       is_required_default: input.isRequiredDefault,
       config: input.config ?? {},
+      weight: input.weight ?? 1,
       sort_order: nextSortOrder,
     })
     .select()
@@ -50,9 +52,10 @@ export const createBankQuestion = async (input: CreateBankQuestionInput) => {
     const { error: optionsError } = await hrDb()
       .from("question_bank_options")
       .insert(
-        input.options.map((text, index) => ({
+        input.options.map((o, index) => ({
           bank_question_id: question.id,
-          option_text: text,
+          option_text: o.text,
+          score: o.score,
           sort_order: index,
         })),
       );
@@ -71,7 +74,12 @@ export const createBankQuestion = async (input: CreateBankQuestionInput) => {
 
 export const updateBankQuestion = async (
   id: string,
-  fields: { question_text?: string; is_required_default?: boolean },
+  fields: {
+    question_text?: string;
+    is_required_default?: boolean;
+    weight?: number;
+    config?: Json;
+  },
 ) => {
   return hrDb().from("question_bank").update(fields).eq("id", id);
 };
@@ -100,22 +108,28 @@ export const addBankOption = async (
   bankQuestionId: string,
   optionText: string,
   sortOrder: number,
+  score = 0,
 ) => {
   return hrDb()
     .from("question_bank_options")
     .insert({
       bank_question_id: bankQuestionId,
       option_text: optionText.trim(),
+      score,
       sort_order: sortOrder,
     })
     .select()
     .single();
 };
 
-export const updateBankOption = async (id: string, optionText: string) => {
+export const updateBankOption = async (
+  id: string,
+  optionText: string,
+  score: number,
+) => {
   return hrDb()
     .from("question_bank_options")
-    .update({ option_text: optionText.trim() })
+    .update({ option_text: optionText.trim(), score })
     .eq("id", id);
 };
 

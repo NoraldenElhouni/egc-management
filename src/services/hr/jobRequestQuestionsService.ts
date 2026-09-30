@@ -34,7 +34,8 @@ export interface AddFreeformQuestionInput {
   questionType: QuestionType;
   isRequired: boolean;
   config?: Json;
-  options?: string[];
+  weight?: number;
+  options?: { text: string; score: number }[];
 }
 
 export const addFreeformQuestion = async (input: AddFreeformQuestionInput) => {
@@ -54,6 +55,7 @@ export const addFreeformQuestion = async (input: AddFreeformQuestionInput) => {
       question_type: input.questionType,
       is_required: input.isRequired,
       config: input.config ?? {},
+      weight: input.weight ?? 1,
       sort_order: nextSortOrder,
     })
     .select()
@@ -68,9 +70,10 @@ export const addFreeformQuestion = async (input: AddFreeformQuestionInput) => {
     const { error: optionsError } = await hrDb()
       .from("job_request_question_options")
       .insert(
-        input.options.map((text, index) => ({
+        input.options.map((o, index) => ({
           job_request_question_id: question.id,
-          option_text: text,
+          option_text: o.text,
+          score: o.score,
           sort_order: index,
         })),
       );
@@ -89,7 +92,12 @@ export const addFreeformQuestion = async (input: AddFreeformQuestionInput) => {
 
 export const updateJobRequestQuestion = async (
   id: string,
-  fields: { question_text?: string; is_required?: boolean },
+  fields: {
+    question_text?: string;
+    is_required?: boolean;
+    weight?: number;
+    config?: Json;
+  },
 ) => {
   return hrDb().from("job_request_questions").update(fields).eq("id", id);
 };
@@ -115,12 +123,14 @@ export const addJobRequestQuestionOption = async (
   jobRequestQuestionId: string,
   optionText: string,
   sortOrder: number,
+  score = 0,
 ) => {
   return hrDb()
     .from("job_request_question_options")
     .insert({
       job_request_question_id: jobRequestQuestionId,
       option_text: optionText.trim(),
+      score,
       sort_order: sortOrder,
     })
     .select()
@@ -130,10 +140,11 @@ export const addJobRequestQuestionOption = async (
 export const updateJobRequestQuestionOption = async (
   id: string,
   optionText: string,
+  score: number,
 ) => {
   return hrDb()
     .from("job_request_question_options")
-    .update({ option_text: optionText.trim() })
+    .update({ option_text: optionText.trim(), score })
     .eq("id", id);
 };
 

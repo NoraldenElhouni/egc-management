@@ -31,6 +31,7 @@ import RolePermissionsListPage from "../../pages/settings/permissions/RolePermis
 import RolePermissionsDetailPage from "../../pages/settings/permissions/RolePermissionsDetailPage";
 import EvaluationSettingsPage from "../../pages/settings/evaluation/EvaluationSettingsPage";
 import QuestionBankPage from "../../pages/settings/questionBank/QuestionBankPage";
+import ScoringSettingsPage from "../../pages/settings/scoring/ScoringSettingsPage";
 
 export default function SettingsRoutes() {
   return (
@@ -144,6 +145,7 @@ export default function SettingsRoutes() {
             path="evaluation-settings"
             element={<EvaluationSettingsPage />}
           />
+          <Route path="scoring-settings" element={<ScoringSettingsPage />} />
         </Route>
 
         <Route

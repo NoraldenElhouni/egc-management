@@ -4,12 +4,13 @@ import { Plus, Pencil, Check, X, Trash2 } from "lucide-react";
 interface OptionRow {
   id: string;
   option_text: string;
+  score: number;
 }
 
 interface QuestionOptionsEditorProps {
   options: OptionRow[];
-  onAdd: (text: string) => Promise<void> | void;
-  onUpdate: (id: string, text: string) => Promise<void> | void;
+  onAdd: (text: string, score: number) => Promise<void> | void;
+  onUpdate: (id: string, text: string, score: number) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
 }
 
@@ -22,15 +23,18 @@ const QuestionOptionsEditor: React.FC<QuestionOptionsEditorProps> = ({
   onDelete,
 }) => {
   const [newOption, setNewOption] = useState("");
+  const [newScore, setNewScore] = useState("0");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [editScore, setEditScore] = useState("0");
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newOption.trim();
     if (!trimmed) return;
-    await onAdd(trimmed);
+    await onAdd(trimmed, Number(newScore) || 0);
     setNewOption("");
+    setNewScore("0");
   };
 
   return (
@@ -45,10 +49,18 @@ const QuestionOptionsEditor: React.FC<QuestionOptionsEditorProps> = ({
                 className="flex-1 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
                 autoFocus
               />
+              <input
+                type="number"
+                value={editScore}
+                onChange={(e) => setEditScore(e.target.value)}
+                title="الدرجة"
+                className="w-16 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
+              />
               <button
                 type="button"
                 onClick={async () => {
-                  if (editText.trim()) await onUpdate(o.id, editText.trim());
+                  if (editText.trim())
+                    await onUpdate(o.id, editText.trim(), Number(editScore) || 0);
                   setEditingId(null);
                 }}
                 className="text-green-600 hover:text-green-700"
@@ -68,11 +80,15 @@ const QuestionOptionsEditor: React.FC<QuestionOptionsEditorProps> = ({
               <span className="flex-1 text-xs text-gray-700">
                 {o.option_text}
               </span>
+              <span className="text-xs text-gray-500" title="الدرجة">
+                {o.score}
+              </span>
               <button
                 type="button"
                 onClick={() => {
                   setEditingId(o.id);
                   setEditText(o.option_text);
+                  setEditScore(String(o.score));
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -96,6 +112,13 @@ const QuestionOptionsEditor: React.FC<QuestionOptionsEditorProps> = ({
           onChange={(e) => setNewOption(e.target.value)}
           placeholder="إضافة خيار"
           className="flex-1 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
+        />
+        <input
+          type="number"
+          value={newScore}
+          onChange={(e) => setNewScore(e.target.value)}
+          title="الدرجة"
+          className="w-16 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
         />
         <button
           type="submit"

@@ -15,6 +15,11 @@ import {
 import { Plus, X, EyeOff, Eye } from "lucide-react";
 import SortableConfigRow from "./SortableConfigRow";
 import QuestionOptionsEditor from "../shared/QuestionOptionsEditor";
+import QuestionScoringFields, {
+  DEFAULT_SCORING_VALUE,
+  buildScoringConfig,
+  type QuestionScoringValue,
+} from "../shared/QuestionScoringFields";
 import { useQuestionBank } from "../../../hooks/hr/useQuestionBank";
 import { useDepartments } from "../../../hooks/permissions/useDepartments";
 import {
@@ -26,6 +31,12 @@ import {
 
 const ALL_FILTER = "__all__";
 const GENERAL_FILTER = "__general__";
+
+interface NewOption {
+  text: string;
+  score: string;
+}
+const EMPTY_OPTION: NewOption = { text: "", score: "0" };
 
 const QuestionBankEditor: React.FC = () => {
   const {
@@ -46,7 +57,10 @@ const QuestionBankEditor: React.FC = () => {
   const [newText, setNewText] = useState("");
   const [newType, setNewType] = useState<QuestionType>("text");
   const [newRequiredDefault, setNewRequiredDefault] = useState(true);
-  const [newOptions, setNewOptions] = useState<string[]>([""]);
+  const [newOptions, setNewOptions] = useState<NewOption[]>([EMPTY_OPTION]);
+  const [newScoring, setNewScoring] = useState<QuestionScoringValue>(
+    DEFAULT_SCORING_VALUE,
+  );
   const [saving, setSaving] = useState(false);
 
   const sensors = useSensors(
@@ -70,8 +84,12 @@ const QuestionBankEditor: React.FC = () => {
         questionText: newText,
         questionType: newType,
         isRequiredDefault: newRequiredDefault,
+        weight: Number(newScoring.weight) || 0,
+        config: buildScoringConfig(newType, newScoring),
         options: isChoiceType
-          ? newOptions.map((o) => o.trim()).filter(Boolean)
+          ? newOptions
+              .map((o) => ({ text: o.text.trim(), score: Number(o.score) || 0 }))
+              .filter((o) => o.text)
           : undefined,
       });
       if (!result.success) {
@@ -82,7 +100,8 @@ const QuestionBankEditor: React.FC = () => {
       setNewText("");
       setNewType("text");
       setNewRequiredDefault(true);
-      setNewOptions([""]);
+      setNewOptions([EMPTY_OPTION]);
+      setNewScoring(DEFAULT_SCORING_VALUE);
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -170,19 +189,40 @@ const QuestionBankEditor: React.FC = () => {
             إجباري افتراضياً عند النسخ لطلب توظيف
           </label>
 
+          <QuestionScoringFields
+            type={newType}
+            value={newScoring}
+            onChange={setNewScoring}
+          />
+
           {isChoiceType && (
             <div className="space-y-1.5">
               {newOptions.map((opt, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input
-                    value={opt}
+                    value={opt.text}
                     onChange={(e) =>
                       setNewOptions((prev) =>
-                        prev.map((o, i) => (i === index ? e.target.value : o)),
+                        prev.map((o, i) =>
+                          i === index ? { ...o, text: e.target.value } : o,
+                        ),
                       )
                     }
                     placeholder={`خيار ${index + 1}`}
                     className="flex-1 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
+                  />
+                  <input
+                    type="number"
+                    value={opt.score}
+                    onChange={(e) =>
+                      setNewOptions((prev) =>
+                        prev.map((o, i) =>
+                          i === index ? { ...o, score: e.target.value } : o,
+                        ),
+                      )
+                    }
+                    title="الدرجة"
+                    className="w-16 rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gray-400"
                   />
                   <button
                     type="button"
@@ -197,7 +237,7 @@ const QuestionBankEditor: React.FC = () => {
               ))}
               <button
                 type="button"
-                onClick={() => setNewOptions((prev) => [...prev, ""])}
+                onClick={() => setNewOptions((prev) => [...prev, EMPTY_OPTION])}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> إضافة خيار
@@ -250,14 +290,19 @@ const QuestionBankEditor: React.FC = () => {
                       <span className="text-xs text-gray-400">
                         {q.department ?? "عام"}
                       </span>
+                      <span className="text-xs text-gray-400">
+                        الوزن: {q.weight}
+                      </span>
                     </div>
                     {CHOICE_QUESTION_TYPES.includes(
                       q.question_type as QuestionType,
                     ) && (
                       <QuestionOptionsEditor
                         options={q.question_bank_options}
-                        onAdd={(text) => addOption(q.id, text)}
-                        onUpdate={(id, text) => editOption(id, text)}
+                        onAdd={(text, score) => addOption(q.id, text, score)}
+                        onUpdate={(id, text, score) =>
+                          editOption(id, text, score)
+                        }
                         onDelete={(id) => removeOption(id)}
                       />
                     )}

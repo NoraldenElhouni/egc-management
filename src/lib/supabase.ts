@@ -1385,6 +1385,7 @@ export type Database = {
           created_at: string
           id: string
           job_request_question_id: string
+          score: number | null
           selected_option_ids: string[] | null
         }
         Insert: {
@@ -1393,6 +1394,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_request_question_id: string
+          score?: number | null
           selected_option_ids?: string[] | null
         }
         Update: {
@@ -1401,9 +1403,17 @@ export type Database = {
           created_at?: string
           id?: string
           job_request_question_id?: string
+          score?: number | null
           selected_option_ids?: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "applicant_answers_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "applicant_scores"
+            referencedColumns: ["applicant_id"]
+          },
           {
             foreignKeyName: "applicant_answers_applicant_id_fkey"
             columns: ["applicant_id"]
@@ -1434,6 +1444,7 @@ export type Database = {
           gender: string | null
           general_notes: string | null
           gpa_grade: string | null
+          gpa_tier_id: string | null
           graduation_year: number | null
           hired_employee_id: string | null
           id: string
@@ -1441,6 +1452,7 @@ export type Database = {
           phone_whatsapp: string | null
           specialization: string | null
           university: string | null
+          university_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1456,6 +1468,7 @@ export type Database = {
           gender?: string | null
           general_notes?: string | null
           gpa_grade?: string | null
+          gpa_tier_id?: string | null
           graduation_year?: number | null
           hired_employee_id?: string | null
           id?: string
@@ -1463,6 +1476,7 @@ export type Database = {
           phone_whatsapp?: string | null
           specialization?: string | null
           university?: string | null
+          university_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1478,6 +1492,7 @@ export type Database = {
           gender?: string | null
           general_notes?: string | null
           gpa_grade?: string | null
+          gpa_tier_id?: string | null
           graduation_year?: number | null
           hired_employee_id?: string | null
           id?: string
@@ -1485,14 +1500,29 @@ export type Database = {
           phone_whatsapp?: string | null
           specialization?: string | null
           university?: string | null
+          university_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "applicants_gpa_tier_id_fkey"
+            columns: ["gpa_tier_id"]
+            isOneToOne: false
+            referencedRelation: "gpa_tiers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "applicants_job_request_id_fkey"
             columns: ["job_request_id"]
             isOneToOne: false
             referencedRelation: "job_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applicants_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
             referencedColumns: ["id"]
           },
         ]
@@ -1523,6 +1553,45 @@ export type Database = {
           id?: string
           is_active?: boolean
           name_ar?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      experience_level_scores: {
+        Row: {
+          level: string
+          score: number
+        }
+        Insert: {
+          level: string
+          score: number
+        }
+        Update: {
+          level?: string
+          score?: number
+        }
+        Relationships: []
+      }
+      gpa_tiers: {
+        Row: {
+          id: string
+          is_active: boolean
+          label: string
+          score: number
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          label: string
+          score: number
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          label?: string
+          score?: number
           sort_order?: number
         }
         Relationships: []
@@ -1609,6 +1678,13 @@ export type Database = {
             foreignKeyName: "interview_evaluations_applicant_id_fkey"
             columns: ["applicant_id"]
             isOneToOne: false
+            referencedRelation: "applicant_scores"
+            referencedColumns: ["applicant_id"]
+          },
+          {
+            foreignKeyName: "interview_evaluations_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
             referencedRelation: "applicants"
             referencedColumns: ["id"]
           },
@@ -1660,6 +1736,13 @@ export type Database = {
             foreignKeyName: "interview_rounds_applicant_id_fkey"
             columns: ["applicant_id"]
             isOneToOne: false
+            referencedRelation: "applicant_scores"
+            referencedColumns: ["applicant_id"]
+          },
+          {
+            foreignKeyName: "interview_rounds_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
             referencedRelation: "applicants"
             referencedColumns: ["id"]
           },
@@ -1670,18 +1753,21 @@ export type Database = {
           id: string
           job_request_question_id: string
           option_text: string
+          score: number
           sort_order: number
         }
         Insert: {
           id?: string
           job_request_question_id: string
           option_text: string
+          score?: number
           sort_order?: number
         }
         Update: {
           id?: string
           job_request_question_id?: string
           option_text?: string
+          score?: number
           sort_order?: number
         }
         Relationships: [
@@ -1705,6 +1791,7 @@ export type Database = {
           question_text: string
           question_type: string
           sort_order: number
+          weight: number
         }
         Insert: {
           bank_question_id?: string | null
@@ -1716,6 +1803,7 @@ export type Database = {
           question_text: string
           question_type: string
           sort_order?: number
+          weight?: number
         }
         Update: {
           bank_question_id?: string | null
@@ -1727,6 +1815,7 @@ export type Database = {
           question_text?: string
           question_type?: string
           sort_order?: number
+          weight?: number
         }
         Relationships: [
           {
@@ -1868,6 +1957,7 @@ export type Database = {
           question_text: string
           question_type: string
           sort_order: number
+          weight: number
         }
         Insert: {
           config?: Json
@@ -1879,6 +1969,7 @@ export type Database = {
           question_text: string
           question_type: string
           sort_order?: number
+          weight?: number
         }
         Update: {
           config?: Json
@@ -1890,6 +1981,7 @@ export type Database = {
           question_text?: string
           question_type?: string
           sort_order?: number
+          weight?: number
         }
         Relationships: []
       }
@@ -1898,18 +1990,21 @@ export type Database = {
           bank_question_id: string
           id: string
           option_text: string
+          score: number
           sort_order: number
         }
         Insert: {
           bank_question_id: string
           id?: string
           option_text: string
+          score?: number
           sort_order?: number
         }
         Update: {
           bank_question_id?: string
           id?: string
           option_text?: string
+          score?: number
           sort_order?: number
         }
         Relationships: [
@@ -1949,9 +2044,82 @@ export type Database = {
         }
         Relationships: []
       }
+      universities: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+          tier_id: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+          tier_id?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+          tier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universities_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "university_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      university_tiers: {
+        Row: {
+          id: string
+          is_active: boolean
+          score: number
+          sort_order: number
+          tier_name: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          score: number
+          sort_order?: number
+          tier_name: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          score?: number
+          sort_order?: number
+          tier_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      applicant_scores: {
+        Row: {
+          applicant_id: string | null
+          experience_score: number | null
+          full_name: string | null
+          gpa_score: number | null
+          job_request_id: string | null
+          questionnaire_score: number | null
+          total_score: number | null
+          university_score: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applicants_job_request_id_fkey"
+            columns: ["job_request_id"]
+            isOneToOne: false
+            referencedRelation: "job_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       copy_bank_question_to_job_request: {

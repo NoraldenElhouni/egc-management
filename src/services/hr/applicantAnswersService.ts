@@ -46,3 +46,8 @@ export const submitAnswers = async (
 
   return { success: true };
 };
+
+/** Manual score for text / textarea / number answers (the DB trigger leaves it alone). */
+export const setAnswerScore = async (id: string, score: number | null) => {
+  return hrDb().from("applicant_answers").update({ score }).eq("id", id);
+};

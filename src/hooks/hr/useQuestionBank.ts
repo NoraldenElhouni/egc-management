@@ -44,7 +44,7 @@ export function useQuestionBank() {
   );
 
   const update = useCallback(
-    async (id: string, fields: { question_text?: string; is_required_default?: boolean }) => {
+    async (id: string, fields: Parameters<typeof updateBankQuestion>[1]) => {
       const { error } = await updateBankQuestion(id, fields);
       if (error) return { success: false };
       await refetch();
@@ -81,7 +81,7 @@ export function useQuestionBank() {
   );
 
   const addOption = useCallback(
-    async (bankQuestionId: string, optionText: string) => {
+    async (bankQuestionId: string, optionText: string, score: number) => {
       const question = questions.find((q) => q.id === bankQuestionId);
       const nextSortOrder =
         (question?.question_bank_options ?? []).reduce(
@@ -92,6 +92,7 @@ export function useQuestionBank() {
         bankQuestionId,
         optionText,
         nextSortOrder,
+        score,
       );
       if (error) return { success: false };
       await refetch();
@@ -101,8 +102,8 @@ export function useQuestionBank() {
   );
 
   const editOption = useCallback(
-    async (optionId: string, optionText: string) => {
-      const { error } = await updateBankOption(optionId, optionText);
+    async (optionId: string, optionText: string, score: number) => {
+      const { error } = await updateBankOption(optionId, optionText, score);
       if (error) return { success: false };
       await refetch();
       return { success: true };
