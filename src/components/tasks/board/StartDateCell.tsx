@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import CalendarPopover from "./CalendarPopover";
+import DayOffsetPopover from "./DayOffsetPopover";
+import { useTemplateMode } from "../TemplateModeContext";
+import { dateToDayOffset, dayOffsetLabel } from "./templateDates";
 import Tooltip from "../../ui/Tooltip";
 import { formatSlashDate } from "./taskDates";
 
@@ -38,6 +41,24 @@ interface StartDateCellProps {
 export default function StartDateCell({ startDate, onChange, align = "right" }: StartDateCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isTemplate = useTemplateMode();
+
+  // Template board: "Day N" instead of a calendar date (templateDates.ts).
+  if (isTemplate) {
+    return (
+      <div ref={ref} className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={startDate
+            ? "whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
+            : "rounded-full px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-100 hover:text-gray-400"}
+        >
+          {startDate ? dayOffsetLabel(dateToDayOffset(startDate)) : "يوم —"}
+        </button>
+        {open && <DayOffsetPopover value={startDate} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} align={align} />}
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="relative">

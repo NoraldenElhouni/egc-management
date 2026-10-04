@@ -1,24 +1,31 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Plus, Trash2, FileStack } from "lucide-react";
+import { Loader2, Plus, Trash2, FileStack, Pencil } from "lucide-react";
 import { useTemplatesAdmin } from "../../../hooks/tasks/useTemplatesAdmin";
 
-// D8 — Template builder admin, list screen (build plan Part 7).
+// D8 — Templates admin, list screen (build plan Part 7). Each template is
+// a board (boards.is_template); clicking one opens it on the normal board
+// screen, where it's edited exactly like a board.
 
 export default function TemplatesAdminPage() {
   const navigate = useNavigate();
-  const { data, loading, error, createTemplate, creating, deleteTemplate } = useTemplatesAdmin();
+  const { data, loading, error, createTemplate, creating, renameTemplate, deleteTemplate } = useTemplatesAdmin();
   const [showNew, setShowNew] = useState(false);
-  const [nameAr, setNameAr] = useState("");
   const [name, setName] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
 
   const handleCreate = async () => {
-    if (!nameAr.trim() || !name.trim()) return;
-    const id = await createTemplate({ name_ar: nameAr.trim(), name: name.trim(), template_scope: "board", applies_to: null });
+    if (!name.trim()) return;
+    const id = await createTemplate(name.trim());
     setShowNew(false);
-    setNameAr("");
     setName("");
-    navigate(`/tasks/admin/templates/${id}`);
+    navigate(`/tasks/board/${id}`);
+  };
+
+  const commitRename = async () => {
+    if (renamingId && renameDraft.trim()) await renameTemplate({ id: renamingId, name: renameDraft.trim() });
+    setRenamingId(null);
   };
 
   if (loading) {
@@ -49,20 +56,16 @@ export default function TemplatesAdminPage() {
       {showNew && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <input
-            value={nameAr}
-            onChange={(e) => setNameAr(e.target.value)}
-            placeholder="اسم القالب (عربي)"
-            className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none"
-          />
-          <input
+            autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Template name (English)"
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            placeholder="اسم القالب"
             className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none"
           />
           <button
             onClick={handleCreate}
-            disabled={creating}
+            disabled={creating || !name.trim()}
             className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
           >
             إنشاء
@@ -79,28 +82,54 @@ export default function TemplatesAdminPage() {
           {data.map((t) => (
             <div
               key={t.id}
-              onClick={() => navigate(`/tasks/admin/templates/${t.id}`)}
+              onClick={() => renamingId !== t.id && navigate(`/tasks/board/${t.id}`)}
               className="group flex cursor-pointer flex-col gap-1 rounded-lg border border-gray-200 p-3 hover:border-primary"
             >
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                  <FileStack className="h-3.5 w-3.5 text-gray-400" />
-                  {t.name_ar}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`حذف قالب "${t.name_ar}"؟`)) deleteTemplate(t.id);
-                  }}
-                  className="text-gray-300 opacity-0 hover:text-red-500 group-hover:opacity-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+              <div className="flex items-center justify-between gap-2">
+                {renamingId === t.id ? (
+                  <input
+                    autoFocus
+                    value={renameDraft}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      if (e.key === "Escape") setRenamingId(null);
+                    }}
+                    className="flex-1 rounded-md border border-gray-200 px-2 py-0.5 text-sm outline-none focus:border-primary"
+                  />
+                ) : (
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                    <FileStack className="h-3.5 w-3.5 text-gray-400" />
+                    {t.name}
+                  </span>
+                )}
+                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingId(t.id);
+                      setRenameDraft(t.name);
+                    }}
+                    className="text-gray-300 hover:text-gray-600"
+                    title="إعادة تسمية"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`حذف قالب "${t.name}"؟`)) deleteTemplate(t.id);
+                    }}
+                    className="text-gray-300 hover:text-red-500"
+                    title="حذف"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="text-xs text-gray-400">
-                {t.taskCount} مهمة · {t.template_scope === "board" ? "لوحة" : "مهمة"}
-                {t.applies_to && ` · ${t.applies_to}`}
-              </div>
+              <div className="text-xs text-gray-400">{t.taskCount} مهمة</div>
             </div>
           ))}
         </div>

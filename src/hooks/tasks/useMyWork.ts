@@ -74,6 +74,7 @@ export function useMyWork() {
             )
             .in("id", taskIds)
             .eq("is_archived", false)
+            .eq("is_template", false)
         : { data: [], error: null };
       if (tasksError) throw tasksError;
 
@@ -105,7 +106,7 @@ export function useMyWork() {
           ? tasksDb.from("statuses").select("*").in("id", statusIds)
           : Promise.resolve({ data: [], error: null }),
         templateTaskIds.length
-          ? tasksDb.from("template_tasks").select("id, title_ar").in("id", templateTaskIds)
+          ? tasksDb.from("tasks").select("id, title").in("id", templateTaskIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (boardsError) throw boardsError;
@@ -121,7 +122,7 @@ export function useMyWork() {
       };
 
       const openTasks = (tasks ?? []).filter((t) => isOpen(t.status_id));
-      const templateTitleById = new Map((templateTaskRows ?? []).map((t) => [t.id, t.title_ar]));
+      const templateTitleById = new Map((templateTaskRows ?? []).map((t) => [t.id, t.title]));
 
       const byKey = new Map<string, MyWorkTask[]>();
       for (const t of openTasks) {

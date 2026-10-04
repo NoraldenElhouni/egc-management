@@ -84,7 +84,7 @@ export function useDepartmentView(departmentId: string | undefined) {
         { data: spaces, error: spacesError },
         { data: memberRows, error: membersError },
       ] = await Promise.all([
-        tasksDb.from("spaces").select("id, visibility, owner_user_id").eq("is_archived", false),
+        tasksDb.from("spaces").select("id, visibility, owner_user_id").eq("is_archived", false).eq("is_template", false),
         tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
       ]);
       if (spacesError) throw spacesError;
@@ -96,7 +96,7 @@ export function useDepartmentView(departmentId: string | undefined) {
         .map((s) => s.id);
 
       const { data: boards, error: boardsError } = visibleSpaceIds.length
-        ? await tasksDb.from("boards").select("id").in("space_id", visibleSpaceIds).eq("is_archived", false)
+        ? await tasksDb.from("boards").select("id").in("space_id", visibleSpaceIds).eq("is_archived", false).eq("is_template", false)
         : { data: [], error: null };
       if (boardsError) throw boardsError;
       const boardIds = (boards ?? []).map((b) => b.id);

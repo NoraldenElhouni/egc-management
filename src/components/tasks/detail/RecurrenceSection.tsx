@@ -7,6 +7,8 @@ import {
   type RecurrenceCreateMode,
   type MissedRunBehavior,
 } from "../../../hooks/tasks/useTaskRecurrence";
+import { useTemplateMode } from "../TemplateModeContext";
+import { dateToDayOffset, dayOffsetToDate } from "../board/templateDates";
 
 const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
   daily: "يومي",
@@ -28,13 +30,16 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function defaultForm(): RecurrenceInput {
+// On a template board the rule is a blueprint whose dates are "Day N"
+// offsets (templateDates.ts) — apply_template_board() shifts them onto the
+// real board along with the tasks' own dates.
+function defaultForm(isTemplate = false): RecurrenceInput {
   return {
     frequency: "daily",
     interval: 1,
     daysOfWeek: null,
     dayOfMonth: null,
-    startsOn: todayIso(),
+    startsOn: isTemplate ? dayOffsetToDate(0) : todayIso(),
     endsOn: null,
     maxOccurrences: null,
     createMode: "on_schedule",
@@ -57,7 +62,8 @@ function describeRule(rule: RecurrenceInput): string {
 export default function RecurrenceSection({ taskId, boardId }: { taskId: string; boardId: string }) {
   const { rule, loading, createRule, updateRule, toggleActive, deleteRule } = useTaskRecurrence(taskId, boardId);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<RecurrenceInput>(defaultForm());
+  const isTemplate = useTemplateMode();
+  const [form, setForm] = useState<RecurrenceInput>(defaultForm(isTemplate));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -101,7 +107,7 @@ export default function RecurrenceSection({ taskId, boardId }: { taskId: string;
     return (
       <button
         onClick={() => {
-          setForm(defaultForm());
+          setForm(defaultForm(isTemplate));
           setEditing(true);
         }}
         className="flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 px-2.5 py-1.5 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
@@ -179,22 +185,42 @@ export default function RecurrenceSection({ taskId, boardId }: { taskId: string;
 
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
-            <span className="mb-0.5 block text-[10px] text-gray-400">تبدأ من</span>
-            <input
-              type="date"
-              value={form.startsOn}
-              onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-              className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
-            />
+            <span className="mb-0.5 block text-[10px] text-gray-400">{isTemplate ? "تبدأ من يوم" : "تبدأ من"}</span>
+            {isTemplate ? (
+              <input
+                type="number"
+                step={1}
+                value={dateToDayOffset(form.startsOn)}
+                onChange={(e) => setForm({ ...form, startsOn: dayOffsetToDate(Number(e.target.value) || 0) })}
+                className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
+              />
+            ) : (
+              <input
+                type="date"
+                value={form.startsOn}
+                onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
+                className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
+              />
+            )}
           </label>
           <label className="block">
-            <span className="mb-0.5 block text-[10px] text-gray-400">تنتهي في (اختياري)</span>
-            <input
-              type="date"
-              value={form.endsOn ?? ""}
-              onChange={(e) => setForm({ ...form, endsOn: e.target.value || null })}
-              className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
-            />
+            <span className="mb-0.5 block text-[10px] text-gray-400">{isTemplate ? "تنتهي في يوم (اختياري)" : "تنتهي في (اختياري)"}</span>
+            {isTemplate ? (
+              <input
+                type="number"
+                step={1}
+                value={form.endsOn ? dateToDayOffset(form.endsOn) : ""}
+                onChange={(e) => setForm({ ...form, endsOn: e.target.value === "" ? null : dayOffsetToDate(Number(e.target.value) || 0) })}
+                className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
+              />
+            ) : (
+              <input
+                type="date"
+                value={form.endsOn ?? ""}
+                onChange={(e) => setForm({ ...form, endsOn: e.target.value || null })}
+                className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
+              />
+            )}
           </label>
         </div>
 

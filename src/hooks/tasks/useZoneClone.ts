@@ -9,16 +9,13 @@ import { callCopyTaskTree } from "./copyTaskTree";
 // =====================================================================
 // D5 — Clone zone, build plan Part 7.
 // =====================================================================
-// Same copy_task_tree() RPC as D4 (see useTemplatePicker.ts's header for
-// the mechanism), but p_source_type = 'task' instead of 'template'. The
-// task-side branch of that function has no is_selected_by_default gate —
-// it always copies a source root's *entire* subtree, unconditionally
-// (see the RPC body: the recursive CTE for 'task' has no `where
-// tt.is_selected_by_default` clause the template branch has). So unlike
-// D4, there is nothing to toggle below the root — "pre-checked preview"
+// Same copy_task_tree() RPC that D4's apply_template_board() uses under
+// the hood (see copyTaskTree.ts). This screen passes no excluded ids, so
+// each selected root's *entire* subtree is copied — "pre-checked preview"
 // per the build plan means every root task defaults to included, and a
 // user can only opt whole root branches in or out, not individual
-// descendants.
+// descendants. Template boards are never offered as source or target
+// here; templates are applied through D4.
 //
 // It also carries assignees and checklists (reset unchecked) across
 // as-is — that's server-side behavior this screen doesn't need to
@@ -41,7 +38,8 @@ export function useZoneCloneBoards(spaceId: string | undefined) {
         .from("boards")
         .select("id, name, zone_id")
         .eq("space_id", spaceId)
-        .eq("is_archived", false);
+        .eq("is_archived", false)
+        .eq("is_template", false);
       if (boardsError) throw boardsError;
 
       const zoneIds = Array.from(

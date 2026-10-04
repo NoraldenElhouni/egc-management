@@ -342,7 +342,7 @@ export function useTaskDetail(taskId: string | undefined) {
       // field update itself, same posture as setAssignees' own push.
       if (patch.status_id) {
         const category = query.data?.statuses.find((s) => s.id === patch.status_id)?.category;
-        if (category === "done") void notifyDependentAssignees(taskId);
+        if (category === "done" && !query.data?.task.is_template) void notifyDependentAssignees(taskId);
 
         // Any task that lists this one as a blocker has its own cached
         // detail view keyed by ITS OWN taskId — a status change here
@@ -397,8 +397,9 @@ export function useTaskDetail(taskId: string | undefined) {
         // itself, so this isn't awaited into the mutation's own error
         // path. Skips the assigner themselves — no need to notify
         // someone they assigned the task to themselves.
+        // Template tasks don't notify — see useTaskBoard.ts's setAssignees.
         const recipients = toAdd.filter((id) => id !== user.id);
-        if (recipients.length > 0) {
+        if (recipients.length > 0 && !query.data?.task.is_template) {
           const taskTitle = query.data?.task.title ?? "مهمة";
           void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, {
             url: `/tasks/${taskId}`,

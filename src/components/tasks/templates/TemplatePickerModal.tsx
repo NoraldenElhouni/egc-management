@@ -5,11 +5,13 @@ import {
   useTemplateSelection,
   type TemplateTask,
 } from "../../../hooks/tasks/useTemplatePicker";
+import { useTemplateMode } from "../TemplateModeContext";
+import { dateToDayOffset, dayOffsetLabel, dayOffsetToDate } from "../board/templateDates";
 
 // =====================================================================
 // D4 — Template picker (build plan Part 7). See useTemplatePicker.ts's
-// header comment for how selection maps onto copy_task_tree()'s actual
-// behavior — this file is presentation + the merged-preview tree only.
+// header comment for how selection maps onto apply_template_board() —
+// this file is presentation + the merged-preview tree only.
 // =====================================================================
 
 interface TemplatePickerModalProps {
@@ -40,12 +42,15 @@ export default function TemplatePickerModal({
   onClose,
   onApplied,
 }: TemplatePickerModalProps) {
-  const { data, loading, apply, applying, attachFields } = useTemplatePicker(spaceId);
+  // Opened on a template board: the template itself is the only target,
+  // and the anchor is a "Day N" rather than a calendar date.
+  const isTemplate = useTemplateMode();
+  const { data, loading, apply, applying } = useTemplatePicker(spaceId, currentBoardId, isTemplate);
   const selection = useTemplateSelection();
   const [targetBoardIds, setTargetBoardIds] = useState<Set<string>>(
     new Set([currentBoardId]),
   );
-  const [anchorDate, setAnchorDate] = useState(todayIso());
+  const [anchorDate, setAnchorDate] = useState(isTemplate ? dayOffsetToDate(0) : todayIso());
   const [step, setStep] = useState<"pick" | "preview">("pick");
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -64,70 +69,36 @@ export default function TemplatePickerModal({
   };
 
   // Effective inclusion + counting, shared by rendering and the footer
-  // tally — a node counts only if it and every ancestor up to its root
-  // are checked (root inclusion = not in excludedRootIds; everything
-  // else = is_selected_by_default, possibly overridden this session).
+  // tally — a node counts only if neither it nor any ancestor is excluded
+  // (the same rule apply_template_board()'s tree walk applies).
   const countTemplate = (templateId: string): number => {
     const nodes = data?.templateTasksByTemplate.get(templateId) ?? [];
-    const byParent = new Map<string | null, TemplateTask[]>();
-    for (const n of nodes) {
-      const list = byParent.get(n.parent_template_task_id) ?? [];
-      list.push(n);
-      byParent.set(n.parent_template_task_id, list);
-    }
+    const byParent = groupByParent(nodes);
     let count = 0;
-    const walk = (node: TemplateTask, isRoot: boolean, ancestorExcluded: boolean) => {
-      const checked = isRoot
-        ? !selection.excludedRootIds.has(node.id)
-        : selection.isNodeSelected(node.id, node.is_selected_by_default);
-      const included = checked && !ancestorExcluded;
-      if (included) count++;
-      for (const child of byParent.get(node.id) ?? []) {
-        walk(child, false, !included);
-      }
+    const walk = (node: TemplateTask) => {
+      if (selection.isExcluded(node.id)) return;
+      count++;
+      for (const child of byParent.get(node.id) ?? []) walk(child);
     };
-    for (const root of byParent.get(null) ?? []) walk(root, true, false);
+    for (const root of byParent.get(null) ?? []) walk(root);
     return count;
   };
 
   const totalTasksPerZone = selectedTemplates.reduce((sum, t) => sum + countTemplate(t.id), 0);
   const zoneCount = targetBoardIds.size;
-  const uniqueFieldDefIds = Array.from(
-    new Set(selectedTemplates.flatMap((t) => data?.fieldDefIdsByTemplate.get(t.id) ?? [])),
+  const uniqueColumnNames = Array.from(
+    new Set(selectedTemplates.flatMap((t) => data?.columnNamesByTemplate.get(t.id) ?? [])),
   );
 
   const handleConfirm = async () => {
     setConfirmError(null);
-    const changedSelections = Array.from(selection.nodeOverrides.entries()).map(([id, selected]) => ({
-      id,
-      selected,
-    }));
-
-    const selectedRootIds: string[] = [];
-    for (const t of selectedTemplates) {
-      const nodes = data?.templateTasksByTemplate.get(t.id) ?? [];
-      for (const n of nodes) {
-        if (n.parent_template_task_id === null && !selection.excludedRootIds.has(n.id)) {
-          selectedRootIds.push(n.id);
-        }
-      }
-    }
-
     try {
       await apply({
-        selectedRootIds,
-        changedSelections,
+        templateIds: selectedTemplates.map((t) => t.id),
+        excludedIds: Array.from(selection.excludedIds),
         targetBoardIds: Array.from(targetBoardIds),
         anchorDate,
       });
-
-      if (uniqueFieldDefIds.length) {
-        await attachFields({
-          fieldDefinitionIds: uniqueFieldDefIds,
-          targetBoardIds: Array.from(targetBoardIds),
-        });
-      }
-
       onApplied();
     } catch (err) {
       setConfirmError(extractErrorMessage(err));
@@ -153,7 +124,7 @@ export default function TemplatePickerModal({
           </div>
         ) : !data || data.templates.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">
-            لا توجد قوالب متاحة بعد. القوالب تُضاف من شاشة إدارة القوالب (قيد الإنشاء).
+            لا توجد قوالب متاحة بعد. القوالب تُضاف من شاشة القوالب.
           </div>
         ) : step === "pick" ? (
           <>
@@ -171,12 +142,11 @@ export default function TemplatePickerModal({
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-800">{t.name_ar}</span>
+                        <span className="text-sm font-medium text-gray-800">{t.name}</span>
                         <input type="checkbox" checked={checked} readOnly className="h-3.5 w-3.5" />
                       </div>
                       <div className="mt-1 text-xs text-gray-400">
-                        {data.taskCountByTemplate.get(t.id) ?? 0} مهمة
-                        {t.applies_to && ` · ${t.applies_to}`}
+                        {data.templateTasksByTemplate.get(t.id)?.length ?? 0} مهمة
                       </div>
                     </button>
                   );
@@ -206,13 +176,28 @@ export default function TemplatePickerModal({
                   </div>
 
                   <div className="mt-4 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-500">تاريخ الإسناد</span>
-                    <input
-                      type="date"
-                      value={anchorDate}
-                      onChange={(e) => setAnchorDate(e.target.value)}
-                      className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
-                    />
+                    {isTemplate ? (
+                      <>
+                        <span className="text-xs font-semibold text-gray-500">يبدأ القالب من يوم</span>
+                        <input
+                          type="number"
+                          step={1}
+                          value={dateToDayOffset(anchorDate)}
+                          onChange={(e) => setAnchorDate(dayOffsetToDate(Number(e.target.value) || 0))}
+                          className="w-20 rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-semibold text-gray-500">تاريخ البدء (يوم 0)</span>
+                        <input
+                          type="date"
+                          value={anchorDate}
+                          onChange={(e) => setAnchorDate(e.target.value)}
+                          className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+                        />
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -237,9 +222,10 @@ export default function TemplatePickerModal({
               {selectedTemplates.map((t) => (
                 <TemplatePreviewTree
                   key={t.id}
-                  templateName={t.name_ar}
+                  templateName={t.name}
                   nodes={data.templateTasksByTemplate.get(t.id) ?? []}
                   departmentNamesById={data.departmentNamesById}
+                  assigneeCountByTask={data.assigneeCountByTask}
                   selection={selection}
                 />
               ))}
@@ -252,7 +238,7 @@ export default function TemplatePickerModal({
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">
                   {totalTasksPerZone} مهمة × {zoneCount} منطقة = {totalTasksPerZone * zoneCount}
-                  {uniqueFieldDefIds.length > 0 && ` · دمج ${uniqueFieldDefIds.length} حقل`}
+                  {uniqueColumnNames.length > 0 && ` · دمج ${uniqueColumnNames.length} حقل`}
                 </span>
                 <div className="flex gap-2">
                   <button
@@ -279,27 +265,30 @@ export default function TemplatePickerModal({
   );
 }
 
+function groupByParent(nodes: TemplateTask[]): Map<string | null, TemplateTask[]> {
+  const map = new Map<string | null, TemplateTask[]>();
+  for (const n of nodes) {
+    const list = map.get(n.parent_task_id) ?? [];
+    list.push(n);
+    map.set(n.parent_task_id, list);
+  }
+  return map;
+}
+
 function TemplatePreviewTree({
   templateName,
   nodes,
   departmentNamesById,
+  assigneeCountByTask,
   selection,
 }: {
   templateName: string;
   nodes: TemplateTask[];
   departmentNamesById: Map<string, string>;
+  assigneeCountByTask: Map<string, number>;
   selection: ReturnType<typeof useTemplateSelection>;
 }) {
-  const byParent = useMemo(() => {
-    const map = new Map<string | null, TemplateTask[]>();
-    for (const n of nodes) {
-      const list = map.get(n.parent_template_task_id) ?? [];
-      list.push(n);
-      map.set(n.parent_template_task_id, list);
-    }
-    return map;
-  }, [nodes]);
-
+  const byParent = useMemo(() => groupByParent(nodes), [nodes]);
   const roots = byParent.get(null) ?? [];
 
   return (
@@ -314,6 +303,7 @@ function TemplatePreviewTree({
           templateName={templateName}
           byParent={byParent}
           departmentNamesById={departmentNamesById}
+          assigneeCountByTask={assigneeCountByTask}
           selection={selection}
         />
       ))}
@@ -322,9 +312,8 @@ function TemplatePreviewTree({
 }
 
 function offsetLabel(node: TemplateTask): string | null {
-  if (node.relative_start_offset_days != null) return `+${node.relative_start_offset_days}يوم`;
-  if (node.relative_due_offset_days != null) return `+${node.relative_due_offset_days}يوم`;
-  return null;
+  const date = node.start_date ?? node.due_date;
+  return date ? dayOffsetLabel(dateToDayOffset(date)) : null;
 }
 
 function PreviewNode({
@@ -335,6 +324,7 @@ function PreviewNode({
   templateName,
   byParent,
   departmentNamesById,
+  assigneeCountByTask,
   selection,
 }: {
   node: TemplateTask;
@@ -344,23 +334,16 @@ function PreviewNode({
   templateName: string;
   byParent: Map<string | null, TemplateTask[]>;
   departmentNamesById: Map<string, string>;
+  assigneeCountByTask: Map<string, number>;
   selection: ReturnType<typeof useTemplateSelection>;
 }) {
-  const ownChecked = isRoot
-    ? !selection.excludedRootIds.has(node.id)
-    : selection.isNodeSelected(node.id, node.is_selected_by_default);
-  const effectivelyChecked = ownChecked && !ancestorExcluded;
+  const effectivelyChecked = !selection.isExcluded(node.id) && !ancestorExcluded;
   const disabled = ancestorExcluded;
   const children = byParent.get(node.id) ?? [];
 
-  const toggle = () => {
-    if (disabled) return;
-    if (isRoot) selection.toggleRoot(node.id);
-    else selection.toggleNode(node.id, node.is_selected_by_default);
-  };
-
   const department = node.department_id ? departmentNamesById.get(node.department_id) : null;
   const offset = offsetLabel(node);
+  const assigneeCount = assigneeCountByTask.get(node.id) ?? 0;
 
   return (
     <>
@@ -372,11 +355,12 @@ function PreviewNode({
           type="checkbox"
           checked={effectivelyChecked}
           disabled={disabled}
-          onChange={toggle}
+          onChange={() => !disabled && selection.toggleNode(node.id)}
           className="h-3.5 w-3.5"
         />
-        <span className="flex-1 truncate text-gray-700">{node.title_ar}</span>
+        <span className="flex-1 truncate text-gray-700">{node.title}</span>
         {department && <span className="shrink-0 text-xs text-gray-400">{department}</span>}
+        {assigneeCount > 0 && <span className="shrink-0 text-xs text-gray-400">{assigneeCount} مسؤول</span>}
         {offset && (
           <span className="shrink-0 rounded-full bg-gray-100 px-1.5 text-xs text-gray-500">{offset}</span>
         )}
@@ -394,6 +378,7 @@ function PreviewNode({
           templateName={templateName}
           byParent={byParent}
           departmentNamesById={departmentNamesById}
+          assigneeCountByTask={assigneeCountByTask}
           selection={selection}
         />
       ))}

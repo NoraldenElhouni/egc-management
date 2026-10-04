@@ -731,7 +731,7 @@ function AutomationsTab({ spaceId, statuses }: { spaceId: string; statuses: Stat
           <option value="">اختر القالب...</option>
           {data.pickers.templates.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name_ar}
+              {t.name}
             </option>
           ))}
         </select>
@@ -761,7 +761,7 @@ function AutomationsTab({ spaceId, statuses }: { spaceId: string; statuses: Stat
           : ac?.board_id
             ? data.pickers.boards.find((b) => b.id === ac.board_id)?.name
             : ac?.template_id
-              ? data.pickers.templates.find((tpl) => tpl.id === ac.template_id)?.name_ar
+              ? data.pickers.templates.find((tpl) => tpl.id === ac.template_id)?.name
               : ac?.text || null;
     return `${TRIGGER_LABELS[a.trigger_type]}${triggerDetail ? ` (${triggerDetail})` : ""} ← ${ACTION_LABELS[a.action_type]}${actionDetail ? ` (${actionDetail})` : ""}`;
   };

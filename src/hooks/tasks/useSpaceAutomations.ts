@@ -37,7 +37,9 @@ export interface AutomationPickerData {
   employees: { id: string; name: string }[];
   boards: { id: string; name: string }[];
   fields: { id: string; name_ar: string }[];
-  templates: { id: string; name_ar: string }[];
+  // Template boards (boards.is_template) — template_id in an
+  // apply_template action's config is a template board id.
+  templates: { id: string; name: string }[];
 }
 
 export function useSpaceAutomations(spaceId: string | undefined) {
@@ -62,9 +64,9 @@ export function useSpaceAutomations(spaceId: string | undefined) {
       ] = await Promise.all([
         tasksDb.from("automations").select("*").eq("scope_type", "space").eq("scope_id", spaceId).order("created_at", { ascending: false }),
         supabase.from("employees").select("id, first_name, last_name"),
-        tasksDb.from("boards").select("id, name").eq("space_id", spaceId).eq("is_archived", false),
+        tasksDb.from("boards").select("id, name").eq("space_id", spaceId).eq("is_archived", false).eq("is_template", false),
         tasksDb.from("field_definitions").select("id, name_ar"),
-        tasksDb.from("templates").select("id, name_ar"),
+        tasksDb.from("boards").select("id, name").eq("is_template", true).eq("is_archived", false).order("name"),
       ]);
       if (automationsError) throw automationsError;
       if (employeesError) throw employeesError;

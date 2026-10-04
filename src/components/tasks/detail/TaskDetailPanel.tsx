@@ -22,6 +22,7 @@ import ActivitySection from "./ActivitySection";
 import TagPicker from "./TagPicker";
 import RecurrenceSection from "./RecurrenceSection";
 import MentionTextarea from "./MentionTextarea";
+import { TemplateModeProvider } from "../TemplateModeContext";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -96,7 +97,10 @@ export default function TaskDetailPanel() {
 
   const close = () => navigate(basePath);
 
+  // A task on a template board gets the same panel, in template mode
+  // (Day N dates, no notifications, links kept inside the template).
   return (
+    <TemplateModeProvider value={!!data?.task.is_template}>
     <div className="fixed inset-0 z-40 flex justify-end" dir="rtl">
       <button
         aria-label="إغلاق"
@@ -308,6 +312,7 @@ export default function TaskDetailPanel() {
             <Section title="الاعتماديات">
               <DependenciesSection
                 taskId={data.task.id}
+                boardId={data.task.board_id}
                 spaceId={data.breadcrumb.spaceId}
                 blocking={data.blocking}
                 blockedByMe={data.blockedByMe}
@@ -319,6 +324,7 @@ export default function TaskDetailPanel() {
             <Section title="الروابط">
               <RelationshipsSection
                 taskId={data.task.id}
+                boardId={data.task.board_id}
                 relationships={data.relationships}
                 onAdd={(relatedTaskId, type) => addRelationship({ relatedTaskId, type })}
                 onRemove={(id) => removeRelationship(id)}
@@ -393,6 +399,7 @@ export default function TaskDetailPanel() {
         )}
       </div>
     </div>
+    </TemplateModeProvider>
   );
 }
 

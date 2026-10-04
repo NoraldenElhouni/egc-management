@@ -94,7 +94,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         // carries its own space_id directly, same as useTasksSidebar.ts's
         // own boards query relies on).
         const [{ data, error }, { data: spaceRow, error: spaceError }] = await Promise.all([
-          tasksDb.from("boards").select("id, name, space_id").eq("space_id", spaceId).eq("is_archived", false),
+          tasksDb.from("boards").select("id, name, space_id").eq("space_id", spaceId).eq("is_archived", false).eq("is_template", false),
           tasksDb.from("spaces").select("id, name").eq("id", spaceId).maybeSingle(),
         ]);
         if (error) throw error;
@@ -103,7 +103,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         if (spaceRow) spaceNamesById.set(spaceRow.id, spaceRow.name);
       } else {
         const [{ data: spaces, error: spacesError }, { data: memberRows, error: membersError }] = await Promise.all([
-          tasksDb.from("spaces").select("id, name, visibility, owner_user_id").eq("is_archived", false),
+          tasksDb.from("spaces").select("id, name, visibility, owner_user_id").eq("is_archived", false).eq("is_template", false),
           tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
         ]);
         if (spacesError) throw spacesError;
@@ -116,7 +116,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
           .map((s) => s.id);
 
         const { data, error } = visibleSpaceIds.length
-          ? await tasksDb.from("boards").select("id, name, space_id").in("space_id", visibleSpaceIds).eq("is_archived", false)
+          ? await tasksDb.from("boards").select("id, name, space_id").in("space_id", visibleSpaceIds).eq("is_archived", false).eq("is_template", false)
           : { data: [], error: null };
         if (error) throw error;
         boards = data ?? [];

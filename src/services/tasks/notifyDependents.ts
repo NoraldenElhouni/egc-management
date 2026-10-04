@@ -68,7 +68,7 @@ export async function notifyDependentAssignees(taskId: string): Promise<void> {
     const [{ data: assigneeRows, error: assigneeError }, { data: candidateTask, error: candidateError }] =
       await Promise.all([
         tasksDb.from("task_assignees").select("user_id").eq("task_id", candidateId),
-        tasksDb.from("tasks").select("title").eq("id", candidateId).single(),
+        tasksDb.from("tasks").select("title, is_template").eq("id", candidateId).single(),
       ]);
     if (assigneeError) {
       console.error("notifyDependentAssignees: failed to fetch assignees:", assigneeError.message);
@@ -78,6 +78,9 @@ export async function notifyDependentAssignees(taskId: string): Promise<void> {
       console.error("notifyDependentAssignees: failed to fetch candidate task:", candidateError.message);
       continue;
     }
+
+    // A template task's assignees are a blueprint, not real people to ping.
+    if (candidateTask.is_template) continue;
 
     const recipients = (assigneeRows ?? []).map((r) => r.user_id);
     if (recipients.length === 0) continue;

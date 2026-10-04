@@ -43,7 +43,7 @@ export default function MentionTextarea({
   const runSearch = (term: string) => {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
     searchTimer.current = window.setTimeout(async () => {
-      let query = supabase.schema("tasks").from("tasks").select("id, title").eq("is_archived", false).ilike("title", `%${term}%`).limit(8);
+      let query = supabase.schema("tasks").from("tasks").select("id, title").eq("is_archived", false).eq("is_template", false).ilike("title", `%${term}%`).limit(8);
       if (excludeTaskId) query = query.neq("id", excludeTaskId);
       const { data } = await query;
       setResults(data ?? []);

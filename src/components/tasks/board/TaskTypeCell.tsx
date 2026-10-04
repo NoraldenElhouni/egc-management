@@ -9,7 +9,7 @@ import type { TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
 
 interface TaskTypeCellProps {
   // ReadonlyMap (not Map) so callers whose task-type rows carry extra
-  // fields (e.g. TemplateBuilderPage's full task_types Row) can pass
+  // fields (e.g. a full task_types Row) can pass
   // their map as-is — this only ever reads it.
   taskTypes: ReadonlyMap<string, TaskTypeLite>;
   currentTaskTypeId: string;

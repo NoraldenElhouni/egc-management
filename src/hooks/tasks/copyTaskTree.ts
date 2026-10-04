@@ -1,8 +1,9 @@
 import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 
-// Shared by useTemplatePicker (D4) and useZoneClone (D5) — both call the
-// same tasks.copy_task_tree() RPC (build plan §5.1, "one copy function").
+// Used by useZoneClone (D5) directly and by useTemplatePicker (D4) through
+// apply_template_board() below — both end up in the same
+// tasks.copy_task_tree() RPC (build plan §5.1, "one copy function").
 //
 // copy_task_tree() does its work in two passes through a session-scoped
 // temporary table (_copy_map): pass 1 assigns every new row's id, pass 2
@@ -38,4 +39,34 @@ export async function callCopyTaskTree(args: {
     ({ error } = await run());
   }
   if (error) throw error;
+}
+
+// Applies a whole template board (boards.is_template) onto a board in one
+// RPC: tasks.apply_template_board() calls copy_task_tree() once per root
+// and then recreates dependencies, relationships, tags, record links,
+// attachments, recurrence rules and board columns between the copies.
+// Same temp-table mechanism underneath, so the same one silent retry.
+export async function callApplyTemplateBoard(args: {
+  templateBoardId: string;
+  targetBoardId: string;
+  anchorDate: string;
+  createdBy: string;
+  excludedIds: string[];
+}): Promise<number> {
+  const tasksDb = supabase.schema("tasks");
+  const run = () =>
+    tasksDb.rpc("apply_template_board", {
+      p_template_board_id: args.templateBoardId,
+      p_target_board_id: args.targetBoardId,
+      p_anchor_date: args.anchorDate,
+      p_created_by: args.createdBy,
+      p_excluded_ids: args.excludedIds,
+    });
+
+  let { data, error } = await run();
+  if (error) {
+    ({ data, error } = await run());
+  }
+  if (error) throw error;
+  return data ?? 0;
 }

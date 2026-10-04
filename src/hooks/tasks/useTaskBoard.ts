@@ -52,7 +52,7 @@ export interface TagLite {
 }
 
 export interface TaskBoardData {
-  board: { id: string; name: string; space_id: string; zone_id: string | null };
+  board: { id: string; name: string; space_id: string; zone_id: string | null; is_template: boolean };
   zoneName: string | null;
   statuses: StatusRow[];
   tasks: TaskRow[];
@@ -109,7 +109,7 @@ export function useTaskBoard(boardId: string | undefined) {
 
       const { data: board, error: boardError } = await tasksDb
         .from("boards")
-        .select("id, name, space_id, zone_id, status_set_id")
+        .select("id, name, space_id, zone_id, status_set_id, is_template")
         .eq("id", boardId)
         .single();
       if (boardError) throw boardError;
@@ -387,6 +387,7 @@ export function useTaskBoard(boardId: string | undefined) {
           name: board.name,
           space_id: board.space_id,
           zone_id: board.zone_id,
+          is_template: board.is_template,
         },
         zoneName: zoneRow.data?.name ?? null,
         statuses: statuses ?? [],
@@ -426,7 +427,8 @@ export function useTaskBoard(boardId: string | undefined) {
       // Best-effort — a failed dependency check shouldn't fail the
       // status change itself, same posture as setAssignees' own push.
       const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
-      if (category === "done") void notifyDependentAssignees(taskId);
+      // Template boards never notify — nobody is really working them.
+      if (category === "done" && !query.data?.board.is_template) void notifyDependentAssignees(taskId);
 
       // Any task that lists this one as a blocker has its own cached
       // detail view keyed by ITS OWN taskId — invalidate those too, or
@@ -541,8 +543,10 @@ export function useTaskBoard(boardId: string | undefined) {
 
         // Best-effort, not awaited into the mutation's own error path —
         // see the identical note in useTaskDetail.ts's setAssignees.
+        // Template boards don't notify: the people get notified when the
+        // template is applied to a real board, not while it's being edited.
         const recipients = toAdd.filter((id) => id !== user.id);
-        if (recipients.length > 0) {
+        if (recipients.length > 0 && !query.data?.board.is_template) {
           const taskTitle = query.data?.tasks.find((t) => t.id === taskId)?.title ?? "مهمة";
           void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, {
             url: `/tasks/${taskId}`,
@@ -641,8 +645,8 @@ export function useTaskBoard(boardId: string | undefined) {
     onSuccess: invalidate,
   });
 
-  // Drag-and-drop reorder/reparent — same shape as useTemplateBuilder's
-  // moveTaskTo (native HTML5 DnD, no library). Cycle guard walks up from
+  // Drag-and-drop reorder/reparent (native HTML5 DnD, no library).
+  // Cycle guard walks up from
   // the drop target before writing anything.
   const moveTaskTo = useMutation({
     mutationFn: async ({

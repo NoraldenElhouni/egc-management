@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { Outlet, useParams } from "react-router-dom";
-import { Loader2, FileStack, Copy } from "lucide-react";
+import { Link, Outlet, useParams } from "react-router-dom";
+import { Loader2, FileStack, Copy, ChevronRight } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
 import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
 import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
+import { TemplateModeProvider } from "../../components/tasks/TemplateModeContext";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
+// Also the template editor: a template is a board with is_template set
+// (opened from /tasks/admin/templates), rendered here in template mode —
+// see TemplateModeContext.tsx for what that changes.
 export default function TaskBoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const {
@@ -48,18 +52,36 @@ export default function TaskBoardPage() {
     );
   }
 
+  const isTemplate = data.board.is_template;
+
   return (
+    <TemplateModeProvider value={isTemplate}>
     <div className="flex h-full flex-col" dir="rtl">
       <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-        <h1 className="text-base font-semibold text-gray-900">{data.board.name}</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowZoneClone(true)}
-            className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            استنساخ منطقة
-          </button>
+          {isTemplate && (
+            <Link to="/tasks/admin/templates" className="text-gray-400 hover:text-gray-600" title="القوالب">
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          )}
+          <h1 className="text-base font-semibold text-gray-900">{data.board.name}</h1>
+          {isTemplate && (
+            <span className="flex items-center gap-1 rounded-full bg-primary-superLight px-2 py-0.5 text-xs font-medium text-primary">
+              <FileStack className="h-3 w-3" />
+              قالب
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!isTemplate && (
+            <button
+              onClick={() => setShowZoneClone(true)}
+              className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              استنساخ منطقة
+            </button>
+          )}
           <button
             onClick={() => setShowTemplatePicker(true)}
             className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
@@ -136,5 +158,6 @@ export default function TaskBoardPage() {
         />
       )}
     </div>
+    </TemplateModeProvider>
   );
 }

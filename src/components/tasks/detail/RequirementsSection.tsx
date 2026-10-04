@@ -25,10 +25,9 @@ interface RequirementsSectionProps {
 // missing visible up front (build plan D3 §5). Manually toggling one here
 // is the override path (tasks.requirement.override in the permission
 // list, Part 6) — no gate on that yet since Part 6 is deferred, same as
-// everywhere else in this module. Adding one is the same
-// "+ إضافة متطلب" pattern TemplateBuilderPage.tsx already uses for
-// template_requirements — this was the only place a real (non-template)
-// task had no way to get a requirement at all until now.
+// everywhere else in this module. Template boards use this same section
+// (templates are boards now), and apply_template_board() copies the
+// requirements onto the real tasks.
 export default function RequirementsSection({
   requirements,
   onToggle,

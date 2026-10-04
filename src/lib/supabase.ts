@@ -6366,6 +6366,24 @@ export type Database = {
   }
   tasks: {
     Tables: {
+      _template_migration_map: {
+        Row: {
+          kind: string
+          new_id: string
+          old_id: string
+        }
+        Insert: {
+          kind: string
+          new_id: string
+          old_id: string
+        }
+        Update: {
+          kind?: string
+          new_id?: string
+          old_id?: string
+        }
+        Relationships: []
+      }
       automation_runs: {
         Row: {
           automation_id: string | null
@@ -6508,6 +6526,7 @@ export type Database = {
           folder_id: string | null
           id: string
           is_archived: boolean
+          is_template: boolean
           name: string
           sort_order: number
           space_id: string
@@ -6523,6 +6542,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           is_archived?: boolean
+          is_template?: boolean
           name: string
           sort_order?: number
           space_id: string
@@ -6538,6 +6558,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           is_archived?: boolean
+          is_template?: boolean
           name?: string
           sort_order?: number
           space_id?: string
@@ -6823,6 +6844,7 @@ export type Database = {
           icon: string | null
           id: string
           is_archived: boolean
+          is_template: boolean
           name: string
           owner_user_id: string | null
           project_id: string | null
@@ -6840,6 +6862,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_archived?: boolean
+          is_template?: boolean
           name: string
           owner_user_id?: string | null
           project_id?: string | null
@@ -6857,6 +6880,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_archived?: boolean
+          is_template?: boolean
           name?: string
           owner_user_id?: string | null
           project_id?: string | null
@@ -7356,6 +7380,7 @@ export type Database = {
           id: string
           is_archived: boolean
           is_overdue: boolean
+          is_template: boolean
           occurrence_date: string | null
           parent_task_id: string | null
           priority: Database["tasks"]["Enums"]["priority"] | null
@@ -7383,6 +7408,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_overdue?: boolean
+          is_template?: boolean
           occurrence_date?: string | null
           parent_task_id?: string | null
           priority?: Database["tasks"]["Enums"]["priority"] | null
@@ -7410,6 +7436,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_overdue?: boolean
+          is_template?: boolean
           occurrence_date?: string | null
           parent_task_id?: string | null
           priority?: Database["tasks"]["Enums"]["priority"] | null
@@ -7452,7 +7479,7 @@ export type Database = {
             foreignKeyName: "tasks_source_template_task_id_fkey"
             columns: ["source_template_task_id"]
             isOneToOne: false
-            referencedRelation: "template_tasks"
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
@@ -7756,6 +7783,16 @@ export type Database = {
         Args: { p_rule: Database["tasks"]["Tables"]["recurrence_rules"]["Row"] }
         Returns: string
       }
+      apply_template_board: {
+        Args: {
+          p_anchor_date: string
+          p_created_by: string
+          p_excluded_ids?: string[]
+          p_target_board_id: string
+          p_template_board_id: string
+        }
+        Returns: number
+      }
       assert_requirements_satisfied: {
         Args: { p_task_id: string }
         Returns: undefined
@@ -7775,6 +7812,7 @@ export type Database = {
         Args: {
           p_anchor_date: string
           p_created_by: string
+          p_excluded_ids?: string[]
           p_parent_task_id?: string
           p_source_root_id: string
           p_source_type: Database["tasks"]["Enums"]["copy_source_type"]
@@ -7794,6 +7832,8 @@ export type Database = {
       recompute_overdue_flags: { Args: never; Returns: undefined }
       resolve_status_set: { Args: { p_board_id: string }; Returns: string }
       run_due_date_automations: { Args: never; Returns: undefined }
+      template_epoch: { Args: never; Returns: string }
+      template_space_id: { Args: never; Returns: string }
     }
     Enums: {
       access_level: "view" | "comment" | "edit" | "full"

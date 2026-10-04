@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Lock, Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import { useTemplateMode } from "../TemplateModeContext";
 import type { DependencyTaskRef } from "../../../hooks/tasks/useTaskDetail";
 
 type Direction = "blocks" | "blockedBy";
@@ -44,6 +45,7 @@ interface SearchResult {
 
 interface DependenciesSectionProps {
   taskId: string;
+  boardId: string;
   spaceId: string;
   blocking: DependencyTaskRef[]; // tasks that block this one
   blockedByMe: DependencyTaskRef[]; // tasks waiting on this one
@@ -53,6 +55,7 @@ interface DependenciesSectionProps {
 
 export default function DependenciesSection({
   taskId,
+  boardId,
   spaceId,
   blocking,
   blockedByMe,
@@ -66,6 +69,10 @@ export default function DependenciesSection({
   const ref = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<number | null>(null);
   useClickOutside(ref, () => setOpen(false));
+  // A template's dependencies only make sense between its own tasks —
+  // apply_template_board() recreates exactly those on the target board —
+  // so on a template the search is limited to the template board itself.
+  const isTemplate = useTemplateMode();
 
   // Fetched once per space (not per keystroke) so every search can scope
   // a dedicated same-space query alongside the company-wide one — see
@@ -104,26 +111,30 @@ export default function DependenciesSection({
       // match count below 8. Querying the current space separately
       // guarantees a same-space match is always found regardless of how
       // many other tasks match elsewhere.
+      const scopeBoardIds = isTemplate ? [boardId] : spaceBoardIds;
       const [{ data: innerData }, { data: outerData }] = await Promise.all([
-        spaceBoardIds.length
+        scopeBoardIds.length
           ? supabase
               .schema("tasks")
               .from("tasks")
               .select("id, title, board_id, project_id")
               .eq("is_archived", false)
               .neq("id", taskId)
-              .in("board_id", spaceBoardIds)
+              .in("board_id", scopeBoardIds)
               .ilike("title", `%${trimmed}%`)
               .limit(6)
           : Promise.resolve({ data: [] as { id: string; title: string; board_id: string; project_id: string | null }[] }),
-        supabase
-          .schema("tasks")
-          .from("tasks")
-          .select("id, title, board_id, project_id")
-          .eq("is_archived", false)
-          .neq("id", taskId)
-          .ilike("title", `%${trimmed}%`)
-          .limit(8),
+        isTemplate
+          ? Promise.resolve({ data: [] as { id: string; title: string; board_id: string; project_id: string | null }[] })
+          : supabase
+              .schema("tasks")
+              .from("tasks")
+              .select("id, title, board_id, project_id")
+              .eq("is_archived", false)
+              .eq("is_template", false)
+              .neq("id", taskId)
+              .ilike("title", `%${trimmed}%`)
+              .limit(8),
       ]);
       const innerIds = new Set((innerData ?? []).map((r) => r.id));
       const rows = [...(innerData ?? []), ...(outerData ?? []).filter((r) => !innerIds.has(r.id))];

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import { useTemplateMode } from "../TemplateModeContext";
 import type { Relationship } from "../../../hooks/tasks/useTaskDetail";
 import type { Database } from "../../../lib/supabase";
 
@@ -24,6 +25,7 @@ const TYPES: RelationshipType[] = ["relates_to", "duplicate_of", "reference"];
 
 interface RelationshipsSectionProps {
   taskId: string;
+  boardId: string;
   relationships: (Relationship & { relatedTitle: string })[];
   onAdd: (relatedTaskId: string, type: RelationshipType) => void;
   onRemove: (relationshipId: string) => void;
@@ -31,6 +33,7 @@ interface RelationshipsSectionProps {
 
 export default function RelationshipsSection({
   taskId,
+  boardId,
   relationships,
   onAdd,
   onRemove,
@@ -42,6 +45,9 @@ export default function RelationshipsSection({
   const ref = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<number | null>(null);
   useClickOutside(ref, () => setOpen(false));
+  // Same scoping as DependenciesSection: a template's links stay inside
+  // the template, a real task never links to a template task.
+  const isTemplate = useTemplateMode();
 
   const runSearch = (term: string) => {
     setSearch(term);
@@ -51,14 +57,15 @@ export default function RelationshipsSection({
       return;
     }
     searchTimer.current = window.setTimeout(async () => {
-      const { data } = await supabase
+      let q = supabase
         .schema("tasks")
         .from("tasks")
         .select("id, title")
         .eq("is_archived", false)
         .neq("id", taskId)
-        .ilike("title", `%${term.trim()}%`)
-        .limit(8);
+        .ilike("title", `%${term.trim()}%`);
+      q = isTemplate ? q.eq("board_id", boardId) : q.eq("is_template", false);
+      const { data } = await q.limit(8);
       setResults(data ?? []);
     }, 300);
   };

@@ -75,7 +75,7 @@ export function useTasksSidebar() {
         { data: departmentRows, error: departmentsError },
         { data: assigneeRows, error: assigneeError },
       ] = await Promise.all([
-        tasksDb.from("spaces").select("*").eq("is_archived", false),
+        tasksDb.from("spaces").select("*").eq("is_archived", false).eq("is_template", false),
         tasksDb
           .from("space_members")
           .select("space_id")
@@ -120,7 +120,8 @@ export function useTasksSidebar() {
                 .from("boards")
                 .select("*")
                 .in("space_id", visibleSpaceIds)
-                .eq("is_archived", false),
+                .eq("is_archived", false)
+                .eq("is_template", false),
             ]);
 
       if (foldersError) throw foldersError;
@@ -163,7 +164,8 @@ export function useTasksSidebar() {
           .from("tasks")
           .select("status_id")
           .in("id", myTaskIds)
-          .eq("is_archived", false);
+          .eq("is_archived", false)
+          .eq("is_template", false);
         if (error) throw error;
         myOpenTaskStatusIds = (data ?? []).map((r) => r.status_id);
       }

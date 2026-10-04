@@ -11,7 +11,6 @@ import SpaceTasksPage from "../../pages/tasks/SpaceTasksPage";
 import TaskRedirect from "../../pages/tasks/TaskRedirect";
 import TaskDetailPanel from "../tasks/detail/TaskDetailPanel";
 import TemplatesAdminPage from "../../pages/tasks/admin/TemplatesAdminPage";
-import TemplateBuilderPage from "../../pages/tasks/admin/TemplateBuilderPage";
 import SpaceSettingsPage from "../../pages/tasks/admin/SpaceSettingsPage";
 import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
 
@@ -64,7 +63,6 @@ export default function TasksRoutes() {
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
         <Route path="admin/templates" element={<TemplatesAdminPage />} />
-        <Route path="admin/templates/:templateId" element={<TemplateBuilderPage />} />
         <Route path="admin/fields" element={<FieldsAdminPage />} />
         <Route path="space/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="space/:spaceId" element={<SpaceTasksPage />}>
