@@ -58,9 +58,24 @@ export function localDayBounds(now: Date = new Date()): { start: number; end: nu
   };
 }
 
-/** True when `ts` falls inside today, in the device's local timezone.
- * Half-open: a timestamp at exactly local midnight belongs to the day
- * starting then, not the one ending. */
+/** Local "YYYY-MM-DD" — the value shape of <input type="date">. Built from
+ * local Y/M/D, never toISOString() (see the house rule above). */
+export function toLocalDateInput(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** Inverse of toLocalDateInput: "YYYY-MM-DD" → local midnight of that day.
+ * Parsed from the parts rather than `new Date("YYYY-MM-DD")`, which is
+ * read as UTC midnight and lands on the previous local day west of UTC. */
+export function parseLocalDateInput(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** True when `ts` falls inside the local day that `now` is in (today by
+ * default; pass any date to ask about that day instead). Half-open: a
+ * timestamp at exactly local midnight belongs to the day starting then,
+ * not the one ending. */
 export function isCompletedToday(ts: string | null, now: Date = new Date()): boolean {
   if (!ts) return false;
   const t = new Date(ts).getTime();

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
+import { parseLocalDateInput, toLocalDateInput } from "./taskDates";
 import {
   ASSIGNEE_NONE_KEY,
   PROJECT_NONE_KEY,
@@ -66,6 +67,65 @@ function CheckboxRow({
       {color !== undefined && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color ?? "#9CA3AF" }} />}
       <span className="truncate">{label}</span>
     </label>
+  );
+}
+
+// Day picker for the "done_on" status mode: اليوم / أمس chips, a native date
+// input, and previous/next-day steps. `value` is a local "YYYY-MM-DD" or null
+// for today; today is always handed back as null so it keeps following the
+// clock instead of freezing the day the dialog was opened. Future days are
+// blocked (nothing can have been completed yet).
+function CompletedDatePicker({ value, onChange }: { value: string | null; onChange: (date: string | null) => void }) {
+  const now = new Date();
+  const todayISO = toLocalDateInput(now);
+  const yesterdayISO = toLocalDateInput(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const selectedISO = value ?? todayISO;
+  const isToday = selectedISO >= todayISO;
+
+  const pick = (iso: string) => onChange(!iso || iso >= todayISO ? null : iso);
+  const step = (days: number) => {
+    const d = parseLocalDateInput(selectedISO);
+    pick(toLocalDateInput(new Date(d.getFullYear(), d.getMonth(), d.getDate() + days)));
+  };
+
+  const chipClass = (active: boolean) =>
+    `rounded-full px-2.5 py-0.5 text-xs ${active ? "bg-primary text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`;
+
+  return (
+    <div className="mr-5 space-y-1.5 border-r border-gray-100 pr-2 pt-1">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => step(-1)}
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          title="اليوم السابق"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <input
+          type="date"
+          value={selectedISO}
+          max={todayISO}
+          onChange={(e) => pick(e.target.value)}
+          className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+        />
+        <button
+          onClick={() => step(1)}
+          disabled={isToday}
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          title="اليوم التالي"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex gap-1">
+        <button onClick={() => pick(todayISO)} className={chipClass(isToday)}>
+          اليوم
+        </button>
+        <button onClick={() => pick(yesterdayISO)} className={chipClass(selectedISO === yesterdayISO)}>
+          أمس
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -150,7 +210,7 @@ export default function DirectoryFilterSortPopover({ filters, onChangeFilters, s
   const statusModeOptions: [DirectoryFilterState["statusMode"], string][] = [
     ["open", "المفتوحة فقط"],
     ["done", "المكتملة"],
-    ["done_today", "اكتملت اليوم"],
+    ["done_on", "اكتملت في يوم محدد"],
     ["all", "الكل"],
     ["custom", "تحديد..."],
   ];
@@ -184,6 +244,12 @@ export default function DirectoryFilterSortPopover({ filters, onChangeFilters, s
                       {label}
                     </label>
                   ))}
+                  {filters.statusMode === "done_on" && (
+                    <CompletedDatePicker
+                      value={filters.completedDate}
+                      onChange={(completedDate) => onChangeFilters({ ...filters, completedDate })}
+                    />
+                  )}
                   {filters.statusMode === "custom" && (
                     <div className="mr-5 space-y-0.5 border-r border-gray-100 pr-2">
                       {data.statuses.map((s) => (

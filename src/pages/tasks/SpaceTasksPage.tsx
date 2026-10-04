@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Outlet, useNavigate, useParams } from "react-router-dom";
+import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
 import { ChevronDown, ChevronLeft, Loader2, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
@@ -209,14 +209,34 @@ export default function SpaceTasksPage() {
             const collapsed = !searching && collapsedKeys.has(group.key);
             return (
               <div key={group.key} className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white last:mb-0">
-                <button
-                  onClick={() => toggle(group.key)}
-                  className="flex w-full items-center gap-2 border-b-2 border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200"
-                >
-                  {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  <span>{group.label}</span>
-                  <span className="text-xs font-normal text-gray-400">({group.tasks.length})</span>
-                </button>
+                {/* A link can't live inside a button, so the header is a row of
+                    siblings: chevron (collapse), board name (opens the board),
+                    and a flex-1 filler that keeps "click anywhere else on the
+                    header to collapse" working as it did when the whole header
+                    was one button. */}
+                <div className="flex w-full items-center gap-2 border-b-2 border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200">
+                  <button
+                    onClick={() => toggle(group.key)}
+                    className="shrink-0 rounded p-0.5 hover:bg-gray-300/60"
+                    title={collapsed ? "توسيع" : "طي"}
+                  >
+                    {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+                  <Link
+                    to={`/tasks/board/${group.key}`}
+                    className="truncate hover:text-primary hover:underline"
+                    title="فتح اللوحة"
+                  >
+                    {group.label}
+                  </Link>
+                  <span className="shrink-0 text-xs font-normal text-gray-400">({group.tasks.length})</span>
+                  <button
+                    onClick={() => toggle(group.key)}
+                    className="h-6 flex-1"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                </div>
 
                 {!collapsed && (
                   <>

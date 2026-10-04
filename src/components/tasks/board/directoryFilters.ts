@@ -1,6 +1,6 @@
 import type { Priority, TaskRow } from "../../../hooks/tasks/useTaskBoard";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
-import { isCompletedToday } from "./taskDates";
+import { isCompletedToday, parseLocalDateInput } from "./taskDates";
 
 // Pure filter/sort logic shared by AssigneeViewPage.tsx, TaskTypeViewPage.tsx,
 // and DirectoryFilterSortPopover.tsx — no JSX here so it's trivially unit-
@@ -15,9 +15,13 @@ export interface DirectoryFilterState {
    * default). "done" = the done category only — NOT `closed`, since the
    * trigger that stamps tasks.completed_at only fires for `done`, so a
    * combined mode would list cancelled tasks with no completion time.
-   * "done_today" = done AND completed_at falls in today (device-local).
+   * "done_on" = done AND completed_at falls on `completedDate`
+   * (device-local day; today when that is null).
    * "all" = no status filtering. "custom" = exactly customStatusIds. */
-  statusMode: "open" | "done" | "done_today" | "all" | "custom";
+  statusMode: "open" | "done" | "done_on" | "all" | "custom";
+  /** Local "YYYY-MM-DD" for the "done_on" mode. null = today, which
+   * follows the clock rather than freezing the day the page was opened. */
+  completedDate: string | null;
   customStatusIds: Set<string>;
   /** Empty = every priority, including unset. */
   priorities: Set<Priority | "none">;
@@ -40,6 +44,7 @@ export interface DirectoryFilterState {
 export function createDefaultFilters(): DirectoryFilterState {
   return {
     statusMode: "open",
+    completedDate: null,
     customStatusIds: new Set(),
     priorities: new Set(),
     overdueOnly: false,
@@ -81,17 +86,18 @@ export function filterDirectoryTasks(tasks: TaskRow[], filters: DirectoryFilterS
     data.statuses.filter((s) => s.category === "not_started" || s.category === "active").map((s) => s.id),
   );
   const doneStatusIds = new Set(data.statuses.filter((s) => s.category === "done").map((s) => s.id));
+  const completedDay = filters.completedDate ? parseLocalDateInput(filters.completedDate) : new Date();
 
   return tasks.filter((task) => {
     if (filters.statusMode === "open" && !openStatusIds.has(task.status_id)) return false;
     if (filters.statusMode === "done" && !doneStatusIds.has(task.status_id)) return false;
-    if (filters.statusMode === "done_today") {
+    if (filters.statusMode === "done_on") {
       // Both checks on purpose. completed_at alone would be enough while
       // the trigger behaves, but checking the category too means a stale
       // timestamp that somehow survived a reopen can't put an open task
       // in a "completed" list.
       if (!doneStatusIds.has(task.status_id)) return false;
-      if (!isCompletedToday(task.completed_at)) return false;
+      if (!isCompletedToday(task.completed_at, completedDay)) return false;
     }
     if (filters.statusMode === "custom" && filters.customStatusIds.size > 0 && !filters.customStatusIds.has(task.status_id)) {
       return false;

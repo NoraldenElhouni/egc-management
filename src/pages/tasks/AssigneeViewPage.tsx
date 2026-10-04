@@ -129,7 +129,7 @@ export default function AssigneeViewPage() {
   // The completion column earns its width only while you're actually
   // looking at completed work, so it appears with the filter and the
   // default view stays exactly as wide as before.
-  const showCompleted = filters.statusMode === "done" || filters.statusMode === "done_today";
+  const showCompleted = filters.statusMode === "done" || filters.statusMode === "done_on";
 
   return (
     <div className="flex h-full flex-col" dir="rtl">

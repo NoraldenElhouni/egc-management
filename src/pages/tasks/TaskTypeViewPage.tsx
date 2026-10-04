@@ -103,7 +103,7 @@ export default function TaskTypeViewPage() {
   // Same rule as AssigneeViewPage — the completion column appears only
   // while you're looking at completed work, so the default view keeps its
   // width.
-  const showCompleted = filters.statusMode === "done" || filters.statusMode === "done_today";
+  const showCompleted = filters.statusMode === "done" || filters.statusMode === "done_on";
 
   return (
     <div className="flex h-full flex-col" dir="rtl">

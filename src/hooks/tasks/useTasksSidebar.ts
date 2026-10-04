@@ -36,6 +36,9 @@ export interface FolderNode {
 
 export interface SpaceNode {
   space: SpaceRow;
+  /** Name of the linked project (project-type spaces), so search can match
+   * by project even when the space was named something else. */
+  projectName: string | null;
   folders: FolderNode[];
   boards: BoardWithCount[]; // directly under the space (folder_id null)
 }
@@ -214,6 +217,15 @@ export function useTasksSidebar() {
       if (zonesError) throw zonesError;
       const zoneNameById = new Map((zoneRows ?? []).map((z) => [z.id, z.name]));
 
+      const projectIds = Array.from(
+        new Set(visibleSpaces.map((s) => s.project_id).filter((id): id is string => !!id)),
+      );
+      const { data: projectRows, error: projectsError } = projectIds.length
+        ? await supabase.from("projects").select("id, name").in("id", projectIds)
+        : { data: [], error: null };
+      if (projectsError) throw projectsError;
+      const projectNameById = new Map((projectRows ?? []).map((p) => [p.id, p.name]));
+
       const boardsWithCount: BoardWithCount[] = (boards ?? []).map((b) => ({
         board: b,
         openCount: openCountByBoard.get(b.id) ?? 0,
@@ -230,6 +242,7 @@ export function useTasksSidebar() {
 
         return {
           space,
+          projectName: space.project_id ? (projectNameById.get(space.project_id) ?? null) : null,
           boards: spaceBoards.filter((b) => !b.board.folder_id),
           folders: spaceFolders.map((folder) => ({
             folder,

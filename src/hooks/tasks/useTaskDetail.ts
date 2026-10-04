@@ -643,6 +643,17 @@ export function useTaskDetail(taskId: string | undefined) {
         body: { text },
       });
       if (error) throw error;
+
+      // Best-effort push to the task's creator — same wording and link as
+      // Fields' addComment, so the notification looks and opens the same
+      // whichever app the comment came from. Not awaited (a failed push
+      // must not fail the comment) and never notifies the commenter.
+      const creatorId = query.data?.task.created_by;
+      if (creatorId && creatorId !== user.id) {
+        void notifyUsers([creatorId], "تعليق جديد على مهمتك", `${query.data?.task.title ?? "مهمة"}: ${text}`, {
+          url: `/tasks/${taskId}`,
+        });
+      }
     },
     onSuccess: invalidate,
   });
