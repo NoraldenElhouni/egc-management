@@ -6,6 +6,9 @@ import TaskTable from "../../components/tasks/board/TaskTable";
 import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
 import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
 import { TemplateModeProvider } from "../../components/tasks/TemplateModeContext";
+import TemplateSyncBanner from "../../components/tasks/templates/TemplateSyncBanner";
+import PushToBoardsModal from "../../components/tasks/templates/PushToBoardsModal";
+import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks/useTemplateSync";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
 // Also the template editor: a template is a board with is_template set
@@ -35,6 +38,10 @@ export default function TaskBoardPage() {
   } = useTaskBoard(boardId);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showZoneClone, setShowZoneClone] = useState(false);
+  // Template push (useTemplateSync.ts): the task ids the dialog opens with.
+  const [pushTaskIds, setPushTaskIds] = useState<string[] | null>(null);
+  const { status: syncStatus } = useTemplateSyncStatus(boardId);
+  const { dismiss } = useTemplateSyncActions();
 
   if (loading) {
     return (
@@ -53,6 +60,9 @@ export default function TaskBoardPage() {
   }
 
   const isTemplate = data.board.is_template;
+  // Pushing only makes sense on a template, or on a board built from one.
+  const canPush = !!syncStatus && (isTemplate || syncStatus.templateBoards.length > 0);
+  const pendingTaskIds = canPush ? syncStatus.pendingTaskIds : [];
 
   return (
     <TemplateModeProvider value={isTemplate}>
@@ -91,6 +101,15 @@ export default function TaskBoardPage() {
           </button>
         </div>
       </div>
+
+      {pendingTaskIds.length > 0 && (
+        <TemplateSyncBanner
+          isTemplate={isTemplate}
+          pendingCount={pendingTaskIds.length}
+          onPush={() => setPushTaskIds(pendingTaskIds)}
+          onDismiss={() => dismiss({ boardId: data.board.id, taskIds: pendingTaskIds })}
+        />
+      )}
 
       <div className="flex-1 overflow-hidden">
         <TaskTable
@@ -131,6 +150,7 @@ export default function TaskBoardPage() {
           onSetColumnVisibility={(boardColumnId, visible) => setColumnVisibility({ boardColumnId, visible })}
           onRenameField={(fieldDefinitionId, name_ar) => renameField({ fieldDefinitionId, name_ar })}
           onMoveTaskTo={moveTaskTo}
+          onPushSelected={canPush ? setPushTaskIds : undefined}
         />
       </div>
 
@@ -146,6 +166,17 @@ export default function TaskBoardPage() {
           currentBoardId={data.board.id}
           onClose={() => setShowTemplatePicker(false)}
           onApplied={() => setShowTemplatePicker(false)}
+        />
+      )}
+
+      {pushTaskIds && syncStatus && (
+        <PushToBoardsModal
+          boardId={data.board.id}
+          isTemplate={isTemplate}
+          status={syncStatus}
+          tasks={data.tasks}
+          initialTaskIds={pushTaskIds}
+          onClose={() => setPushTaskIds(null)}
         />
       )}
 

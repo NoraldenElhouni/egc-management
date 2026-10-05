@@ -330,6 +330,7 @@ export function useTaskDetail(taskId: string | undefined) {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey });
     queryClient.invalidateQueries({ queryKey: ["task-board", query.data?.task.board_id] });
+    queryClient.invalidateQueries({ queryKey: ["template-sync", query.data?.task.board_id] });
   };
 
   const updateField = useMutation({

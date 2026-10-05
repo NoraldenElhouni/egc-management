@@ -414,7 +414,11 @@ export function useTaskBoard(boardId: string | undefined) {
     },
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey });
+    // a new/moved task can change the template-push banner (useTemplateSync.ts)
+    queryClient.invalidateQueries({ queryKey: ["template-sync", boardId] });
+  };
 
   const updateStatus = useMutation({
     mutationFn: async ({ taskId, statusId }: { taskId: string; statusId: string }) => {

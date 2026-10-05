@@ -7392,6 +7392,7 @@ export type Database = {
           start_date: string | null
           status_id: string
           task_type_id: string
+          template_push_dismissed: boolean
           time_estimate_minutes: number | null
           title: string
           updated_at: string
@@ -7420,6 +7421,7 @@ export type Database = {
           start_date?: string | null
           status_id: string
           task_type_id?: string
+          template_push_dismissed?: boolean
           time_estimate_minutes?: number | null
           title: string
           updated_at?: string
@@ -7448,6 +7450,7 @@ export type Database = {
           start_date?: string | null
           status_id?: string
           task_type_id?: string
+          template_push_dismissed?: boolean
           time_estimate_minutes?: number | null
           title?: string
           updated_at?: string
@@ -7783,6 +7786,17 @@ export type Database = {
         Args: { p_rule: Database["tasks"]["Tables"]["recurrence_rules"]["Row"] }
         Returns: string
       }
+      add_tasks_to_template: {
+        Args: {
+          p_created_by: string
+          p_task_ids: string[]
+          p_template_board_id: string
+        }
+        Returns: {
+          source_task_id: string
+          template_task_id: string
+        }[]
+      }
       apply_template_board: {
         Args: {
           p_anchor_date: string
@@ -7829,11 +7843,24 @@ export type Database = {
         Returns: boolean
       }
       generate_recurrence_occurrences: { Args: never; Returns: undefined }
+      push_template_tasks: {
+        Args: {
+          p_created_by: string
+          p_default_anchor: string
+          p_target_board_ids: string[]
+          p_task_ids: string[]
+          p_template_board_id: string
+        }
+        Returns: {
+          new_task_id: string
+        }[]
+      }
       recompute_overdue_flags: { Args: never; Returns: undefined }
       resolve_status_set: { Args: { p_board_id: string }; Returns: string }
       run_due_date_automations: { Args: never; Returns: undefined }
       template_epoch: { Args: never; Returns: string }
       template_space_id: { Args: never; Returns: string }
+      template_sync_status: { Args: { p_board_id: string }; Returns: Json }
     }
     Enums: {
       access_level: "view" | "comment" | "edit" | "full"

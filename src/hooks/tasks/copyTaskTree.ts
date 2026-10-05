@@ -70,3 +70,57 @@ export async function callApplyTemplateBoard(args: {
   if (error) throw error;
   return data ?? 0;
 }
+
+// Copies chosen template tasks (with their subtrees) onto each target
+// board that doesn't have them yet — tasks.push_template_tasks(). Each
+// copy lands under the target's copy of its template parent when there is
+// one, dated from the Day 0 the board was built with (or defaultAnchor
+// when that can't be worked out). Returns the new task ids.
+export async function callPushTemplateTasks(args: {
+  templateBoardId: string;
+  taskIds: string[];
+  targetBoardIds: string[];
+  defaultAnchor: string;
+  createdBy: string;
+}): Promise<string[]> {
+  const tasksDb = supabase.schema("tasks");
+  const run = () =>
+    tasksDb.rpc("push_template_tasks", {
+      p_template_board_id: args.templateBoardId,
+      p_task_ids: args.taskIds,
+      p_target_board_ids: args.targetBoardIds,
+      p_default_anchor: args.defaultAnchor,
+      p_created_by: args.createdBy,
+    });
+
+  let { data, error } = await run();
+  if (error) {
+    ({ data, error } = await run());
+  }
+  if (error) throw error;
+  return (data ?? []).map((r) => r.new_task_id);
+}
+
+// Copies tasks added by hand on a real board into its template —
+// tasks.add_tasks_to_template() — and links the originals back to the new
+// template tasks. Returns the new template task ids.
+export async function callAddTasksToTemplate(args: {
+  taskIds: string[];
+  templateBoardId: string;
+  createdBy: string;
+}): Promise<string[]> {
+  const tasksDb = supabase.schema("tasks");
+  const run = () =>
+    tasksDb.rpc("add_tasks_to_template", {
+      p_task_ids: args.taskIds,
+      p_template_board_id: args.templateBoardId,
+      p_created_by: args.createdBy,
+    });
+
+  let { data, error } = await run();
+  if (error) {
+    ({ data, error } = await run());
+  }
+  if (error) throw error;
+  return (data ?? []).map((r) => r.template_task_id);
+}

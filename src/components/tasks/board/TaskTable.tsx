@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp } from "lucide-react";
+import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, Send } from "lucide-react";
 import TaskRow, { rowGridStyle } from "./TaskRow";
 import ColumnEditorModal from "./ColumnEditorModal";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
@@ -63,6 +63,9 @@ interface TaskTableProps {
   onSetColumnVisibility: (boardColumnId: string, visible: boolean) => void;
   onRenameField: (fieldDefinitionId: string, name_ar: string) => void;
   onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
+  /** When set, rows get checkboxes and a selection bar offers "add to
+   * boards…" for the selected tasks (template push — see useTemplateSync.ts). */
+  onPushSelected?: (taskIds: string[]) => void;
 }
 
 export default function TaskTable({
@@ -102,6 +105,7 @@ export default function TaskTable({
   onSetColumnVisibility,
   onRenameField,
   onMoveTaskTo,
+  onPushSelected,
 }: TaskTableProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -109,6 +113,14 @@ export default function TaskTable({
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showColumnEditor, setShowColumnEditor] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string | null, TaskRowType[]>();
@@ -236,6 +248,25 @@ export default function TaskTable({
         </div>
       </div>
 
+      {onPushSelected && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 border-b border-primary/20 bg-primary-superLight px-4 py-1.5 text-sm">
+          <span className="font-medium text-primary">{selectedIds.size} محددة</span>
+          <button
+            onClick={() => {
+              onPushSelected(Array.from(selectedIds));
+              setSelectedIds(new Set());
+            }}
+            className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white"
+          >
+            <Send className="h-3.5 w-3.5" />
+            إضافة إلى لوحات…
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
+            إلغاء التحديد
+          </button>
+        </div>
+      )}
+
       <div
         style={rowGridStyle(customColumns.length, featureSettings.priorities)}
         className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-2 py-2 text-xs font-semibold text-gray-500"
@@ -330,6 +361,8 @@ export default function TaskTable({
                 onDragStart={setDraggedId}
                 onDragEnd={() => setDraggedId(null)}
                 onMoveTaskTo={onMoveTaskTo}
+                selectedIds={onPushSelected ? selectedIds : undefined}
+                onToggleSelect={onPushSelected ? toggleSelect : undefined}
               />
             ))}
           </div>

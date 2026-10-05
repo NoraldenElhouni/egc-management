@@ -78,6 +78,10 @@ interface TaskRowProps {
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
+  /** Row selection for "add to boards…" (template push). Omitted = no
+   * checkbox at all. */
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
 export default function TaskRow({
@@ -117,6 +121,8 @@ export default function TaskRow({
   onDragStart,
   onDragEnd,
   onMoveTaskTo,
+  selectedIds,
+  onToggleSelect,
 }: TaskRowProps) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
@@ -127,6 +133,10 @@ export default function TaskRow({
   const hasChildren = children.length > 0;
   const collapsed = collapsedIds.has(task.id) && !addingChild;
   const siblings = childrenByParent.get(task.parent_task_id) ?? [];
+  const selected = !!selectedIds?.has(task.id);
+  // Once anything is selected every row shows its box, so picking several
+  // doesn't need a hover per row.
+  const showSelect = !!onToggleSelect && (hovered || selected || (selectedIds?.size ?? 0) > 0);
 
   const handleDrop = () => {
     if (!draggedId || draggedId === task.id) return setDropZone(null);
@@ -176,7 +186,7 @@ export default function TaskRow({
         onDragLeave={() => setDropZone(null)}
         onDrop={handleDrop}
         style={rowGridStyle(customColumns.length, showPriority)}
-        className={`min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50 ${
+        className={`min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50 ${selected ? "bg-primary-superLight/60" : ""} ${
           dropZone === "before"
             ? "border-t-2 border-t-primary"
             : dropZone === "after"
@@ -190,6 +200,19 @@ export default function TaskRow({
           className="flex min-w-0 items-center gap-1"
           style={{ paddingRight: depth * 20 }}
         >
+          {onToggleSelect && (
+            <span className="flex w-4 shrink-0 items-center">
+              {showSelect && (
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => onToggleSelect(task.id)}
+                  className="h-3.5 w-3.5 cursor-pointer"
+                  title="تحديد"
+                />
+              )}
+            </span>
+          )}
           <span className="w-4 shrink-0 text-gray-300">
             {hovered && (
               <span
@@ -402,6 +425,8 @@ export default function TaskRow({
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               onMoveTaskTo={onMoveTaskTo}
+              selectedIds={selectedIds}
+              onToggleSelect={onToggleSelect}
             />
           ))}
 
