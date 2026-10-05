@@ -7,6 +7,10 @@ import {
   type PickerBoard,
   type TemplateSyncStatus,
 } from "../../../hooks/tasks/useTemplateSync";
+import { useAuth } from "../../../hooks/useAuth";
+import { useAddTeamMember } from "../../../hooks/team/useTeamAssignments";
+import { useRoleGaps } from "../../../hooks/tasks/useRoleGaps";
+import RoleGapsSection, { resolveGapChoices, type GapChoice } from "./RoleGapsSection";
 
 // Template push dialog, opened from the board's TemplateSyncBanner or its
 // row-selection bar. On a template board it copies the chosen tasks onto
@@ -64,9 +68,36 @@ export default function PushToBoardsModal({
   const usingBoardIds = new Set((isTemplate ? status : templateStatus)?.usingBoardIds ?? []);
   const { boards, loading: boardsLoading } = useBoardPickerOptions(true);
   const { push, pushing } = useTemplateSyncActions();
+  const { user } = useAuth();
+  const addTeamMember = useAddTeamMember();
+  const [gapChoices, setGapChoices] = useState<Record<string, GapChoice>>({});
 
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
   const shownTasks = initialTaskIds.map((id) => taskById.get(id)).filter((t): t is TaskLite => !!t);
+
+  // Project roles only exist on template tasks, so only a push FROM a
+  // template has roles to resolve. A push copies whole subtrees, so the
+  // subtasks' roles count too.
+  const copiedTaskIds = useMemo(() => {
+    if (!isTemplate) return [];
+    const childrenByParent = new Map<string, string[]>();
+    for (const t of tasks) {
+      if (!t.parent_task_id) continue;
+      const list = childrenByParent.get(t.parent_task_id) ?? [];
+      list.push(t.id);
+      childrenByParent.set(t.parent_task_id, list);
+    }
+    const ids = new Set<string>();
+    const walk = (id: string) => {
+      if (ids.has(id)) return;
+      ids.add(id);
+      for (const child of childrenByParent.get(id) ?? []) walk(child);
+    };
+    for (const id of selectedTaskIds) walk(id);
+    return Array.from(ids);
+  }, [isTemplate, tasks, selectedTaskIds]);
+  const roleGaps = useRoleGaps(copiedTaskIds, Array.from(targetIds));
+  const gapResolution = resolveGapChoices(roleGaps.gaps, gapChoices);
 
   const term = search.trim();
   const matches = (b: PickerBoard) => !term || b.label.includes(term);
@@ -84,18 +115,35 @@ export default function PushToBoardsModal({
   // A template push needs somewhere to go; from a real board, adding to
   // the template alone is already useful.
   const canConfirm =
-    !!templateBoardId && selectedTaskIds.size > 0 && (isTemplate ? targetIds.size > 0 : true) && !pushing;
+    !!templateBoardId &&
+    selectedTaskIds.size > 0 &&
+    (isTemplate ? targetIds.size > 0 : true) &&
+    !pushing &&
+    !addTeamMember.isPending &&
+    !roleGaps.loading &&
+    gapResolution.valid;
 
   const handleConfirm = async () => {
     if (!templateBoardId) return;
     setError(null);
     try {
+      // "add to the role" choices first, so the push finds those people
+      // in the role like any other holder
+      for (const a of gapResolution.addToRole) {
+        await addTeamMember.mutateAsync({
+          projectId: a.projectId,
+          personId: a.personId,
+          projectRoleId: a.roleId,
+          assignedBy: user?.id ?? null,
+        });
+      }
       const { created, addedToTemplate } = await push({
         fromBoardId: boardId,
         templateBoardId,
         taskIds: Array.from(selectedTaskIds),
         targetBoardIds: Array.from(targetIds),
         defaultAnchor: anchorDate,
+        roleOverrides: gapResolution.overrides,
       });
       setResult(
         [addedToTemplate ? "أُضيفت المهام إلى القالب" : null, targetIds.size ? `أُنشئت ${created} مهمة في ${targetIds.size} لوحة` : null]
@@ -216,6 +264,14 @@ export default function PushToBoardsModal({
                   </>
                 )}
               </section>
+
+              <RoleGapsSection
+                gaps={roleGaps.gaps}
+                filled={roleGaps.filled}
+                loading={roleGaps.loading}
+                choices={gapChoices}
+                onChange={(key, choice) => setGapChoices((prev) => ({ ...prev, [key]: choice }))}
+              />
 
               {targetIds.size > 0 && (
                 <section className="flex flex-wrap items-center gap-2">

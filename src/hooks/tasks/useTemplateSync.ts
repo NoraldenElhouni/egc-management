@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
-import { notifyUsers } from "../../services/notifications/pushNotifications";
+import { notifyNewAssignees } from "../../services/tasks/notifyNewAssignees";
 import { callAddTasksToTemplate, callPushTemplateTasks } from "./copyTaskTree";
 
 // =====================================================================
@@ -135,31 +135,6 @@ export function useTemplateSyncActions() {
     queryClient.invalidateQueries({ queryKey: ["template-picker"] });
   };
 
-  // Best-effort, like setAssignees' own push: one notification per person,
-  // never to the person doing the push.
-  const notifyNewAssignees = async (newTaskIds: string[]) => {
-    if (newTaskIds.length === 0) return;
-    const tasksDb = supabase.schema("tasks");
-    const [{ data: assigneeRows }, { data: taskRows }] = await Promise.all([
-      tasksDb.from("task_assignees").select("task_id, user_id").in("task_id", newTaskIds),
-      tasksDb.from("tasks").select("id, title").in("id", newTaskIds),
-    ]);
-    const titleById = new Map((taskRows ?? []).map((t) => [t.id, t.title]));
-    const tasksByUser = new Map<string, string[]>();
-    for (const row of assigneeRows ?? []) {
-      if (row.user_id === user?.id) continue;
-      const list = tasksByUser.get(row.user_id) ?? [];
-      list.push(row.task_id);
-      tasksByUser.set(row.user_id, list);
-    }
-    for (const [userId, taskIds] of tasksByUser) {
-      const body = taskIds.length === 1 ? (titleById.get(taskIds[0]) ?? "مهمة") : `${taskIds.length} مهام جديدة`;
-      void notifyUsers([userId], "تم تكليفك بمهمة جديدة", body, {
-        url: taskIds.length === 1 ? `/tasks/${taskIds[0]}` : "/tasks/my-work",
-      });
-    }
-  };
-
   const push = useMutation({
     mutationFn: async (input: {
       /** Real board's own id when the tasks start there; the template's id otherwise. */
@@ -169,6 +144,9 @@ export function useTemplateSyncActions() {
       taskIds: string[];
       targetBoardIds: string[];
       defaultAnchor: string;
+      /** Picks for project roles nobody holds, per target board:
+       * {boardId: {roleId: [userIds]}} — see RoleGapsSection.tsx. */
+      roleOverrides?: Record<string, Record<string, string[]>>;
     }) => {
       if (!user?.id) throw new Error("no authenticated user");
 
@@ -191,10 +169,11 @@ export function useTemplateSyncActions() {
             targetBoardIds: input.targetBoardIds,
             defaultAnchor: input.defaultAnchor,
             createdBy: user.id,
+            roleOverrides: input.roleOverrides ?? {},
           })
         : [];
 
-      void notifyNewAssignees(newTaskIds);
+      void notifyNewAssignees(newTaskIds, user.id);
       return { ...input, created: newTaskIds.length, addedToTemplate: input.fromBoardId !== input.templateBoardId };
     },
     onSuccess: ({ fromBoardId, templateBoardId, targetBoardIds }) => {

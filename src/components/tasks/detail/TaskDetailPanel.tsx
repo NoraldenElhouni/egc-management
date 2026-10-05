@@ -5,6 +5,8 @@ import { useTaskDetail } from "../../../hooks/tasks/useTaskDetail";
 import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
 import AssigneeCell from "../board/AssigneeCell";
+import RoleAssigneeCell from "../board/RoleAssigneeCell";
+import { useTaskRoles } from "../../../hooks/tasks/useTaskRoles";
 import StartDateCell from "../board/StartDateCell";
 import DateCell from "../board/DateCell";
 import CustomFieldCell from "../board/CustomFieldCell";
@@ -81,6 +83,13 @@ export default function TaskDetailPanel() {
     deleteTask,
     deletingTask,
   } = useTaskDetail(taskId);
+  // Template tasks can also be assigned by project role (useTaskRoles.ts).
+  const isTemplateTask = !!data?.task.is_template;
+  const { rolesByTask, setTaskRoles } = useTaskRoles(
+    taskId ? `task:${taskId}` : undefined,
+    taskId ? [taskId] : [],
+    isTemplateTask,
+  );
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
@@ -250,13 +259,22 @@ export default function TaskDetailPanel() {
                 </select>
               </FieldRow>
               <FieldRow label="المسؤولون">
-                <AssigneeCell
-                  assigneeIds={data.assigneeIds}
-                  employeesById={data.employeesById}
-                  allEmployees={data.employees}
-                  onChange={(userIds) => setAssignees(userIds)}
-                  align="left"
-                />
+                <div className="flex items-center gap-1.5">
+                  {isTemplateTask && (
+                    <RoleAssigneeCell
+                      roleIds={rolesByTask.get(data.task.id) ?? []}
+                      onChange={(roleIds) => setTaskRoles({ taskId: data.task.id, roleIds })}
+                      align="left"
+                    />
+                  )}
+                  <AssigneeCell
+                    assigneeIds={data.assigneeIds}
+                    employeesById={data.employeesById}
+                    allEmployees={data.employees}
+                    onChange={(userIds) => setAssignees(userIds)}
+                    align="left"
+                  />
+                </div>
               </FieldRow>
               <FieldRow label="تاريخ البدء">
                 <StartDateCell

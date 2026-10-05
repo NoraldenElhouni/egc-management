@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { callApplyTemplateBoard } from "./copyTaskTree";
+import { notifyNewAssignees } from "../../services/tasks/notifyNewAssignees";
 
 // =====================================================================
 // D4 — Template picker, build plan Part 7.
@@ -170,26 +171,37 @@ export function useTemplatePicker(spaceId: string | undefined, currentBoardId: s
       excludedIds,
       targetBoardIds,
       anchorDate,
+      roleOverrides,
     }: {
       templateIds: string[];
       excludedIds: string[];
       targetBoardIds: string[];
       anchorDate: string;
+      /** {boardId: {roleId: [userIds]}} — picks for project roles nobody
+       * holds on that board's project (RoleGapsSection.tsx). */
+      roleOverrides: Record<string, Record<string, string[]>>;
     }) => {
       if (!user?.id) throw new Error("no authenticated user");
 
+      const newTaskIds: string[] = [];
       for (const boardId of targetBoardIds) {
         for (const templateId of templateIds) {
-          await callApplyTemplateBoard({
-            templateBoardId: templateId,
-            targetBoardId: boardId,
-            anchorDate,
-            createdBy: user.id,
-            excludedIds,
-          });
+          newTaskIds.push(
+            ...(await callApplyTemplateBoard({
+              templateBoardId: templateId,
+              targetBoardId: boardId,
+              anchorDate,
+              createdBy: user.id,
+              excludedIds,
+              roleOverrides: roleOverrides[boardId] ?? {},
+            })),
+          );
         }
       }
 
+      // people (named, or resolved from a project role) were assigned
+      // server-side; tell them
+      void notifyNewAssignees(newTaskIds, user.id);
       return { targetBoardIds };
     },
     onSuccess: ({ targetBoardIds }) => {

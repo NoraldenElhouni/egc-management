@@ -32,6 +32,8 @@ import RolePermissionsDetailPage from "../../pages/settings/permissions/RolePerm
 import EvaluationSettingsPage from "../../pages/settings/evaluation/EvaluationSettingsPage";
 import QuestionBankPage from "../../pages/settings/questionBank/QuestionBankPage";
 import ScoringSettingsPage from "../../pages/settings/scoring/ScoringSettingsPage";
+import ProjectRolesPage from "../../pages/settings/projectRoles/ProjectRolesPage";
+import ProjectRoleDetailPage from "../../pages/settings/projectRoles/ProjectRoleDetailPage";
 
 export default function SettingsRoutes() {
   return (
@@ -44,6 +46,7 @@ export default function SettingsRoutes() {
                 "manage_reference_data",
                 "manage_specialities",
                 "manage_roles",
+                "manage_project_roles",
               ]}
             />
           }
@@ -55,6 +58,13 @@ export default function SettingsRoutes() {
           <Route path="roles" element={<SettingsRolesPage />} />
           <Route path="roles/new" element={<NewRolePage />} />
           <Route path="roles/:id" element={<RolesDetailsPage />} />
+        </Route>
+
+        {/* Project team positions (public.project_roles) — not the
+            permission roles above, which is why it has its own permission. */}
+        <Route element={<RequirePermission permission="manage_project_roles" />}>
+          <Route path="project-roles" element={<ProjectRolesPage />} />
+          <Route path="project-roles/:roleId" element={<ProjectRoleDetailPage />} />
         </Route>
 
         <Route

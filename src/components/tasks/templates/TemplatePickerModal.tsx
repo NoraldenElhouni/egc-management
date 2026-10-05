@@ -7,6 +7,10 @@ import {
 } from "../../../hooks/tasks/useTemplatePicker";
 import { useTemplateMode } from "../TemplateModeContext";
 import { dateToDayOffset, dayOffsetLabel, dayOffsetToDate } from "../board/templateDates";
+import { useAuth } from "../../../hooks/useAuth";
+import { useAddTeamMember } from "../../../hooks/team/useTeamAssignments";
+import { useRoleGaps } from "../../../hooks/tasks/useRoleGaps";
+import RoleGapsSection, { resolveGapChoices, type GapChoice } from "./RoleGapsSection";
 
 // =====================================================================
 // D4 — Template picker (build plan Part 7). See useTemplatePicker.ts's
@@ -53,6 +57,9 @@ export default function TemplatePickerModal({
   const [anchorDate, setAnchorDate] = useState(isTemplate ? dayOffsetToDate(0) : todayIso());
   const [step, setStep] = useState<"pick" | "preview">("pick");
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [gapChoices, setGapChoices] = useState<Record<string, GapChoice>>({});
+  const { user } = useAuth();
+  const addTeamMember = useAddTeamMember();
 
   const selectedTemplates = useMemo(
     () => (data?.templates ?? []).filter((t) => selection.selectedTemplateIds.has(t.id)),
@@ -84,6 +91,26 @@ export default function TemplatePickerModal({
     return count;
   };
 
+  // The template tasks that will actually be copied — same walk as above.
+  const includedTaskIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const t of selectedTemplates) {
+      const byParent = groupByParent(data?.templateTasksByTemplate.get(t.id) ?? []);
+      const walk = (node: TemplateTask) => {
+        if (selection.isExcluded(node.id)) return;
+        ids.push(node.id);
+        for (const child of byParent.get(node.id) ?? []) walk(child);
+      };
+      for (const root of byParent.get(null) ?? []) walk(root);
+    }
+    return ids;
+  }, [selectedTemplates, data, selection]);
+
+  // Project roles on those tasks vs. who holds them on each target's
+  // project. Into a template, roles stay roles — nothing to resolve.
+  const roleGaps = useRoleGaps(step === "preview" && !isTemplate ? includedTaskIds : [], Array.from(targetBoardIds));
+  const gapResolution = resolveGapChoices(roleGaps.gaps, gapChoices);
+
   const totalTasksPerZone = selectedTemplates.reduce((sum, t) => sum + countTemplate(t.id), 0);
   const zoneCount = targetBoardIds.size;
   const uniqueColumnNames = Array.from(
@@ -93,11 +120,22 @@ export default function TemplatePickerModal({
   const handleConfirm = async () => {
     setConfirmError(null);
     try {
+      // "add to the role" choices are real team changes, made first so the
+      // copy finds those people in the role like any other holder
+      for (const a of gapResolution.addToRole) {
+        await addTeamMember.mutateAsync({
+          projectId: a.projectId,
+          personId: a.personId,
+          projectRoleId: a.roleId,
+          assignedBy: user?.id ?? null,
+        });
+      }
       await apply({
         templateIds: selectedTemplates.map((t) => t.id),
         excludedIds: Array.from(selection.excludedIds),
         targetBoardIds: Array.from(targetBoardIds),
         anchorDate,
+        roleOverrides: gapResolution.overrides,
       });
       onApplied();
     } catch (err) {
@@ -229,6 +267,16 @@ export default function TemplatePickerModal({
                   selection={selection}
                 />
               ))}
+
+              <div className="mt-4">
+                <RoleGapsSection
+                  gaps={roleGaps.gaps}
+                  filled={roleGaps.filled}
+                  loading={roleGaps.loading}
+                  choices={gapChoices}
+                  onChange={(key, choice) => setGapChoices((prev) => ({ ...prev, [key]: choice }))}
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5 border-t border-gray-100 px-4 py-3">
@@ -249,7 +297,13 @@ export default function TemplatePickerModal({
                   </button>
                   <button
                     onClick={handleConfirm}
-                    disabled={applying || totalTasksPerZone === 0}
+                    disabled={
+                      applying ||
+                      addTeamMember.isPending ||
+                      totalTasksPerZone === 0 ||
+                      roleGaps.loading ||
+                      !gapResolution.valid
+                    }
                     className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40"
                   >
                     {applying && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

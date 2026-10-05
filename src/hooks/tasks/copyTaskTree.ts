@@ -44,7 +44,9 @@ export async function callCopyTaskTree(args: {
 // Applies a whole template board (boards.is_template) onto a board in one
 // RPC: tasks.apply_template_board() calls copy_task_tree() once per root
 // and then recreates dependencies, relationships, tags, record links,
-// attachments, recurrence rules and board columns between the copies.
+// attachments, recurrence rules and board columns between the copies,
+// and turns the template's project roles into the target project's people
+// (tasks._assign_roles). Returns the new task ids.
 // Same temp-table mechanism underneath, so the same one silent retry.
 export async function callApplyTemplateBoard(args: {
   templateBoardId: string;
@@ -52,7 +54,9 @@ export async function callApplyTemplateBoard(args: {
   anchorDate: string;
   createdBy: string;
   excludedIds: string[];
-}): Promise<number> {
+  /** Picks for project roles nobody holds on the target: {roleId: [userIds]}. */
+  roleOverrides: Record<string, string[]>;
+}): Promise<string[]> {
   const tasksDb = supabase.schema("tasks");
   const run = () =>
     tasksDb.rpc("apply_template_board", {
@@ -61,6 +65,7 @@ export async function callApplyTemplateBoard(args: {
       p_anchor_date: args.anchorDate,
       p_created_by: args.createdBy,
       p_excluded_ids: args.excludedIds,
+      p_role_overrides: args.roleOverrides,
     });
 
   let { data, error } = await run();
@@ -68,7 +73,7 @@ export async function callApplyTemplateBoard(args: {
     ({ data, error } = await run());
   }
   if (error) throw error;
-  return data ?? 0;
+  return (data ?? []).map((r) => r.new_task_id);
 }
 
 // Copies chosen template tasks (with their subtrees) onto each target
@@ -82,6 +87,8 @@ export async function callPushTemplateTasks(args: {
   targetBoardIds: string[];
   defaultAnchor: string;
   createdBy: string;
+  /** {boardId: {roleId: [userIds]}} — picks for roles nobody holds. */
+  roleOverrides: Record<string, Record<string, string[]>>;
 }): Promise<string[]> {
   const tasksDb = supabase.schema("tasks");
   const run = () =>
@@ -91,6 +98,7 @@ export async function callPushTemplateTasks(args: {
       p_target_board_ids: args.targetBoardIds,
       p_default_anchor: args.defaultAnchor,
       p_created_by: args.createdBy,
+      p_role_overrides: args.roleOverrides,
     });
 
   let { data, error } = await run();

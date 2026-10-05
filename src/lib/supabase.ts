@@ -7185,6 +7185,35 @@ export type Database = {
           },
         ]
       }
+      task_role_assignees: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          project_role_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          project_role_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          project_role_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_role_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_relationships: {
         Row: {
           created_at: string
@@ -7802,10 +7831,13 @@ export type Database = {
           p_anchor_date: string
           p_created_by: string
           p_excluded_ids?: string[]
+          p_role_overrides?: Json
           p_target_board_id: string
           p_template_board_id: string
         }
-        Returns: number
+        Returns: {
+          new_task_id: string
+        }[]
       }
       assert_requirements_satisfied: {
         Args: { p_task_id: string }
@@ -7847,6 +7879,7 @@ export type Database = {
         Args: {
           p_created_by: string
           p_default_anchor: string
+          p_role_overrides?: Json
           p_target_board_ids: string[]
           p_task_ids: string[]
           p_template_board_id: string

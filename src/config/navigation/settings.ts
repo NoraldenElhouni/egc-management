@@ -2,6 +2,7 @@ import {
   Award,
   BookText,
   Box,
+  BriefcaseBusiness,
   Building2,
   ClipboardCheck,
   Globe,
@@ -23,6 +24,13 @@ export const SETTINGS_ITEMS: NavItem[] = [
     path: "/settings/roles",
     description: "إدارة  الأدوار والصلاحيات",
     permission: "manage_roles",
+  },
+  {
+    label: "أدوار المشاريع",
+    icon: BriefcaseBusiness,
+    path: "/settings/project-roles",
+    description: "مناصب فرق المشاريع (مدير مشروع، مهندس موقع...) ومن يشغلها",
+    permission: "manage_project_roles",
   },
   {
     label: "اداره اسماء المصروفات",

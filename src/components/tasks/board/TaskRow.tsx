@@ -6,6 +6,8 @@ import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
 import StartDateCell from "./StartDateCell";
 import AssigneeCell from "./AssigneeCell";
+import RoleAssigneeCell from "./RoleAssigneeCell";
+import { useTemplateRoles } from "../TemplateRolesContext";
 import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
@@ -133,6 +135,8 @@ export default function TaskRow({
   const hasChildren = children.length > 0;
   const collapsed = collapsedIds.has(task.id) && !addingChild;
   const siblings = childrenByParent.get(task.parent_task_id) ?? [];
+  // Only provided on template boards: roles sit next to the people.
+  const templateRoles = useTemplateRoles();
   const selected = !!selectedIds?.has(task.id);
   // Once anything is selected every row shows its box, so picking several
   // doesn't need a hover per row.
@@ -355,12 +359,20 @@ export default function TaskRow({
             onChange={(priority) => onChangePriority(task.id, priority)}
           />
         )}
-        <AssigneeCell
-          assigneeIds={assigneesByTask.get(task.id) ?? []}
-          employeesById={employeesById}
-          allEmployees={allEmployees}
-          onChange={(userIds) => onChangeAssignees(task.id, userIds)}
-        />
+        <div className="flex items-center gap-1">
+          {templateRoles && (
+            <RoleAssigneeCell
+              roleIds={templateRoles.rolesByTask.get(task.id) ?? []}
+              onChange={(roleIds) => templateRoles.setTaskRoles({ taskId: task.id, roleIds })}
+            />
+          )}
+          <AssigneeCell
+            assigneeIds={assigneesByTask.get(task.id) ?? []}
+            employeesById={employeesById}
+            allEmployees={allEmployees}
+            onChange={(userIds) => onChangeAssignees(task.id, userIds)}
+          />
+        </div>
         <StartDateCell
           startDate={task.start_date}
           onChange={(date) => onChangeStartDate(task.id, date)}

@@ -6,6 +6,8 @@ import TaskTable from "../../components/tasks/board/TaskTable";
 import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
 import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
 import { TemplateModeProvider } from "../../components/tasks/TemplateModeContext";
+import { TemplateRolesProvider } from "../../components/tasks/TemplateRolesContext";
+import { useTaskRoles } from "../../hooks/tasks/useTaskRoles";
 import TemplateSyncBanner from "../../components/tasks/templates/TemplateSyncBanner";
 import PushToBoardsModal from "../../components/tasks/templates/PushToBoardsModal";
 import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks/useTemplateSync";
@@ -42,6 +44,12 @@ export default function TaskBoardPage() {
   const [pushTaskIds, setPushTaskIds] = useState<string[] | null>(null);
   const { status: syncStatus } = useTemplateSyncStatus(boardId);
   const { dismiss } = useTemplateSyncActions();
+  // Project roles on a template's tasks (useTaskRoles.ts) — loaded only for templates.
+  const { rolesByTask, setTaskRoles } = useTaskRoles(
+    boardId,
+    data?.tasks.map((t) => t.id) ?? [],
+    !!data?.board.is_template,
+  );
 
   if (loading) {
     return (
@@ -66,6 +74,7 @@ export default function TaskBoardPage() {
 
   return (
     <TemplateModeProvider value={isTemplate}>
+    <TemplateRolesProvider value={isTemplate ? { rolesByTask, setTaskRoles } : null}>
     <div className="flex h-full flex-col" dir="rtl">
       <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-2">
@@ -189,6 +198,7 @@ export default function TaskBoardPage() {
         />
       )}
     </div>
+    </TemplateRolesProvider>
     </TemplateModeProvider>
   );
 }
