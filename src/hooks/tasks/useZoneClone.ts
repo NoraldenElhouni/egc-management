@@ -102,7 +102,7 @@ export function useSourceZoneTasks(sourceBoardId: string | undefined) {
           : Promise.resolve({ data: [], error: null }),
         supabase.from("employees").select("id, first_name, last_name"),
         taskTypeIds.length
-          ? tasksDb.from("task_types").select("id, name_ar, color").in("id", taskTypeIds)
+          ? tasksDb.from("task_types").select("id, name, name_ar, color").in("id", taskTypeIds)
           : Promise.resolve({ data: [], error: null }),
         departmentIds.length
           ? supabase.from("departments").select("id, name_ar, name").in("id", departmentIds)

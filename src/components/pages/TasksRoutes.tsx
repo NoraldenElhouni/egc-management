@@ -35,6 +35,10 @@ import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
 // TasksPage.tsx's space cards — separate from space/:id/settings (D9,
 // which also holds D10's automations tab; react-router matches the more
 // specific path so the two bare/`/settings` routes don't collide).
+// board/:id/gantt is the same board page in its Gantt view — a path
+// segment rather than ?view=gantt because TaskDetailPanel's base path is
+// built from pathname alone, so a query param would be dropped every
+// time the panel opened or closed.
 // admin/templates[/:id] (D8) and admin/fields (D11) are also real;
 // task/:id without a list context (D1's search, etc.) goes through
 // TaskRedirect so the panel is never opened without a list mounted
@@ -44,7 +48,10 @@ export default function TasksRoutes() {
     <Routes>
       <Route element={<TasksLayout />}>
         <Route index element={<TasksPage />} />
-        <Route path="board/:boardId" element={<TaskBoardPage />}>
+        <Route path="board/:boardId" element={<TaskBoardPage view="list" />}>
+          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        </Route>
+        <Route path="board/:boardId/gantt" element={<TaskBoardPage view="gantt" />}>
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
         <Route path="department/:departmentId" element={<DepartmentPage />}>

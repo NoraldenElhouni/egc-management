@@ -41,8 +41,16 @@ export interface EmployeeLite {
 
 export interface TaskTypeLite {
   id: string;
+  /** Stable system key (e.g. "milestone") — logic reads this, never name_ar. */
+  name: string;
   name_ar: string;
   color: string | null;
+}
+
+/** One task_dependencies edge, read from either end. */
+export interface DependencyPair {
+  blocking_task_id: string;
+  blocked_task_id: string;
 }
 
 export interface TagLite {
@@ -70,6 +78,10 @@ export interface TaskBoardData {
   // board row can show a cleared/green indicator instead of just letting
   // the lock badge silently vanish.
   dependencyClearedTaskIds: Set<string>;
+  // The raw edges behind the two sets above (blocked side on this board;
+  // the blocking side may be on another board). The Gantt view draws an
+  // arrow for each edge whose two ends are both on this board.
+  dependencies: DependencyPair[];
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -184,7 +196,7 @@ export function useTaskBoard(boardId: string | undefined) {
         // The full company-wide catalog, not just the types already used on
         // this board's tasks — TaskTypeCell's popover needs every type as a
         // pickable option, same reasoning as useAllFieldDefinitions.
-        tasksDb.from("task_types").select("id, name_ar, color").order("name_ar"),
+        tasksDb.from("task_types").select("id, name, name_ar, color").order("name_ar"),
         departmentIds.length
           ? supabase.from("departments").select("id, name_ar, name").in("id", departmentIds)
           : Promise.resolve({ data: [], error: null }),
@@ -400,6 +412,7 @@ export function useTaskBoard(boardId: string | undefined) {
         linkedTaskIds,
         blockedTaskIds,
         dependencyClearedTaskIds,
+        dependencies: dependenciesResult.data ?? [],
         unmetRequirementTaskIds,
         attachedTaskIds,
         commentedTaskIds,
@@ -513,6 +526,56 @@ export function useTaskBoard(boardId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: invalidate,
+  });
+
+  // Gantt drag/resize: one update for whichever of the two dates changed
+  // (a moved bar changes both — two separate mutations would mean two of
+  // this board's heavy refetches and a visible flicker between them).
+  // Optimistic, unlike the cell mutations above: a bar snapping back to
+  // its old position until the refetch lands reads as "the drag failed".
+  // An omitted key is left untouched; null clears it.
+  const updateTaskDates = useMutation({
+    mutationFn: async ({
+      taskId,
+      startDate,
+      dueDate,
+    }: {
+      taskId: string;
+      startDate?: string | null;
+      dueDate?: string | null;
+    }) => {
+      const patch: { start_date?: string | null; due_date?: string | null } = {};
+      if (startDate !== undefined) patch.start_date = startDate;
+      if (dueDate !== undefined) patch.due_date = dueDate;
+      const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);
+      if (error) throw error;
+    },
+    onMutate: async ({ taskId, startDate, dueDate }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<TaskBoardData>(queryKey);
+      if (previous) {
+        queryClient.setQueryData<TaskBoardData>(queryKey, {
+          ...previous,
+          tasks: previous.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  ...(startDate !== undefined ? { start_date: startDate } : {}),
+                  ...(dueDate !== undefined ? { due_date: dueDate } : {}),
+                }
+              : t,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: (_data, _error, { taskId }) => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ["task-detail", taskId] });
+    },
   });
 
   const setAssignees = useMutation({
@@ -712,6 +775,7 @@ export function useTaskBoard(boardId: string | undefined) {
     updatePriority: updatePriority.mutate,
     updateDueDate: updateDueDate.mutate,
     updateStartDate: updateStartDate.mutate,
+    updateTaskDates: updateTaskDates.mutate,
     setAssignees: setAssignees.mutate,
     createTask: createTask.mutate,
     createTaskError: createTask.error as Error | null,

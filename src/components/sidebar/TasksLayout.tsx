@@ -168,7 +168,9 @@ function CountBadge({ count }: { count: number }) {
 function BoardRow({ item }: { item: BoardWithCount }) {
   const location = useLocation();
   const path = `/tasks/board/${item.board.id}`;
-  const isActive = location.pathname === path;
+  // Prefix match, so the board stays highlighted on its /gantt view and
+  // while a task panel is open on top of it.
+  const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   return (
     <Link

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, Outlet, useParams } from "react-router-dom";
-import { Loader2, FileStack, Copy, ChevronRight } from "lucide-react";
+import { Loader2, FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
+import TaskGantt from "../../components/tasks/gantt/TaskGantt";
 import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
 import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
 import { TemplateModeProvider } from "../../components/tasks/TemplateModeContext";
@@ -16,7 +17,11 @@ import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks
 // Also the template editor: a template is a board with is_template set
 // (opened from /tasks/admin/templates), rendered here in template mode —
 // see TemplateModeContext.tsx for what that changes.
-export default function TaskBoardPage() {
+//
+// `view` comes from the route: board/:id is the list, board/:id/gantt the
+// Gantt (TasksRoutes.tsx). Both read the same useTaskBoard query, so
+// switching is instant and edits made in one show up in the other.
+export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   const { boardId } = useParams<{ boardId: string }>();
   const {
     data,
@@ -28,6 +33,7 @@ export default function TaskBoardPage() {
     updatePriority,
     updateStartDate,
     updateDueDate,
+    updateTaskDates,
     setAssignees,
     createTask,
     setTaskValue,
@@ -92,6 +98,26 @@ export default function TaskBoardPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-md border border-gray-200 text-sm">
+            <Link
+              to={`/tasks/board/${data.board.id}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${
+                view === "list" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <List className="h-3.5 w-3.5" />
+              قائمة
+            </Link>
+            <Link
+              to={`/tasks/board/${data.board.id}/gantt`}
+              className={`flex items-center gap-1.5 border-r border-gray-200 px-3 py-1.5 ${
+                view === "gantt" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <ChartGantt className="h-3.5 w-3.5" />
+              مخطط زمني
+            </Link>
+          </div>
           {!isTemplate && (
             <button
               onClick={() => setShowZoneClone(true)}
@@ -121,46 +147,59 @@ export default function TaskBoardPage() {
       )}
 
       <div className="flex-1 overflow-hidden">
-        <TaskTable
-          key={boardId}
-          boardId={data.board.id}
-          boardZoneId={data.board.zone_id}
-          zoneName={data.zoneName}
-          tasks={data.tasks}
-          statuses={data.statuses}
-          employeesById={employeesById}
-          allEmployees={data.employees}
-          assigneesByTask={data.assigneesByTask}
-          taskTypes={data.taskTypes}
-          departmentNamesById={data.departmentNamesById}
-          linkedTaskIds={data.linkedTaskIds}
-          blockedTaskIds={data.blockedTaskIds}
-          dependencyClearedTaskIds={data.dependencyClearedTaskIds}
-          unmetRequirementTaskIds={data.unmetRequirementTaskIds}
-          attachedTaskIds={data.attachedTaskIds}
-          commentedTaskIds={data.commentedTaskIds}
-          tagsByTask={data.tagsByTask}
-          subtaskProgressByTask={data.subtaskProgressByTask}
-          customColumns={data.customColumns}
-          hiddenColumns={data.hiddenColumns}
-          valuesByTask={data.valuesByTask}
-          featureSettings={data.featureSettings}
-          onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}
-          onChangeTaskType={(taskId, taskTypeId) => updateTaskType({ taskId, taskTypeId })}
-          onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
-          onChangeStartDate={(taskId, startDate) => updateStartDate({ taskId, startDate })}
-          onChangeDueDate={(taskId, dueDate) => updateDueDate({ taskId, dueDate })}
-          onChangeAssignees={(taskId, userIds) => setAssignees({ taskId, userIds })}
-          onCreateTask={(title, parentTaskId) => createTask({ title, parentTaskId })}
-          onChangeValue={(taskId, fieldDefinitionId, value) => setTaskValue({ taskId, fieldDefinitionId, value })}
-          onAttachField={attachField}
-          onCreateAndAttachField={createAndAttachField}
-          onDetachColumn={detachColumn}
-          onSetColumnVisibility={(boardColumnId, visible) => setColumnVisibility({ boardColumnId, visible })}
-          onRenameField={(fieldDefinitionId, name_ar) => renameField({ fieldDefinitionId, name_ar })}
-          onMoveTaskTo={moveTaskTo}
-          onPushSelected={canPush ? setPushTaskIds : undefined}
-        />
+        {view === "gantt" ? (
+          <TaskGantt
+            key={boardId}
+            boardId={data.board.id}
+            tasks={data.tasks}
+            statuses={data.statuses}
+            taskTypes={data.taskTypes}
+            dependencies={data.dependencies}
+            blockedTaskIds={data.blockedTaskIds}
+            onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
+          />
+        ) : (
+          <TaskTable
+            key={boardId}
+            boardId={data.board.id}
+            boardZoneId={data.board.zone_id}
+            zoneName={data.zoneName}
+            tasks={data.tasks}
+            statuses={data.statuses}
+            employeesById={employeesById}
+            allEmployees={data.employees}
+            assigneesByTask={data.assigneesByTask}
+            taskTypes={data.taskTypes}
+            departmentNamesById={data.departmentNamesById}
+            linkedTaskIds={data.linkedTaskIds}
+            blockedTaskIds={data.blockedTaskIds}
+            dependencyClearedTaskIds={data.dependencyClearedTaskIds}
+            unmetRequirementTaskIds={data.unmetRequirementTaskIds}
+            attachedTaskIds={data.attachedTaskIds}
+            commentedTaskIds={data.commentedTaskIds}
+            tagsByTask={data.tagsByTask}
+            subtaskProgressByTask={data.subtaskProgressByTask}
+            customColumns={data.customColumns}
+            hiddenColumns={data.hiddenColumns}
+            valuesByTask={data.valuesByTask}
+            featureSettings={data.featureSettings}
+            onChangeStatus={(taskId, statusId) => updateStatus({ taskId, statusId })}
+            onChangeTaskType={(taskId, taskTypeId) => updateTaskType({ taskId, taskTypeId })}
+            onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
+            onChangeStartDate={(taskId, startDate) => updateStartDate({ taskId, startDate })}
+            onChangeDueDate={(taskId, dueDate) => updateDueDate({ taskId, dueDate })}
+            onChangeAssignees={(taskId, userIds) => setAssignees({ taskId, userIds })}
+            onCreateTask={(title, parentTaskId) => createTask({ title, parentTaskId })}
+            onChangeValue={(taskId, fieldDefinitionId, value) => setTaskValue({ taskId, fieldDefinitionId, value })}
+            onAttachField={attachField}
+            onCreateAndAttachField={createAndAttachField}
+            onDetachColumn={detachColumn}
+            onSetColumnVisibility={(boardColumnId, visible) => setColumnVisibility({ boardColumnId, visible })}
+            onRenameField={(fieldDefinitionId, name_ar) => renameField({ fieldDefinitionId, name_ar })}
+            onMoveTaskTo={moveTaskTo}
+            onPushSelected={canPush ? setPushTaskIds : undefined}
+          />
+        )}
       </div>
 
       {/* D3 slide-over, nested route board/:boardId/task/:taskId — see

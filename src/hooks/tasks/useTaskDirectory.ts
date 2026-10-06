@@ -159,7 +159,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         taskIds.length
           ? tasksDb.from("task_assignees").select("task_id, user_id").in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
-        tasksDb.from("task_types").select("id, name_ar, color").order("name_ar"),
+        tasksDb.from("task_types").select("id, name, name_ar, color").order("name_ar"),
         taskIds.length
           ? tasksDb.from("task_links").select("task_id").in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),

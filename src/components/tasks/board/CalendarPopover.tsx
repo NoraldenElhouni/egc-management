@@ -23,7 +23,8 @@ import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 const POPOVER_WIDTH = 256; // w-64
 
 const WEEKDAY_LABELS = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
-const MONTH_LABELS = [
+// Exported for the Gantt view's month header (gantt/ganttScale.ts).
+export const MONTH_LABELS = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
   "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
 ];
