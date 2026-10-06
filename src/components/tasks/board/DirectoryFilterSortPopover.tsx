@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
 import { parseLocalDateInput, toLocalDateInput } from "./taskDates";
@@ -8,6 +8,8 @@ import {
   PROJECT_NONE_KEY,
   createDefaultFilters,
   DEFAULT_SORT,
+  TASK_SORT_OPTIONS,
+  taskSortOption,
   type DirectoryFilterState,
   type DirectorySortState,
   type GroupSortKey,
@@ -194,9 +196,20 @@ interface Props {
   onChangeSort: (sort: DirectorySortState) => void;
   data: TaskDirectoryData;
   onClose: () => void;
+  /** Offer "board order" for grouping — only where the groups are boards
+   * (SpaceTasksPage). */
+  showBoardOrder?: boolean;
 }
 
-export default function DirectoryFilterSortPopover({ filters, onChangeFilters, sort, onChangeSort, data, onClose }: Props) {
+export default function DirectoryFilterSortPopover({
+  filters,
+  onChangeFilters,
+  sort,
+  onChangeSort,
+  data,
+  onClose,
+  showBoardOrder = false,
+}: Props) {
   const assigneeIdsInUse = Array.from(new Set(Array.from(data.assigneesByTask.values()).flat()));
   const assigneeOptions = assigneeIdsInUse
     .map((id) => data.employeesById.get(id))
@@ -401,20 +414,36 @@ export default function DirectoryFilterSortPopover({ filters, onChangeFilters, s
                 onChange={(e) => onChangeSort({ ...sort, groupSort: e.target.value as GroupSortKey })}
                 className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 outline-none"
               >
+                {showBoardOrder && <option value="order">الأقسام: ترتيب اللوحات</option>}
                 <option value="count">الأقسام: الأكثر مهاماً أولاً</option>
                 <option value="name">الأقسام: أبجدياً</option>
               </select>
-              <select
-                value={sort.taskSort}
-                onChange={(e) => onChangeSort({ ...sort, taskSort: e.target.value as TaskSortKey })}
-                className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 outline-none"
-              >
-                <option value="due_date">المهام: الأقرب استحقاقاً أولاً</option>
-                <option value="completed_at">المهام: الأحدث إكمالاً</option>
-                <option value="priority">المهام: الأولوية</option>
-                <option value="title">المهام: العنوان (أ-ي)</option>
-                <option value="status">المهام: الحالة</option>
-              </select>
+              <div className="flex gap-1.5">
+                <select
+                  value={sort.taskSort}
+                  onChange={(e) => {
+                    const taskSort = e.target.value as TaskSortKey;
+                    onChangeSort({ ...sort, taskSort, taskSortDir: taskSortOption(taskSort).defaultDir });
+                  }}
+                  className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 outline-none"
+                >
+                  {/* "manual" is a single board's drag order — meaningless across boards */}
+                  {TASK_SORT_OPTIONS.filter((o) => o.key !== "manual").map((o) => (
+                    <option key={o.key} value={o.key}>
+                      المهام: {o.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => onChangeSort({ ...sort, taskSortDir: sort.taskSortDir === "asc" ? "desc" : "asc" })}
+                  className="flex shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                  title="عكس الاتجاه"
+                >
+                  {sort.taskSortDir === "asc" ? <ArrowUpNarrowWide className="h-3.5 w-3.5" /> : <ArrowDownWideNarrow className="h-3.5 w-3.5" />}
+                  {sort.taskSortDir === "asc" ? taskSortOption(sort.taskSort).ascLabel : taskSortOption(sort.taskSort).descLabel}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -423,7 +452,8 @@ export default function DirectoryFilterSortPopover({ filters, onChangeFilters, s
           <button
             onClick={() => {
               onChangeFilters(createDefaultFilters());
-              onChangeSort(DEFAULT_SORT);
+              // where boards are the groups, their saved order is the default
+              onChangeSort(showBoardOrder ? { ...DEFAULT_SORT, groupSort: "order" } : DEFAULT_SORT);
             }}
             className="rounded-md px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-50"
           >

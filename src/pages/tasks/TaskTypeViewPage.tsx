@@ -64,7 +64,7 @@ export default function TaskTypeViewPage() {
         key: typeId,
         label: taskType?.name_ar ?? "نوع",
         taskType,
-        tasks: sortDirectoryTasks(tasks, sort.taskSort, data),
+        tasks: sortDirectoryTasks(tasks, sort, data),
       };
     });
 

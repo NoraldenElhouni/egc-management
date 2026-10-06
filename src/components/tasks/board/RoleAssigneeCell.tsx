@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { BriefcaseBusiness } from "lucide-react";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import { useAnchoredPosition } from "../../../hooks/tasks/useAnchoredPosition";
 import { useProjectRoles } from "../../../hooks/team/useTeamAssignments";
 import Tooltip from "../../ui/Tooltip";
 
@@ -18,7 +20,10 @@ interface RoleAssigneeCellProps {
 export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }: RoleAssigneeCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
+  // same placement as AssigneeCell's dropdown — never clipped on the last rows
+  const popoverRef = useRef<HTMLDivElement>(null);
+  useClickOutside([ref, popoverRef], () => setOpen(false));
+  const pos = useAnchoredPosition(ref, popoverRef, { open, width: 224, align });
   const { data: roles = [] } = useProjectRoles();
 
   const nameById = new Map(roles.map((r) => [r.id, r.name]));
@@ -50,12 +55,18 @@ export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }:
         </button>
       )}
 
-      {open && (
+      {open && createPortal(
         <div
-          className={`absolute top-full z-30 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-lg ${
-            align === "left" ? "left-0" : "right-0"
-          }`}
+          ref={popoverRef}
           dir="rtl"
+          style={{
+            position: "fixed",
+            top: pos?.top ?? 0,
+            left: pos?.left ?? 0,
+            width: 224,
+            visibility: pos ? "visible" : "hidden",
+          }}
+          className="z-50 rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
         >
           <div className="mb-1.5 text-xs font-semibold text-gray-500">الأدوار في المشروع</div>
           {roles.map((r) => (
@@ -67,7 +78,8 @@ export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }:
           <p className="mt-1.5 text-[11px] leading-snug text-gray-400">
             عند تطبيق القالب تُسند المهمة لمن يشغل هذا الدور في المشروع.
           </p>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

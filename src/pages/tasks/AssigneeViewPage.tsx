@@ -81,7 +81,7 @@ export default function AssigneeViewPage() {
         key: userId,
         label: employee ? `${employee.first_name} ${employee.last_name ?? ""}`.trim() : "موظف",
         employee,
-        tasks: sortDirectoryTasks(tasks, sort.taskSort, data),
+        tasks: sortDirectoryTasks(tasks, sort, data),
       };
     });
 
@@ -90,7 +90,7 @@ export default function AssigneeViewPage() {
         key: ASSIGNEE_NONE_KEY,
         label: "غير معين",
         employee: null,
-        tasks: sortDirectoryTasks(unassigned, sort.taskSort, data),
+        tasks: sortDirectoryTasks(unassigned, sort, data),
       });
     }
 

@@ -84,6 +84,9 @@ interface TaskRowProps {
    * checkbox at all. */
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  /** false while the table is sorted by anything but its manual order —
+   * dragging writes the manual order, so it's hidden then. */
+  canDrag?: boolean;
 }
 
 export default function TaskRow({
@@ -125,6 +128,7 @@ export default function TaskRow({
   onMoveTaskTo,
   selectedIds,
   onToggleSelect,
+  canDrag = true,
 }: TaskRowProps) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
@@ -218,7 +222,7 @@ export default function TaskRow({
             </span>
           )}
           <span className="w-4 shrink-0 text-gray-300">
-            {hovered && (
+            {hovered && canDrag && (
               <span
                 draggable
                 onDragStart={(e) => {
@@ -439,6 +443,7 @@ export default function TaskRow({
               onMoveTaskTo={onMoveTaskTo}
               selectedIds={selectedIds}
               onToggleSelect={onToggleSelect}
+              canDrag={canDrag}
             />
           ))}
 

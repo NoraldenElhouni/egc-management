@@ -73,7 +73,9 @@ export default function SpaceTasksPage() {
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<DirectoryFilterState>(createDefaultFilters());
-  const [sort, setSort] = useState<DirectorySortState>(DEFAULT_SORT);
+  // Boards keep their saved order (boards.sort_order, set in space
+  // settings) by default — the same order the space is organised in.
+  const [sort, setSort] = useState<DirectorySortState>({ ...DEFAULT_SORT, groupSort: "order" });
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const searching = search.trim().length > 0;
 
@@ -117,10 +119,10 @@ export default function SpaceTasksPage() {
     const boardGroups: BoardGroup[] = Array.from(byBoard.entries()).map(([boardId, tasks]) => ({
       key: boardId,
       label: data.boardNamesById.get(boardId) ?? "لوحة",
-      tasks: sortDirectoryTasks(tasks, sort.taskSort, data),
+      tasks: sortDirectoryTasks(tasks, sort, data),
     }));
 
-    return sortDirectoryGroups(boardGroups, sort.groupSort);
+    return sortDirectoryGroups(boardGroups, sort.groupSort, undefined, data.boardOrderById);
   }, [data, visibleTasks, searching, sort, activeFilterCount]);
 
   const expandAll = () => setCollapsedKeys(new Set());
@@ -196,6 +198,7 @@ export default function SpaceTasksPage() {
           onChangeSort={setSort}
           data={data}
           onClose={() => setShowFilterDialog(false)}
+          showBoardOrder
         />
       )}
 

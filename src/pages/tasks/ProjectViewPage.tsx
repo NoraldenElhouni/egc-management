@@ -83,7 +83,7 @@ export default function ProjectViewPage() {
       const zoneGroups: ZoneGroup[] = Array.from(byZone.entries()).map(([zoneId, zoneTasks]) => ({
         key: zoneId,
         label: zoneId === ZONE_NONE_KEY ? "بدون منطقة" : (data.zoneNamesById.get(zoneId) ?? "منطقة"),
-        tasks: sortDirectoryTasks(zoneTasks, sort.taskSort, data),
+        tasks: sortDirectoryTasks(zoneTasks, sort, data),
       }));
 
       return {

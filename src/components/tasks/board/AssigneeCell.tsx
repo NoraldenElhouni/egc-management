@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import { useAnchoredPosition } from "../../../hooks/tasks/useAnchoredPosition";
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import Tooltip from "../../ui/Tooltip";
 import { colorFor, initials } from "./employeeAvatar";
@@ -30,7 +32,11 @@ export default function AssigneeCell({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
+  // Portaled to document.body and placed by useAnchoredPosition, so it
+  // opens upward on the last rows instead of being clipped by the list.
+  const popoverRef = useRef<HTMLDivElement>(null);
+  useClickOutside([ref, popoverRef], () => setOpen(false));
+  const pos = useAnchoredPosition(ref, popoverRef, { open, width: 224, align });
 
   const visible = assigneeIds.slice(0, 3);
   const overflow = assigneeIds.length - visible.length;
@@ -83,8 +89,19 @@ export default function AssigneeCell({
         )}
       </button>
 
-      {open && (
-        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-56 rounded-lg border border-gray-200 bg-white shadow-lg`}>
+      {open && createPortal(
+        <div
+          ref={popoverRef}
+          dir="rtl"
+          style={{
+            position: "fixed",
+            top: pos?.top ?? 0,
+            left: pos?.left ?? 0,
+            width: 224,
+            visibility: pos ? "visible" : "hidden",
+          }}
+          className="z-50 rounded-lg border border-gray-200 bg-white shadow-lg"
+        >
           <div className="border-b border-gray-100 p-2">
             <input
               autoFocus
@@ -126,7 +143,8 @@ export default function AssigneeCell({
               </label>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

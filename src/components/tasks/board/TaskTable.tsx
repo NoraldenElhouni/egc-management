@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, Send } from "lucide-react";
+import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, Send, ArrowDownWideNarrow, ArrowUpNarrowWide } from "lucide-react";
 import TaskRow, { rowGridStyle } from "./TaskRow";
 import ColumnEditorModal from "./ColumnEditorModal";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import { sortTasks, taskSortOption, TASK_SORT_OPTIONS, type SortDirection, type TaskSortKey } from "./directoryFilters";
 import type {
   CustomColumn,
   FieldType,
@@ -114,6 +115,11 @@ export default function TaskTable({
   const [showColumnEditor, setShowColumnEditor] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sort, setSortState] = useState<{ key: TaskSortKey; dir: SortDirection }>(loadBoardSort);
+  const setSort = (next: { key: TaskSortKey; dir: SortDirection }) => {
+    setSortState(next);
+    saveBoardSort(next);
+  };
   const toggleSelect = (id: string) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -161,7 +167,22 @@ export default function TaskTable({
   };
   const expandAll = () => setCollapsedIds(new Set());
 
-  const topLevel = childrenByParent.get(null) ?? [];
+  // Each level (top-level tasks, and every task's own subtasks) is sorted
+  // on its own, so the tree shape never changes — only sibling order.
+  const statusOrderById = useMemo(() => new Map(statuses.map((s) => [s.id, s.sort_order])), [statuses]);
+  const sortedChildrenByParent = useMemo(() => {
+    if (sort.key === "manual" && sort.dir === "asc") return childrenByParent;
+    const map = new Map<string | null, TaskRowType[]>();
+    for (const [parentId, list] of childrenByParent) {
+      map.set(parentId, sortTasks(list, sort.key, sort.dir, statusOrderById));
+    }
+    return map;
+  }, [childrenByParent, sort, statusOrderById]);
+  // Drag-and-drop writes the manual order, so it only makes sense while
+  // that's the order on screen.
+  const canDrag = sort.key === "manual" && sort.dir === "asc";
+
+  const topLevel = sortedChildrenByParent.get(null) ?? [];
 
   const groups = useMemo(() => {
     if (groupBy === "none") return [{ key: "all", label: null, tasks: topLevel }];
@@ -231,6 +252,30 @@ export default function TaskTable({
             ))}
         </select>
         <div className="flex items-center gap-1.5">
+          <select
+            value={sort.key}
+            onChange={(e) => {
+              const key = e.target.value as TaskSortKey;
+              setSort({ key, dir: taskSortOption(key).defaultDir });
+            }}
+            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 outline-none"
+            title="ترتيب المهام"
+          >
+            {TASK_SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                ترتيب: {o.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => setSort({ ...sort, dir: sort.dir === "asc" ? "desc" : "asc" })}
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+            title={canDrag ? "عكس الاتجاه" : "عكس الاتجاه — السحب والإفلات متاح في الترتيب اليدوي فقط"}
+          >
+            {sort.dir === "asc" ? <ArrowUpNarrowWide className="h-3.5 w-3.5" /> : <ArrowDownWideNarrow className="h-3.5 w-3.5" />}
+            {sort.dir === "asc" ? taskSortOption(sort.key).ascLabel : taskSortOption(sort.key).descLabel}
+          </button>
+          <span className="mx-1 h-4 w-px bg-gray-200" />
           <button
             onClick={expandAll}
             className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
@@ -328,7 +373,8 @@ export default function TaskTable({
                 task={task}
                 boardId={boardId}
                 depth={0}
-                childrenByParent={childrenByParent}
+                childrenByParent={sortedChildrenByParent}
+                canDrag={canDrag}
                 collapsedIds={collapsedIds}
                 onToggleCollapse={toggleCollapse}
                 statuses={statuses}
@@ -491,4 +537,31 @@ function CustomColumnHeader({
       )}
     </div>
   );
+}
+
+// The board's sort choice, remembered per browser (a convenience — it's
+// fine for it to be missing, e.g. storage blocked, and fall back to manual).
+const BOARD_SORT_STORAGE_KEY = "tasks.boardSort";
+
+function loadBoardSort(): { key: TaskSortKey; dir: SortDirection } {
+  try {
+    const raw = localStorage.getItem(BOARD_SORT_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { key?: string; dir?: string };
+      if (TASK_SORT_OPTIONS.some((o) => o.key === parsed.key) && (parsed.dir === "asc" || parsed.dir === "desc")) {
+        return { key: parsed.key as TaskSortKey, dir: parsed.dir };
+      }
+    }
+  } catch {
+    // unreadable storage — use the default
+  }
+  return { key: "manual", dir: "asc" };
+}
+
+function saveBoardSort(sort: { key: TaskSortKey; dir: SortDirection }) {
+  try {
+    localStorage.setItem(BOARD_SORT_STORAGE_KEY, JSON.stringify(sort));
+  } catch {
+    // storage unavailable — the choice just won't be remembered
+  }
 }

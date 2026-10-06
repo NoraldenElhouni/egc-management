@@ -149,52 +149,124 @@ export function searchDirectoryTasks(tasks: TaskRow[], search: string): TaskRow[
   return tasks.filter((task) => task.title.toLowerCase().includes(term));
 }
 
-export type TaskSortKey = "due_date" | "completed_at" | "priority" | "title" | "status";
-export type GroupSortKey = "count" | "name";
+// Task sort keys, shared by the board (TaskTable) and the directory
+// views. "manual" is the board's own drag order (tasks.sort_order) and is
+// only offered on a board — across boards it means nothing.
+export type TaskSortKey =
+  | "manual"
+  | "created_at"
+  | "updated_at"
+  | "start_date"
+  | "due_date"
+  | "completed_at"
+  | "priority"
+  | "title"
+  | "status";
+export type SortDirection = "asc" | "desc";
+
+interface TaskSortOption {
+  key: TaskSortKey;
+  label: string;
+  /** the direction picking this sort starts in */
+  defaultDir: SortDirection;
+  ascLabel: string;
+  descLabel: string;
+}
+
+const DATE_LABELS = { ascLabel: "الأقدم أولاً", descLabel: "الأحدث أولاً" };
+
+export const TASK_SORT_OPTIONS: TaskSortOption[] = [
+  { key: "manual", label: "الترتيب اليدوي", defaultDir: "asc", ascLabel: "من الأعلى", descLabel: "من الأسفل" },
+  { key: "created_at", label: "تاريخ الإنشاء", defaultDir: "desc", ...DATE_LABELS },
+  { key: "updated_at", label: "آخر تعديل", defaultDir: "desc", ...DATE_LABELS },
+  { key: "start_date", label: "تاريخ البدء", defaultDir: "asc", ...DATE_LABELS },
+  { key: "due_date", label: "تاريخ الاستحقاق", defaultDir: "asc", ...DATE_LABELS },
+  { key: "completed_at", label: "تاريخ الإنجاز", defaultDir: "desc", ...DATE_LABELS },
+  { key: "priority", label: "الأولوية", defaultDir: "asc", ascLabel: "الأعلى أولاً", descLabel: "الأدنى أولاً" },
+  { key: "title", label: "العنوان", defaultDir: "asc", ascLabel: "أ ← ي", descLabel: "ي ← أ" },
+  { key: "status", label: "الحالة", defaultDir: "asc", ascLabel: "بترتيب الحالات", descLabel: "عكس ترتيب الحالات" },
+];
+
+export function taskSortOption(key: TaskSortKey): TaskSortOption {
+  return TASK_SORT_OPTIONS.find((o) => o.key === key) ?? TASK_SORT_OPTIONS[0];
+}
+
+// "order" = the groups' own saved order (boards.sort_order — the order
+// set in space settings); only offered where groups are boards.
+export type GroupSortKey = "count" | "name" | "order";
 
 export interface DirectorySortState {
   taskSort: TaskSortKey;
+  taskSortDir: SortDirection;
   groupSort: GroupSortKey;
 }
 
-export const DEFAULT_SORT: DirectorySortState = { taskSort: "due_date", groupSort: "count" };
+export const DEFAULT_SORT: DirectorySortState = { taskSort: "due_date", taskSortDir: "asc", groupSort: "count" };
 
 const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 
-export function sortDirectoryTasks(tasks: TaskRow[], key: TaskSortKey, data: TaskDirectoryData): TaskRow[] {
-  const sorted = [...tasks];
+type SortableTask = Pick<
+  TaskRow,
+  | "sort_order"
+  | "created_at"
+  | "updated_at"
+  | "start_date"
+  | "due_date"
+  | "completed_at"
+  | "priority"
+  | "title"
+  | "status_id"
+>;
+
+function sortValue(task: SortableTask, key: TaskSortKey, statusOrderById: Map<string, number>): number | string | null {
   switch (key) {
+    case "manual":
+      return task.sort_order;
+    case "created_at":
+    case "updated_at":
+    case "start_date":
     case "due_date":
-      sorted.sort((a, b) => {
-        const at = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
-        const bt = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
-        return at - bt;
-      });
-      break;
-    case "completed_at":
-      // Descending — most recently finished first, which is the order a
-      // "what got done today" list wants. Nulls (open tasks, and
-      // `closed` ones the trigger never stamped) sort last either way,
-      // hence -Infinity rather than the due_date case's +Infinity.
-      sorted.sort((a, b) => {
-        const at = a.completed_at ? new Date(a.completed_at).getTime() : Number.NEGATIVE_INFINITY;
-        const bt = b.completed_at ? new Date(b.completed_at).getTime() : Number.NEGATIVE_INFINITY;
-        return bt - at;
-      });
-      break;
-    case "priority":
-      sorted.sort((a, b) => (a.priority ? PRIORITY_RANK[a.priority] : 4) - (b.priority ? PRIORITY_RANK[b.priority] : 4));
-      break;
-    case "title":
-      sorted.sort((a, b) => a.title.localeCompare(b.title, "ar"));
-      break;
-    case "status": {
-      const sortOrderByStatus = new Map(data.statuses.map((s) => [s.id, s.sort_order]));
-      sorted.sort((a, b) => (sortOrderByStatus.get(a.status_id) ?? 0) - (sortOrderByStatus.get(b.status_id) ?? 0));
-      break;
+    case "completed_at": {
+      const v = task[key];
+      return v ? new Date(v).getTime() : null;
     }
+    case "priority":
+      return task.priority ? PRIORITY_RANK[task.priority] : null;
+    case "title":
+      return task.title;
+    case "status":
+      return statusOrderById.get(task.status_id) ?? null;
   }
-  return sorted;
+}
+
+/** Sorts one list of sibling tasks. A task with no value for the key (no
+ * due date, never finished, no priority...) always goes last, whichever
+ * way the direction points; ties keep the manual order. */
+export function sortTasks<T extends SortableTask>(
+  tasks: T[],
+  key: TaskSortKey,
+  dir: SortDirection,
+  statusOrderById: Map<string, number>,
+): T[] {
+  const sign = dir === "asc" ? 1 : -1;
+  return [...tasks].sort((a, b) => {
+    const av = sortValue(a, key, statusOrderById);
+    const bv = sortValue(b, key, statusOrderById);
+    if (av === null && bv === null) return a.sort_order - b.sort_order;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    const diff = typeof av === "string" ? av.localeCompare(bv as string, "ar") : av - (bv as number);
+    return diff !== 0 ? diff * sign : a.sort_order - b.sort_order;
+  });
+}
+
+export function sortDirectoryTasks(
+  tasks: TaskRow[],
+  sort: Pick<DirectorySortState, "taskSort" | "taskSortDir">,
+  data: TaskDirectoryData,
+): TaskRow[] {
+  const statusOrderById = new Map(data.statuses.map((s) => [s.id, s.sort_order]));
+  return sortTasks(tasks, sort.taskSort, sort.taskSortDir, statusOrderById);
 }
 
 /** Generic over both AssigneeGroup and TaskTypeGroup — both carry a
@@ -205,12 +277,19 @@ export function sortDirectoryGroups<G extends { key: string; label: string; task
   groups: G[],
   sortKey: GroupSortKey,
   fallbackKey?: string,
+  /** group key -> saved position, for sortKey "order" */
+  orderByKey?: Map<string, number>,
 ): G[] {
   const sorted = [...groups];
   sorted.sort((a, b) => {
     if (fallbackKey) {
       if (a.key === fallbackKey && b.key !== fallbackKey) return 1;
       if (b.key === fallbackKey && a.key !== fallbackKey) return -1;
+    }
+    if (sortKey === "order") {
+      const diff =
+        (orderByKey?.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (orderByKey?.get(b.key) ?? Number.MAX_SAFE_INTEGER);
+      return diff !== 0 ? diff : a.label.localeCompare(b.label, "ar");
     }
     return sortKey === "count" ? b.tasks.length - a.tasks.length : a.label.localeCompare(b.label, "ar");
   });
