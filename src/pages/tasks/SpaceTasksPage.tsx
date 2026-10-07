@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
 import { ChevronDown, ChevronLeft, Loader2, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
@@ -70,6 +71,7 @@ export default function SpaceTasksPage() {
   const navigate = useNavigate();
   const { data, loading, error, ...mutations } = useTaskDirectory({ spaceId });
   const { data: sidebarData } = useTasksSidebar();
+  const spaceCaps = useSpaceCaps(spaceId);
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<DirectoryFilterState>(createDefaultFilters());
@@ -258,6 +260,7 @@ export default function SpaceTasksPage() {
                       <DirectoryTaskRow
                         key={task.id}
                         task={task}
+                        spaceId={data.spaceIdByBoardId.get(task.board_id)}
                         statuses={data.statuses}
                         employeesById={data.employeesById}
                         allEmployees={data.allEmployees}
@@ -278,7 +281,7 @@ export default function SpaceTasksPage() {
                     {group.tasks.length === 0 && (
                       <div className="px-3 py-3 text-center text-sm text-gray-400">لا توجد مهام في هذه اللوحة بعد</div>
                     )}
-                    <AddTaskRow onAdd={(title) => mutations.onCreateTask(group.key, title)} />
+                    {spaceCaps.create && <AddTaskRow onAdd={(title) => mutations.onCreateTask(group.key, title)} />}
                   </>
                 )}
               </div>

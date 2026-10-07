@@ -36,9 +36,11 @@ interface StartDateCellProps {
   /** See StatusCell's align prop — "left" for narrow contexts near the
    * screen's left edge (the D3 detail panel). */
   align?: "left" | "right";
+  /** Display only: the popover never opens (no edit rights). */
+  readOnly?: boolean;
 }
 
-export default function StartDateCell({ startDate, onChange, align = "right" }: StartDateCellProps) {
+export default function StartDateCell({ startDate, onChange, align = "right", readOnly = false }: StartDateCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isTemplate = useTemplateMode();
@@ -48,7 +50,7 @@ export default function StartDateCell({ startDate, onChange, align = "right" }: 
     return (
       <div ref={ref} className="relative">
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => !readOnly && setOpen((v) => !v)}
           className={startDate
             ? "whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
             : "rounded-full px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-100 hover:text-gray-400"}
@@ -65,7 +67,7 @@ export default function StartDateCell({ startDate, onChange, align = "right" }: 
       {startDate ? (
         <Tooltip label={formatSlashDate(startDate)}>
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => !readOnly && setOpen((v) => !v)}
             className="whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
           >
             {daysPassedLabel(startDate)}
@@ -73,8 +75,8 @@ export default function StartDateCell({ startDate, onChange, align = "right" }: 
         </Tooltip>
       ) : (
         <button
-          onClick={() => setOpen((v) => !v)}
-          className="rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400"
+          onClick={() => !readOnly && setOpen((v) => !v)}
+          className={`rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400 ${readOnly ? "hidden" : ""}`}
           title="تحديد تاريخ البدء"
         >
           <CalendarDays className="h-3.5 w-3.5" />

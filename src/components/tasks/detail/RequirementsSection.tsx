@@ -19,6 +19,11 @@ interface RequirementsSectionProps {
   onToggle: (requirementId: string, satisfied: boolean) => void;
   onAdd: (requirementType: RequirementType) => void;
   onDelete: (requirementId: string) => void;
+  /** May add / remove requirements (edit rights). Default true. */
+  canEdit?: boolean;
+  /** May mark one satisfied (status rights, an assignee has them). An
+   * "approval" still needs canEdit: nobody approves their own work. Default true. */
+  canSatisfy?: boolean;
 }
 
 // "Before this can close" — requirements as a checklist, with what's
@@ -33,6 +38,8 @@ export default function RequirementsSection({
   onToggle,
   onAdd,
   onDelete,
+  canEdit = true,
+  canSatisfy = true,
 }: RequirementsSectionProps) {
   const unmetCount = requirements.filter((r) => !r.is_satisfied).length;
 
@@ -56,7 +63,11 @@ export default function RequirementsSection({
                 : "border-amber-100 bg-amber-50 text-amber-700"
             }`}
           >
-            <button onClick={() => onToggle(req.id, !req.is_satisfied)} className="flex flex-1 items-center gap-2 text-right">
+            <button
+              onClick={() => onToggle(req.id, !req.is_satisfied)}
+              disabled={!(canEdit || (canSatisfy && req.requirement_type !== "approval"))}
+              className="flex flex-1 items-center gap-2 text-right disabled:cursor-default"
+            >
               <span
                 className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
                   req.is_satisfied ? "border-emerald-400 bg-emerald-400 text-white" : "border-amber-300"
@@ -66,12 +77,15 @@ export default function RequirementsSection({
               </span>
               {REQUIREMENT_LABELS[req.requirement_type]}
             </button>
-            <button onClick={() => onDelete(req.id)} className="shrink-0 opacity-60 hover:opacity-100">
-              <X className="h-3.5 w-3.5" />
-            </button>
+            {canEdit && (
+              <button onClick={() => onDelete(req.id)} className="shrink-0 opacity-60 hover:opacity-100">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         ))}
       </div>
+      {canEdit && (
       <select
         value=""
         onChange={(e) => {
@@ -86,6 +100,7 @@ export default function RequirementsSection({
           </option>
         ))}
       </select>
+      )}
     </div>
   );
 }

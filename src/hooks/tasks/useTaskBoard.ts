@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { invalidateTaskAccess } from "./useTaskAccess";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database, Json } from "../../lib/supabase";
@@ -571,7 +572,10 @@ export function useTaskBoard(boardId: string | undefined) {
         }
       }
     },
-    onSettled: invalidate,
+    onSettled: () => {
+      invalidate();
+      invalidateTaskAccess(queryClient);
+    },
   });
 
   // Hard delete, same as the detail panel's deleteTask. Subtasks (and every
@@ -748,7 +752,10 @@ export function useTaskBoard(boardId: string | undefined) {
         }
       }
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateTaskAccess(queryClient);
+    },
   });
 
   const createTask = useMutation({

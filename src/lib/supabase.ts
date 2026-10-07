@@ -6847,6 +6847,7 @@ export type Database = {
           is_template: boolean
           name: string
           owner_user_id: string | null
+          manager_user_id: string | null
           project_id: string | null
           settings: Json
           space_type: Database["tasks"]["Enums"]["space_type"]
@@ -6865,6 +6866,7 @@ export type Database = {
           is_template?: boolean
           name: string
           owner_user_id?: string | null
+          manager_user_id?: string | null
           project_id?: string | null
           settings?: Json
           space_type: Database["tasks"]["Enums"]["space_type"]
@@ -6883,6 +6885,7 @@ export type Database = {
           is_template?: boolean
           name?: string
           owner_user_id?: string | null
+          manager_user_id?: string | null
           project_id?: string | null
           settings?: Json
           space_type?: Database["tasks"]["Enums"]["space_type"]

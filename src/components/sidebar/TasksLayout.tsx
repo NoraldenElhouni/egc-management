@@ -39,6 +39,7 @@ import { extractErrorMessage } from "../../hooks/tasks/extractErrorMessage";
 import { emitTaskError, setTaskErrorListener } from "../../hooks/tasks/taskErrorBus";
 import { searchSidebarEntities, type EntityMatches } from "../../hooks/tasks/tasksSidebarSearch";
 import NewSpaceModal from "./NewSpaceModal";
+import { useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 
 // A failed mutation anywhere in this module (most commonly the
 // completion-gate trigger rejecting a status change, or the reparent
@@ -350,6 +351,7 @@ function FolderSection({
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const [addingBoard, setAddingBoard] = useState(false);
+  const spaceCaps = useSpaceCaps(spaceId);
   const openCount = folderNode.boards.reduce((sum, b) => sum + b.openCount, 0);
 
   return (
@@ -368,16 +370,18 @@ function FolderSection({
           <span className="flex-1 truncate">{folderNode.folder.name}</span>
         </button>
         <CountBadge count={openCount} />
-        <button
-          onClick={() => {
-            setIsOpen(true);
-            setAddingBoard(true);
-          }}
-          className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/folder:opacity-100"
-          title="إضافة لوحة"
-        >
-          <Plus className="h-3 w-3" />
-        </button>
+        {spaceCaps.create && (
+          <button
+            onClick={() => {
+              setIsOpen(true);
+              setAddingBoard(true);
+            }}
+            className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/folder:opacity-100"
+            title="إضافة لوحة"
+          >
+            <Plus className="h-3 w-3" />
+          </button>
+        )}
       </div>
       {isOpen && (
         <div className="mr-4 space-y-0.5">
@@ -412,6 +416,7 @@ function SpaceSection({
 }) {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addMode, setAddMode] = useState<"board" | "folder" | null>(null);
+  const spaceCaps = useSpaceCaps(node.space.id);
   const addMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(addMenuRef, () => setAddMenuOpen(false));
   const Icon = SPACE_TYPE_ICONS[node.space.space_type];
@@ -450,6 +455,7 @@ function SpaceSection({
           </span>
         </Link>
         <CountBadge count={totalOpen} />
+        {spaceCaps.create && (
         <div ref={addMenuRef} className="relative shrink-0">
           <button
             onClick={() => {
@@ -484,13 +490,16 @@ function SpaceSection({
             </div>
           )}
         </div>
-        <Link
-          to={`/tasks/space/${node.space.id}/settings`}
-          className="shrink-0 rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
-          title="إعدادات المساحة"
-        >
-          <Settings className="h-3.5 w-3.5" />
-        </Link>
+        )}
+        {spaceCaps.manage && (
+          <Link
+            to={`/tasks/space/${node.space.id}/settings`}
+            className="shrink-0 rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
+            title="إعدادات المساحة"
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
 
       {isOpen && (
@@ -527,6 +536,10 @@ function SpaceSection({
 const TasksLayoutInner = () => {
   const { isCollapsed, toggle } = useSidebar();
   const { data, loading } = useTasksSidebar();
+  const { access } = useMyTaskAccess();
+  // The cross-space browsing views (by employee / type / project, departments)
+  // only make sense for someone who can see more than their own tasks.
+  const canBrowse = !!access && (access.view_all || Object.keys(access.spaces).length > 0);
   const navigate = useNavigate();
   const [showNewSpace, setShowNewSpace] = useState(false);
 
@@ -707,13 +720,15 @@ const TasksLayoutInner = () => {
           <p className="mt-1 text-sm text-gray-500">
             المساحات، اللوحات، وأعمالي
           </p>
-          <button
-            onClick={() => setShowNewSpace(true)}
-            className="mt-2 flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            <Plus className="h-3 w-3" />
-            مساحة جديدة
-          </button>
+          {access?.can_create_space && (
+            <button
+              onClick={() => setShowNewSpace(true)}
+              className="mt-2 flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+            >
+              <Plus className="h-3 w-3" />
+              مساحة جديدة
+            </button>
+          )}
           <button
             onClick={toggle}
             className="absolute top-4 left-4 rounded-full p-1 hover:bg-gray-100"
@@ -862,7 +877,7 @@ const TasksLayoutInner = () => {
                 </div>
               )}
 
-              {!!data?.departments.length && (
+              {canBrowse && !!data?.departments.length && (
                 <div className="space-y-1 border-t border-gray-100 pt-3">
                   <div className="px-2 text-xs font-semibold text-gray-400">
                     الأقسام
@@ -892,6 +907,7 @@ const TasksLayoutInner = () => {
                   <span className="flex-1 truncate">أعمالي</span>
                   <CountBadge count={data?.myWorkCount ?? 0} />
                 </Link>
+                {canBrowse && (<>
                 <Link
                   to="/tasks/by-assignee"
                   className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
@@ -913,8 +929,10 @@ const TasksLayoutInner = () => {
                   <FolderKanban className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                   <span className="flex-1 truncate">حسب المشروع</span>
                 </Link>
+                </>)}
               </div>
 
+              {access?.edit_all && (
               <div className="space-y-1 border-t border-gray-100 pt-3">
                 <div className="px-2 text-xs font-semibold text-gray-400">الإدارة</div>
                 <Link
@@ -932,6 +950,7 @@ const TasksLayoutInner = () => {
                   <span className="flex-1 truncate">الحقول والوسوم وأنواع المهام</span>
                 </Link>
               </div>
+              )}
             </>
           )}
         </div>

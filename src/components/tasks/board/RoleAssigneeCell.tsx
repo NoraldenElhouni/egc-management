@@ -15,6 +15,8 @@ interface RoleAssigneeCellProps {
   roleIds: string[];
   onChange: (roleIds: string[]) => void;
   align?: "left" | "right";
+  /** Display only: the popover never opens (no edit rights). */
+  readOnly?: boolean;
 }
 
 // First letters of the first two words ("مدير مشروع" -> "مم").
@@ -27,7 +29,7 @@ function roleInitials(name: string): string {
     .join("");
 }
 
-export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }: RoleAssigneeCellProps) {
+export default function RoleAssigneeCell({ roleIds, onChange, align = "right", readOnly = false }: RoleAssigneeCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   // same placement as AssigneeCell's dropdown — never clipped on the last rows
@@ -47,7 +49,7 @@ export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }:
         // Same shape as AssigneeCell's avatar stack so a long role name can't
         // push the people picker out of its column; the name is in the tooltip.
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => !readOnly && setOpen((v) => !v)}
           className="flex items-center -space-x-2 rtl:space-x-reverse"
         >
           {roleIds.slice(0, 2).map((id) => {
@@ -70,8 +72,8 @@ export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }:
         </button>
       ) : (
         <button
-          onClick={() => setOpen((v) => !v)}
-          className="rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400"
+          onClick={() => !readOnly && setOpen((v) => !v)}
+          className={`rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400 ${readOnly ? "hidden" : ""}`}
           title="تكليف حسب الدور في المشروع"
         >
           <BriefcaseBusiness className="h-3.5 w-3.5" />

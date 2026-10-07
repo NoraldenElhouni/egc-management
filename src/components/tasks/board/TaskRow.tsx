@@ -8,6 +8,8 @@ import StartDateCell from "./StartDateCell";
 import AssigneeCell from "./AssigneeCell";
 import RoleAssigneeCell from "./RoleAssigneeCell";
 import { useTemplateRoles } from "../TemplateRolesContext";
+import { useRowCaps } from "../BoardAccessContext";
+import EditGuard from "../EditGuard";
 import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
@@ -141,6 +143,8 @@ export default function TaskRow({
   const siblings = childrenByParent.get(task.parent_task_id) ?? [];
   // Only provided on template boards: roles sit next to the people.
   const templateRoles = useTemplateRoles();
+  // What I may do on THIS task: the space's rights, plus an assignee's own.
+  const rowCaps = useRowCaps(assigneesByTask.get(task.id) ?? []);
   const selected = !!selectedIds?.has(task.id);
   // Once anything is selected every row shows its box, so picking several
   // doesn't need a hover per row.
@@ -209,7 +213,7 @@ export default function TaskRow({
           style={{ paddingRight: depth * 20 }}
         >
           <span className="w-4 shrink-0 text-gray-300">
-            {hovered && canDrag && (
+            {hovered && canDrag && rowCaps.edit && (
               <span
                 draggable
                 onDragStart={(e) => {
@@ -223,7 +227,7 @@ export default function TaskRow({
               </span>
             )}
           </span>
-          {onToggleSelect && (
+          {onToggleSelect && rowCaps.status && (
             <span className="flex w-4 shrink-0 items-center">
               {showSelect && (
                 <input
@@ -257,6 +261,7 @@ export default function TaskRow({
               taskTypes={taskTypes}
               currentTaskTypeId={task.task_type_id}
               onChange={(taskTypeId) => onChangeTaskType(task.id, taskTypeId)}
+              readOnly={!rowCaps.edit}
             />
           )}
 
@@ -340,7 +345,7 @@ export default function TaskRow({
               </Tooltip>
             )}
 
-            {hovered && !addingChild && (
+            {hovered && !addingChild && rowCaps.create && (
               <button
                 onClick={() => setAddingChild(true)}
                 className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
@@ -356,11 +361,13 @@ export default function TaskRow({
           statuses={statuses}
           currentStatusId={task.status_id}
           onChange={(statusId) => onChangeStatus(task.id, statusId)}
+          readOnly={!rowCaps.status}
         />
         {showPriority && (
           <PriorityCell
             priority={task.priority}
             onChange={(priority) => onChangePriority(task.id, priority)}
+            readOnly={!rowCaps.edit}
           />
         )}
         <div className="flex items-center gap-1">
@@ -368,6 +375,7 @@ export default function TaskRow({
             <RoleAssigneeCell
               roleIds={templateRoles.rolesByTask.get(task.id) ?? []}
               onChange={(roleIds) => templateRoles.setTaskRoles({ taskId: task.id, roleIds })}
+              readOnly={!rowCaps.edit}
             />
           )}
           <AssigneeCell
@@ -376,11 +384,13 @@ export default function TaskRow({
             allEmployees={allEmployees}
             projectId={task.project_id}
             onChange={(userIds) => onChangeAssignees(task.id, userIds)}
+            readOnly={!rowCaps.edit}
           />
         </div>
         <StartDateCell
           startDate={task.start_date}
           onChange={(date) => onChangeStartDate(task.id, date)}
+          readOnly={!rowCaps.edit}
         />
         <DateCell
           dueDate={task.due_date}
@@ -388,17 +398,19 @@ export default function TaskRow({
           statusCategory={statuses.find((s) => s.id === task.status_id)?.category}
           completedAt={task.completed_at}
           onChange={(date) => onChangeDueDate(task.id, date)}
+          readOnly={!rowCaps.edit}
         />
         <div className="truncate text-xs text-gray-400">{department ?? ""}</div>
         {customColumns.map((col) => (
-          <CustomFieldCell
-            key={col.boardColumnId}
-            column={col}
-            value={valuesByTask.get(task.id)?.get(col.fieldDefinitionId)}
-            employeesById={employeesById}
-            allEmployees={allEmployees}
-            onChange={(value) => onChangeValue(task.id, col.fieldDefinitionId, value)}
-          />
+          <EditGuard key={col.boardColumnId} disabled={!rowCaps.edit}>
+            <CustomFieldCell
+              column={col}
+              value={valuesByTask.get(task.id)?.get(col.fieldDefinitionId)}
+              employeesById={employeesById}
+              allEmployees={allEmployees}
+              onChange={(value) => onChangeValue(task.id, col.fieldDefinitionId, value)}
+            />
+          </EditGuard>
         ))}
         <div />
       </div>

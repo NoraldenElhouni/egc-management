@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { accessSignature, useMyTaskAccess } from "./useTaskAccess";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
 import { notifyNewAssignees } from "../../services/tasks/notifyNewAssignees";
@@ -73,25 +74,24 @@ export interface PickerBoard {
 // same space-visibility rule as useTasksSidebar.ts.
 export function useBoardPickerOptions(enabled: boolean) {
   const { user } = useAuth();
+  const { access } = useMyTaskAccess();
 
   const query = useQuery({
-    queryKey: ["board-picker-options", user?.id],
-    enabled: enabled && !!user?.id,
+    queryKey: ["board-picker-options", user?.id, accessSignature(access)],
+    enabled: enabled && !!user?.id && !!access,
     queryFn: async (): Promise<PickerBoard[]> => {
-      if (!user?.id) throw new Error("no authenticated user");
+      if (!user?.id || !access) throw new Error("no authenticated user");
       const tasksDb = supabase.schema("tasks");
 
-      const [{ data: spaces, error: spacesError }, { data: memberRows, error: membersError }] = await Promise.all([
-        tasksDb.from("spaces").select("id, name, visibility, owner_user_id").eq("is_archived", false).eq("is_template", false),
-        tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
-      ]);
+      const { data: spaces, error: spacesError } = await tasksDb
+        .from("spaces")
+        .select("id, name")
+        .eq("is_archived", false)
+        .eq("is_template", false);
       if (spacesError) throw spacesError;
-      if (membersError) throw membersError;
 
-      const memberSpaceIds = new Set((memberRows ?? []).map((r) => r.space_id));
-      const visibleSpaces = (spaces ?? []).filter(
-        (s) => s.visibility === "public" || s.owner_user_id === user.id || memberSpaceIds.has(s.id),
-      );
+      // pushing tasks into a board needs edit rights on that board's space
+      const visibleSpaces = (spaces ?? []).filter((s) => access.spaces[s.id]?.caps.edit);
       const spaceNameById = new Map(visibleSpaces.map((s) => [s.id, s.name]));
       if (visibleSpaces.length === 0) return [];
 

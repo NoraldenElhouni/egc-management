@@ -17,9 +17,11 @@ interface TaskTypeCellProps {
   /** See StatusCell's align prop — "left" for narrow contexts near the
    * screen's left edge (the D3 detail panel). */
   align?: "left" | "right";
+  /** Display only: the popover never opens (no edit rights). */
+  readOnly?: boolean;
 }
 
-export default function TaskTypeCell({ taskTypes, currentTaskTypeId, onChange, align = "right" }: TaskTypeCellProps) {
+export default function TaskTypeCell({ taskTypes, currentTaskTypeId, onChange, align = "right", readOnly = false }: TaskTypeCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, () => setOpen(false));
@@ -30,7 +32,7 @@ export default function TaskTypeCell({ taskTypes, currentTaskTypeId, onChange, a
   return (
     <div ref={ref} className="relative shrink-0">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => !readOnly && setOpen((v) => !v)}
         className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full hover:bg-gray-100"
         title={current?.name_ar ?? "نوع المهمة"}
       >

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { accessSignature, invalidateTaskAccess, useMyTaskAccess } from "./useTaskAccess";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
@@ -61,6 +62,8 @@ export interface TaskDirectoryData {
    * board rather than by space so the row can resolve a task's origin in
    * one lookup off task.board_id, with no space_id hop in the component. */
   spaceNameByBoardId: Map<string, string>;
+  /** board_id → the space it lives in; rows use it to look up what I may do there. */
+  spaceIdByBoardId: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   // Had at least one blocking dependency, but every one of them is now
@@ -76,13 +79,14 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
   const queryClient = useQueryClient();
   const tasksDb = supabase.schema("tasks");
   const spaceId = options?.spaceId;
-  const queryKey = ["task-directory", user?.id, spaceId ?? null];
+  const { access } = useMyTaskAccess();
+  const queryKey = ["task-directory", user?.id, spaceId ?? null, accessSignature(access)];
 
   const query = useQuery({
     queryKey,
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!access,
     queryFn: async (): Promise<TaskDirectoryData> => {
-      if (!user?.id) throw new Error("no user");
+      if (!user?.id || !access) throw new Error("no user");
 
       let boards: { id: string; name: string; space_id: string; sort_order: number }[];
       // space_id → space name, for the "where did this task come from"
@@ -104,18 +108,17 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         boards = data ?? [];
         if (spaceRow) spaceNamesById.set(spaceRow.id, spaceRow.name);
       } else {
-        const [{ data: spaces, error: spacesError }, { data: memberRows, error: membersError }] = await Promise.all([
-          tasksDb.from("spaces").select("id, name, visibility, owner_user_id").eq("is_archived", false).eq("is_template", false),
-          tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
-        ]);
+        const { data: spaces, error: spacesError } = await tasksDb
+          .from("spaces")
+          .select("id, name")
+          .eq("is_archived", false)
+          .eq("is_template", false);
         if (spacesError) throw spacesError;
-        if (membersError) throw membersError;
         spaceNamesById = new Map((spaces ?? []).map((s) => [s.id, s.name]));
 
-        const memberSpaceIds = new Set((memberRows ?? []).map((r) => r.space_id));
-        const visibleSpaceIds = (spaces ?? [])
-          .filter((s) => s.visibility === "public" || s.owner_user_id === user.id || memberSpaceIds.has(s.id))
-          .map((s) => s.id);
+        // directory views list spaces I hold a level on; a space that is
+        // only visible because it holds a task of mine belongs in My Work
+        const visibleSpaceIds = (spaces ?? []).filter((s) => !!access.spaces[s.id]).map((s) => s.id);
 
         const { data, error } = visibleSpaceIds.length
           ? await tasksDb.from("boards").select("id, name, space_id, sort_order").in("space_id", visibleSpaceIds).eq("is_archived", false).eq("is_template", false)
@@ -277,6 +280,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         zoneNamesById: new Map((zoneRowsResult.data ?? []).map((z) => [z.id, z.name])),
         boardNamesById: new Map(boards.map((b) => [b.id, b.name])),
         boardOrderById: new Map(boards.map((b) => [b.id, b.sort_order])),
+        spaceIdByBoardId: new Map(boards.map((b) => [b.id, b.space_id])),
         spaceNameByBoardId: new Map(
           boards
             .map((b) => [b.id, spaceNamesById.get(b.space_id)] as const)
@@ -378,7 +382,10 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         }
       }
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateTaskAccess(queryClient);
+    },
   });
 
   // Unlike useTaskBoard.ts's own createTask, this can't lean on

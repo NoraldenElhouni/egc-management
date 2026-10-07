@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Loader2, FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
@@ -12,6 +12,8 @@ import { useTaskRoles } from "../../hooks/tasks/useTaskRoles";
 import TemplateSyncBanner from "../../components/tasks/templates/TemplateSyncBanner";
 import PushToBoardsModal from "../../components/tasks/templates/PushToBoardsModal";
 import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks/useTemplateSync";
+import { NO_CAPS, useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
+import { BoardAccessProvider } from "../../components/tasks/BoardAccessContext";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
 // Also the template editor: a template is a board with is_template set
@@ -63,6 +65,15 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     !!data?.board.is_template,
   );
 
+  // What I may do here. The server computes it (tasks.my_access); all false
+  // until it answers, so nothing editable flashes up for a moment.
+  const { access, userId } = useMyTaskAccess();
+  const spaceCaps = useSpaceCaps(data?.board.space_id);
+  const boardAccess = useMemo(
+    () => ({ spaceCaps, assigneeCaps: access?.assignee_caps ?? NO_CAPS, myUserId: userId }),
+    [spaceCaps, access, userId],
+  );
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400">
@@ -74,19 +85,32 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   if (error || !data) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-red-500">
-        تعذّر تحميل اللوحة
+        اللوحة غير متاحة أو تعذّر تحميلها
       </div>
     );
   }
 
   const isTemplate = data.board.is_template;
+
+  // Without a view on the whole space (an assignee reaching the board from
+  // the sidebar) the board shows only the tasks assigned to me. A task whose
+  // parent is not one of mine is shown at the top level. (Row-level security
+  // would do this on the server; until then the screen does it.)
+  const boardTasks = spaceCaps.view || !userId
+    ? data.tasks
+    : data.tasks
+        .filter((t) => (data.assigneesByTask.get(t.id) ?? []).includes(userId))
+        .map((t, _i, mine) =>
+          t.parent_task_id && !mine.some((m) => m.id === t.parent_task_id) ? { ...t, parent_task_id: null } : t,
+        );
   // Pushing only makes sense on a template, or on a board built from one.
   const canPush = !!syncStatus && (isTemplate || syncStatus.templateBoards.length > 0);
-  const pendingTaskIds = canPush ? syncStatus.pendingTaskIds : [];
+  const pendingTaskIds = canPush && spaceCaps.edit ? syncStatus.pendingTaskIds : [];
 
   return (
     <TemplateModeProvider value={isTemplate}>
     <TemplateRolesProvider value={isTemplate ? { rolesByTask, setTaskRoles } : null}>
+    <BoardAccessProvider value={boardAccess}>
     <div className="flex h-full flex-col" dir="rtl">
       <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-2">
@@ -124,7 +148,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
               مخطط زمني
             </Link>
           </div>
-          {!isTemplate && (
+          {!isTemplate && spaceCaps.create && (
             <button
               onClick={() => setShowZoneClone(true)}
               className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
@@ -133,6 +157,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
               استنساخ منطقة
             </button>
           )}
+          {spaceCaps.create && (
           <button
             onClick={() => setShowTemplatePicker(true)}
             className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
@@ -140,6 +165,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             <FileStack className="h-3.5 w-3.5" />
             استخدام قالب
           </button>
+          )}
         </div>
       </div>
 
@@ -157,12 +183,13 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
           <TaskGantt
             key={boardId}
             boardId={data.board.id}
-            tasks={data.tasks}
+            tasks={boardTasks}
             statuses={data.statuses}
             taskTypes={data.taskTypes}
             dependencies={data.dependencies}
             blockedTaskIds={data.blockedTaskIds}
             onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
+            readOnly={!spaceCaps.edit}
           />
         ) : (
           <TaskTable
@@ -170,7 +197,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             boardId={data.board.id}
             boardZoneId={data.board.zone_id}
             zoneName={data.zoneName}
-            tasks={data.tasks}
+            tasks={boardTasks}
             statuses={data.statuses}
             employeesById={employeesById}
             allEmployees={data.employees}
@@ -215,7 +242,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
                 navigate(location.pathname.replace(/\/task\/[^/]+$/, ""));
               }
             }}
-            onPushSelected={canPush ? setPushTaskIds : undefined}
+            onPushSelected={canPush && spaceCaps.edit ? setPushTaskIds : undefined}
           />
         )}
       </div>
@@ -255,6 +282,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
         />
       )}
     </div>
+    </BoardAccessProvider>
     </TemplateRolesProvider>
     </TemplateModeProvider>
   );

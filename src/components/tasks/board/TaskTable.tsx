@@ -2,6 +2,8 @@ import { cloneElement, useCallback, useEffect, useMemo, useRef, useState, type R
 import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, ArrowDownWideNarrow, ArrowUpNarrowWide } from "lucide-react";
 import TaskRow, { rowGridStyle } from "./TaskRow";
 import BulkActionPanel from "./BulkActionPanel";
+import { useBoardAccess } from "../BoardAccessContext";
+import { taskRowCaps } from "../../../hooks/tasks/useTaskAccess";
 import { withDescendants } from "../../../hooks/tasks/bulkSelection";
 import ColumnEditorModal from "./ColumnEditorModal";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
@@ -130,6 +132,10 @@ export default function TaskTable({
   const [showColumnEditor, setShowColumnEditor] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { spaceCaps, assigneeCaps, myUserId } = useBoardAccess();
+  // What I may do on a given task: the space's rights plus an assignee's own.
+  const capsOf = (taskId: string) =>
+    taskRowCaps(spaceCaps, assigneeCaps, !!myUserId && (assigneesByTask.get(taskId) ?? []).includes(myUserId));
   const [sort, setSortState] = useState<{ key: TaskSortKey; dir: SortDirection }>(loadBoardSort);
   const setSort = (next: { key: TaskSortKey; dir: SortDirection }) => {
     setSortState(next);
@@ -156,9 +162,10 @@ export default function TaskTable({
 
   // Select-all covers every task on the board, subtasks under collapsed
   // parents included — the bulk bar's delete wording says how many go.
-  const allSelected = tasks.length > 0 && selectedIds.size === tasks.length;
+  const selectableIds = tasks.filter((t) => capsOf(t.id).status).map((t) => t.id);
+  const allSelected = selectableIds.length > 0 && selectedIds.size === selectableIds.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
-  const selectAll = () => setSelectedIds(new Set(tasks.map((t) => t.id)));
+  const selectAll = () => setSelectedIds(new Set(selectableIds));
   const clearSelection = () => setSelectedIds(new Set());
   const selectAllRef = useCallback(
     (el: HTMLInputElement | null) => {
@@ -316,7 +323,10 @@ export default function TaskTable({
     lastPanelElement.current = (
         <BulkActionPanel
           selectedCount={selectedIds.size}
-          totalCount={tasks.length}
+          totalCount={selectableIds.length}
+          canStatus={selectedTasks.every((t) => capsOf(t.id).status)}
+          canEdit={selectedTasks.every((t) => capsOf(t.id).edit)}
+          canDelete={selectedTasks.every((t) => capsOf(t.id).delete)}
           statuses={statuses}
           showPriority={featureSettings.priorities}
           employeesById={employeesById}
@@ -431,7 +441,7 @@ export default function TaskTable({
           {/* same slot order as TaskRow: drag grip, then the checkbox */}
           <span className="w-4 shrink-0" />
           <span className="flex w-4 shrink-0 items-center">
-            {tasks.length > 0 && (
+            {selectableIds.length > 0 && (
               <input
                 ref={selectAllRef}
                 type="checkbox"
@@ -454,18 +464,23 @@ export default function TaskTable({
           <CustomColumnHeader
             key={col.boardColumnId}
             column={col}
+            canManage={spaceCaps.manage}
             onRename={(name_ar) => onRenameField(col.fieldDefinitionId, name_ar)}
             onDetach={() => onDetachColumn(col.boardColumnId)}
             onHide={() => onSetColumnVisibility(col.boardColumnId, false)}
           />
         ))}
-        <button
-          onClick={() => setShowColumnEditor(true)}
-          title="إضافة عمود"
-          className="flex items-center justify-center text-gray-300 hover:text-gray-500"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+        {spaceCaps.manage ? (
+          <button
+            onClick={() => setShowColumnEditor(true)}
+            title="إضافة عمود"
+            className="flex items-center justify-center text-gray-300 hover:text-gray-500"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <div />
+        )}
       </div>
 
       {showColumnEditor && (
@@ -547,6 +562,7 @@ export default function TaskTable({
           </div>
         )}
 
+        {spaceCaps.create && (
         <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
           <Plus className="h-3.5 w-3.5 text-gray-400" />
           <input
@@ -561,6 +577,7 @@ export default function TaskTable({
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
           />
         </div>
+        )}
       </div>
     </div>
   );
@@ -593,11 +610,13 @@ const FIELD_TYPE_LABELS: Record<CustomColumn["type"], string> = {
 // columns list is the only way back, so both must ship together.
 function CustomColumnHeader({
   column,
+  canManage,
   onRename,
   onDetach,
   onHide,
 }: {
   column: CustomColumn;
+  canManage: boolean;
   onRename: (name_ar: string) => void;
   onDetach: () => void;
   onHide: () => void;
@@ -634,9 +653,11 @@ function CustomColumnHeader({
         {column.name_ar}
         <span className="mr-1 text-[10px] font-normal text-gray-400">({FIELD_TYPE_LABELS[column.type]})</span>
       </span>
-      <button onClick={() => setOpen((v) => !v)} className="shrink-0 text-gray-300 hover:text-gray-500">
-        <MoreHorizontal className="h-3 w-3" />
-      </button>
+      {canManage && (
+        <button onClick={() => setOpen((v) => !v)} className="shrink-0 text-gray-300 hover:text-gray-500">
+          <MoreHorizontal className="h-3 w-3" />
+        </button>
+      )}
       {open && (
         <div className="absolute left-0 top-full z-30 mt-1 w-32 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
           <button

@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { X, Loader2, ChevronLeft, Trash2, Plus } from "lucide-react";
 import { useTaskDetail } from "../../../hooks/tasks/useTaskDetail";
 import { colorFor, initials } from "../board/employeeAvatar";
+import { useMyTaskAccess, useTaskCaps } from "../../../hooks/tasks/useTaskAccess";
+import EditGuard from "../EditGuard";
 import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
 import AssigneeCell from "../board/AssigneeCell";
@@ -84,6 +86,14 @@ export default function TaskDetailPanel() {
     deleteTask,
     deletingTask,
   } = useTaskDetail(taskId);
+  // What I may do on THIS task, as answered by the database (tasks.task_caps).
+  // Everything below is a courtesy for people who cannot edit; row-level
+  // security refuses the same writes regardless of what the screen shows.
+  const { caps, loading: capsLoading, unavailable } = useTaskCaps(taskId);
+  const { access } = useMyTaskAccess();
+  // Contractors/vendors only ever see the task itself, its comments, files,
+  // checklists and requirements — not field values, ERP links, activity.
+  const isExternal = !!access && !access.is_internal;
   // Template tasks can also be assigned by project role (useTaskRoles.ts).
   const isTemplateTask = !!data?.task.is_template;
   const { rolesByTask, setTaskRoles } = useTaskRoles(
@@ -172,9 +182,14 @@ export default function TaskDetailPanel() {
           </button>
         </div>
 
-        {loading || !data ? (
+        {loading || !data || capsLoading ? (
           <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+          </div>
+        ) : unavailable ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center text-sm text-gray-500">
+            <span className="font-medium text-gray-700">المهمة غير متاحة</span>
+            <span className="text-xs text-gray-400">قد تكون محذوفة أو غير مُسندة إليك.</span>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -186,15 +201,18 @@ export default function TaskDetailPanel() {
                 if (title && title !== data.task.title) updateField({ title });
                 setTitleDraft(null);
               }}
+              readOnly={!caps.edit}
               className="w-full border-none text-lg font-semibold text-gray-900 outline-none"
             />
 
             <div className="mt-1.5">
-              <TagPicker
-                allTags={data.allTags}
-                tagIds={data.tagIds}
-                onToggle={(tagId, attached) => toggleTag({ tagId, attached })}
-              />
+              <EditGuard disabled={!caps.edit}>
+                <TagPicker
+                  allTags={data.allTags}
+                  tagIds={data.tagIds}
+                  onToggle={(tagId, attached) => toggleTag({ tagId, attached })}
+                />
+              </EditGuard>
             </div>
 
             {/* description is JSON (build plan §4.7), not HTML — no rich-text
@@ -204,6 +222,7 @@ export default function TaskDetailPanel() {
                 the token it inserts renders as raw text here (no view/edit
                 split for this field) but still creates the reference
                 relationship on save, per build plan §4.13. */}
+            <EditGuard disabled={!caps.edit}>
             <MentionTextarea
               value={
                 descriptionDraft ??
@@ -222,6 +241,7 @@ export default function TaskDetailPanel() {
               rows={3}
               className="mt-2 w-full resize-none rounded-md border-none text-sm text-gray-600 outline-none placeholder:text-gray-300"
             />
+            </EditGuard>
 
             <Section title="التعليقات">
               <CommentsSection
@@ -234,6 +254,7 @@ export default function TaskDetailPanel() {
                 }}
                 onDeleteComment={deleteComment}
                 onToggleResolved={(id, resolved) => toggleCommentResolved({ id, resolved })}
+                canResolve={caps.edit}
                 onNavigateToTask={(id) => navigate(`${basePath}/task/${id}`)}
               />
             </Section>
@@ -245,6 +266,7 @@ export default function TaskDetailPanel() {
                   currentStatusId={data.task.status_id}
                   onChange={(statusId) => updateField({ status_id: statusId })}
                   align="left"
+                  readOnly={!caps.status}
                 />
               </FieldRow>
               <FieldRow label="الأولوية">
@@ -252,11 +274,13 @@ export default function TaskDetailPanel() {
                   priority={data.task.priority}
                   onChange={(priority) => updateField({ priority })}
                   align="left"
+                  readOnly={!caps.edit}
                 />
               </FieldRow>
               <FieldRow label="القسم">
                 <select
                   value={data.task.department_id ?? ""}
+                  disabled={!caps.edit}
                   onChange={(e) => updateField({ department_id: e.target.value || null })}
                   className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
                 >
@@ -271,6 +295,7 @@ export default function TaskDetailPanel() {
               <FieldRow label="التخصص">
                 <select
                   value={data.task.specialization_id ?? ""}
+                  disabled={!caps.edit}
                   onChange={(e) => updateField({ specialization_id: e.target.value || null })}
                   className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
                 >
@@ -294,8 +319,10 @@ export default function TaskDetailPanel() {
                         roleIds={rolesByTask.get(data.task.id) ?? []}
                         onChange={(roleIds) => setTaskRoles({ taskId: data.task.id, roleIds })}
                         align="left"
+                        readOnly={!caps.edit}
                       />
                     )}
+                    {caps.edit && (
                     <AssigneeCell
                       variant="button"
                       buttonClassName="flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
@@ -312,6 +339,7 @@ export default function TaskDetailPanel() {
                       onChange={(userIds) => setAssignees(userIds)}
                       align="left"
                     />
+                    )}
                   </div>
                 </div>
                 {data.assigneeIds.length > 0 && (
@@ -337,14 +365,16 @@ export default function TaskDetailPanel() {
                               مقاول
                             </span>
                           )}
-                          <button
-                            onClick={() => setAssignees(data.assigneeIds.filter((id) => id !== userId))}
-                            title="إزالة"
-                            aria-label="إزالة"
-                            className="ms-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
+                          {caps.edit && (
+                            <button
+                              onClick={() => setAssignees(data.assigneeIds.filter((id) => id !== userId))}
+                              title="إزالة"
+                              aria-label="إزالة"
+                              className="ms-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </li>
                       );
                     })}
@@ -356,6 +386,7 @@ export default function TaskDetailPanel() {
                   startDate={data.task.start_date}
                   onChange={(date) => updateField({ start_date: date })}
                   align="left"
+                  readOnly={!caps.edit}
                 />
               </FieldRow>
               <FieldRow label="تاريخ الاستحقاق">
@@ -366,13 +397,15 @@ export default function TaskDetailPanel() {
                   completedAt={data.task.completed_at}
                   onChange={(date) => updateField({ due_date: date })}
                   align="left"
+                  readOnly={!caps.edit}
                 />
               </FieldRow>
               {/* The board's attached custom fields (D2's "+" column
                   editor) previously had no home in this panel — only the
                   dense board row could show or edit them. */}
-              {data.customColumns.map((col) => (
+              {!isExternal && data.customColumns.map((col) => (
                 <FieldRow key={col.boardColumnId} label={col.name_ar}>
+                  <EditGuard disabled={!caps.edit}>
                   <CustomFieldCell
                     column={col}
                     value={data.customValues.get(col.fieldDefinitionId)}
@@ -381,18 +414,23 @@ export default function TaskDetailPanel() {
                     onChange={(value) => setCustomValue({ fieldDefinitionId: col.fieldDefinitionId, value })}
                     align="left"
                   />
+                  </EditGuard>
                 </FieldRow>
               ))}
             </div>
 
-            <Section title="السجل المرتبط">
-              <div className="space-y-1.5">
-                <LinkedRecordCard links={data.links} onRemove={removeLink} />
-                <LinkRecordPicker
-                  projectId={data.task.project_id}
-                  onAdd={(input) => addLink({ recordType: input.recordType, recordId: input.recordId, linkMode: input.linkMode })}
-                />
-              </div>
+            <Section title="السجل المرتبط" hidden={isExternal}>
+              <EditGuard disabled={!caps.edit}>
+                <div className="space-y-1.5">
+                  <LinkedRecordCard links={data.links} onRemove={removeLink} />
+                  {caps.edit && (
+                    <LinkRecordPicker
+                      projectId={data.task.project_id}
+                      onAdd={(input) => addLink({ recordType: input.recordType, recordId: input.recordId, linkMode: input.linkMode })}
+                    />
+                  )}
+                </div>
+              </EditGuard>
             </Section>
 
             <Section title="">
@@ -401,10 +439,13 @@ export default function TaskDetailPanel() {
                 onToggle={(id, satisfied) => satisfyRequirement({ requirementId: id, satisfied })}
                 onAdd={addRequirement}
                 onDelete={deleteRequirement}
+                canEdit={caps.edit}
+                canSatisfy={caps.status}
               />
             </Section>
 
-            <Section title="الاعتماديات">
+            <Section title="الاعتماديات" hidden={isExternal}>
+              <EditGuard disabled={!caps.edit}>
               <DependenciesSection
                 taskId={data.task.id}
                 boardId={data.task.board_id}
@@ -414,9 +455,11 @@ export default function TaskDetailPanel() {
                 onAdd={(relatedTaskId, direction) => addDependency({ relatedTaskId, direction })}
                 onRemove={(dependencyId) => removeDependency(dependencyId)}
               />
+              </EditGuard>
             </Section>
 
-            <Section title="الروابط">
+            <Section title="الروابط" hidden={isExternal}>
+              <EditGuard disabled={!caps.edit}>
               <RelationshipsSection
                 taskId={data.task.id}
                 boardId={data.task.board_id}
@@ -424,6 +467,7 @@ export default function TaskDetailPanel() {
                 onAdd={(relatedTaskId, type) => addRelationship({ relatedTaskId, type })}
                 onRemove={(id) => removeRelationship(id)}
               />
+              </EditGuard>
             </Section>
 
             <Section title="قوائم التحقق">
@@ -432,6 +476,8 @@ export default function TaskDetailPanel() {
                 onAddChecklist={(name) => addChecklist(name)}
                 onAddItem={(checklistId, content) => addChecklistItem({ checklistId, content })}
                 onToggleItem={(itemId, checked) => toggleChecklistItem({ itemId, checked })}
+                canEdit={caps.edit}
+                canTick={caps.status}
               />
             </Section>
 
@@ -440,6 +486,7 @@ export default function TaskDetailPanel() {
                 basePath={basePath}
                 subtasks={data.subtasks}
                 onAdd={(title) => addSubtask(title)}
+                canAdd={caps.create}
               />
             </Section>
 
@@ -448,10 +495,11 @@ export default function TaskDetailPanel() {
                 taskId={data.task.id}
                 attachments={data.attachments}
                 onUploaded={() => refetch()}
+                canUpload={caps.comment}
               />
             </Section>
 
-            <Section title="إضافة تعليق">
+            <Section title="إضافة تعليق" hidden={!caps.comment}>
               <CommentComposer
                 excludeTaskId={data.task.id}
                 onAddComment={async (text) => {
@@ -461,15 +509,15 @@ export default function TaskDetailPanel() {
               />
             </Section>
 
-            <Section title="النشاط">
+            <Section title="النشاط" hidden={isExternal}>
               <ActivitySection activity={data.activity} employeesById={data.employeesById} />
             </Section>
 
-            <Section title="التكرار">
+            <Section title="التكرار" hidden={isExternal || !caps.edit}>
               <RecurrenceSection taskId={data.task.id} boardId={data.breadcrumb.boardId} />
             </Section>
 
-            <Section title="منطقة الخطر">
+            <Section title="منطقة الخطر" hidden={!caps.delete}>
               <div className="rounded-md border border-red-100 bg-red-50/50 p-3">
                 <button
                   onClick={handleDelete}

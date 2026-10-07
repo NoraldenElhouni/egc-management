@@ -231,6 +231,7 @@ export default function AssigneeViewPage() {
                       <DirectoryTaskRow
                         key={task.id}
                         task={task}
+                        spaceId={data.spaceIdByBoardId.get(task.board_id)}
                         statuses={data.statuses}
                         employeesById={data.employeesById}
                         allEmployees={data.allEmployees}

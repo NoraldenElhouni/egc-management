@@ -95,6 +95,8 @@ interface GanttBarProps {
   labelInset: number;
   onOpen: () => void;
   onCommit: (change: BarChange) => void;
+  /** No edit rights: the bar can be clicked open but never dragged. */
+  readOnly?: boolean;
 }
 
 export default function GanttBar({
@@ -110,6 +112,7 @@ export default function GanttBar({
   labelInset,
   onOpen,
   onCommit,
+  readOnly = false,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -128,7 +131,8 @@ export default function GanttBar({
   };
 
   const onPointerMove = (e: ReactPointerEvent) => {
-    if (!drag) return;
+    // Read-only: the pointer never counts as "moved", so release is a click.
+    if (!drag || readOnly) return;
     const dx = e.clientX - drag.originX;
     const moved = drag.moved || Math.abs(dx) >= CLICK_SLOP;
     // RTL: a leftward drag (negative dx) is later in time.

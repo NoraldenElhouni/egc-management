@@ -11,6 +11,7 @@ import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
 import type { StatusRow, TaskRow as TaskRowType, TaskTypeLite, TagLite } from "../../../hooks/tasks/useTaskBoard";
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
+import { NO_CAPS, taskRowCaps, useMyTaskAccess } from "../../../hooks/tasks/useTaskAccess";
 
 // A leaner sibling of board/TaskRow.tsx for the cross-board directory
 // views (AssigneeViewPage, TaskTypeViewPage) — same inline-edit cells
@@ -70,6 +71,8 @@ interface DirectoryTaskRowProps {
   taskTypes: Map<string, TaskTypeLite>;
   tagsByTask: Map<string, TagLite[]>;
   parentTitle?: string;
+  /** The space this task's board lives in — what I may do here depends on it. */
+  spaceId?: string;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   dependencyClearedTaskIds: Set<string>;
@@ -103,6 +106,7 @@ export default function DirectoryTaskRow({
   taskTypes,
   tagsByTask,
   parentTitle,
+  spaceId,
   linkedTaskIds,
   blockedTaskIds,
   dependencyClearedTaskIds,
@@ -126,6 +130,14 @@ export default function DirectoryTaskRow({
   const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
   const tags = tagsByTask.get(task.id) ?? [];
 
+  // What I may do to THIS task: my rights in its space, plus an assignee's own.
+  const { access, userId: myUserId } = useMyTaskAccess();
+  const rowCaps = taskRowCaps(
+    (spaceId && access?.spaces[spaceId]?.caps) || NO_CAPS,
+    access?.assignee_caps,
+    !!myUserId && (assigneesByTask.get(task.id) ?? []).includes(myUserId),
+  );
+
   return (
     <div
       style={directoryRowGridStyle({ showPriority, showSource, showCompleted })}
@@ -136,6 +148,7 @@ export default function DirectoryTaskRow({
           taskTypes={taskTypes}
           currentTaskTypeId={task.task_type_id}
           onChange={(taskTypeId) => onChangeTaskType(task.id, taskTypeId)}
+          readOnly={!rowCaps.edit}
         />
 
         {/* Separate overflow-hidden wrapper from TaskTypeCell above — see
@@ -223,9 +236,14 @@ export default function DirectoryTaskRow({
         statuses={statuses}
         currentStatusId={task.status_id}
         onChange={(statusId) => onChangeStatus(task.id, statusId)}
+        readOnly={!rowCaps.status}
       />
       {showPriority && (
-        <PriorityCell priority={task.priority} onChange={(priority) => onChangePriority(task.id, priority)} />
+        <PriorityCell
+          priority={task.priority}
+          onChange={(priority) => onChangePriority(task.id, priority)}
+          readOnly={!rowCaps.edit}
+        />
       )}
       <AssigneeCell
         assigneeIds={assigneesByTask.get(task.id) ?? []}
@@ -233,14 +251,20 @@ export default function DirectoryTaskRow({
         allEmployees={allEmployees}
         projectId={task.project_id}
         onChange={(userIds) => onChangeAssignees(task.id, userIds)}
+        readOnly={!rowCaps.edit}
       />
-      <StartDateCell startDate={task.start_date} onChange={(date) => onChangeStartDate(task.id, date)} />
+      <StartDateCell
+        startDate={task.start_date}
+        onChange={(date) => onChangeStartDate(task.id, date)}
+        readOnly={!rowCaps.edit}
+      />
       <DateCell
         dueDate={task.due_date}
         isOverdue={task.is_overdue}
         statusCategory={statuses.find((s) => s.id === task.status_id)?.category}
         completedAt={task.completed_at}
         onChange={(date) => onChangeDueDate(task.id, date)}
+        readOnly={!rowCaps.edit}
       />
       {showCompleted && <CompletedAtCell completedAt={task.completed_at} />}
     </div>

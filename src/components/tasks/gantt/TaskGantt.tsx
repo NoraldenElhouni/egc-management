@@ -27,6 +27,7 @@ import type {
 import Tooltip from "../../ui/Tooltip";
 import { useTemplateMode } from "../TemplateModeContext";
 import GanttBar, { MILESTONE_HALF, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
+import EditGuard from "../EditGuard";
 import GanttDateCell from "./GanttDateCell";
 import {
   MAX_PX_PER_DAY,
@@ -146,6 +147,11 @@ export interface GanttDateChange {
   dueDate?: string | null;
 }
 
+// What a read-only Gantt calls instead of saving.
+function ignoreDateChange(): void {
+  return;
+}
+
 interface TaskGanttProps {
   boardId: string;
   tasks: TaskRow[];
@@ -154,6 +160,9 @@ interface TaskGanttProps {
   dependencies: DependencyPair[];
   blockedTaskIds: Set<string>;
   onChangeDates: (taskId: string, change: GanttDateChange) => void;
+  /** No edit rights: bars open the task but cannot be dragged and the date
+   * columns / clear button are inert. */
+  readOnly?: boolean;
 }
 
 interface VisibleRow {
@@ -169,8 +178,10 @@ export default function TaskGantt({
   taskTypes,
   dependencies,
   blockedTaskIds,
-  onChangeDates,
+  onChangeDates: onChangeDatesProp,
+  readOnly = false,
 }: TaskGanttProps) {
+  const onChangeDates = readOnly ? ignoreDateChange : onChangeDatesProp;
   const navigate = useNavigate();
   const isTemplate = useTemplateMode();
   const adapter = useMemo(() => dayAdapter(isTemplate), [isTemplate]);
@@ -694,19 +705,23 @@ export default function TaskGantt({
                     >
                       {columns.start && (
                         <div className="shrink-0 border-l border-gray-100" style={{ width: DATE_COL_W }}>
-                          <GanttDateCell
-                            value={task.start_date}
-                            onChange={(date) => onChangeDates(task.id, { startDate: date })}
-                          />
+                          <EditGuard disabled={readOnly}>
+                            <GanttDateCell
+                              value={task.start_date}
+                              onChange={(date) => onChangeDates(task.id, { startDate: date })}
+                            />
+                          </EditGuard>
                         </div>
                       )}
                       {columns.end && (
                         <div className="shrink-0 border-l border-gray-100" style={{ width: DATE_COL_W }}>
-                          <GanttDateCell
-                            value={task.due_date}
-                            overdue={task.is_overdue}
-                            onChange={(date) => onChangeDates(task.id, { dueDate: date })}
-                          />
+                          <EditGuard disabled={readOnly}>
+                            <GanttDateCell
+                              value={task.due_date}
+                              overdue={task.is_overdue}
+                              onChange={(date) => onChangeDates(task.id, { dueDate: date })}
+                            />
+                          </EditGuard>
                         </div>
                       )}
                       <div
@@ -733,7 +748,7 @@ export default function TaskGantt({
                         {/* Clear both dates — the task goes back to an
                             undated row, same as CalendarPopover's
                             "إزالة التاريخ" but for start and due at once. */}
-                        {span && span.kind !== "none" && (
+                        {span && span.kind !== "none" && !readOnly && (
                           <Tooltip label="إزالة التواريخ" className="ms-auto shrink-0">
                             <button
                               onClick={() => onChangeDates(task.id, { startDate: null, dueDate: null })}
@@ -764,6 +779,7 @@ export default function TaskGantt({
                           labelInset={leftW + 6}
                           onOpen={() => openTask(task.id)}
                           onCommit={(change) => commit(task.id, change)}
+                          readOnly={readOnly}
                         />
                       ) : rollup ? (
                         <RollupBar

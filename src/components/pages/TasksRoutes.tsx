@@ -13,14 +13,16 @@ import TaskDetailPanel from "../tasks/detail/TaskDetailPanel";
 import TemplatesAdminPage from "../../pages/tasks/admin/TemplatesAdminPage";
 import SpaceSettingsPage from "../../pages/tasks/admin/SpaceSettingsPage";
 import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
+import RequireTaskAccess from "../tasks/RequireTaskAccess";
 
 // App.tsx gates the whole /tasks/* mount point behind one section-level
-// permission (view_tasks_section, Admin only for now, while the module is
-// in testing). Nothing inside this file is gated per-screen or per-action
-// yet — that's Part 6 of the build plan (tasks/task-module-build-plan.md),
-// deliberately on hold. Wire tasks.* keys into permission_catalog and gate
-// individual routes/actions here the same way HR/Finance/etc. do before
-// this ships to more than Admin.
+// permission (view_tasks_section: the menu entry). Inside it, access to
+// tasks follows the model in tasks/migrations/2026-10-08_task_access_*.sql:
+// assigned tasks only, widened by space membership, and the two company-wide
+// permissions view_all_tasks / edit_all_tasks. The admin pages (templates,
+// field catalog) need edit_all_tasks and a space's settings need "manage"
+// on that space — see RequireTaskAccess. Per-action gating inside screens
+// reads useTaskAccess.
 //
 // board/:id (D2), department/:id (D6), my-work (D7), by-assignee,
 // by-type, by-project, and space/:spaceId each mount D3's slide-over as
@@ -54,26 +56,36 @@ export default function TasksRoutes() {
         <Route path="board/:boardId/gantt" element={<TaskBoardPage view="gantt" />}>
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
-        <Route path="department/:departmentId" element={<DepartmentPage />}>
-          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        <Route element={<RequireTaskAccess scope="browse" />}>
+          <Route path="department/:departmentId" element={<DepartmentPage />}>
+            <Route path="task/:taskId" element={<TaskDetailPanel />} />
+          </Route>
         </Route>
         <Route path="my-work" element={<MyWorkPage />}>
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
-        <Route path="by-assignee" element={<AssigneeViewPage />}>
-          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        <Route element={<RequireTaskAccess scope="browse" />}>
+          <Route path="by-assignee" element={<AssigneeViewPage />}>
+            <Route path="task/:taskId" element={<TaskDetailPanel />} />
+          </Route>
+          <Route path="by-type" element={<TaskTypeViewPage />}>
+            <Route path="task/:taskId" element={<TaskDetailPanel />} />
+          </Route>
+          <Route path="by-project" element={<ProjectViewPage />}>
+            <Route path="task/:taskId" element={<TaskDetailPanel />} />
+          </Route>
         </Route>
-        <Route path="by-type" element={<TaskTypeViewPage />}>
-          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        <Route element={<RequireTaskAccess scope="edit-all" />}>
+          <Route path="admin/templates" element={<TemplatesAdminPage />} />
+          <Route path="admin/fields" element={<FieldsAdminPage />} />
         </Route>
-        <Route path="by-project" element={<ProjectViewPage />}>
-          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        <Route element={<RequireTaskAccess scope="space" />}>
+          <Route path="space/:spaceId/settings" element={<SpaceSettingsPage />} />
         </Route>
-        <Route path="admin/templates" element={<TemplatesAdminPage />} />
-        <Route path="admin/fields" element={<FieldsAdminPage />} />
-        <Route path="space/:spaceId/settings" element={<SpaceSettingsPage />} />
-        <Route path="space/:spaceId" element={<SpaceTasksPage />}>
-          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        <Route element={<RequireTaskAccess scope="space-view" />}>
+          <Route path="space/:spaceId" element={<SpaceTasksPage />}>
+            <Route path="task/:taskId" element={<TaskDetailPanel />} />
+          </Route>
         </Route>
         <Route path="task/:taskId" element={<TaskRedirect />} />
       </Route>

@@ -1,8 +1,9 @@
 import { useMemo, useState, type ComponentType, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Loader2, Users, UserCog, Shapes, Building2, FolderKanban, Building, User, Search, X, Layers } from "lucide-react";
 import { useTasksSidebar, type BoardWithCount, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 import { matchSpaceNode } from "../../hooks/tasks/tasksSidebarSearch";
+import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
 
 // The /tasks index route — what shows before a space/board is picked.
 // D1's actual spec is just "the sidebar" (already built, TasksLayout.tsx),
@@ -127,8 +128,13 @@ function SpaceCard({ node, matchedBoards }: { node: SpaceNode; matchedBoards?: B
 
 export default function TasksPage() {
   const { data, loading } = useTasksSidebar();
+  const { access } = useMyTaskAccess();
   const [search, setSearch] = useState("");
   const searching = search.trim().length > 0;
+
+  // Someone who can see no space at all (only tasks assigned to them) lands
+  // on their own work instead of an empty hub.
+  const onlyOwnTasks = !!access && !access.view_all && Object.keys(access.spaces).length === 0;
 
   // Per space type: the spaces that match (by project / space / board name),
   // each with the boards that matched, so a board hit is reachable straight
@@ -144,6 +150,7 @@ export default function TasksPage() {
     })).filter((g) => g.results.length > 0);
   }, [data, search, searching]);
 
+  if (onlyOwnTasks) return <Navigate to="/tasks/my-work" replace />;
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400">
@@ -152,8 +159,16 @@ export default function TasksPage() {
     );
   }
 
+  // The cross-space views (by employee / type / project, departments) are for
+  // people who can see more than their own tasks. Space cards: only spaces I
+  // hold a level on (a space visible just because it holds a task of mine is
+  // reached from the sidebar's board link, and its page would refuse me).
+  const canBrowse = !!access && (access.view_all || Object.keys(access.spaces).length > 0);
   const spaceGroups = data
-    ? SPACE_TYPE_ORDER.map((type) => ({ type, nodes: data.spacesByType[type] })).filter((g) => g.nodes.length > 0)
+    ? SPACE_TYPE_ORDER.map((type) => ({
+        type,
+        nodes: data.spacesByType[type].filter((n) => !!access?.spaces[n.space.id]),
+      })).filter((g) => g.nodes.length > 0)
     : [];
 
   return (
@@ -206,29 +221,33 @@ export default function TasksPage() {
               subtitle="المهام المسندة إليك عبر كل المشاريع"
               badge={<CountBadge count={data?.myWorkCount ?? 0} />}
             />
-            <ViewCard
-              to="/tasks/by-assignee"
-              icon={UserCog}
-              label="حسب الموظف"
-              subtitle="كل المهام مجمّعة حسب الموظف المسؤول"
-            />
-            <ViewCard
-              to="/tasks/by-type"
-              icon={Shapes}
-              label="حسب نوع المهمة"
-              subtitle="كل المهام مجمّعة حسب نوع المهمة"
-            />
-            <ViewCard
-              to="/tasks/by-project"
-              icon={FolderKanban}
-              label="حسب المشروع"
-              subtitle="كل المهام مجمّعة حسب المشروع والمنطقة"
-            />
+            {canBrowse && (
+              <>
+                <ViewCard
+                  to="/tasks/by-assignee"
+                  icon={UserCog}
+                  label="حسب الموظف"
+                  subtitle="كل المهام مجمّعة حسب الموظف المسؤول"
+                />
+                <ViewCard
+                  to="/tasks/by-type"
+                  icon={Shapes}
+                  label="حسب نوع المهمة"
+                  subtitle="كل المهام مجمّعة حسب نوع المهمة"
+                />
+                <ViewCard
+                  to="/tasks/by-project"
+                  icon={FolderKanban}
+                  label="حسب المشروع"
+                  subtitle="كل المهام مجمّعة حسب المشروع والمنطقة"
+                />
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {!searching && !!data?.departments.length && (
+      {!searching && canBrowse && !!data?.departments.length && (
         <div className="mb-5">
           <div className="mb-2 text-xs font-semibold text-gray-500">الأقسام</div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">

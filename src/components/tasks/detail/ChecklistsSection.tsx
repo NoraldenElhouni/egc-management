@@ -7,16 +7,24 @@ interface ChecklistsSectionProps {
   onAddChecklist: (name: string) => void;
   onAddItem: (checklistId: string, content: string) => void;
   onToggleItem: (itemId: string, checked: boolean) => void;
+  /** May add checklists and items (edit rights). Default true. */
+  canEdit?: boolean;
+  /** May tick items (status rights: an assignee can). Default true. */
+  canTick?: boolean;
 }
 
 function ChecklistBlock({
   checklist,
   onAddItem,
   onToggleItem,
+  canEdit,
+  canTick,
 }: {
   checklist: Checklist & { items: ChecklistItem[] };
   onAddItem: (checklistId: string, content: string) => void;
   onToggleItem: (itemId: string, checked: boolean) => void;
+  canEdit: boolean;
+  canTick: boolean;
 }) {
   const [newItem, setNewItem] = useState("");
   const done = checklist.items.filter((i) => i.is_checked).length;
@@ -47,6 +55,7 @@ function ChecklistBlock({
             <input
               type="checkbox"
               checked={item.is_checked}
+              disabled={!canTick}
               onChange={(e) => onToggleItem(item.id, e.target.checked)}
               className="h-3.5 w-3.5"
             />
@@ -56,17 +65,19 @@ function ChecklistBlock({
           </label>
         ))}
       </div>
-      <div className="mt-1 flex items-center gap-1.5 px-1">
-        <Plus className="h-3.5 w-3.5 text-gray-300" />
-        <input
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          onBlur={submit}
-          placeholder="إضافة عنصر..."
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-        />
-      </div>
+      {canEdit && (
+        <div className="mt-1 flex items-center gap-1.5 px-1">
+          <Plus className="h-3.5 w-3.5 text-gray-300" />
+          <input
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            onBlur={submit}
+            placeholder="إضافة عنصر..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -80,6 +91,8 @@ export default function ChecklistsSection({
   onAddChecklist,
   onAddItem,
   onToggleItem,
+  canEdit = true,
+  canTick = true,
 }: ChecklistsSectionProps) {
   const [newChecklistName, setNewChecklistName] = useState("");
   const [adding, setAdding] = useState(false);
@@ -99,10 +112,12 @@ export default function ChecklistsSection({
           checklist={c}
           onAddItem={onAddItem}
           onToggleItem={onToggleItem}
+          canEdit={canEdit}
+          canTick={canTick}
         />
       ))}
 
-      {adding ? (
+      {!canEdit ? null : adding ? (
         <input
           autoFocus
           value={newChecklistName}

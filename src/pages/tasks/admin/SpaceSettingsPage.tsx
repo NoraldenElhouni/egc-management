@@ -17,6 +17,7 @@ import {
   type Automation,
 } from "../../../hooks/tasks/useSpaceAutomations";
 import { useDepartmentOptions, useProjectZoneOptions } from "../../../hooks/tasks/useCreateTaskEntities";
+import { useMyTaskAccess } from "../../../hooks/tasks/useTaskAccess";
 import { useProjectTeam } from "../../../hooks/team/useTeamAssignments";
 import { useCan } from "../../../hooks/permissions/useCan";
 import AddTeamMemberForm from "../../../components/project/team/AddTeamMemberForm";
@@ -248,16 +249,10 @@ function GeneralTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
           )}
         </div>
       </div>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={data.space.visibility === "public"}
-          disabled={isPersonal}
-          onChange={(e) => updateSpace({ visibility: e.target.checked ? "public" : "private" })}
-          className="h-3.5 w-3.5"
-        />
-        <span className="text-sm text-gray-700">مساحة عامة (يراها الجميع)</span>
-      </label>
+      <p className="rounded-md bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-500">
+        يرى هذه المساحة مديرها والأعضاء المضافون في تبويب «الأعضاء» ومن لديه صلاحية عرض أو تعديل كل المهام.
+        أما المكلَّفون بمهام فيها فيرون مهامهم فقط.
+      </p>
       {isPersonal && <p className="text-xs text-gray-400">المساحات الشخصية تبقى خاصة دائماً ولا تقبل أعضاء.</p>}
 
       <div className="rounded-md border border-red-100 bg-red-50/50 p-3">
@@ -410,9 +405,21 @@ function BoardsTab({ settings }: { settings: ReturnType<typeof useSpaceSettings>
   );
 }
 
+// Three levels only. (The database enum still has a "comment" value from the
+// first design; it is never offered here and no member has it.)
+const MEMBER_LEVELS: AccessLevel[] = ["view", "edit", "full"];
+
+const ACCESS_HINTS: Partial<Record<AccessLevel, string>> = {
+  view: "يرى كل مهام المساحة للقراءة فقط",
+  edit: "+ إنشاء المهام وتعديلها وإسنادها والتعليق وإرفاق الملفات",
+  full: "+ حذف المهام وإدارة المساحة والأعضاء",
+};
+
 function MembersTab({ settings }: { settings: ReturnType<typeof useSpaceSettings> }) {
-  const { data, addMember, updateMemberAccess, removeMember } = settings;
+  const { data, addMember, updateMemberAccess, removeMember, setManager } = settings;
+  const { access } = useMyTaskAccess();
   const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [newManager, setNewManager] = useState("");
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("edit");
 
   if (!data) return null;
@@ -426,6 +433,48 @@ function MembersTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
 
   return (
     <div className="max-w-lg space-y-3">
+      <div className="rounded-md bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-500">
+        <div className="mb-1 font-semibold text-gray-600">مستويات الوصول</div>
+        {MEMBER_LEVELS.map((a) => (
+          <div key={a}>
+            <span className="font-medium text-gray-700">{ACCESS_LABELS[a]}:</span> {ACCESS_HINTS[a]}
+          </div>
+        ))}
+        <div className="mt-1.5 text-gray-400">
+          هذه القائمة منفصلة عن «فريق المشروع»: إضافة شخص إلى الفريق لا تمنحه وصولاً إلى مهام هذه المساحة.
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-sm">
+        <span className="text-gray-700">
+          مدير المساحة: <span className="font-medium">{data.managerName ?? "—"}</span>
+          <span className="ms-1 text-xs text-gray-400">(تحكم كامل)</span>
+        </span>
+        {access?.edit_all && (
+          <span className="flex items-center gap-1.5">
+            <select
+              value={newManager}
+              onChange={(e) => setNewManager(e.target.value)}
+              className="rounded-md border border-gray-200 px-2 py-1 text-xs outline-none"
+            >
+              <option value="">نقل الإدارة إلى...</option>
+              {data.employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => newManager && setManager(newManager).then(() => setNewManager(""))}
+              disabled={!newManager}
+              className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
+            >
+              نقل
+            </button>
+          </span>
+        )}
+      </div>
+
       <div className="flex items-center gap-2">
         <select
           value={selectedEmployee}
@@ -444,7 +493,7 @@ function MembersTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
           onChange={(e) => setAccessLevel(e.target.value as AccessLevel)}
           className="rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none"
         >
-          {(Object.keys(ACCESS_LABELS) as AccessLevel[]).map((a) => (
+          {MEMBER_LEVELS.map((a) => (
             <option key={a} value={a}>
               {ACCESS_LABELS[a]}
             </option>
@@ -461,7 +510,7 @@ function MembersTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
 
       <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
         {data.members.length === 0 ? (
-          <div className="p-3 text-sm text-gray-400">لا يوجد أعضاء بعد (يمكن للجميع الوصول لأن المساحة عامة، أو لا أحد إن كانت خاصة)</div>
+          <div className="p-3 text-sm text-gray-400">لا يوجد أعضاء بعد — يرى المساحة مديرها ومن لديه صلاحية عرض/تعديل كل المهام، والمكلَّفون يرون مهامهم فقط</div>
         ) : (
           data.members.map((m) => (
             <div key={m.id} className="flex items-center justify-between px-3 py-2 text-sm">
@@ -472,7 +521,7 @@ function MembersTab({ settings }: { settings: ReturnType<typeof useSpaceSettings
                   onChange={(e) => updateMemberAccess({ memberId: m.id, accessLevel: e.target.value as AccessLevel })}
                   className="rounded-md border border-gray-200 px-2 py-1 text-xs outline-none"
                 >
-                  {(Object.keys(ACCESS_LABELS) as AccessLevel[]).map((a) => (
+                  {(MEMBER_LEVELS.includes(m.accessLevel) ? MEMBER_LEVELS : [m.accessLevel, ...MEMBER_LEVELS]).map((a) => (
                     <option key={a} value={a}>
                       {ACCESS_LABELS[a]}
                     </option>

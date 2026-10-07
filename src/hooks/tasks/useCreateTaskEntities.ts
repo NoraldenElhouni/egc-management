@@ -44,6 +44,8 @@ export function useCreateTaskEntities() {
           department_id: input.spaceType === "department" ? (input.departmentId ?? null) : null,
           owner_user_id: input.spaceType === "personal" ? (user?.id ?? null) : null,
           created_by: user?.id ?? null,
+          // full control of the space until someone transfers it
+          manager_user_id: user?.id ?? null,
         })
         .select("id")
         .single();

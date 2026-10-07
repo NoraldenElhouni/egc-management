@@ -16,6 +16,10 @@ interface BulkActionPanelProps {
   selectedCount: number;
   /** Tasks the select-all box would select. */
   totalCount: number;
+  /** What I may do to EVERY selected task (an action is offered only if all allow it). */
+  canStatus: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   statuses: StatusRow[];
   showPriority: boolean;
   employeesById: Map<string, AssignablePerson>;
@@ -42,6 +46,9 @@ interface BulkActionPanelProps {
 export default function BulkActionPanel({
   selectedCount,
   totalCount,
+  canStatus,
+  canEdit,
+  canDelete,
   statuses,
   showPriority,
   employeesById,
@@ -108,22 +115,22 @@ export default function BulkActionPanel({
 
           <BarButton
             icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-            disabled={busy || !hasDoneStatus || incompleteCount === 0}
+            disabled={busy || !canStatus || !hasDoneStatus || incompleteCount === 0}
             title={!hasDoneStatus ? "لا توجد حالة «منجز» في هذه اللوحة" : incompleteCount === 0 ? "كل المحدد منجز بالفعل" : undefined}
             onClick={() => run(onComplete)}
           >
             إكمال
           </BarButton>
 
-          <StatusMenu statuses={statuses} disabled={busy} onPick={(id) => run(() => onSetStatus(id))} />
+          <StatusMenu statuses={statuses} disabled={busy || !canStatus} onPick={(id) => run(() => onSetStatus(id))} />
 
           {showPriority && (
-            <PriorityMenu disabled={busy} onPick={(p) => run(() => onSetPriority(p))} />
+            <PriorityMenu disabled={busy || !canEdit} onPick={(p) => run(() => onSetPriority(p))} />
           )}
 
           <AssigneeCell
             variant="button"
-            buttonClassName={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 ${busy ? "pointer-events-none opacity-40" : ""}`}
+            buttonClassName={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 ${busy || !canEdit ? "pointer-events-none opacity-40" : ""}`}
             buttonContent={
               <>
                 <UserPlus className="h-3.5 w-3.5" />
@@ -142,7 +149,7 @@ export default function BulkActionPanel({
           />
 
           {onPush && (
-            <BarButton icon={<Send className="h-3.5 w-3.5" />} disabled={busy} onClick={onPush}>
+            <BarButton icon={<Send className="h-3.5 w-3.5" />} disabled={busy || !canEdit} onClick={onPush}>
               إضافة إلى لوحات…
             </BarButton>
           )}
@@ -150,7 +157,8 @@ export default function BulkActionPanel({
           <span className="mx-1 h-5 w-px bg-gray-200" />
           <BarButton
             icon={busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            disabled={busy}
+            disabled={busy || !canDelete}
+            title={canDelete ? undefined : "الحذف متاح لمديري المساحة فقط"}
             danger
             onClick={() => setConfirmingDelete(true)}
           >

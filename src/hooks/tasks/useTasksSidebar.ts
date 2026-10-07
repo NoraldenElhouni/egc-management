@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
+import { accessSignature, canSeeSpace, useMyTaskAccess } from "./useTaskAccess";
 
 // =====================================================================
 // D1 sidebar data — one query, everything the sidebar chrome needs.
@@ -60,26 +61,22 @@ const OPEN_CATEGORIES: StatusCategory[] = ["not_started", "active"];
 
 export function useTasksSidebar() {
   const { user } = useAuth();
+  const { access } = useMyTaskAccess();
   const tasksDb = supabase.schema("tasks");
 
   const query = useQuery({
-    queryKey: ["tasks-sidebar", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["tasks-sidebar", user?.id, accessSignature(access)],
+    enabled: !!user?.id && !!access,
     queryFn: async (): Promise<TasksSidebarData> => {
-      if (!user?.id) throw new Error("no authenticated user");
+      if (!user?.id || !access) throw new Error("no authenticated user");
       const userId = user.id;
 
       const [
         { data: spaces, error: spacesError },
-        { data: memberRows, error: membersError },
         { data: departmentRows, error: departmentsError },
         { data: assigneeRows, error: assigneeError },
       ] = await Promise.all([
         tasksDb.from("spaces").select("*").eq("is_archived", false).eq("is_template", false),
-        tasksDb
-          .from("space_members")
-          .select("space_id")
-          .eq("user_id", userId),
         supabase
           .from("departments")
           .select("id, name, name_ar")
@@ -88,20 +85,12 @@ export function useTasksSidebar() {
       ]);
 
       if (spacesError) throw spacesError;
-      if (membersError) throw membersError;
       if (departmentsError) throw departmentsError;
       if (assigneeError) throw assigneeError;
 
-      const memberSpaceIds = new Set(
-        (memberRows ?? []).map((row) => row.space_id),
-      );
-
-      const visibleSpaces = (spaces ?? []).filter(
-        (space) =>
-          space.visibility === "public" ||
-          space.owner_user_id === userId ||
-          memberSpaceIds.has(space.id),
-      );
+      // Which spaces I see is decided by the database (tasks.my_access): a
+      // level on the space, or a task of mine inside it. Not by `visibility`.
+      const visibleSpaces = (spaces ?? []).filter((space) => canSeeSpace(access, space.id));
       const visibleSpaceIds = visibleSpaces.map((s) => s.id);
 
       const [

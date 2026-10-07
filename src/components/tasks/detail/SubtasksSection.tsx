@@ -7,6 +7,8 @@ interface SubtasksSectionProps {
   basePath: string;
   subtasks: { id: string; title: string; status: StatusRow | null }[];
   onAdd: (title: string) => void;
+  /** May add subtasks (edit rights). Default true. */
+  canAdd?: boolean;
 }
 
 // Real subtasks (a status, a place in the dependency graph) — separate
@@ -16,7 +18,7 @@ interface SubtasksSectionProps {
 // is a deliberate simplification (see build plan D3 note). basePath is
 // whichever list (board/department/my-work) currently hosts the panel —
 // see TaskDetailPanel's own header comment.
-export default function SubtasksSection({ basePath, subtasks, onAdd }: SubtasksSectionProps) {
+export default function SubtasksSection({ basePath, subtasks, onAdd, canAdd = true }: SubtasksSectionProps) {
   const navigate = useNavigate();
   const [newTitle, setNewTitle] = useState("");
 
@@ -44,17 +46,19 @@ export default function SubtasksSection({ basePath, subtasks, onAdd }: SubtasksS
         </button>
       ))}
 
-      <div className="flex items-center gap-1.5 px-2">
-        <Plus className="h-3.5 w-3.5 text-gray-300" />
-        <input
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          onBlur={submit}
-          placeholder="إضافة مهمة فرعية..."
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-        />
-      </div>
+      {canAdd && (
+        <div className="flex items-center gap-1.5 px-2">
+          <Plus className="h-3.5 w-3.5 text-gray-300" />
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            onBlur={submit}
+            placeholder="إضافة مهمة فرعية..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+          />
+        </div>
+      )}
     </div>
   );
 }

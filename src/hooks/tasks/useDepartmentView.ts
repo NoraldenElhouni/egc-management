@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { accessSignature, useMyTaskAccess } from "./useTaskAccess";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
@@ -65,13 +66,14 @@ const OPEN_CATEGORIES: Database["tasks"]["Enums"]["status_category"][] = ["not_s
 
 export function useDepartmentView(departmentId: string | undefined) {
   const { user } = useAuth();
+  const { access } = useMyTaskAccess();
   const tasksDb = supabase.schema("tasks");
 
   const query = useQuery({
-    queryKey: ["department-view", departmentId, user?.id],
-    enabled: !!departmentId && !!user?.id,
+    queryKey: ["department-view", departmentId, user?.id, accessSignature(access)],
+    enabled: !!departmentId && !!user?.id && !!access,
     queryFn: async (): Promise<DepartmentViewData> => {
-      if (!departmentId || !user?.id) throw new Error("missing department or user");
+      if (!departmentId || !user?.id || !access) throw new Error("missing department or user");
 
       const { data: department, error: departmentError } = await supabase
         .from("departments")
@@ -80,20 +82,14 @@ export function useDepartmentView(departmentId: string | undefined) {
         .single();
       if (departmentError) throw departmentError;
 
-      const [
-        { data: spaces, error: spacesError },
-        { data: memberRows, error: membersError },
-      ] = await Promise.all([
-        tasksDb.from("spaces").select("id, visibility, owner_user_id").eq("is_archived", false).eq("is_template", false),
-        tasksDb.from("space_members").select("space_id").eq("user_id", user.id),
-      ]);
+      const { data: spaces, error: spacesError } = await tasksDb
+        .from("spaces")
+        .select("id")
+        .eq("is_archived", false)
+        .eq("is_template", false);
       if (spacesError) throw spacesError;
-      if (membersError) throw membersError;
 
-      const memberSpaceIds = new Set((memberRows ?? []).map((r) => r.space_id));
-      const visibleSpaceIds = (spaces ?? [])
-        .filter((s) => s.visibility === "public" || s.owner_user_id === user.id || memberSpaceIds.has(s.id))
-        .map((s) => s.id);
+      const visibleSpaceIds = (spaces ?? []).filter((s) => !!access.spaces[s.id]).map((s) => s.id);
 
       const { data: boards, error: boardsError } = visibleSpaceIds.length
         ? await tasksDb.from("boards").select("id").in("space_id", visibleSpaceIds).eq("is_archived", false).eq("is_template", false)

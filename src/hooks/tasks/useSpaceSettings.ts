@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateTaskAccess } from "./useTaskAccess";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database, Json } from "../../lib/supabase";
 
@@ -54,6 +55,8 @@ export interface FolderLite {
 
 export interface SpaceSettingsData {
   space: Space;
+  /** Whoever has full control of this space (defaults to its creator). */
+  managerName: string | null;
   members: MemberLite[];
   employees: { id: string; name: string }[];
   statuses: StatusRow[];
@@ -67,6 +70,13 @@ export function useSpaceSettings(spaceId: string | undefined) {
   const tasksDb = supabase.schema("tasks");
   const queryKey = ["space-settings", spaceId];
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  // Members and the manager decide what everyone can do here, so the cached
+  // capability answers (useTaskAccess) must be refreshed too.
+  const refreshAfterMemberChange = () => {
+    invalidate();
+    invalidateTaskAccess(queryClient);
+    queryClient.invalidateQueries({ queryKey: ["tasks-sidebar"] });
+  };
 
   const query = useQuery({
     queryKey,
@@ -154,6 +164,9 @@ export function useSpaceSettings(spaceId: string | undefined) {
 
       return {
         space,
+        managerName: space.manager_user_id
+          ? (employeeNameById.get(space.manager_user_id) ?? "مستخدم")
+          : null,
         members: (memberRows ?? []).map((m) => ({
           id: m.id,
           userId: m.user_id,
@@ -206,7 +219,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
       const { error } = await tasksDb.from("space_members").insert({ space_id: spaceId, user_id: userId, access_level: accessLevel });
       if (error) throw error;
     },
-    onSuccess: invalidate,
+    onSuccess: refreshAfterMemberChange,
   });
 
   const updateMemberAccess = useMutation({
@@ -214,7 +227,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
       const { error } = await tasksDb.from("space_members").update({ access_level: accessLevel }).eq("id", memberId);
       if (error) throw error;
     },
-    onSuccess: invalidate,
+    onSuccess: refreshAfterMemberChange,
   });
 
   const removeMember = useMutation({
@@ -222,7 +235,18 @@ export function useSpaceSettings(spaceId: string | undefined) {
       const { error } = await tasksDb.from("space_members").delete().eq("id", memberId);
       if (error) throw error;
     },
-    onSuccess: invalidate,
+    onSuccess: refreshAfterMemberChange,
+  });
+
+  // Hands the space to someone else (the creator left, say). The database
+  // only lets a holder of edit_all_tasks change this column.
+  const setManager = useMutation({
+    mutationFn: async (userId: string) => {
+      if (!spaceId) throw new Error("no space id");
+      const { error } = await tasksDb.from("spaces").update({ manager_user_id: userId }).eq("id", spaceId);
+      if (error) throw error;
+    },
+    onSuccess: refreshAfterMemberChange,
   });
 
   const createOwnStatusSet = useMutation({
@@ -369,6 +393,7 @@ export function useSpaceSettings(spaceId: string | undefined) {
     addMember: addMember.mutateAsync,
     updateMemberAccess: updateMemberAccess.mutateAsync,
     removeMember: removeMember.mutateAsync,
+    setManager: setManager.mutateAsync,
     createOwnStatusSet: createOwnStatusSet.mutateAsync,
     creatingStatusSet: createOwnStatusSet.isPending,
     addStatus: addStatus.mutateAsync,

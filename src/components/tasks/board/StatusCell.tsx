@@ -25,13 +25,15 @@ interface StatusCellProps {
    * edge (the D3 detail panel), where a right-anchored dropdown would
    * extend further left and overflow off-screen. */
   align?: "left" | "right";
+  /** Display only: the popover never opens (no edit rights). */
+  readOnly?: boolean;
 }
 
 export default function StatusCell({
   statuses,
   currentStatusId,
   onChange,
-  align = "right",
+  align = "right", readOnly = false,
 }: StatusCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -42,7 +44,7 @@ export default function StatusCell({
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => !readOnly && setOpen((v) => !v)}
         style={pillStyle(current?.color ?? null)}
         className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
       >

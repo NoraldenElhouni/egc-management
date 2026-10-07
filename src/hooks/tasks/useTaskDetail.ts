@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { invalidateTaskAccess } from "./useTaskAccess";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Database, Json } from "../../lib/supabase";
@@ -408,7 +409,10 @@ export function useTaskDetail(taskId: string | undefined) {
         }
       }
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateTaskAccess(queryClient);
+    },
   });
 
   const satisfyRequirement = useMutation({

@@ -8,6 +8,8 @@ interface AttachmentsSectionProps {
   taskId: string;
   attachments: Attachment[];
   onUploaded: () => void;
+  /** May add files (comment rights). Default true. */
+  canUpload?: boolean;
 }
 
 // Drag-drop zone + grid, per clickup-task-ui. Reuses the app's existing
@@ -21,6 +23,7 @@ export default function AttachmentsSection({
   taskId,
   attachments,
   onUploaded,
+  canUpload = true,
 }: AttachmentsSectionProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -43,6 +46,7 @@ export default function AttachmentsSection({
 
   return (
     <div className="space-y-3">
+      {canUpload && (
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -75,6 +79,7 @@ export default function AttachmentsSection({
           onChange={(e) => upload(e.target.files)}
         />
       </div>
+      )}
 
       <AttachmentsPreview attachments={attachments} />
     </div>

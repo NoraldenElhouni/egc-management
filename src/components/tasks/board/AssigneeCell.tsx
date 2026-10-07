@@ -30,6 +30,8 @@ interface AssigneeCellProps {
   /** See StatusCell's align prop — "left" for narrow contexts near the
    * screen's left edge (the D3 detail panel). */
   align?: "left" | "right";
+  /** Display only: the popover never opens (no edit rights). */
+  readOnly?: boolean;
   variant?: "stack" | "button";
   /** Trigger content for variant="button". */
   buttonContent?: ReactNode;
@@ -44,7 +46,7 @@ export default function AssigneeCell({
   allEmployees,
   onChange,
   projectId,
-  align = "right",
+  align = "right", readOnly = false,
   variant = "stack",
   buttonContent,
   buttonClassName,
@@ -100,12 +102,12 @@ export default function AssigneeCell({
   return (
     <div ref={ref} className="relative">
       {variant === "button" ? (
-        <button onClick={() => setOpen((v) => !v)} className={buttonClassName}>
+        <button onClick={() => !readOnly && setOpen((v) => !v)} className={buttonClassName}>
           {buttonContent ?? <Plus className="h-3.5 w-3.5" />}
         </button>
       ) : (
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => !readOnly && setOpen((v) => !v)}
           className="flex items-center -space-x-2 rtl:space-x-reverse"
           title={assigneeIds.length === 0 ? "تعيين" : undefined}
         >
@@ -130,7 +132,7 @@ export default function AssigneeCell({
               +{overflow}
             </span>
           )}
-          {assigneeIds.length === 0 && (
+          {assigneeIds.length === 0 && !readOnly && (
             <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-gray-300 text-gray-300 hover:border-gray-400 hover:text-gray-400">
               <Plus className="h-3 w-3" />
             </span>

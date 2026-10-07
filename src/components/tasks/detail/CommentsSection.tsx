@@ -26,7 +26,10 @@ export default function CommentsSection({
   onDeleteComment,
   onToggleResolved,
   onNavigateToTask,
+  canResolve = true,
 }: {
+  /** May mark a comment resolved (edit rights). Default true. */
+  canResolve?: boolean;
   comments: Comment[];
   employeesById: Map<string, EmployeeLite>;
   excludeTaskId: string;
@@ -71,13 +74,15 @@ export default function CommentsSection({
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-800">{nameOf(c.author_user_id)}</span>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onToggleResolved(c.id, !c.is_resolved)}
-                    className={`rounded p-0.5 ${c.is_resolved ? "text-green-500" : "text-gray-300 hover:text-gray-500"}`}
-                    title={c.is_resolved ? "إعادة فتح" : "تحديد كمحلول"}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                  </button>
+                  {(canResolve || c.is_resolved) && (
+                    <button
+                      onClick={() => canResolve && onToggleResolved(c.id, !c.is_resolved)}
+                      className={`rounded p-0.5 ${c.is_resolved ? "text-green-500" : "text-gray-300 hover:text-gray-500"} ${canResolve ? "" : "cursor-default"}`}
+                      title={c.is_resolved ? "إعادة فتح" : "تحديد كمحلول"}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   {isMine && !isEditing && (
                     <>
                       <button

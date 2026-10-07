@@ -71,9 +71,11 @@ interface DateCellProps {
   /** See StatusCell's align prop — "left" for narrow contexts near the
    * screen's left edge (the D3 detail panel). */
   align?: "left" | "right";
+  /** Display only: the popover never opens (no edit rights). */
+  readOnly?: boolean;
 }
 
-export default function DateCell({ dueDate, isOverdue, statusCategory, completedAt, onChange, align = "right" }: DateCellProps) {
+export default function DateCell({ dueDate, isOverdue, statusCategory, completedAt, onChange, align = "right", readOnly = false }: DateCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isTemplate = useTemplateMode();
@@ -88,7 +90,7 @@ export default function DateCell({ dueDate, isOverdue, statusCategory, completed
     return (
       <div ref={ref} className="relative">
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => !readOnly && setOpen((v) => !v)}
           className={dueDate
             ? "whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
             : "rounded-full px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-100 hover:text-gray-400"}
@@ -105,7 +107,7 @@ export default function DateCell({ dueDate, isOverdue, statusCategory, completed
       {dueDate && completed ? (
         <Tooltip label={completed.tooltip}>
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => !readOnly && setOpen((v) => !v)}
             className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${completed.className}`}
           >
             <CheckCircle2 className="h-3 w-3 shrink-0" />
@@ -115,7 +117,7 @@ export default function DateCell({ dueDate, isOverdue, statusCategory, completed
       ) : dueDate && finished ? (
         <Tooltip label={formatSlashDate(dueDate)}>
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => !readOnly && setOpen((v) => !v)}
             className="whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"
           >
             {formatSlashDate(dueDate)}
@@ -124,7 +126,7 @@ export default function DateCell({ dueDate, isOverdue, statusCategory, completed
       ) : dueDate ? (
         <Tooltip label={formatSlashDate(dueDate)}>
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => !readOnly && setOpen((v) => !v)}
             className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
               isOverdue
                 ? "bg-red-50 text-red-600"
@@ -138,8 +140,8 @@ export default function DateCell({ dueDate, isOverdue, statusCategory, completed
         </Tooltip>
       ) : (
         <button
-          onClick={() => setOpen((v) => !v)}
-          className="rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400"
+          onClick={() => !readOnly && setOpen((v) => !v)}
+          className={`rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400 ${readOnly ? "hidden" : ""}`}
           title="تحديد تاريخ الاستحقاق"
         >
           <Calendar className="h-3.5 w-3.5" />

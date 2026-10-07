@@ -212,6 +212,7 @@ export default function ProjectViewPage() {
                           <DirectoryTaskRow
                             key={task.id}
                             task={task}
+                        spaceId={data.spaceIdByBoardId.get(task.board_id)}
                             statuses={data.statuses}
                             employeesById={data.employeesById}
                             allEmployees={data.allEmployees}
