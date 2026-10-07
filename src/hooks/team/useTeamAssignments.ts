@@ -236,6 +236,9 @@ export function useAddTeamMember() {
       // Keeps the cross-project overview honest: a change made on one
       // project's own screen must show up there too, and vice versa.
       queryClient.invalidateQueries({ queryKey: ALL_PROJECT_TEAMS_KEY });
+      // The tasks module's template-roles dialog caches who holds each
+      // role per project under this key (hooks/tasks/useRoleGaps.ts).
+      queryClient.invalidateQueries({ queryKey: ["role-gaps"] });
     },
   });
 }
@@ -278,6 +281,9 @@ export function useUpdateTeamMemberRole() {
       // Keeps the cross-project overview honest: a change made on one
       // project's own screen must show up there too, and vice versa.
       queryClient.invalidateQueries({ queryKey: ALL_PROJECT_TEAMS_KEY });
+      // The tasks module's template-roles dialog caches who holds each
+      // role per project under this key (hooks/tasks/useRoleGaps.ts).
+      queryClient.invalidateQueries({ queryKey: ["role-gaps"] });
     },
   });
 }
@@ -307,6 +313,9 @@ export function useRemoveTeamMember() {
       // Keeps the cross-project overview honest: a change made on one
       // project's own screen must show up there too, and vice versa.
       queryClient.invalidateQueries({ queryKey: ALL_PROJECT_TEAMS_KEY });
+      // The tasks module's template-roles dialog caches who holds each
+      // role per project under this key (hooks/tasks/useRoleGaps.ts).
+      queryClient.invalidateQueries({ queryKey: ["role-gaps"] });
       // Deliberately does NOT invalidate anything distribution-related.
       // Removing someone from a team has no effect on their percentage,
       // and pretending otherwise by refetching would suggest it might.

@@ -17,6 +17,10 @@ import {
   type Automation,
 } from "../../../hooks/tasks/useSpaceAutomations";
 import { useDepartmentOptions, useProjectZoneOptions } from "../../../hooks/tasks/useCreateTaskEntities";
+import { useProjectTeam } from "../../../hooks/team/useTeamAssignments";
+import { useCan } from "../../../hooks/permissions/useCan";
+import AddTeamMemberForm from "../../../components/project/team/AddTeamMemberForm";
+import TeamRoster from "../../../components/project/team/TeamRoster";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 import type { Database, Json } from "../../../lib/supabase";
 
@@ -84,11 +88,12 @@ const RUN_STATUS_STYLE: Record<Database["tasks"]["Enums"]["automation_run_status
   skipped: "bg-gray-100 text-gray-500",
 };
 
-type Tab = "general" | "boards" | "members" | "statuses" | "features" | "automations";
+type Tab = "general" | "boards" | "team" | "members" | "statuses" | "features" | "automations";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "general", label: "عام" },
   { key: "boards", label: "اللوحات" },
+  { key: "team", label: "فريق المشروع" },
   { key: "members", label: "الأعضاء" },
   { key: "statuses", label: "الحالات" },
   { key: "features", label: "الميزات" },
@@ -119,7 +124,7 @@ export default function SpaceSettingsPage() {
       </div>
 
       <div className="flex gap-1 border-b border-gray-100 px-4">
-        {TABS.map((t) => (
+        {TABS.filter((t) => t.key !== "team" || data.space.project_id).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -135,11 +140,36 @@ export default function SpaceSettingsPage() {
       <div className="flex-1 p-4">
         {tab === "general" && <GeneralTab settings={settings} />}
         {tab === "boards" && <BoardsTab settings={settings} />}
+        {tab === "team" && data.space.project_id && <TeamTab projectId={data.space.project_id} />}
         {tab === "members" && <MembersTab settings={settings} />}
         {tab === "statuses" && <StatusesTab settings={settings} />}
         {tab === "features" && <FeaturesTab settings={settings} />}
         {tab === "automations" && spaceId && <AutomationsTab spaceId={spaceId} statuses={data.statuses} />}
       </div>
+    </div>
+  );
+}
+
+// Who holds which role (Project Manager, Architect, ...) on the space's
+// project. Same public.team_assignments the execution-management team screen
+// edits — this is just a second door to it, so template roles resolve to
+// the people set here. Editing needs manage_project_team on this project;
+// anyone else sees the roster read-only.
+function TeamTab({ projectId }: { projectId: string }) {
+  const { data: members, isLoading } = useProjectTeam(projectId);
+  const { can: canManage } = useCan("manage_project_team", projectId);
+
+  if (isLoading) {
+    return <Loader2 className="h-5 w-5 animate-spin text-gray-300" />;
+  }
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      <p className="text-xs text-gray-500">
+        الأدوار التي تحددها هنا (مدير المشروع، المهندس المعماري...) تُستخدم عند تطبيق القوالب وفي قائمة اختيار المسؤولين.
+      </p>
+      {canManage && <AddTeamMemberForm projectId={projectId} members={members ?? []} />}
+      <TeamRoster projectId={projectId} members={members ?? []} readOnly={!canManage} />
     </div>
   );
 }

@@ -257,6 +257,29 @@ export default function TemplatePickerModal({
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-4">
+              {selectedTemplates.length > 1 && (
+                <div className="mb-3 flex items-center justify-between rounded-md bg-gray-50 px-2 py-1.5">
+                  <span className="text-xs font-semibold text-gray-600">كل القوالب</span>
+                  <SelectAllButtons
+                    onSelectAll={() =>
+                      selection.setExcluded(
+                        selectedTemplates.flatMap((t) => (data.templateTasksByTemplate.get(t.id) ?? []).map((n) => n.id)),
+                        false,
+                      )
+                    }
+                    onSelectNone={() =>
+                      selection.setExcluded(
+                        selectedTemplates.flatMap((t) =>
+                          (data.templateTasksByTemplate.get(t.id) ?? [])
+                            .filter((n) => n.parent_task_id === null)
+                            .map((n) => n.id),
+                        ),
+                        true,
+                      )
+                    }
+                  />
+                </div>
+              )}
               {selectedTemplates.map((t) => (
                 <TemplatePreviewTree
                   key={t.id}
@@ -319,6 +342,25 @@ export default function TemplatePickerModal({
   );
 }
 
+function SelectAllButtons({
+  onSelectAll,
+  onSelectNone,
+}: {
+  onSelectAll: () => void;
+  onSelectNone: () => void;
+}) {
+  return (
+    <span className="flex items-center gap-2 text-xs">
+      <button onClick={onSelectAll} className="text-primary hover:underline">
+        تحديد الكل
+      </button>
+      <button onClick={onSelectNone} className="text-gray-500 hover:underline">
+        إلغاء التحديد
+      </button>
+    </span>
+  );
+}
+
 function groupByParent(nodes: TemplateTask[]): Map<string | null, TemplateTask[]> {
   const map = new Map<string | null, TemplateTask[]>();
   for (const n of nodes) {
@@ -347,6 +389,15 @@ function TemplatePreviewTree({
 
   return (
     <div className="mb-3">
+      <div className="mb-1 flex items-center justify-between border-b border-gray-100 pb-1">
+        <span className="text-xs font-semibold text-gray-500">
+          {templateName} ({nodes.length})
+        </span>
+        <SelectAllButtons
+          onSelectAll={() => selection.setExcluded(nodes.map((n) => n.id), false)}
+          onSelectNone={() => selection.setExcluded(roots.map((n) => n.id), true)}
+        />
+      </div>
       {roots.map((root) => (
         <PreviewNode
           key={root.id}

@@ -208,19 +208,6 @@ export default function TaskRow({
           className="flex min-w-0 items-center gap-1"
           style={{ paddingRight: depth * 20 }}
         >
-          {onToggleSelect && (
-            <span className="flex w-4 shrink-0 items-center">
-              {showSelect && (
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={() => onToggleSelect(task.id)}
-                  className="h-3.5 w-3.5 cursor-pointer"
-                  title="تحديد"
-                />
-              )}
-            </span>
-          )}
           <span className="w-4 shrink-0 text-gray-300">
             {hovered && canDrag && (
               <span
@@ -236,6 +223,19 @@ export default function TaskRow({
               </span>
             )}
           </span>
+          {onToggleSelect && (
+            <span className="flex w-4 shrink-0 items-center">
+              {showSelect && (
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => onToggleSelect(task.id)}
+                  className="h-3.5 w-3.5 cursor-pointer"
+                  title="تحديد"
+                />
+              )}
+            </span>
+          )}
 
           {hasChildren ? (
             <button
@@ -374,6 +374,7 @@ export default function TaskRow({
             assigneeIds={assigneesByTask.get(task.id) ?? []}
             employeesById={employeesById}
             allEmployees={allEmployees}
+            projectId={task.project_id}
             onChange={(userIds) => onChangeAssignees(task.id, userIds)}
           />
         </div>
@@ -384,6 +385,8 @@ export default function TaskRow({
         <DateCell
           dueDate={task.due_date}
           isOverdue={task.is_overdue}
+          statusCategory={statuses.find((s) => s.id === task.status_id)?.category}
+          completedAt={task.completed_at}
           onChange={(date) => onChangeDueDate(task.id, date)}
         />
         <div className="truncate text-xs text-gray-400">{department ?? ""}</div>

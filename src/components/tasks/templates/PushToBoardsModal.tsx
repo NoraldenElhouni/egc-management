@@ -179,7 +179,15 @@ export default function PushToBoardsModal({
           <>
             <div className="flex-1 space-y-5 overflow-y-auto p-4">
               <section>
-                <div className="mb-1.5 text-xs font-semibold text-gray-500">المهام</div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-500">
+                    المهام <span className="font-normal text-gray-400">({selectedTaskIds.size}/{shownTasks.length})</span>
+                  </span>
+                  <SelectAllLinks
+                    onAll={() => setSelectedTaskIds(new Set(shownTasks.map((t) => t.id)))}
+                    onNone={() => setSelectedTaskIds(new Set())}
+                  />
+                </div>
                 <div className="space-y-0.5">
                   {shownTasks.map((t) => {
                     const parent = t.parent_task_id ? taskById.get(t.parent_task_id) : null;
@@ -227,8 +235,20 @@ export default function PushToBoardsModal({
 
               <section>
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-gray-500">
-                    اللوحات {targetIds.size > 0 && <span className="text-primary">({targetIds.size} محددة)</span>}
+                  <span className="flex items-center gap-3 text-xs font-semibold text-gray-500">
+                    <span>
+                      اللوحات {targetIds.size > 0 && <span className="text-primary">({targetIds.size} محددة)</span>}
+                    </span>
+                    {/* acts on the boards currently listed, so a search narrows it */}
+                    <SelectAllLinks
+                      onAll={() =>
+                        setTargetIds((s) => new Set([...s, ...usingBoards.map((b) => b.id), ...otherBoards.map((b) => b.id)]))
+                      }
+                      onNone={() => {
+                        const listed = new Set([...usingBoards, ...otherBoards].map((b) => b.id));
+                        setTargetIds((s) => new Set([...s].filter((id) => !listed.has(id))));
+                      }}
+                    />
                   </span>
                   <div className="flex items-center gap-1.5 rounded-md border border-gray-200 px-2 py-1">
                     <Search className="h-3.5 w-3.5 text-gray-400" />
@@ -309,6 +329,19 @@ export default function PushToBoardsModal({
         )}
       </div>
     </div>
+  );
+}
+
+function SelectAllLinks({ onAll, onNone }: { onAll: () => void; onNone: () => void }) {
+  return (
+    <span className="flex items-center gap-2 text-xs font-normal">
+      <button onClick={onAll} className="text-primary hover:underline">
+        تحديد الكل
+      </button>
+      <button onClick={onNone} className="text-gray-500 hover:underline">
+        إلغاء التحديد
+      </button>
+    </span>
   );
 }
 

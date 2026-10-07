@@ -8,6 +8,12 @@ import { resolveStatusSetId } from "./resolveStatusSetId";
 import { DEFAULT_FEATURE_SETTINGS, type SpaceFeatureSettings } from "./useSpaceSettings";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
 import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
+import { emitTaskError } from "./taskErrorBus";
+import { extractErrorMessage } from "./extractErrorMessage";
+import { topmostTaskIds, withDescendants } from "./bulkSelection";
+
+/** How many tasks a bulk status change updates at once. */
+const BULK_BATCH_SIZE = 6;
 
 // D2 — Zone board (list view), the main screen (build plan Part 7, D2).
 //
@@ -433,37 +439,158 @@ export function useTaskBoard(boardId: string | undefined) {
     queryClient.invalidateQueries({ queryKey: ["template-sync", boardId] });
   };
 
+  // One task's status change plus its side effects — shared by the cell's
+  // updateStatus and the bulk bar's bulkSetStatus.
+  const applyStatus = async (taskId: string, statusId: string) => {
+    const { error } = await tasksDb
+      .from("tasks")
+      .update({ status_id: statusId })
+      .eq("id", taskId);
+    if (error) throw error;
+
+    // Best-effort — a failed dependency check shouldn't fail the
+    // status change itself, same posture as setAssignees' own push.
+    const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
+    // Template boards never notify — nobody is really working them.
+    if (category === "done" && !query.data?.board.is_template) void notifyDependentAssignees(taskId);
+
+    // Any task that lists this one as a blocker has its own cached
+    // detail view keyed by ITS OWN taskId — invalidate those too, or
+    // an already-open dependent panel's dependency badge (amber/green)
+    // stays stale (see useTaskDetail.ts's updateField for the same fix).
+    const { data: dependents, error: dependentsError } = await tasksDb
+      .from("task_dependencies")
+      .select("blocked_task_id")
+      .eq("blocking_task_id", taskId);
+    if (dependentsError) {
+      console.error("Failed to look up dependent tasks to invalidate", dependentsError);
+    } else {
+      for (const dep of dependents ?? []) {
+        queryClient.invalidateQueries({ queryKey: ["task-detail", dep.blocked_task_id] });
+      }
+    }
+  };
+
   const updateStatus = useMutation({
-    mutationFn: async ({ taskId, statusId }: { taskId: string; statusId: string }) => {
-      const { error } = await tasksDb
-        .from("tasks")
-        .update({ status_id: statusId })
-        .eq("id", taskId);
+    mutationFn: ({ taskId, statusId }: { taskId: string; statusId: string }) =>
+      applyStatus(taskId, statusId),
+    onSuccess: invalidate,
+  });
+
+  // ---------------------------------------------------------------------
+  // Bulk actions (BulkActionPanel)
+  // ---------------------------------------------------------------------
+  // Status changes run one task at a time, in small batches, and settle
+  // independently: completing a task can be refused by the database (unmet
+  // requirements, see tasks.assert_requirements_satisfied), and one refusal
+  // must not roll back or hide the rest. Partial failures are reported
+  // through the tasks error toast instead of throwing, so the tasks that did
+  // change still refresh.
+  const reportBulkFailures = (results: PromiseSettledResult<unknown>[]) => {
+    const failures = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failures.length === 0) return;
+    const ok = results.length - failures.length;
+    emitTaskError(
+      `تم ${ok} من ${results.length} — فشل ${failures.length}: ${extractErrorMessage(failures[0].reason)}`,
+    );
+  };
+
+  const bulkSetStatus = useMutation({
+    mutationFn: async ({ taskIds, statusId }: { taskIds: string[]; statusId: string }) => {
+      const results: PromiseSettledResult<void>[] = [];
+      for (let i = 0; i < taskIds.length; i += BULK_BATCH_SIZE) {
+        const batch = taskIds.slice(i, i + BULK_BATCH_SIZE);
+        results.push(...(await Promise.allSettled(batch.map((id) => applyStatus(id, statusId)))));
+      }
+      reportBulkFailures(results);
+    },
+    onSettled: invalidate,
+  });
+
+  const bulkSetPriority = useMutation({
+    mutationFn: async ({ taskIds, priority }: { taskIds: string[]; priority: Priority | null }) => {
+      const { error } = await tasksDb.from("tasks").update({ priority }).in("id", taskIds);
       if (error) throw error;
+    },
+    onSettled: invalidate,
+  });
 
-      // Best-effort — a failed dependency check shouldn't fail the
-      // status change itself, same posture as setAssignees' own push.
-      const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
-      // Template boards never notify — nobody is really working them.
-      if (category === "done" && !query.data?.board.is_template) void notifyDependentAssignees(taskId);
+  // Adds and/or removes people across the selected tasks. Only inserts the
+  // pairs that don't exist yet; notifies each newly added person once (not
+  // once per task), and never on template boards or for yourself.
+  const bulkAssign = useMutation({
+    mutationFn: async ({
+      taskIds,
+      add,
+      remove,
+    }: {
+      taskIds: string[];
+      add: string[];
+      remove: string[];
+    }) => {
+      const assigneesByTask = query.data?.assigneesByTask ?? new Map<string, string[]>();
 
-      // Any task that lists this one as a blocker has its own cached
-      // detail view keyed by ITS OWN taskId — invalidate those too, or
-      // an already-open dependent panel's dependency badge (amber/green)
-      // stays stale (see useTaskDetail.ts's updateField for the same fix).
-      const { data: dependents, error: dependentsError } = await tasksDb
-        .from("task_dependencies")
-        .select("blocked_task_id")
-        .eq("blocking_task_id", taskId);
-      if (dependentsError) {
-        console.error("Failed to look up dependent tasks to invalidate", dependentsError);
-      } else {
-        for (const dep of dependents ?? []) {
-          queryClient.invalidateQueries({ queryKey: ["task-detail", dep.blocked_task_id] });
+      if (remove.length) {
+        const { error } = await tasksDb
+          .from("task_assignees")
+          .delete()
+          .in("task_id", taskIds)
+          .in("user_id", remove);
+        if (error) throw error;
+      }
+
+      if (add.length && user?.id) {
+        const rows = taskIds.flatMap((taskId) =>
+          add
+            .filter((userId) => !(assigneesByTask.get(taskId) ?? []).includes(userId))
+            .map((userId) => ({ task_id: taskId, user_id: userId, assigned_by: user.id })),
+        );
+        if (rows.length) {
+          const { error } = await tasksDb.from("task_assignees").insert(rows);
+          if (error) throw error;
+
+          if (!query.data?.board.is_template) {
+            const tasksByUser = new Map<string, string[]>();
+            for (const row of rows) {
+              if (row.user_id === user.id) continue;
+              tasksByUser.set(row.user_id, [...(tasksByUser.get(row.user_id) ?? []), row.task_id]);
+            }
+            for (const [userId, assignedTaskIds] of tasksByUser) {
+              const single = assignedTaskIds.length === 1;
+              const title = single
+                ? (query.data?.tasks.find((t) => t.id === assignedTaskIds[0])?.title ?? "مهمة")
+                : (query.data?.board.name ?? "");
+              void notifyUsers(
+                [userId],
+                single ? "تم تكليفك بمهمة جديدة" : `تم تكليفك بـ ${assignedTaskIds.length} مهام`,
+                title,
+                { url: single ? `/tasks/${assignedTaskIds[0]}` : `/tasks/board/${boardId}` },
+              );
+            }
+          }
         }
       }
     },
-    onSuccess: invalidate,
+    onSettled: invalidate,
+  });
+
+  // Hard delete, same as the detail panel's deleteTask. Subtasks (and every
+  // child row) go with their parent via ON DELETE CASCADE, so only the
+  // topmost selected tasks are sent. Resolves with every task id that is now
+  // gone, subtasks included, so the page can close a panel that was open on one.
+  const bulkDelete = useMutation({
+    mutationFn: async ({ taskIds }: { taskIds: string[] }): Promise<Set<string>> => {
+      const allTasks = query.data?.tasks ?? [];
+      const roots = topmostTaskIds(allTasks, new Set(taskIds));
+      if (roots.length === 0) return new Set();
+      const { error } = await tasksDb.from("tasks").delete().in("id", roots);
+      if (error) throw error;
+      return withDescendants(allTasks, roots);
+    },
+    onSuccess: (deletedIds) => {
+      for (const id of deletedIds) queryClient.removeQueries({ queryKey: ["task-detail", id] });
+    },
+    onSettled: invalidate,
   });
 
   const updateTaskType = useMutation({
@@ -777,6 +904,10 @@ export function useTaskBoard(boardId: string | undefined) {
     updateStartDate: updateStartDate.mutate,
     updateTaskDates: updateTaskDates.mutate,
     setAssignees: setAssignees.mutate,
+    bulkSetStatus: bulkSetStatus.mutateAsync,
+    bulkSetPriority: bulkSetPriority.mutateAsync,
+    bulkAssign: bulkAssign.mutateAsync,
+    bulkDelete: bulkDelete.mutateAsync,
     createTask: createTask.mutate,
     createTaskError: createTask.error as Error | null,
     setTaskValue: setTaskValue.mutate,

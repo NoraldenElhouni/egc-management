@@ -1,6 +1,8 @@
-import { useMemo, useRef, useState } from "react";
-import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, Send, ArrowDownWideNarrow, ArrowUpNarrowWide } from "lucide-react";
+import { cloneElement, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, ArrowDownWideNarrow, ArrowUpNarrowWide } from "lucide-react";
 import TaskRow, { rowGridStyle } from "./TaskRow";
+import BulkActionPanel from "./BulkActionPanel";
+import { withDescendants } from "../../../hooks/tasks/bulkSelection";
 import ColumnEditorModal from "./ColumnEditorModal";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import { sortTasks, taskSortOption, TASK_SORT_OPTIONS, type SortDirection, type TaskSortKey } from "./directoryFilters";
@@ -64,8 +66,16 @@ interface TaskTableProps {
   onSetColumnVisibility: (boardColumnId: string, visible: boolean) => void;
   onRenameField: (fieldDefinitionId: string, name_ar: string) => void;
   onMoveTaskTo: (input: { id: string; newParentId: string | null; beforeId: string | null }) => void;
-  /** When set, rows get checkboxes and a selection bar offers "add to
-   * boards…" for the selected tasks (template push — see useTemplateSync.ts). */
+  /** The board's project, for ordering the bulk-assign picker. */
+  projectId: string | null;
+  /** Bulk actions for the selection bar. Each rejects on failure (the
+   * tasks error toast has already shown why). */
+  onBulkSetStatus: (taskIds: string[], statusId: string) => Promise<unknown>;
+  onBulkSetPriority: (taskIds: string[], priority: Priority | null) => Promise<unknown>;
+  onBulkAssign: (taskIds: string[], add: string[], remove: string[]) => Promise<unknown>;
+  onBulkDelete: (taskIds: string[]) => Promise<unknown>;
+  /** When set, the selection bar also offers "add to boards…" for the
+   * selected tasks (template push — see useTemplateSync.ts). */
   onPushSelected?: (taskIds: string[]) => void;
 }
 
@@ -106,6 +116,11 @@ export default function TaskTable({
   onSetColumnVisibility,
   onRenameField,
   onMoveTaskTo,
+  projectId,
+  onBulkSetStatus,
+  onBulkSetPriority,
+  onBulkAssign,
+  onBulkDelete,
   onPushSelected,
 }: TaskTableProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
@@ -127,6 +142,54 @@ export default function TaskTable({
       else next.add(id);
       return next;
     });
+
+  // Drop selected ids whose task is gone (deleted here or elsewhere,
+  // archived) so counts and bulk actions never refer to a ghost.
+  const taskIdSet = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks]);
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set([...prev].filter((id) => taskIdSet.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [taskIdSet]);
+
+  // Select-all covers every task on the board, subtasks under collapsed
+  // parents included — the bulk bar's delete wording says how many go.
+  const allSelected = tasks.length > 0 && selectedIds.size === tasks.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+  const selectAll = () => setSelectedIds(new Set(tasks.map((t) => t.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectAllRef = useCallback(
+    (el: HTMLInputElement | null) => {
+      if (el) el.indeterminate = someSelected;
+    },
+    [someSelected],
+  );
+
+  const selectedTasks = tasks.filter((t) => selectedIds.has(t.id));
+  const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
+  const firstDoneStatus = useMemo(
+    () => statuses.filter((s) => s.category === "done").sort((a, b) => a.sort_order - b.sort_order)[0],
+    [statuses],
+  );
+  const incompleteSelected = selectedTasks.filter((t) => {
+    const category = statusById.get(t.status_id)?.category;
+    return category !== "done" && category !== "closed";
+  });
+  // Ticked only when every selected task has the person.
+  const commonAssigneeIds = useMemo(() => {
+    if (selectedTasks.length === 0) return [];
+    const [first, ...rest] = selectedTasks.map((t) => assigneesByTask.get(t.id) ?? []);
+    return first.filter((id) => rest.every((ids) => ids.includes(id)));
+  }, [selectedIds, tasks, assigneesByTask]);
+  const deleteMessage = (() => {
+    const total = withDescendants(tasks, selectedIds).size;
+    const extra = total - selectedIds.size;
+    return extra > 0
+      ? `سيتم حذف ${selectedIds.size} مهمة محددة و${extra} مهمة فرعية تحتها نهائياً.`
+      : `سيتم حذف ${selectedIds.size} مهمة نهائياً.`;
+  })();
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string | null, TaskRowType[]>();
@@ -235,8 +298,73 @@ export default function TaskTable({
     setNewTaskTitle("");
   };
 
+  // The bulk bar fades out as well as in: it stays mounted for the length of
+  // the transition after the selection empties, rendered from the last
+  // non-empty selection's props so it doesn't flash "0 selected".
+  const hasSelection = selectedIds.size > 0;
+  const [panelMounted, setPanelMounted] = useState(false);
+  useEffect(() => {
+    if (hasSelection) {
+      setPanelMounted(true);
+      return;
+    }
+    const timer = setTimeout(() => setPanelMounted(false), 220);
+    return () => clearTimeout(timer);
+  }, [hasSelection]);
+  const lastPanelElement = useRef<ReactElement<{ visible: boolean }> | null>(null);
+  if (hasSelection) {
+    lastPanelElement.current = (
+        <BulkActionPanel
+          selectedCount={selectedIds.size}
+          totalCount={tasks.length}
+          statuses={statuses}
+          showPriority={featureSettings.priorities}
+          employeesById={employeesById}
+          allEmployees={allEmployees}
+          projectId={projectId}
+          commonAssigneeIds={commonAssigneeIds}
+          incompleteCount={incompleteSelected.length}
+          deleteMessage={deleteMessage}
+          onSelectAll={selectAll}
+          onClear={clearSelection}
+          onComplete={async () => {
+            if (!firstDoneStatus) return;
+            await onBulkSetStatus(
+              incompleteSelected.map((t) => t.id),
+              firstDoneStatus.id,
+            );
+            clearSelection();
+          }}
+          onSetStatus={async (statusId) => {
+            await onBulkSetStatus(Array.from(selectedIds), statusId);
+            clearSelection();
+          }}
+          onSetPriority={async (priority) => {
+            await onBulkSetPriority(Array.from(selectedIds), priority);
+            clearSelection();
+          }}
+          onAssignChange={(add, remove) => onBulkAssign(Array.from(selectedIds), add, remove)}
+          onDelete={async () => {
+            await onBulkDelete(Array.from(selectedIds));
+            clearSelection();
+          }}
+          onPush={
+            onPushSelected
+              ? () => {
+                  onPushSelected(Array.from(selectedIds));
+                  clearSelection();
+                }
+              : undefined
+          }
+          visible
+        />
+    );
+  } else if (lastPanelElement.current) {
+    lastPanelElement.current = cloneElement(lastPanelElement.current, { visible: false });
+  }
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2">
         <select
           value={groupBy}
@@ -293,30 +421,29 @@ export default function TaskTable({
         </div>
       </div>
 
-      {onPushSelected && selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 border-b border-primary/20 bg-primary-superLight px-4 py-1.5 text-sm">
-          <span className="font-medium text-primary">{selectedIds.size} محددة</span>
-          <button
-            onClick={() => {
-              onPushSelected(Array.from(selectedIds));
-              setSelectedIds(new Set());
-            }}
-            className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white"
-          >
-            <Send className="h-3.5 w-3.5" />
-            إضافة إلى لوحات…
-          </button>
-          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
-            إلغاء التحديد
-          </button>
-        </div>
-      )}
+      {panelMounted && lastPanelElement.current}
 
       <div
         style={rowGridStyle(customColumns.length, featureSettings.priorities)}
         className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-2 py-2 text-xs font-semibold text-gray-500"
       >
-        <div>عنوان المهمة</div>
+        <div className="flex min-w-0 items-center gap-1">
+          {/* same slot order as TaskRow: drag grip, then the checkbox */}
+          <span className="w-4 shrink-0" />
+          <span className="flex w-4 shrink-0 items-center">
+            {tasks.length > 0 && (
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                checked={allSelected}
+                onChange={() => (allSelected ? clearSelection() : selectAll())}
+                className="h-3.5 w-3.5 cursor-pointer"
+                title={allSelected ? "إلغاء تحديد الكل" : "تحديد الكل"}
+              />
+            )}
+          </span>
+          عنوان المهمة
+        </div>
         <div>الحالة</div>
         {featureSettings.priorities && <div>الأولوية</div>}
         <div>الفريق</div>
@@ -407,8 +534,8 @@ export default function TaskTable({
                 onDragStart={setDraggedId}
                 onDragEnd={() => setDraggedId(null)}
                 onMoveTaskTo={onMoveTaskTo}
-                selectedIds={onPushSelected ? selectedIds : undefined}
-                onToggleSelect={onPushSelected ? toggleSelect : undefined}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
               />
             ))}
           </div>

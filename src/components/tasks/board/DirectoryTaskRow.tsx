@@ -231,10 +231,17 @@ export default function DirectoryTaskRow({
         assigneeIds={assigneesByTask.get(task.id) ?? []}
         employeesById={employeesById}
         allEmployees={allEmployees}
+        projectId={task.project_id}
         onChange={(userIds) => onChangeAssignees(task.id, userIds)}
       />
       <StartDateCell startDate={task.start_date} onChange={(date) => onChangeStartDate(task.id, date)} />
-      <DateCell dueDate={task.due_date} isOverdue={task.is_overdue} onChange={(date) => onChangeDueDate(task.id, date)} />
+      <DateCell
+        dueDate={task.due_date}
+        isOverdue={task.is_overdue}
+        statusCategory={statuses.find((s) => s.id === task.status_id)?.category}
+        completedAt={task.completed_at}
+        onChange={(date) => onChangeDueDate(task.id, date)}
+      />
       {showCompleted && <CompletedAtCell completedAt={task.completed_at} />}
     </div>
   );

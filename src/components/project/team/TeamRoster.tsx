@@ -24,9 +24,11 @@ import Button from "../../ui/Button";
 interface Props {
   projectId: string;
   members: TeamMember[];
+  /** Hides the role-edit and remove buttons (viewer without manage_project_team). */
+  readOnly?: boolean;
 }
 
-export default function TeamRoster({ projectId, members }: Props) {
+export default function TeamRoster({ projectId, members, readOnly = false }: Props) {
   const { data: roles } = useProjectRoles();
   const removeMember = useRemoveTeamMember();
   const updateRole = useUpdateTeamMemberRole();
@@ -154,7 +156,7 @@ export default function TeamRoster({ projectId, members }: Props) {
                   </span>
                 </span>
 
-                {editId === member.assignmentId ? (
+                {readOnly ? null : editId === member.assignmentId ? (
                   <span className="flex items-center gap-2">
                     <select
                       value={editRoleId}

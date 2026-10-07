@@ -42,6 +42,21 @@ function calendarDayDiff(d: Date, now: Date): number {
   return Math.round((a - b) / 86_400_000);
 }
 
+/** How a finished task's completion compares with its due date, by local
+ * calendar day: finishing any time on the due day is on time. `days` is
+ * always >= 0 (0 for on_time). */
+export function completionTiming(
+  completedAt: string,
+  dueDate: string,
+): { kind: "early" | "on_time" | "late"; days: number } | null {
+  const completed = new Date(completedAt);
+  const due = new Date(dueDate);
+  if (Number.isNaN(completed.getTime()) || Number.isNaN(due.getTime())) return null;
+  const diff = calendarDayDiff(completed, due);
+  if (diff === 0) return { kind: "on_time", days: 0 };
+  return diff < 0 ? { kind: "early", days: -diff } : { kind: "late", days: diff };
+}
+
 /** Local midnight today → local midnight tomorrow, as a half-open range
  * of epoch milliseconds. */
 export function localDayBounds(now: Date = new Date()): { start: number; end: number } {

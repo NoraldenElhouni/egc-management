@@ -17,6 +17,16 @@ interface RoleAssigneeCellProps {
   align?: "left" | "right";
 }
 
+// First letters of the first two words ("مدير مشروع" -> "مم").
+function roleInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => Array.from(w)[0])
+    .join("");
+}
+
 export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }: RoleAssigneeCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -27,24 +37,37 @@ export default function RoleAssigneeCell({ roleIds, onChange, align = "right" }:
   const { data: roles = [] } = useProjectRoles();
 
   const nameById = new Map(roles.map((r) => [r.id, r.name]));
-  const names = roleIds.map((id) => nameById.get(id) ?? "—");
 
   const toggle = (id: string) =>
     onChange(roleIds.includes(id) ? roleIds.filter((r) => r !== id) : [...roleIds, id]);
 
   return (
     <div ref={ref} className="relative">
-      {names.length > 0 ? (
-        <Tooltip label={names.join("، ")}>
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="flex max-w-[120px] items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-600 hover:bg-indigo-100"
-          >
-            <BriefcaseBusiness className="h-3 w-3 shrink-0" />
-            <span className="truncate">{names[0]}</span>
-            {names.length > 1 && <span className="shrink-0">+{names.length - 1}</span>}
-          </button>
-        </Tooltip>
+      {roleIds.length > 0 ? (
+        // Same shape as AssigneeCell's avatar stack so a long role name can't
+        // push the people picker out of its column; the name is in the tooltip.
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center -space-x-2 rtl:space-x-reverse"
+        >
+          {roleIds.slice(0, 2).map((id) => {
+            const name = nameById.get(id) ?? "—";
+            return (
+              <Tooltip key={id} label={name}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-indigo-500 text-[10px] font-semibold text-white">
+                  {roleInitials(name)}
+                </span>
+              </Tooltip>
+            );
+          })}
+          {roleIds.length > 2 && (
+            <Tooltip label={roleIds.slice(2).map((id) => nameById.get(id) ?? "—").join("، ")}>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-indigo-100 text-[10px] font-semibold text-indigo-600">
+                +{roleIds.length - 2}
+              </span>
+            </Tooltip>
+          )}
+        </button>
       ) : (
         <button
           onClick={() => setOpen((v) => !v)}

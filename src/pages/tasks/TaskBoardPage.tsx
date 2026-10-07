@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Outlet, useParams } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Loader2, FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
@@ -23,6 +23,8 @@ import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks
 // switching is instant and edits made in one show up in the other.
 export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   const { boardId } = useParams<{ boardId: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     data,
     loading,
@@ -35,6 +37,10 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     updateDueDate,
     updateTaskDates,
     setAssignees,
+    bulkSetStatus,
+    bulkSetPriority,
+    bulkAssign,
+    bulkDelete,
     createTask,
     setTaskValue,
     attachField,
@@ -197,6 +203,18 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             onSetColumnVisibility={(boardColumnId, visible) => setColumnVisibility({ boardColumnId, visible })}
             onRenameField={(fieldDefinitionId, name_ar) => renameField({ fieldDefinitionId, name_ar })}
             onMoveTaskTo={moveTaskTo}
+            projectId={data.projectId}
+            onBulkSetStatus={(taskIds, statusId) => bulkSetStatus({ taskIds, statusId })}
+            onBulkSetPriority={(taskIds, priority) => bulkSetPriority({ taskIds, priority })}
+            onBulkAssign={(taskIds, add, remove) => bulkAssign({ taskIds, add, remove })}
+            onBulkDelete={async (taskIds) => {
+              const deletedIds = await bulkDelete({ taskIds });
+              // The detail slide-over may be open on a task that just went.
+              const openTaskId = location.pathname.match(/\/task\/([^/]+)$/)?.[1];
+              if (openTaskId && deletedIds.has(openTaskId)) {
+                navigate(location.pathname.replace(/\/task\/[^/]+$/, ""));
+              }
+            }}
             onPushSelected={canPush ? setPushTaskIds : undefined}
           />
         )}

@@ -248,6 +248,21 @@ export function useTemplateSelection() {
 
   const isExcluded = (id: string) => excludedIds.has(id);
 
+  // Bulk version of toggleNode, for the select-all / select-none buttons.
+  // Select all = un-exclude every node of the template(s); select none =
+  // exclude just the root nodes (their subtasks then read as ancestor-
+  // excluded, and the copy walk stops at an excluded node anyway).
+  const setExcluded = (ids: string[], excluded: boolean) => {
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (excluded) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
+
   const reset = () => {
     setSelectedTemplateIds(new Set());
     setExcludedIds(new Set());
@@ -258,6 +273,7 @@ export function useTemplateSelection() {
     toggleTemplate,
     excludedIds,
     toggleNode,
+    setExcluded,
     isExcluded,
     reset,
   };

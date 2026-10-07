@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { X, Loader2, ChevronLeft, Trash2 } from "lucide-react";
+import { X, Loader2, ChevronLeft, Trash2, Plus } from "lucide-react";
 import { useTaskDetail } from "../../../hooks/tasks/useTaskDetail";
+import { colorFor, initials } from "../board/employeeAvatar";
 import StatusCell from "../board/StatusCell";
 import PriorityCell from "../board/PriorityCell";
 import AssigneeCell from "../board/AssigneeCell";
@@ -104,20 +105,43 @@ export default function TaskDetailPanel() {
     navigate(basePath);
   };
 
-  const close = () => navigate(basePath);
+  // Slides in from the left edge on open and back out on close. Opening a
+  // different task from inside the panel (breadcrumb, subtasks) keeps this
+  // same instance mounted, so it doesn't replay.
+  const [entered, setEntered] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setEntered(true));
+    return () => {
+      cancelAnimationFrame(frame);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  const close = () => {
+    if (closeTimer.current) return;
+    setEntered(false);
+    closeTimer.current = setTimeout(() => navigate(basePath), 200);
+  };
 
   // A task on a template board gets the same panel, in template mode
   // (Day N dates, no notifications, links kept inside the template).
   return (
     <TemplateModeProvider value={!!data?.task.is_template}>
-    <div className="fixed inset-0 z-40 flex justify-end" dir="rtl">
+    <div className="fixed inset-0 z-40 flex justify-end overflow-hidden" dir="rtl">
       <button
         aria-label="إغلاق"
         onClick={close}
-        className="absolute inset-0 bg-black/20"
+        className={`absolute inset-0 bg-black/20 transition-opacity duration-200 motion-reduce:transition-none ${
+          entered ? "opacity-100" : "opacity-0"
+        }`}
       />
 
-      <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+      <div
+        className={`relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-200 ease-out motion-reduce:transition-none ${
+          entered ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           {data ? (
             <nav className="flex items-center gap-1 truncate text-xs text-gray-400">
@@ -258,24 +282,75 @@ export default function TaskDetailPanel() {
                   ))}
                 </select>
               </FieldRow>
-              <FieldRow label="المسؤولون">
-                <div className="flex items-center gap-1.5">
-                  {isTemplateTask && (
-                    <RoleAssigneeCell
-                      roleIds={rolesByTask.get(data.task.id) ?? []}
-                      onChange={(roleIds) => setTaskRoles({ taskId: data.task.id, roleIds })}
+              {/* One row per person with its own X, instead of overlapping
+                  avatars — removing someone no longer means opening the
+                  picker and unticking them. */}
+              <div className="py-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-gray-500">المسؤولون</span>
+                  <div className="flex items-center gap-1.5">
+                    {isTemplateTask && (
+                      <RoleAssigneeCell
+                        roleIds={rolesByTask.get(data.task.id) ?? []}
+                        onChange={(roleIds) => setTaskRoles({ taskId: data.task.id, roleIds })}
+                        align="left"
+                      />
+                    )}
+                    <AssigneeCell
+                      variant="button"
+                      buttonClassName="flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
+                      buttonContent={
+                        <>
+                          <Plus className="h-3 w-3" />
+                          إضافة
+                        </>
+                      }
+                      assigneeIds={data.assigneeIds}
+                      employeesById={data.employeesById}
+                      allEmployees={data.employees}
+                      projectId={data.task.project_id}
+                      onChange={(userIds) => setAssignees(userIds)}
                       align="left"
                     />
-                  )}
-                  <AssigneeCell
-                    assigneeIds={data.assigneeIds}
-                    employeesById={data.employeesById}
-                    allEmployees={data.employees}
-                    onChange={(userIds) => setAssignees(userIds)}
-                    align="left"
-                  />
+                  </div>
                 </div>
-              </FieldRow>
+                {data.assigneeIds.length > 0 && (
+                  <ul className="mt-1.5 space-y-1">
+                    {data.assigneeIds.map((userId) => {
+                      const person = data.employeesById.get(userId);
+                      return (
+                        <li
+                          key={userId}
+                          className="flex items-center gap-2 rounded-md bg-gray-50 px-2 py-1 text-sm text-gray-700"
+                        >
+                          <span
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
+                            style={{ background: colorFor(userId) }}
+                          >
+                            {person ? initials(person) : "?"}
+                          </span>
+                          <span className="truncate">
+                            {person ? `${person.first_name} ${person.last_name ?? ""}` : "—"}
+                          </span>
+                          {person?.person_type === "contractor" && (
+                            <span className="shrink-0 rounded bg-amber-100 px-1 text-[9px] font-medium text-amber-700">
+                              مقاول
+                            </span>
+                          )}
+                          <button
+                            onClick={() => setAssignees(data.assigneeIds.filter((id) => id !== userId))}
+                            title="إزالة"
+                            aria-label="إزالة"
+                            className="ms-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
               <FieldRow label="تاريخ البدء">
                 <StartDateCell
                   startDate={data.task.start_date}
@@ -287,6 +362,8 @@ export default function TaskDetailPanel() {
                 <DateCell
                   dueDate={data.task.due_date}
                   isOverdue={data.task.is_overdue}
+                  statusCategory={data.statuses.find((s) => s.id === data.task.status_id)?.category}
+                  completedAt={data.task.completed_at}
                   onChange={(date) => updateField({ due_date: date })}
                   align="left"
                 />

@@ -4,7 +4,7 @@ import Badge, { type BadgeVariant } from "../../ui/Badge";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 
-const PRIORITY_LABELS: Record<Priority, string> = {
+export const PRIORITY_LABELS: Record<Priority, string> = {
   urgent: "عاجل",
   high: "مرتفعة",
   normal: "عادية",
@@ -18,7 +18,7 @@ const PRIORITY_VARIANTS: Record<Priority, BadgeVariant> = {
   low: "default",
 };
 
-const PRIORITIES: Priority[] = ["urgent", "high", "normal", "low"];
+export const PRIORITIES: Priority[] =["urgent", "high", "normal", "low"];
 
 interface PriorityCellProps {
   priority: Priority | null;
