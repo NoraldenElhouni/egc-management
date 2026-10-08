@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Eye, EyeOff, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
 import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
 import SpaceKpiStrip from "../../components/tasks/board/SpaceKpiStrip";
+import { activeKpiKey } from "../../components/tasks/board/spaceKpiFilters";
 import CollapseAllButtons from "../../components/tasks/board/CollapseAllButtons";
 import OverdueNotifyButton from "../../components/tasks/board/OverdueNotifyButton";
 import {
@@ -96,15 +97,13 @@ export default function SpaceTasksPage() {
   // "Show completed" is the status filter's "all" mode — not narrowing
   // anything down, so it must not hide empty boards or their add-task row.
   const narrowingCount = activeFilterCount - (filters.statusMode === "all" ? 1 : 0);
-  // Completed = shown whenever the status filter is anything but "open only".
-  const showingCompleted = filters.statusMode !== "open";
-  const completedCount = useMemo(() => {
-    if (!data) return 0;
-    const finished = new Set(
-      data.statuses.filter((s) => s.category === "done" || s.category === "closed").map((s) => s.id),
-    );
-    return data.tasks.filter((t) => finished.has(t.status_id)).length;
-  }, [data]);
+
+  // A KPI card is selected when the filters match its preset exactly. Every
+  // card except the default "open" view means "only the boards that have
+  // such tasks", so empty boards drop out — including for the "all tasks"
+  // card, which the narrowing count above doesn't treat as a filter.
+  const kpiKey = useMemo(() => (data ? activeKpiKey(filters, data) : null), [data, filters]);
+  const hideEmptyBoards = kpiKey !== null && kpiKey !== "open";
 
   // One definition of "what this page is showing" — shared with the
   // overdue-notify button so its recipients match the visible list.
@@ -123,7 +122,7 @@ export default function SpaceTasksPage() {
     // filter): once someone's actually narrowing things down, an empty
     // board would just be noise among real results.
     const byBoard = new Map<string, TaskRow[]>();
-    if (!searching && narrowingCount === 0) {
+    if (!searching && narrowingCount === 0 && !hideEmptyBoards) {
       for (const boardId of data.boardNamesById.keys()) byBoard.set(boardId, []);
     }
     for (const task of visibleTasks) {
@@ -139,7 +138,7 @@ export default function SpaceTasksPage() {
     }));
 
     return sortDirectoryGroups(boardGroups, sort.groupSort, undefined, data.boardOrderById);
-  }, [data, visibleTasks, searching, sort, narrowingCount]);
+  }, [data, visibleTasks, searching, sort, narrowingCount, hideEmptyBoards]);
 
   const expandAll = () => setCollapsedKeys(new Set());
   const collapseAll = () => setCollapsedKeys(new Set(groups.map((g) => g.key)));
@@ -186,19 +185,6 @@ export default function SpaceTasksPage() {
             />
           </div>
           <CollapseAllButtons onExpandAll={expandAll} onCollapseAll={collapseAll} searching={searching} />
-          <button
-            onClick={() => setFilters({ ...filters, statusMode: showingCompleted ? "open" : "all" })}
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm ${
-              showingCompleted
-                ? "border-primary bg-primary-superLight text-primary"
-                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-            title={showingCompleted ? "إخفاء المهام المكتملة" : "إظهار المهام المكتملة"}
-          >
-            {showingCompleted ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {showingCompleted ? "إخفاء المكتملة" : "إظهار المكتملة"}
-            {completedCount > 0 && <span className="text-gray-400">({completedCount})</span>}
-          </button>
           <OverdueNotifyButton visibleTasks={visibleTasks} data={data} filters={filters} searchTerm={search} />
           <button
             onClick={() => setShowFilterDialog(true)}
@@ -215,7 +201,7 @@ export default function SpaceTasksPage() {
         </div>
       </div>
 
-      <SpaceKpiStrip data={data} />
+      <SpaceKpiStrip data={data} filters={filters} onSelect={setFilters} />
 
       {showFilterDialog && (
         <DirectoryFilterSortPopover
@@ -232,7 +218,7 @@ export default function SpaceTasksPage() {
       <div className="flex-1 overflow-y-auto bg-gray-50 p-3">
         {groups.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-400">
-            {searching || narrowingCount > 0 ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"}
+            {searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"}
           </div>
         ) : (
           groups.map((group) => {
