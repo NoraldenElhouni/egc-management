@@ -20,6 +20,7 @@ import {
   Settings,
   FileStack,
   Tag,
+  Trophy,
   Plus,
   AlertTriangle,
   X,
@@ -40,6 +41,7 @@ import { emitTaskError, setTaskErrorListener } from "../../hooks/tasks/taskError
 import { searchSidebarEntities, type EntityMatches } from "../../hooks/tasks/tasksSidebarSearch";
 import NewSpaceModal from "./NewSpaceModal";
 import { useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
+import { useCan } from "../../hooks/permissions/useCan";
 import { useTaskUndoHotkeys } from "../../hooks/tasks/useTaskUndoHotkeys";
 import TaskUndoToast from "../tasks/TaskUndoToast";
 
@@ -542,6 +544,7 @@ const TasksLayoutInner = () => {
   // The cross-space browsing views (by employee / type / project, departments)
   // only make sense for someone who can see more than their own tasks.
   const canBrowse = !!access && (access.view_all || Object.keys(access.spaces).length > 0);
+  const { can: canSeePerformance } = useCan("view_task_performance");
   const navigate = useNavigate();
   const [showNewSpace, setShowNewSpace] = useState(false);
 
@@ -706,6 +709,15 @@ const TasksLayoutInner = () => {
           >
             <FolderKanban className="h-5 w-5" />
           </Link>
+          {canSeePerformance && (
+            <Link
+              to="/tasks/performance"
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              title="أداء المهام"
+            >
+              <Trophy className="h-5 w-5" />
+            </Link>
+          )}
         </aside>
         <main className="mr-20 flex-1 overflow-y-auto scrollbar-hide">
           <Outlet />
@@ -932,6 +944,15 @@ const TasksLayoutInner = () => {
                   <span className="flex-1 truncate">حسب المشروع</span>
                 </Link>
                 </>)}
+                {canSeePerformance && (
+                  <Link
+                    to="/tasks/performance"
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                  >
+                    <Trophy className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span className="flex-1 truncate">أداء المهام</span>
+                  </Link>
+                )}
               </div>
 
               {access?.edit_all && (

@@ -14,6 +14,8 @@ import TemplatesAdminPage from "../../pages/tasks/admin/TemplatesAdminPage";
 import SpaceSettingsPage from "../../pages/tasks/admin/SpaceSettingsPage";
 import FieldsAdminPage from "../../pages/tasks/admin/FieldsAdminPage";
 import RequireTaskAccess from "../tasks/RequireTaskAccess";
+import RequirePermission from "../auth/RequirePermission";
+import PerformancePage from "../../pages/tasks/PerformancePage";
 
 // App.tsx gates the whole /tasks/* mount point behind one section-level
 // permission (view_tasks_section: the menu entry). Inside it, access to
@@ -78,6 +80,9 @@ export default function TasksRoutes() {
         <Route element={<RequireTaskAccess scope="edit-all" />}>
           <Route path="admin/templates" element={<TemplatesAdminPage />} />
           <Route path="admin/fields" element={<FieldsAdminPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_task_performance" />}>
+          <Route path="performance" element={<PerformancePage />} />
         </Route>
         <Route element={<RequireTaskAccess scope="space" />}>
           <Route path="space/:spaceId/settings" element={<SpaceSettingsPage />} />
