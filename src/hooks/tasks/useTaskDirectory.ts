@@ -8,6 +8,7 @@ import { notifyDependentAssignees } from "../../services/tasks/notifyDependents"
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
 import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
+import { recordAssignees, recordTaskPatch } from "./taskUndo";
 
 // =====================================================================
 // Shared data + mutations for the "directory" views — AssigneeViewPage
@@ -300,8 +301,10 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
 
   const updateStatus = useMutation({
     mutationFn: async ({ taskId, statusId }: { taskId: string; statusId: string }) => {
+      const prev = query.data?.tasks.find((t) => t.id === taskId)?.status_id;
       const { error } = await tasksDb.from("tasks").update({ status_id: statusId }).eq("id", taskId);
       if (error) throw error;
+      if (prev && prev !== statusId) recordTaskPatch("تغيير الحالة", taskId, { status_id: prev }, { status_id: statusId });
 
       // Best-effort — a failed dependency check shouldn't fail the
       // status change itself, same posture as setAssignees' own push.
@@ -329,32 +332,40 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
 
   const updateTaskType = useMutation({
     mutationFn: async ({ taskId, taskTypeId }: { taskId: string; taskTypeId: string }) => {
+      const prev = query.data?.tasks.find((t) => t.id === taskId)?.task_type_id;
       const { error } = await tasksDb.from("tasks").update({ task_type_id: taskTypeId }).eq("id", taskId);
       if (error) throw error;
+      if (prev && prev !== taskTypeId) recordTaskPatch("تغيير النوع", taskId, { task_type_id: prev }, { task_type_id: taskTypeId });
     },
     onSuccess: invalidate,
   });
 
   const updatePriority = useMutation({
     mutationFn: async ({ taskId, priority }: { taskId: string; priority: Priority | null }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb.from("tasks").update({ priority }).eq("id", taskId);
       if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير الأولوية", taskId, { priority: prevTask.priority }, { priority });
     },
     onSuccess: invalidate,
   });
 
   const updateStartDate = useMutation({
     mutationFn: async ({ taskId, startDate }: { taskId: string; startDate: string | null }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb.from("tasks").update({ start_date: startDate }).eq("id", taskId);
       if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير تاريخ البدء", taskId, { start_date: prevTask.start_date }, { start_date: startDate });
     },
     onSuccess: invalidate,
   });
 
   const updateDueDate = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string | null }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb.from("tasks").update({ due_date: dueDate }).eq("id", taskId);
       if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير تاريخ الاستحقاق", taskId, { due_date: prevTask.due_date }, { due_date: dueDate });
     },
     onSuccess: invalidate,
   });
@@ -381,6 +392,14 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
           void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, { url: `/tasks/${taskId}` });
         }
       }
+
+      recordAssignees("تعيين المسؤولين", user?.id, [
+        {
+          taskId,
+          before: current,
+          after: [...current.filter((id) => userIds.includes(id)), ...(user?.id ? toAdd : [])],
+        },
+      ]);
     },
     onSuccess: () => {
       invalidate();

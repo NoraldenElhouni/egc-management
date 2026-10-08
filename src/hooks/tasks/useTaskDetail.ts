@@ -11,6 +11,7 @@ import type { Tag } from "./useAdminCatalog";
 import { extractMentionedTaskIds } from "./mentionUtils";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
 import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
+import { recordAssignees, recordTaskPatch, recordTaskValue, type TaskPatch } from "./taskUndo";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -20,6 +21,17 @@ import { notifyDependentAssignees } from "../../services/tasks/notifyDependents"
 // is_resolved) — see the migration this hook now assumes exists. `body`
 // stores `{ text: string }`, the same plain shape `description` already
 // uses (build plan §4.7 — jsonb, not HTML, no rich-text editor yet).
+
+// Toast wording for single-field edits (see taskUndo.ts).
+const FIELD_LABELS: Record<string, string> = {
+  title: "تعديل العنوان",
+  status_id: "تغيير الحالة",
+  priority: "تغيير الأولوية",
+  due_date: "تغيير تاريخ الاستحقاق",
+  start_date: "تغيير تاريخ البدء",
+  department_id: "تغيير القسم",
+  specialization_id: "تغيير التخصص",
+};
 
 export type Requirement = Database["tasks"]["Tables"]["task_requirements"]["Row"];
 export type Checklist = Database["tasks"]["Tables"]["checklists"]["Row"];
@@ -337,8 +349,21 @@ export function useTaskDetail(taskId: string | undefined) {
   const updateField = useMutation({
     mutationFn: async (patch: Partial<Pick<TaskRow, "title" | "description" | "status_id" | "priority" | "due_date" | "start_date" | "department_id" | "specialization_id">>) => {
       if (!taskId) return;
+      const prevTask = query.data?.task;
       const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);
       if (error) throw error;
+
+      // Description is rich text edited in place — the editor's own undo covers it.
+      const undoable: TaskPatch = { ...patch };
+      delete undoable.description;
+      if (prevTask && Object.keys(undoable).length > 0) {
+        const prev: TaskPatch = {};
+        for (const key of Object.keys(undoable) as (keyof typeof undoable)[]) {
+          (prev as Record<string, unknown>)[key] = prevTask[key];
+        }
+        const keys = Object.keys(undoable);
+        recordTaskPatch(keys.length === 1 ? (FIELD_LABELS[keys[0]] ?? "تعديل المهمة") : "تعديل المهمة", taskId, prev, undoable);
+      }
 
       // Best-effort — a failed dependency check shouldn't fail the
       // field update itself, same posture as setAssignees' own push.
@@ -371,10 +396,12 @@ export function useTaskDetail(taskId: string | undefined) {
   const setCustomValue = useMutation({
     mutationFn: async ({ fieldDefinitionId, value }: { fieldDefinitionId: string; value: Json }) => {
       if (!taskId) return;
+      const prev = query.data?.customValues.get(fieldDefinitionId);
       const { error } = await tasksDb
         .from("task_values")
         .upsert({ task_id: taskId, field_definition_id: fieldDefinitionId, value }, { onConflict: "task_id,field_definition_id" });
       if (error) throw error;
+      recordTaskValue(taskId, fieldDefinitionId, prev, value);
     },
     onSuccess: invalidate,
   });
@@ -408,6 +435,14 @@ export function useTaskDetail(taskId: string | undefined) {
           });
         }
       }
+
+      recordAssignees("تعيين المسؤولين", user?.id, [
+        {
+          taskId,
+          before: current,
+          after: [...current.filter((id) => userIds.includes(id)), ...(user?.id ? toAdd : [])],
+        },
+      ]);
     },
     onSuccess: () => {
       invalidate();

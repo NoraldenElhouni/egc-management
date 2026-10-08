@@ -12,6 +12,7 @@ import { notifyDependentAssignees } from "../../services/tasks/notifyDependents"
 import { emitTaskError } from "./taskErrorBus";
 import { extractErrorMessage } from "./extractErrorMessage";
 import { topmostTaskIds, withDescendants } from "./bulkSelection";
+import { recordAssignees, recordTaskPatch, recordTaskPatches, recordTaskValue } from "./taskUndo";
 
 /** How many tasks a bulk status change updates at once. */
 const BULK_BATCH_SIZE = 6;
@@ -473,8 +474,11 @@ export function useTaskBoard(boardId: string | undefined) {
   };
 
   const updateStatus = useMutation({
-    mutationFn: ({ taskId, statusId }: { taskId: string; statusId: string }) =>
-      applyStatus(taskId, statusId),
+    mutationFn: async ({ taskId, statusId }: { taskId: string; statusId: string }) => {
+      const prev = query.data?.tasks.find((t) => t.id === taskId)?.status_id;
+      await applyStatus(taskId, statusId);
+      if (prev && prev !== statusId) recordTaskPatch("تغيير الحالة", taskId, { status_id: prev }, { status_id: statusId });
+    },
     onSuccess: invalidate,
   });
 
@@ -498,20 +502,38 @@ export function useTaskBoard(boardId: string | undefined) {
 
   const bulkSetStatus = useMutation({
     mutationFn: async ({ taskIds, statusId }: { taskIds: string[]; statusId: string }) => {
+      const prevById = new Map((query.data?.tasks ?? []).map((t) => [t.id, t.status_id]));
       const results: PromiseSettledResult<void>[] = [];
       for (let i = 0; i < taskIds.length; i += BULK_BATCH_SIZE) {
         const batch = taskIds.slice(i, i + BULK_BATCH_SIZE);
         results.push(...(await Promise.allSettled(batch.map((id) => applyStatus(id, statusId)))));
       }
       reportBulkFailures(results);
+      // Only the tasks that actually changed — a refused one has nothing to undo.
+      recordTaskPatches(
+        "تغيير الحالة لعدة مهام",
+        taskIds.flatMap((taskId, i) => {
+          const prev = prevById.get(taskId);
+          return results[i]?.status === "fulfilled" && prev && prev !== statusId
+            ? [{ taskId, prev: { status_id: prev }, next: { status_id: statusId } }]
+            : [];
+        }),
+      );
     },
     onSettled: invalidate,
   });
 
   const bulkSetPriority = useMutation({
     mutationFn: async ({ taskIds, priority }: { taskIds: string[]; priority: Priority | null }) => {
+      const prevById = new Map((query.data?.tasks ?? []).map((t) => [t.id, t.priority]));
       const { error } = await tasksDb.from("tasks").update({ priority }).in("id", taskIds);
       if (error) throw error;
+      recordTaskPatches(
+        "تغيير الأولوية لعدة مهام",
+        taskIds
+          .filter((taskId) => prevById.has(taskId) && prevById.get(taskId) !== priority)
+          .map((taskId) => ({ taskId, prev: { priority: prevById.get(taskId) ?? null }, next: { priority } })),
+      );
     },
     onSettled: invalidate,
   });
@@ -571,6 +593,17 @@ export function useTaskBoard(boardId: string | undefined) {
           }
         }
       }
+
+      recordAssignees(
+        "تعيين المسؤولين لعدة مهام",
+        user?.id,
+        taskIds.map((taskId) => {
+          const before = assigneesByTask.get(taskId) ?? [];
+          const kept = before.filter((id) => !remove.includes(id));
+          const after = user?.id ? [...kept, ...add.filter((id) => !kept.includes(id))] : kept;
+          return { taskId, before, after };
+        }),
+      );
     },
     onSettled: () => {
       invalidate();
@@ -599,11 +632,13 @@ export function useTaskBoard(boardId: string | undefined) {
 
   const updateTaskType = useMutation({
     mutationFn: async ({ taskId, taskTypeId }: { taskId: string; taskTypeId: string }) => {
+      const prev = query.data?.tasks.find((t) => t.id === taskId)?.task_type_id;
       const { error } = await tasksDb
         .from("tasks")
         .update({ task_type_id: taskTypeId })
         .eq("id", taskId);
       if (error) throw error;
+      if (prev && prev !== taskTypeId) recordTaskPatch("تغيير النوع", taskId, { task_type_id: prev }, { task_type_id: taskTypeId });
     },
     onSuccess: invalidate,
   });
@@ -616,11 +651,13 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       priority: Priority | null;
     }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb
         .from("tasks")
         .update({ priority })
         .eq("id", taskId);
       if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير الأولوية", taskId, { priority: prevTask.priority }, { priority });
     },
     onSuccess: invalidate,
   });
@@ -633,11 +670,13 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       dueDate: string | null;
     }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb
         .from("tasks")
         .update({ due_date: dueDate })
         .eq("id", taskId);
       if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير تاريخ الاستحقاق", taskId, { due_date: prevTask.due_date }, { due_date: dueDate });
     },
     onSuccess: invalidate,
   });
@@ -650,11 +689,13 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       startDate: string | null;
     }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb
         .from("tasks")
         .update({ start_date: startDate })
         .eq("id", taskId);
       if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير تاريخ البدء", taskId, { start_date: prevTask.start_date }, { start_date: startDate });
     },
     onSuccess: invalidate,
   });
@@ -699,6 +740,24 @@ export function useTaskBoard(boardId: string | undefined) {
         });
       }
       return { previous };
+    },
+    onSuccess: (_data, { taskId, startDate, dueDate }, context) => {
+      // The cache was already updated optimistically by onMutate, so the old
+      // dates come from the snapshot it took, not from query.data.
+      const prevTask = context?.previous?.tasks.find((t) => t.id === taskId);
+      if (!prevTask) return;
+      recordTaskPatch(
+        "تغيير التواريخ",
+        taskId,
+        {
+          ...(startDate !== undefined ? { start_date: prevTask.start_date } : {}),
+          ...(dueDate !== undefined ? { due_date: prevTask.due_date } : {}),
+        },
+        {
+          ...(startDate !== undefined ? { start_date: startDate } : {}),
+          ...(dueDate !== undefined ? { due_date: dueDate } : {}),
+        },
+      );
     },
     onError: (_error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
@@ -751,6 +810,14 @@ export function useTaskBoard(boardId: string | undefined) {
           });
         }
       }
+
+      recordAssignees("تعيين المسؤولين", user?.id, [
+        {
+          taskId,
+          before: current,
+          after: [...current.filter((id) => userIds.includes(id)), ...(user?.id ? toAdd : [])],
+        },
+      ]);
     },
     onSuccess: () => {
       invalidate();
@@ -792,10 +859,12 @@ export function useTaskBoard(boardId: string | undefined) {
 
   const setTaskValue = useMutation({
     mutationFn: async ({ taskId, fieldDefinitionId, value }: { taskId: string; fieldDefinitionId: string; value: Json }) => {
+      const prev = query.data?.valuesByTask.get(taskId)?.get(fieldDefinitionId);
       const { error } = await tasksDb
         .from("task_values")
         .upsert({ task_id: taskId, field_definition_id: fieldDefinitionId, value }, { onConflict: "task_id,field_definition_id" });
       if (error) throw error;
+      recordTaskValue(taskId, fieldDefinitionId, prev, value);
     },
     onSuccess: invalidate,
   });
@@ -873,13 +942,24 @@ export function useTaskBoard(boardId: string | undefined) {
         .sort((a, b) => a.sort_order - b.sort_order);
       const insertAt = beforeId ? siblings.findIndex((t) => t.id === beforeId) : -1;
       siblings.splice(insertAt === -1 ? siblings.length : insertAt, 0, moved);
+      const undoItems: { taskId: string; prev: Partial<TaskRow>; next: Partial<TaskRow> }[] = [];
       for (let i = 0; i < siblings.length; i++) {
         const s = siblings[i];
         const patch: Partial<TaskRow> = { sort_order: i };
         if (s.id === id) patch.parent_task_id = newParentId;
         const { error } = await tasksDb.from("tasks").update(patch).eq("id", s.id);
         if (error) throw error;
+        // `s` is the cached row, so it still holds the order / parent from before the move.
+        const reparented = s.id === id && s.parent_task_id !== newParentId;
+        if (s.sort_order !== i || reparented) {
+          undoItems.push({
+            taskId: s.id,
+            prev: { sort_order: s.sort_order, ...(s.id === id ? { parent_task_id: s.parent_task_id } : {}) },
+            next: patch,
+          });
+        }
       }
+      recordTaskPatches("نقل مهمة", undoItems);
     },
     onSuccess: invalidate,
   });

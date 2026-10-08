@@ -40,6 +40,8 @@ import { emitTaskError, setTaskErrorListener } from "../../hooks/tasks/taskError
 import { searchSidebarEntities, type EntityMatches } from "../../hooks/tasks/tasksSidebarSearch";
 import NewSpaceModal from "./NewSpaceModal";
 import { useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
+import { useTaskUndoHotkeys } from "../../hooks/tasks/useTaskUndoHotkeys";
+import TaskUndoToast from "../tasks/TaskUndoToast";
 
 // A failed mutation anywhere in this module (most commonly the
 // completion-gate trigger rejecting a status change, or the reparent
@@ -965,10 +967,18 @@ const TasksLayoutInner = () => {
   );
 };
 
+// Mounted inside the provider so it uses the module's own QueryClient —
+// the one every task hook reads from, so undo's invalidations refresh them.
+function TaskUndoHost() {
+  useTaskUndoHotkeys();
+  return <TaskUndoToast />;
+}
+
 const TasksLayout = () => (
   <QueryClientProvider client={tasksQueryClient}>
     <TasksLayoutInner />
     <TaskErrorToast />
+    <TaskUndoHost />
   </QueryClientProvider>
 );
 
