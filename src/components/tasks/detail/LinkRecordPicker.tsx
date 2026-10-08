@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "../board/AnchoredMenu";
 import { useLinkableRecords, RECORD_TYPE_LABELS, type LinkRecordType } from "../../../hooks/tasks/useLinkedRecord";
 import type { Database } from "../../../lib/supabase";
 
@@ -27,7 +27,6 @@ export default function LinkRecordPicker({
   const [linkMode, setLinkMode] = useState<LinkMode>("references");
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
 
   const records = useLinkableRecords(recordType, projectId);
   const filtered = records.filter((r) => !search.trim() || r.label.toLowerCase().includes(search.toLowerCase()));
@@ -46,8 +45,7 @@ export default function LinkRecordPicker({
         ربط بسجل
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg">
+      <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={256}>
           <div className="space-y-1.5 border-b border-gray-100 p-2">
             <select
               value={recordType}
@@ -104,8 +102,7 @@ export default function LinkRecordPicker({
               ))
             )}
           </div>
-        </div>
-      )}
+      </AnchoredMenu>
     </div>
   );
 }

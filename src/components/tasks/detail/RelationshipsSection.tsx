@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "../board/AnchoredMenu";
 import { useTemplateMode } from "../TemplateModeContext";
 import type { Relationship } from "../../../hooks/tasks/useTaskDetail";
 import type { Database } from "../../../lib/supabase";
@@ -44,7 +44,6 @@ export default function RelationshipsSection({
   const [results, setResults] = useState<{ id: string; title: string }[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<number | null>(null);
-  useClickOutside(ref, () => setOpen(false));
   // Same scoping as DependenciesSection: a template's links stay inside
   // the template, a real task never links to a template task.
   const isTemplate = useTemplateMode();
@@ -107,8 +106,7 @@ export default function RelationshipsSection({
           ربط بمهمة أخرى
         </button>
 
-        {open && (
-          <div className="absolute right-0 top-full z-30 mt-1 w-64 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+        <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={256} className="p-2">
             <select
               value={type}
               onChange={(e) => setType(e.target.value as RelationshipType)}
@@ -143,8 +141,7 @@ export default function RelationshipsSection({
                 </button>
               ))}
             </div>
-          </div>
-        )}
+        </AnchoredMenu>
       </div>
     </div>
   );

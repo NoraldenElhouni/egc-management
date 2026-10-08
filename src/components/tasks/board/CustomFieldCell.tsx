@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "./AnchoredMenu";
 import type { CustomColumn, EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
 import type { Json } from "../../../lib/supabase";
 
@@ -33,7 +33,6 @@ export default function CustomFieldCell({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
 
   switch (column.type) {
     case "text":
@@ -101,8 +100,7 @@ export default function CustomFieldCell({
           >
             {current?.label_ar ?? "—"}
           </button>
-          {open && (
-            <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
+          <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={144} align={align} className="py-1">
               {options.map((o) => (
                 <button
                   key={o.id}
@@ -116,8 +114,7 @@ export default function CustomFieldCell({
                   <span className="truncate">{o.label_ar}</span>
                 </button>
               ))}
-            </div>
-          )}
+          </AnchoredMenu>
         </div>
       );
     }
@@ -143,8 +140,7 @@ export default function CustomFieldCell({
                   ) : null;
                 })}
           </button>
-          {open && (
-            <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
+          <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={144} align={align} className="py-1">
               {options.map((o) => (
                 <label key={o.id} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50">
                   <input type="checkbox" checked={selectedIds.includes(o.id)} onChange={() => toggle(o.id)} className="h-3.5 w-3.5" />
@@ -152,8 +148,7 @@ export default function CustomFieldCell({
                   <span className="truncate">{o.label_ar}</span>
                 </label>
               ))}
-            </div>
-          )}
+          </AnchoredMenu>
         </div>
       );
     }
@@ -165,8 +160,7 @@ export default function CustomFieldCell({
           <button onClick={() => setOpen((v) => !v)} className="truncate text-xs text-gray-600">
             {employee ? `${employee.first_name} ${employee.last_name ?? ""}` : "—"}
           </button>
-          {open && (
-            <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-40 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
+          <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={160} align={align} className="max-h-56 overflow-y-auto py-1">
               {allEmployees.map((e) => (
                 <button
                   key={e.id}
@@ -179,8 +173,7 @@ export default function CustomFieldCell({
                   {e.first_name} {e.last_name ?? ""}
                 </button>
               ))}
-            </div>
-          )}
+          </AnchoredMenu>
         </div>
       );
     }

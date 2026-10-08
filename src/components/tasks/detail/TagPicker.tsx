@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "../board/AnchoredMenu";
 import type { Tag } from "../../../hooks/tasks/useAdminCatalog";
 
 // D3's tag row — the company tag catalog (create/delete) lives in D11's
@@ -18,7 +18,6 @@ export default function TagPicker({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
 
   const attached = allTags.filter((t) => tagIds.includes(t.id));
   const available = allTags.filter((t) => !tagIds.includes(t.id));
@@ -46,8 +45,7 @@ export default function TagPicker({
           <Plus className="h-3 w-3" />
           وسم
         </button>
-        {open && (
-          <div className="absolute right-0 top-full z-30 mt-1 w-40 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+        <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={160} className="max-h-56 overflow-y-auto py-1">
             {available.length === 0 ? (
               <div className="px-3 py-2 text-xs text-gray-400">
                 {allTags.length === 0 ? "لا توجد وسوم بعد" : "كل الوسوم مضافة"}
@@ -67,8 +65,7 @@ export default function TagPicker({
                 </button>
               ))
             )}
-          </div>
-        )}
+        </AnchoredMenu>
       </div>
     </div>
   );

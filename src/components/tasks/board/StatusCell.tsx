@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "./AnchoredMenu";
 import type { StatusRow } from "../../../hooks/tasks/useTaskBoard";
 
 // Pill + dropdown, ClickUp-style ("Status cell = colored pill; click
@@ -37,7 +37,6 @@ export default function StatusCell({
 }: StatusCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
 
   const current = statuses.find((s) => s.id === currentStatusId);
 
@@ -51,8 +50,7 @@ export default function StatusCell({
         {current?.label_ar ?? "—"}
       </button>
 
-      {open && (
-        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
+      <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={160} align={align} className="py-1">
           {statuses.map((status) => (
             <button
               key={status.id}
@@ -69,8 +67,7 @@ export default function StatusCell({
               <span className="truncate">{status.label_ar}</span>
             </button>
           ))}
-        </div>
-      )}
+      </AnchoredMenu>
     </div>
   );
 }

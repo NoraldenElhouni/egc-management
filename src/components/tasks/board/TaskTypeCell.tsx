@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Check } from "lucide-react";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "./AnchoredMenu";
 import type { TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
 
 // Small-popover pattern, same as StatusCell — but the trigger stays the
@@ -24,7 +24,6 @@ interface TaskTypeCellProps {
 export default function TaskTypeCell({ taskTypes, currentTaskTypeId, onChange, align = "right", readOnly = false }: TaskTypeCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
 
   const current = taskTypes.get(currentTaskTypeId);
   const options = Array.from(taskTypes.values());
@@ -39,8 +38,7 @@ export default function TaskTypeCell({ taskTypes, currentTaskTypeId, onChange, a
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: current?.color ?? "#9CA3AF" }} />
       </button>
 
-      {open && (
-        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
+      <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={160} align={align} className="py-1">
           {options.map((tt) => {
             const isCurrent = tt.id === currentTaskTypeId;
             return (
@@ -60,8 +58,7 @@ export default function TaskTypeCell({ taskTypes, currentTaskTypeId, onChange, a
               </button>
             );
           })}
-        </div>
-      )}
+      </AnchoredMenu>
     </div>
   );
 }

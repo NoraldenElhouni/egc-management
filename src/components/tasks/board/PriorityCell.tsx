@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Flag } from "lucide-react";
 import Badge, { type BadgeVariant } from "../../ui/Badge";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "./AnchoredMenu";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
@@ -33,7 +33,6 @@ interface PriorityCellProps {
 export default function PriorityCell({ priority, onChange, align = "right", readOnly = false }: PriorityCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
 
   return (
     <div ref={ref} className="relative">
@@ -54,8 +53,7 @@ export default function PriorityCell({ priority, onChange, align = "right", read
         </button>
       )}
 
-      {open && (
-        <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full z-30 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg`}>
+      <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={144} align={align} className="py-1">
           {PRIORITIES.map((p) => (
             <button
               key={p}
@@ -79,8 +77,7 @@ export default function PriorityCell({ priority, onChange, align = "right", read
               بدون أولوية
             </button>
           )}
-        </div>
-      )}
+      </AnchoredMenu>
     </div>
   );
 }

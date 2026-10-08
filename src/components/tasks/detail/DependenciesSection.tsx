@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Lock, Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
-import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
+import AnchoredMenu from "../board/AnchoredMenu";
 import { useTemplateMode } from "../TemplateModeContext";
 import type { DependencyTaskRef } from "../../../hooks/tasks/useTaskDetail";
 
@@ -68,7 +68,6 @@ export default function DependenciesSection({
   const [results, setResults] = useState<SearchResult[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<number | null>(null);
-  useClickOutside(ref, () => setOpen(false));
   // A template's dependencies only make sense between its own tasks —
   // apply_template_board() recreates exactly those on the target board —
   // so on a template the search is limited to the template board itself.
@@ -236,8 +235,7 @@ export default function DependenciesSection({
           إضافة اعتمادية
         </button>
 
-        {open && (
-          <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+        <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={288} className="p-2">
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value as Direction)}
@@ -267,8 +265,7 @@ export default function DependenciesSection({
                 results.map(renderResult)
               )}
             </div>
-          </div>
-        )}
+        </AnchoredMenu>
       </div>
     </div>
   );
