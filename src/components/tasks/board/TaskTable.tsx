@@ -1,5 +1,5 @@
 import { cloneElement, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, ArrowDownWideNarrow, ArrowUpNarrowWide } from "lucide-react";
+import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, ArrowDownWideNarrow, ArrowUpNarrowWide, Eye, EyeOff } from "lucide-react";
 import TaskRow, { rowGridStyle } from "./TaskRow";
 import BulkActionPanel from "./BulkActionPanel";
 import { useBoardAccess } from "../BoardAccessContext";
@@ -149,9 +149,35 @@ export default function TaskTable({
       return next;
     });
 
+  const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
+
+  // Completed tasks (done / closed) are hidden unless asked for. An open
+  // subtask of a hidden completed parent is promoted to the top level
+  // (parent_task_id nulled, as TaskBoardPage does for assignee-only views)
+  // so open work never disappears with its parent. `tasks` stays the full
+  // list for anything that must see everything (e.g. delete wording).
+  const [showCompleted, setShowCompleted] = useState(false);
+  const isCompleted = (t: TaskRowType) => {
+    const category = statusById.get(t.status_id)?.category;
+    return category === "done" || category === "closed";
+  };
+  const completedCount = useMemo(
+    () => tasks.filter(isCompleted).length,
+    [tasks, statusById],
+  );
+  const visibleTasks = useMemo(() => {
+    if (showCompleted) return tasks;
+    const shown = tasks.filter((t) => !isCompleted(t));
+    const shownIds = new Set(shown.map((t) => t.id));
+    return shown.map((t) =>
+      t.parent_task_id && !shownIds.has(t.parent_task_id) ? { ...t, parent_task_id: null } : t,
+    );
+  }, [tasks, statusById, showCompleted]);
+
   // Drop selected ids whose task is gone (deleted here or elsewhere,
-  // archived) so counts and bulk actions never refer to a ghost.
-  const taskIdSet = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks]);
+  // archived) or no longer on screen (completed and hidden) so counts and
+  // bulk actions never refer to a ghost.
+  const taskIdSet = useMemo(() => new Set(visibleTasks.map((t) => t.id)), [visibleTasks]);
   useEffect(() => {
     setSelectedIds((prev) => {
       if (prev.size === 0) return prev;
@@ -160,9 +186,9 @@ export default function TaskTable({
     });
   }, [taskIdSet]);
 
-  // Select-all covers every task on the board, subtasks under collapsed
+  // Select-all covers every task on screen, subtasks under collapsed
   // parents included — the bulk bar's delete wording says how many go.
-  const selectableIds = tasks.filter((t) => capsOf(t.id).status).map((t) => t.id);
+  const selectableIds = visibleTasks.filter((t) => capsOf(t.id).status).map((t) => t.id);
   const allSelected = selectableIds.length > 0 && selectedIds.size === selectableIds.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
   const selectAll = () => setSelectedIds(new Set(selectableIds));
@@ -175,7 +201,6 @@ export default function TaskTable({
   );
 
   const selectedTasks = tasks.filter((t) => selectedIds.has(t.id));
-  const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
   const firstDoneStatus = useMemo(
     () => statuses.filter((s) => s.category === "done").sort((a, b) => a.sort_order - b.sort_order)[0],
     [statuses],
@@ -200,14 +225,14 @@ export default function TaskTable({
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string | null, TaskRowType[]>();
-    for (const t of tasks) {
+    for (const t of visibleTasks) {
       const key = t.parent_task_id;
       const list = map.get(key) ?? [];
       list.push(t);
       map.set(key, list);
     }
     return map;
-  }, [tasks]);
+  }, [visibleTasks]);
 
   // Seed the collapsed set exactly once per board (the parent remounts
   // this component with key={boardId}) — every task with subtasks starts
@@ -219,7 +244,7 @@ export default function TaskTable({
   // mutation's refetch.
   if (!hasSeededCollapse.current && tasks.length > 0) {
     hasSeededCollapse.current = true;
-    const initial = new Set(tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id));
+    const initial = new Set(visibleTasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id));
     if (initial.size > 0) setCollapsedIds(initial);
   }
 
@@ -233,7 +258,7 @@ export default function TaskTable({
   };
 
   const collapseAll = () => {
-    setCollapsedIds(new Set(tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id)));
+    setCollapsedIds(new Set(visibleTasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id)));
   };
   const expandAll = () => setCollapsedIds(new Set());
 
@@ -415,6 +440,19 @@ export default function TaskTable({
           </button>
           <span className="mx-1 h-4 w-px bg-gray-200" />
           <button
+            onClick={() => setShowCompleted((v) => !v)}
+            className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+              showCompleted
+                ? "border-primary bg-primary-superLight text-primary"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+            title={showCompleted ? "إخفاء المهام المكتملة" : "إظهار المهام المكتملة"}
+          >
+            {showCompleted ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {showCompleted ? "إخفاء المكتملة" : "إظهار المكتملة"}
+            {completedCount > 0 && <span className="text-gray-400">({completedCount})</span>}
+          </button>
+          <button
             onClick={expandAll}
             className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
           >
@@ -559,6 +597,11 @@ export default function TaskTable({
         {tasks.length === 0 && (
           <div className="p-6 text-center text-sm text-gray-400">
             لا توجد مهام في هذه اللوحة بعد
+          </div>
+        )}
+        {tasks.length > 0 && visibleTasks.length === 0 && (
+          <div className="p-6 text-center text-sm text-gray-400">
+            كل مهام هذه اللوحة مكتملة ({completedCount}) — اضغط «إظهار المكتملة» لعرضها
           </div>
         )}
 

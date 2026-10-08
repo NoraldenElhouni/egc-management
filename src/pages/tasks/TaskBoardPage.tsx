@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router-
 import { Loader2, FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
+import BoardSwitcher from "../../components/tasks/board/BoardSwitcher";
 import TaskGantt from "../../components/tasks/gantt/TaskGantt";
 import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
 import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
@@ -120,6 +121,9 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             </Link>
           )}
           <h1 className="text-base font-semibold text-gray-900">{data.board.name}</h1>
+          {!isTemplate && (
+            <BoardSwitcher spaceId={data.board.space_id} currentBoardId={data.board.id} view={view} />
+          )}
           {isTemplate && (
             <span className="flex items-center gap-1 rounded-full bg-primary-superLight px-2 py-0.5 text-xs font-medium text-primary">
               <FileStack className="h-3 w-3" />
