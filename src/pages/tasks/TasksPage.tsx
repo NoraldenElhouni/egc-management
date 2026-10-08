@@ -1,20 +1,21 @@
 import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { Loader2, Users, UserCog, Shapes, Building2, FolderKanban, Building, User, Search, X, Layers } from "lucide-react";
+import { Users, UserCog, Shapes, Building2, FolderKanban, Building, User, Search, X, Layers } from "lucide-react";
 import { useTasksSidebar, type BoardWithCount, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 import { matchSpaceNode } from "../../hooks/tasks/tasksSidebarSearch";
 import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
+import { SpaceCardsPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // The /tasks index route — what shows before a space/board is picked.
 // D1's actual spec is just "the sidebar" (already built, TasksLayout.tsx),
 // so this landing page isn't a numbered D-screen; it's a quick-access hub
-// reusing the same sidebar data (spaces/departments/my-work counts)
+// reusing the same sidebar data (spaces/my-work counts)
 // instead of a placeholder now that every real screen exists to link to.
 //
 // The search box filters the space cards by project name, space name or
 // board name (matching logic shared with the sidebar search:
-// hooks/tasks/tasksSidebarSearch.ts). While a term is typed the view /
-// department shortcuts step aside so the page shows only results.
+// hooks/tasks/tasksSidebarSearch.ts). While a term is typed the view
+// shortcuts step aside so the page shows only results.
 
 const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
   project: "مساحات المشاريع",
@@ -152,11 +153,7 @@ export default function TasksPage() {
 
   if (onlyOwnTasks) return <Navigate to="/tasks/my-work" replace />;
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <SpaceCardsPageSkeleton />;
   }
 
   // The cross-space views (by employee / type / project, departments) are for
@@ -243,27 +240,6 @@ export default function TasksPage() {
                 />
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {!searching && canBrowse && !!data?.departments.length && (
-        <div className="mb-5">
-          <div className="mb-2 text-xs font-semibold text-gray-500">الأقسام</div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-            {data.departments.map((dept) => (
-              <Link
-                key={dept.id}
-                to={`/tasks/department/${dept.id}`}
-                className="flex items-center gap-2 rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                  <Building2 className="h-4.5 w-4.5" />
-                </span>
-                <span className="flex-1 truncate font-medium text-gray-800">{dept.name_ar ?? dept.name}</span>
-                <CountBadge count={dept.openCount} />
-              </Link>
-            ))}
           </div>
         </div>
       )}

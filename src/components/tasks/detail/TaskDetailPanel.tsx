@@ -28,6 +28,7 @@ import TagPicker from "./TagPicker";
 import RecurrenceSection from "./RecurrenceSection";
 import MentionTextarea from "./MentionTextarea";
 import { TemplateModeProvider } from "../TemplateModeContext";
+import { TaskDetailSkeleton } from "../TasksSkeletons";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -182,11 +183,7 @@ export default function TaskDetailPanel() {
           </button>
         </div>
 
-        {loading || !data || capsLoading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
-          </div>
-        ) : unavailable ? (
+        {loading || !data || capsLoading ? <TaskDetailSkeleton /> : unavailable ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center text-sm text-gray-500">
             <span className="font-medium text-gray-700">المهمة غير متاحة</span>
             <span className="text-xs text-gray-400">قد تكون محذوفة أو غير مُسندة إليك.</span>

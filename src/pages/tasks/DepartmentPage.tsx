@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
-import { Loader2, ListTodo, AlarmClock, Lock, UserX, ChevronDown, ChevronLeft } from "lucide-react";
+import { ListTodo, AlarmClock, Lock, UserX, ChevronDown, ChevronLeft } from "lucide-react";
 import { useDepartmentView } from "../../hooks/tasks/useDepartmentView";
 import Badge, { type BadgeVariant } from "../../components/ui/Badge";
 import Tooltip from "../../components/ui/Tooltip";
 import type { Priority } from "../../hooks/tasks/useTaskBoard";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // D6 — Department view (build plan Part 7). Everything here is read-only
 // — an overview, not an editable board (D2 already owns editing) — so
@@ -83,11 +84,7 @@ export default function DepartmentPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (error || !data) {

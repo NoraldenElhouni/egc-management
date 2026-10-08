@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { DndContext, type DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SortableRow from "../../../components/operations/boq/SortableRow";
@@ -24,6 +24,7 @@ import AddTeamMemberForm from "../../../components/project/team/AddTeamMemberFor
 import TeamRoster from "../../../components/project/team/TeamRoster";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 import type { Database, Json } from "../../../lib/supabase";
+import { AdminPageSkeleton, RowsSkeleton } from "../../../components/tasks/TasksSkeletons";
 
 // D9 — Space settings + D10 — Automations (build plan Part 7). See
 // useSpaceSettings.ts and useSpaceAutomations.ts headers for scoping
@@ -108,11 +109,7 @@ export default function SpaceSettingsPage() {
   const { data, loading, error } = settings;
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <AdminPageSkeleton />;
   }
   if (error || !data) {
     return <div className="flex h-full items-center justify-center text-sm text-red-500">تعذّر تحميل إعدادات المساحة</div>;
@@ -161,7 +158,7 @@ function TeamTab({ projectId }: { projectId: string }) {
   const { can: canManage } = useCan("manage_project_team", projectId);
 
   if (isLoading) {
-    return <Loader2 className="h-5 w-5 animate-spin text-gray-300" />;
+    return <RowsSkeleton rows={3} />;
   }
 
   return (
@@ -708,11 +705,7 @@ function AutomationsTab({ spaceId, statuses }: { spaceId: string; statuses: Stat
   const [actionValue, setActionValue] = useState("");
 
   if (!data) {
-    return (
-      <div className="flex items-center justify-center py-10 text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <RowsSkeleton rows={2} />;
   }
 
   const triggerConfigKey: Record<string, string> = { status: "to_status_id", field: "field_definition_id" };

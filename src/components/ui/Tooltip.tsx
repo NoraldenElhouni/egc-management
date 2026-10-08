@@ -18,28 +18,38 @@ interface TooltipProps {
   label: string | null | undefined;
   children: ReactNode;
   className?: string;
+  /**
+   * "top" (default) opens above the trigger, flipping below when there is no
+   * room. "left" opens beside it, vertically centred — for a column of icons
+   * (the collapsed sidebar), where above/below would cover the neighbours.
+   */
+  side?: "top" | "left";
 }
 
 const GAP = 6;
 const MIN_CLEARANCE_ABOVE = 60; // roughly a sticky table header's height
 
-export default function Tooltip({ label, children, className = "" }: TooltipProps) {
+export default function Tooltip({ label, children, className = "", side = "top" }: TooltipProps) {
   const [hovered, setHovered] = useState(false);
   const anchorRef = useRef<HTMLSpanElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; placement: "top" | "bottom" } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; placement: "top" | "bottom" | "left" } | null>(null);
 
   useLayoutEffect(() => {
     if (!hovered) return;
     const anchor = anchorRef.current;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
+    if (side === "left") {
+      setPos({ top: rect.top + rect.height / 2, left: rect.left - GAP, placement: "left" });
+      return;
+    }
     const openAbove = rect.top >= MIN_CLEARANCE_ABOVE;
     setPos({
       top: openAbove ? rect.top - GAP : rect.bottom + GAP,
       left: rect.left + rect.width / 2,
       placement: openAbove ? "top" : "bottom",
     });
-  }, [hovered]);
+  }, [hovered, side]);
 
   if (!label) return <>{children}</>;
 
@@ -60,7 +70,12 @@ export default function Tooltip({ label, children, className = "" }: TooltipProp
               position: "fixed",
               top: pos.top,
               left: pos.left,
-              transform: pos.placement === "top" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
+              transform:
+                pos.placement === "left"
+                  ? "translate(-100%, -50%)"
+                  : pos.placement === "top"
+                    ? "translate(-50%, -100%)"
+                    : "translate(-50%, 0)",
             }}
             className="pointer-events-none z-50 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg"
           >

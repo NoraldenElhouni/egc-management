@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // Standalone /tasks/task/:taskId (from D1's search, or a future
 // notification/My-work deep link) has no board in the URL — the detail
@@ -25,11 +25,7 @@ export default function TaskRedirect() {
   }, [taskId]);
 
   if (boardId === undefined) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-300">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (boardId === null) {

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Plus, Trash2, FileStack, Pencil } from "lucide-react";
+import { Plus, Trash2, FileStack, Pencil } from "lucide-react";
 import { useTemplatesAdmin } from "../../../hooks/tasks/useTemplatesAdmin";
+import { AdminPageSkeleton } from "../../../components/tasks/TasksSkeletons";
 
 // D8 — Templates admin, list screen (build plan Part 7). Each template is
 // a board (boards.is_template); clicking one opens it on the normal board
@@ -29,11 +30,7 @@ export default function TemplatesAdminPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <AdminPageSkeleton />;
   }
 
   if (error) {

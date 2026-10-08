@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import {
   Search,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Folder,
   FolderKanban,
   Building2,
   Building,
@@ -17,7 +15,6 @@ import {
   UserCog,
   Shapes,
   Loader2,
-  Settings,
   FileStack,
   Tag,
   Trophy,
@@ -27,20 +24,13 @@ import {
 } from "lucide-react";
 import { useSidebar } from "../../contexts/SidebarContext";
 import { supabase } from "../../lib/supabaseClient";
-import {
-  useTasksSidebar,
-  type SpaceNode,
-  type FolderNode,
-  type BoardWithCount,
-  type SpaceType,
-} from "../../hooks/tasks/useTasksSidebar";
-import { useCreateTaskEntities, useProjectZoneOptions, useCreateZone } from "../../hooks/tasks/useCreateTaskEntities";
-import { useClickOutside } from "../../hooks/tasks/useClickOutside";
+import { useTasksSidebar, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 import { extractErrorMessage } from "../../hooks/tasks/extractErrorMessage";
 import { emitTaskError, setTaskErrorListener } from "../../hooks/tasks/taskErrorBus";
 import { searchSidebarEntities, type EntityMatches } from "../../hooks/tasks/tasksSidebarSearch";
+import Tooltip from "../ui/Tooltip";
 import NewSpaceModal from "./NewSpaceModal";
-import { useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
+import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
 import { useCan } from "../../hooks/permissions/useCan";
 import { useTaskUndoHotkeys } from "../../hooks/tasks/useTaskUndoHotkeys";
 import TaskUndoToast from "../tasks/TaskUndoToast";
@@ -111,13 +101,6 @@ const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
   personal: "مساحتي الخاصة",
 };
 
-const SPACE_TYPE_ORDER: SpaceType[] = [
-  "project",
-  "department",
-  "company",
-  "personal",
-];
-
 const SPACE_TYPE_ICONS: Record<SpaceType, typeof FolderKanban> = {
   project: FolderKanban,
   department: Building2,
@@ -125,30 +108,17 @@ const SPACE_TYPE_ICONS: Record<SpaceType, typeof FolderKanban> = {
   personal: User,
 };
 
-// Which spaces are expanded is per-user UI state, not app data — same
-// posture as SidebarContext's own "sidebarCollapsed" key. Spaces default
-// collapsed (a space not yet in this set reads as closed) since with
-// several spaces open at once the sidebar became one long wall of boards
-// with no way to tell where one space ended and the next began.
-const OPEN_SPACES_STORAGE_KEY = "tasksSidebarOpenSpaces";
-
-function loadOpenSpaceIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem(OPEN_SPACES_STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? new Set(parsed) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
 interface SearchHit {
   id: string;
   title: string;
   boardName: string;
   spaceName: string;
+  spaceColor: string | null;
 }
+
+// A space's colour tints its search rows the same way it tinted the old
+// sidebar tree: a faint background, with the icon and name in the colour.
+const tint = (color: string | null) => (color ? { backgroundColor: `${color}1A` } : undefined);
 
 const SEARCH_MIN_CHARS = 2;
 // Spaces and boards come from the already-loaded sidebar data, so there's
@@ -170,373 +140,6 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
-function BoardRow({ item }: { item: BoardWithCount }) {
-  const location = useLocation();
-  const path = `/tasks/board/${item.board.id}`;
-  // Prefix match, so the board stays highlighted on its /gantt view and
-  // while a task panel is open on top of it.
-  const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
-
-  return (
-    <Link
-      to={path}
-      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-        isActive
-          ? "bg-primary-superLight text-primary font-medium"
-          : "text-gray-600 hover:bg-gray-100"
-      }`}
-    >
-      <Layers className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-      <span className="flex-1 truncate">
-        {item.board.name}
-        {item.zoneName && <span className="text-xs text-gray-400"> ({item.zoneName})</span>}
-      </span>
-      <CountBadge count={item.openCount} />
-    </Link>
-  );
-}
-
-function AddBoardInline({
-  spaceId,
-  folderId,
-  projectId,
-  onDone,
-}: {
-  spaceId: string;
-  folderId: string | null;
-  projectId: string | null;
-  onDone: () => void;
-}) {
-  const { createBoard, creatingBoard } = useCreateTaskEntities();
-  const { createZone, creatingZone } = useCreateZone();
-  const zones = useProjectZoneOptions(projectId);
-  const [name, setName] = useState("");
-  const [step, setStep] = useState<"name" | "zone">("name");
-  const [addingZone, setAddingZone] = useState(false);
-  const [newZoneName, setNewZoneName] = useState("");
-
-  const finish = async (zoneId: string | null) => {
-    await createBoard({ spaceId, folderId, name: name.trim(), zoneId });
-    onDone();
-  };
-
-  const submitName = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return onDone();
-    // A project-type space always gets asked which zone — including when
-    // it has none yet, since "no zones" should offer adding one, not
-    // silently create a zoneless board.
-    if (projectId) {
-      setStep("zone");
-    } else {
-      finish(null);
-    }
-  };
-
-  const submitNewZone = async () => {
-    const trimmed = newZoneName.trim();
-    if (!trimmed || !projectId) return setAddingZone(false);
-    const zone = await createZone({ projectId, name: trimmed });
-    await finish(zone.id);
-  };
-
-  if (step === "zone") {
-    return (
-      <div className="px-2 py-1.5">
-        <div className="mb-1 text-xs text-gray-500">
-          {zones.length === 0
-            ? `لا توجد مناطق لهذا المشروع بعد. أي منطقة تريد ربط "${name.trim()}" بها؟`
-            : `أي منطقة تريد ربط "${name.trim()}" بها؟`}
-        </div>
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            onClick={() => finish(null)}
-            disabled={creatingBoard}
-            className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-200"
-          >
-            بدون منطقة
-          </button>
-          {zones.map((z) => (
-            <button
-              key={z.id}
-              onClick={() => finish(z.id)}
-              disabled={creatingBoard}
-              className="rounded-full bg-primary-superLight px-2.5 py-1 text-xs text-primary hover:bg-primary/20"
-            >
-              {z.name}
-            </button>
-          ))}
-          {!addingZone && (
-            <button
-              onClick={() => setAddingZone(true)}
-              className="flex items-center gap-0.5 rounded-full border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
-            >
-              <Plus className="h-3 w-3" />
-              منطقة جديدة
-            </button>
-          )}
-        </div>
-        {addingZone && (
-          <input
-            autoFocus
-            value={newZoneName}
-            onChange={(e) => setNewZoneName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitNewZone();
-              if (e.key === "Escape") setAddingZone(false);
-            }}
-            onBlur={submitNewZone}
-            disabled={creatingZone || creatingBoard}
-            placeholder="اسم المنطقة الجديدة..."
-            className="mt-1.5 w-full rounded-md border border-gray-200 px-2 py-1 text-xs outline-none"
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1 px-2 py-1">
-      <Layers className="h-3.5 w-3.5 shrink-0 text-gray-300" />
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submitName();
-          if (e.key === "Escape") onDone();
-        }}
-        onBlur={submitName}
-        placeholder="اسم اللوحة..."
-        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-      />
-    </div>
-  );
-}
-
-function AddFolderInline({ spaceId, onDone }: { spaceId: string; onDone: () => void }) {
-  const { createFolder } = useCreateTaskEntities();
-  const [name, setName] = useState("");
-
-  const submit = async () => {
-    const trimmed = name.trim();
-    if (!trimmed) return onDone();
-    await createFolder({ spaceId, name: trimmed });
-    onDone();
-  };
-
-  return (
-    <div className="flex items-center gap-2 px-2 py-1">
-      <Folder className="h-3.5 w-3.5 shrink-0 text-gray-300" />
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
-          if (e.key === "Escape") onDone();
-        }}
-        onBlur={submit}
-        placeholder="اسم المجلد..."
-        className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-      />
-    </div>
-  );
-}
-
-function FolderSection({
-  spaceId,
-  projectId,
-  folderNode,
-}: {
-  spaceId: string;
-  projectId: string | null;
-  folderNode: FolderNode;
-}) {
-  const [isOpen, setIsOpen] = useState(true);
-  const [addingBoard, setAddingBoard] = useState(false);
-  const spaceCaps = useSpaceCaps(spaceId);
-  const openCount = folderNode.boards.reduce((sum, b) => sum + b.openCount, 0);
-
-  return (
-    <div className="group/folder">
-      <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500">
-        <button
-          onClick={() => setIsOpen((v) => !v)}
-          className="flex flex-1 items-center gap-2 overflow-hidden text-right"
-        >
-          <ChevronDown
-            className={`h-3 w-3 shrink-0 text-gray-400 transition-transform ${
-              isOpen ? "" : "-rotate-90"
-            }`}
-          />
-          <Folder className="h-3.5 w-3.5 shrink-0" />
-          <span className="flex-1 truncate">{folderNode.folder.name}</span>
-        </button>
-        <CountBadge count={openCount} />
-        {spaceCaps.create && (
-          <button
-            onClick={() => {
-              setIsOpen(true);
-              setAddingBoard(true);
-            }}
-            className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/folder:opacity-100"
-            title="إضافة لوحة"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-      {isOpen && (
-        <div className="mr-4 space-y-0.5">
-          {addingBoard && (
-            <AddBoardInline
-              spaceId={spaceId}
-              folderId={folderNode.folder.id}
-              projectId={projectId}
-              onDone={() => setAddingBoard(false)}
-            />
-          )}
-          {folderNode.boards.map((b) => (
-            <BoardRow key={b.board.id} item={b} />
-          ))}
-          {folderNode.boards.length === 0 && !addingBoard && (
-            <div className="px-2 py-1 text-xs text-gray-400">لا توجد لوحات</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SpaceSection({
-  node,
-  isOpen,
-  onToggle,
-}: {
-  node: SpaceNode;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [addMode, setAddMode] = useState<"board" | "folder" | null>(null);
-  const spaceCaps = useSpaceCaps(node.space.id);
-  const addMenuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(addMenuRef, () => setAddMenuOpen(false));
-  const Icon = SPACE_TYPE_ICONS[node.space.space_type];
-  const totalOpen =
-    node.boards.reduce((sum, b) => sum + b.openCount, 0) +
-    node.folders.reduce(
-      (sum, f) => sum + f.boards.reduce((s, b) => s + b.openCount, 0),
-      0,
-    );
-
-  const color = node.space.color;
-
-  return (
-    <div className="group/space">
-      <div
-        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-gray-800 ${color ? "" : "hover:bg-gray-100"}`}
-        style={color ? { backgroundColor: `${color}1A` } : undefined}
-      >
-        <button
-          onClick={onToggle}
-          className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-          title={isOpen ? "طي" : "توسيع"}
-        >
-          <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "" : "-rotate-90"}`}
-          />
-        </button>
-        <Link
-          to={`/tasks/space/${node.space.id}`}
-          className="flex flex-1 items-center gap-2 overflow-hidden text-right hover:underline"
-          title="عرض كل مهام المساحة"
-        >
-          <Icon className="h-4 w-4 shrink-0 text-gray-500" style={color ? { color } : undefined} />
-          <span className="flex-1 truncate text-right" style={color ? { color } : undefined}>
-            {node.space.name}
-          </span>
-        </Link>
-        <CountBadge count={totalOpen} />
-        {spaceCaps.create && (
-        <div ref={addMenuRef} className="relative shrink-0">
-          <button
-            onClick={() => {
-              if (!isOpen) onToggle();
-              setAddMenuOpen((v) => !v);
-            }}
-            className="rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
-            title="إضافة"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-          {addMenuOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 w-32 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-              <button
-                onClick={() => {
-                  setAddMode("board");
-                  setAddMenuOpen(false);
-                }}
-                className="block w-full px-3 py-1.5 text-right text-xs hover:bg-gray-50"
-              >
-                لوحة جديدة
-              </button>
-              <button
-                onClick={() => {
-                  setAddMode("folder");
-                  setAddMenuOpen(false);
-                }}
-                className="block w-full px-3 py-1.5 text-right text-xs hover:bg-gray-50"
-              >
-                مجلد جديد
-              </button>
-            </div>
-          )}
-        </div>
-        )}
-        {spaceCaps.manage && (
-          <Link
-            to={`/tasks/space/${node.space.id}/settings`}
-            className="shrink-0 rounded p-0.5 text-gray-300 opacity-0 hover:bg-gray-200 hover:text-gray-600 group-hover/space:opacity-100"
-            title="إعدادات المساحة"
-          >
-            <Settings className="h-3.5 w-3.5" />
-          </Link>
-        )}
-      </div>
-
-      {isOpen && (
-        <div className="mr-5 space-y-0.5 border-r border-gray-100 pr-2">
-          {addMode === "folder" && <AddFolderInline spaceId={node.space.id} onDone={() => setAddMode(null)} />}
-          {node.folders.map((folderNode) => (
-            <FolderSection
-              key={folderNode.folder.id}
-              spaceId={node.space.id}
-              projectId={node.space.project_id}
-              folderNode={folderNode}
-            />
-          ))}
-          {addMode === "board" && (
-            <AddBoardInline
-              spaceId={node.space.id}
-              folderId={null}
-              projectId={node.space.project_id}
-              onDone={() => setAddMode(null)}
-            />
-          )}
-          {node.boards.map((b) => (
-            <BoardRow key={b.board.id} item={b} />
-          ))}
-          {node.folders.length === 0 && node.boards.length === 0 && addMode === null && (
-            <div className="px-2 py-1 text-xs text-gray-400">لا توجد لوحات</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 const TasksLayoutInner = () => {
   const { isCollapsed, toggle } = useSidebar();
   const { data, loading } = useTasksSidebar();
@@ -548,29 +151,6 @@ const TasksLayoutInner = () => {
   const navigate = useNavigate();
   const [showNewSpace, setShowNewSpace] = useState(false);
 
-  const [openSpaceIds, setOpenSpaceIds] = useState<Set<string>>(loadOpenSpaceIds);
-  useEffect(() => {
-    try {
-      localStorage.setItem(OPEN_SPACES_STORAGE_KEY, JSON.stringify(Array.from(openSpaceIds)));
-    } catch {
-      // private window / storage blocked — collapse state just won't persist
-    }
-  }, [openSpaceIds]);
-  const toggleSpace = (spaceId: string) => {
-    setOpenSpaceIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(spaceId)) next.delete(spaceId);
-      else next.add(spaceId);
-      return next;
-    });
-  };
-  const allSpaceIds = useMemo(() => {
-    if (!data) return [];
-    return SPACE_TYPE_ORDER.flatMap((type) => data.spacesByType[type].map((n) => n.space.id));
-  }, [data]);
-  const allSpacesOpen = allSpaceIds.length > 0 && allSpaceIds.every((id) => openSpaceIds.has(id));
-  const toggleAllSpaces = () => setOpenSpaceIds(allSpacesOpen ? new Set() : new Set(allSpaceIds));
-
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -579,7 +159,7 @@ const TasksLayoutInner = () => {
   // board_id -> { boardName, spaceName }, flattened once per sidebar fetch,
   // used only to decorate search hits (which come back as bare rows).
   const boardContext = useMemo(() => {
-    const map = new Map<string, { boardName: string; spaceName: string }>();
+    const map = new Map<string, { boardName: string; spaceName: string; spaceColor: string | null }>();
     if (!data) return map;
     for (const nodes of Object.values(data.spacesByType)) {
       for (const node of nodes) {
@@ -591,6 +171,7 @@ const TasksLayoutInner = () => {
           map.set(b.board.id, {
             boardName: b.board.name,
             spaceName: node.space.name,
+            spaceColor: node.space.color,
           });
         }
       }
@@ -627,6 +208,7 @@ const TasksLayoutInner = () => {
             title: row.title,
             boardName: boardContext.get(row.board_id)?.boardName ?? "",
             spaceName: boardContext.get(row.board_id)?.spaceName ?? "",
+            spaceColor: boardContext.get(row.board_id)?.spaceColor ?? null,
           })),
         );
       }
@@ -653,70 +235,49 @@ const TasksLayoutInner = () => {
     navigate(path);
   };
 
-  const spaceGroups = data
-    ? SPACE_TYPE_ORDER.map((type) => ({
-        type,
-        nodes: data.spacesByType[type],
-      })).filter((g) => g.nodes.length > 0)
-    : [];
-
   if (isCollapsed) {
     return (
       <div className="flex h-[calc(100vh-64px)] bg-gray-50">
         <aside className="fixed right-0 top-16 bottom-0 flex w-20 flex-col items-center gap-2 border-l border-gray-200 bg-white py-4">
-          <button
-            onClick={toggle}
-            className="rounded-full p-2 hover:bg-gray-100"
-            title="توسيع القائمة"
-          >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
-          </button>
-          <Link
-            to="/tasks"
-            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-            title="المهام"
-          >
-            <ListTodo className="h-5 w-5" />
-          </Link>
-          <Link
-            to="/tasks/my-work"
-            className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-            title="أعمالي"
-          >
-            <Users className="h-5 w-5" />
-            {!!data?.myWorkCount && (
-              <span className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
-            )}
-          </Link>
-          <Link
-            to="/tasks/by-assignee"
-            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-            title="حسب الموظف"
-          >
-            <UserCog className="h-5 w-5" />
-          </Link>
-          <Link
-            to="/tasks/by-type"
-            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-            title="حسب نوع المهمة"
-          >
-            <Shapes className="h-5 w-5" />
-          </Link>
-          <Link
-            to="/tasks/by-project"
-            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-            title="حسب المشروع"
-          >
-            <FolderKanban className="h-5 w-5" />
-          </Link>
-          {canSeePerformance && (
-            <Link
-              to="/tasks/performance"
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-              title="أداء المهام"
-            >
-              <Trophy className="h-5 w-5" />
+          <Tooltip label="توسيع القائمة" side="left">
+            <button onClick={toggle} className="rounded-full p-2 hover:bg-gray-100">
+              <ChevronLeft className="h-5 w-5 text-gray-600" />
+            </button>
+          </Tooltip>
+          <Tooltip label="المهام" side="left">
+            <Link to="/tasks" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <ListTodo className="h-5 w-5" />
             </Link>
+          </Tooltip>
+          <Tooltip label="أعمالي" side="left">
+            <Link to="/tasks/my-work" className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <Users className="h-5 w-5" />
+              {!!data?.myWorkCount && (
+                <span className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
+              )}
+            </Link>
+          </Tooltip>
+          <Tooltip label="حسب الموظف" side="left">
+            <Link to="/tasks/by-assignee" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <UserCog className="h-5 w-5" />
+            </Link>
+          </Tooltip>
+          <Tooltip label="حسب نوع المهمة" side="left">
+            <Link to="/tasks/by-type" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <Shapes className="h-5 w-5" />
+            </Link>
+          </Tooltip>
+          <Tooltip label="حسب المشروع" side="left">
+            <Link to="/tasks/by-project" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <FolderKanban className="h-5 w-5" />
+            </Link>
+          </Tooltip>
+          {canSeePerformance && (
+            <Tooltip label="أداء المهام" side="left">
+              <Link to="/tasks/performance" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                <Trophy className="h-5 w-5" />
+              </Link>
+            </Tooltip>
           )}
         </aside>
         <main className="mr-20 flex-1 overflow-y-auto scrollbar-hide">
@@ -785,11 +346,20 @@ const TasksLayoutInner = () => {
                           <button
                             key={`space-${node.space.id}`}
                             onClick={() => goTo(`/tasks/space/${node.space.id}`)}
-                            className="flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-right hover:bg-gray-50"
+                            style={tint(node.space.color)}
+                            className={`flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-right ${node.space.color ? "" : "hover:bg-gray-50"}`}
                           >
-                            <SpaceIcon className="h-4 w-4 shrink-0 text-gray-400" />
+                            <SpaceIcon
+                              className="h-4 w-4 shrink-0 text-gray-400"
+                              style={node.space.color ? { color: node.space.color } : undefined}
+                            />
                             <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-                              <span className="w-full truncate text-sm font-medium text-gray-800">{node.space.name}</span>
+                              <span
+                                className="w-full truncate text-sm font-medium text-gray-800"
+                                style={node.space.color ? { color: node.space.color } : undefined}
+                              >
+                                {node.space.name}
+                              </span>
                               <span className="w-full truncate text-xs text-gray-400">
                                 {SPACE_TYPE_LABELS[node.space.space_type]}
                                 {showProject && ` · ${node.projectName}`}
@@ -807,15 +377,24 @@ const TasksLayoutInner = () => {
                         <button
                           key={`board-${board.board.id}`}
                           onClick={() => goTo(`/tasks/board/${board.board.id}`)}
-                          className="flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-right hover:bg-gray-50"
+                          style={tint(space.space.color)}
+                          className={`flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-right ${space.space.color ? "" : "hover:bg-gray-50"}`}
                         >
-                          <Layers className="h-4 w-4 shrink-0 text-gray-400" />
+                          <Layers
+                            className="h-4 w-4 shrink-0 text-gray-400"
+                            style={space.space.color ? { color: space.space.color } : undefined}
+                          />
                           <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
                             <span className="w-full truncate text-sm font-medium text-gray-800">
                               {board.board.name}
                               {board.zoneName && <span className="text-xs font-normal text-gray-400"> ({board.zoneName})</span>}
                             </span>
-                            <span className="w-full truncate text-xs text-gray-400">{space.space.name}</span>
+                            <span
+                              className="w-full truncate text-xs text-gray-400"
+                              style={space.space.color ? { color: space.space.color } : undefined}
+                            >
+                              {space.space.name}
+                            </span>
                           </span>
                         </button>
                       ))}
@@ -828,13 +407,16 @@ const TasksLayoutInner = () => {
                         <button
                           key={hit.id}
                           onClick={() => goTo(`/tasks/task/${hit.id}`)}
-                          className="flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-3 py-2 text-right hover:bg-gray-50 last:border-b-0"
+                          style={tint(hit.spaceColor)}
+                          className={`flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-3 py-2 text-right last:border-b-0 ${hit.spaceColor ? "" : "hover:bg-gray-50"}`}
                         >
                           <span className="truncate text-sm font-medium text-gray-800">
                             {hit.title}
                           </span>
                           <span className="truncate text-xs text-gray-400">
-                            {hit.spaceName} · {hit.boardName}
+                            <span style={hit.spaceColor ? { color: hit.spaceColor } : undefined}>{hit.spaceName}</span>
+                            {" · "}
+                            {hit.boardName}
                           </span>
                         </button>
                       ))}
@@ -855,63 +437,6 @@ const TasksLayoutInner = () => {
             </div>
           ) : (
             <>
-              {spaceGroups.length > 0 && (
-                <div className="flex items-center justify-between px-2">
-                  <span className="text-xs font-semibold text-gray-400">المساحات</span>
-                  <button
-                    onClick={toggleAllSpaces}
-                    className="text-xs text-gray-400 underline hover:text-gray-600"
-                  >
-                    {allSpacesOpen ? "طي الكل" : "توسيع الكل"}
-                  </button>
-                </div>
-              )}
-              {spaceGroups.map((group) => (
-                <div key={group.type} className="space-y-1.5">
-                  <div className="px-2 text-xs font-semibold text-gray-400">
-                    {SPACE_TYPE_LABELS[group.type]}
-                  </div>
-                  {group.nodes.map((node) => (
-                    <div
-                      key={node.space.id}
-                      className="border-b border-gray-50 pb-1.5 last:border-b-0 last:pb-0"
-                    >
-                      <SpaceSection
-                        node={node}
-                        isOpen={openSpaceIds.has(node.space.id)}
-                        onToggle={() => toggleSpace(node.space.id)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ))}
-              {spaceGroups.length === 0 && (
-                <div className="px-2 text-sm text-gray-400">
-                  لا توجد مساحات متاحة
-                </div>
-              )}
-
-              {canBrowse && !!data?.departments.length && (
-                <div className="space-y-1 border-t border-gray-100 pt-3">
-                  <div className="px-2 text-xs font-semibold text-gray-400">
-                    الأقسام
-                  </div>
-                  {data.departments.map((dept) => (
-                    <Link
-                      key={dept.id}
-                      to={`/tasks/department/${dept.id}`}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-                    >
-                      <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                      <span className="flex-1 truncate">
-                        {dept.name_ar ?? dept.name}
-                      </span>
-                      <CountBadge count={dept.openCount} />
-                    </Link>
-                  ))}
-                </div>
-              )}
-
               <div className="space-y-1 border-t border-gray-100 pt-3">
                 <Link
                   to="/tasks/my-work"

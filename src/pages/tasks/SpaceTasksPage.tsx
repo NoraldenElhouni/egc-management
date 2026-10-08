@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Eye, EyeOff, Loader2, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, Eye, EyeOff, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
@@ -21,6 +21,7 @@ import {
   type DirectorySortState,
 } from "../../components/tasks/board/directoryFilters";
 import type { TaskRow } from "../../hooks/tasks/useTaskBoard";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // "All tasks in this space" — same full inline-edit/filter/sort shape as
 // AssigneeViewPage.tsx/TaskTypeViewPage.tsx/ProjectViewPage.tsx, but
@@ -153,11 +154,7 @@ export default function SpaceTasksPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (error || !data) {

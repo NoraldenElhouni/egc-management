@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Loader2, FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
+import { FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
 import BoardSwitcher from "../../components/tasks/board/BoardSwitcher";
@@ -15,6 +15,7 @@ import PushToBoardsModal from "../../components/tasks/templates/PushToBoardsModa
 import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks/useTemplateSync";
 import { NO_CAPS, useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { BoardAccessProvider } from "../../components/tasks/BoardAccessContext";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
 // Also the template editor: a template is a board with is_template set
@@ -76,11 +77,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   );
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (error || !data) {

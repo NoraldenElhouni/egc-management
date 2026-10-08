@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Loader2, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
 import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
@@ -19,6 +19,7 @@ import {
   type DirectorySortState,
 } from "../../components/tasks/board/directoryFilters";
 import type { TaskRow } from "../../hooks/tasks/useTaskBoard";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // Project view — same company-wide/cross-space scope and full inline
 // edit as AssigneeViewPage.tsx/TaskTypeViewPage.tsx, grouped by project
@@ -110,11 +111,7 @@ export default function ProjectViewPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (error || !data) {

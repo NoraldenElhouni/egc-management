@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Loader2, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
 import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
@@ -21,6 +21,7 @@ import {
 } from "../../components/tasks/board/directoryFilters";
 import type { TaskRow } from "../../hooks/tasks/useTaskBoard";
 import type { AssignablePerson } from "../../hooks/tasks/useAssignablePeople";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // Assignee view — company-wide, cross-space (build plan Part 7's
 // D6/D7 pattern extended to full inline edit, see task-module-build-plan
@@ -110,11 +111,7 @@ export default function AssigneeViewPage() {
   const collapseAll = () => setCollapsedKeys(new Set(groups.map((g) => g.key)));
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (error || !data) {

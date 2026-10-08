@@ -1,6 +1,7 @@
-import { Loader2, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { Outlet, useParams } from "react-router-dom";
 import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
+import { TaskListPageSkeleton } from "./TasksSkeletons";
 
 // Route guards for the tasks module, modelled on auth/RequirePermission.tsx
 // (layout routes; nest to AND). The module's outer guard is still
@@ -10,11 +11,7 @@ import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
 // UI only. The database refuses the same writes regardless.
 
 function Neutral() {
-  return (
-    <div className="flex h-full items-center justify-center text-gray-400">
-      <Loader2 className="h-5 w-5 animate-spin" />
-    </div>
-  );
+  return <TaskListPageSkeleton />;
 }
 
 function Denied() {

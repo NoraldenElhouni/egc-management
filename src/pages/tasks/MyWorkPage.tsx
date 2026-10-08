@@ -4,6 +4,7 @@ import { Loader2, CheckCheck } from "lucide-react";
 import { useMyWork, type MyWorkTask } from "../../hooks/tasks/useMyWork";
 import Badge, { type BadgeVariant } from "../../components/ui/Badge";
 import type { Priority } from "../../hooks/tasks/useTaskBoard";
+import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // D7 — My work (build plan Part 7). See useMyWork.ts's header for why
 // grouping is by source_template_task_id rather than project/board.
@@ -39,11 +40,7 @@ export default function MyWorkPage() {
   const [pendingGroupKey, setPendingGroupKey] = useState<string | null>(null);
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
+    return <TaskListPageSkeleton />;
   }
 
   if (error || !data) {

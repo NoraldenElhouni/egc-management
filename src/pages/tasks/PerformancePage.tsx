@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ChevronDown, ChevronUp, Clock, Info, Loader2, Target, Trophy, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Clock, Info, Target, Trophy, Zap } from "lucide-react";
 import KpiCard from "../../components/ui/KpiCard";
 import Badge from "../../components/ui/Badge";
 import Dialog from "../../components/ui/Dialog";
@@ -17,6 +17,7 @@ import {
   type PerformanceTaskRow,
   type PersonTypeFilter,
 } from "../../hooks/tasks/usePerformance";
+import { PerformancePageSkeleton, RowsSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // Task performance dashboard (admin). All scoring is done in SQL
 // (tasks/migrations/2026-10-08_task_performance.sql); this page only
@@ -139,9 +140,7 @@ function PersonDrillDown({
             {num(row.points)} من {num(row.max_points)} نقطة ممكنة · كفاءة {pct(row.efficiency)}
           </p>
           {isPending ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-            </div>
+            <RowsSkeleton rows={5} />
           ) : error ? (
             <div className="text-sm text-red-600">{(error as Error).message}</div>
           ) : (
@@ -336,9 +335,7 @@ export default function PerformancePage() {
           تعذّر تحميل البيانات: {(error as Error).message}
         </div>
       ) : isPending ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-        </div>
+        <PerformancePageSkeleton />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
