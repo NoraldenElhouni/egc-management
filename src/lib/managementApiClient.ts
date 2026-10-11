@@ -2,7 +2,7 @@ import { getUserData } from "./userStorage";
 
 const MANAGEMENT_API_URL =
   (import.meta.env.VITE_MANAGEMENT_API_URL as string | undefined) ??
-  "http://102.203.200.52";
+  "https://pdf-service.engroup.ly";
 
 /**
  * fetch() wrapper for the management/reporting backend at MANAGEMENT_API_URL.
