@@ -1,9 +1,10 @@
 import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { Users, UserCog, Shapes, Building2, FolderKanban, Building, User, Search, X, Layers } from "lucide-react";
+import { Users, UserCog, Shapes, Building2, FolderKanban, Building, User, Search, X, Layers, Plus, Settings } from "lucide-react";
 import { useTasksSidebar, type BoardWithCount, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
 import { matchSpaceNode } from "../../hooks/tasks/tasksSidebarSearch";
-import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
+import { useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
+import NewBoardModal from "../../components/sidebar/NewBoardModal";
 import { SpaceCardsPageSkeleton } from "../../components/tasks/TasksSkeletons";
 
 // The /tasks index route — what shows before a space/board is picked.
@@ -78,14 +79,20 @@ function SpaceCard({ node, matchedBoards }: { node: SpaceNode; matchedBoards?: B
     node.folders.reduce((n, f) => n + f.boards.reduce((s, b) => s + b.openCount, 0), 0);
   // Only worth a line of its own when it says something the title doesn't.
   const showProject = !!node.projectName && node.projectName !== node.space.name;
+  // With the space tree gone from the sidebar, the card is where a space's
+  // settings are opened and boards are added.
+  const caps = useSpaceCaps(node.space.id);
+  const [showNewBoard, setShowNewBoard] = useState(false);
+  const hasActions = caps.create || caps.manage;
 
   return (
     <div>
+      <div className="relative">
       <Link
         to={`/tasks/space/${node.space.id}`}
         className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-primary/30 hover:bg-primary-superLight/40"
       >
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${hasActions ? "pl-16" : ""}`}>
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-superLight text-primary"
             style={node.space.color ? { backgroundColor: `${node.space.color}1A`, color: node.space.color } : undefined}
@@ -104,6 +111,33 @@ function SpaceCard({ node, matchedBoards }: { node: SpaceNode; matchedBoards?: B
           <CountBadge count={openCount} />
         </div>
       </Link>
+      {/* Siblings of the link, not children: a button can't live inside a link. */}
+      {hasActions && (
+        <div className="absolute left-2 top-2 flex items-center gap-0.5">
+          {caps.create && (
+            <button
+              onClick={() => setShowNewBoard(true)}
+              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              title="لوحة جديدة"
+              aria-label="لوحة جديدة"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
+          {caps.manage && (
+            <Link
+              to={`/tasks/space/${node.space.id}/settings`}
+              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              title="إعدادات المساحة"
+              aria-label="إعدادات المساحة"
+            >
+              <Settings className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
+      )}
+      </div>
+      {showNewBoard && <NewBoardModal spaceId={node.space.id} onClose={() => setShowNewBoard(false)} />}
       {/* Siblings of the card link, not children: a link can't nest a link. */}
       {!!matchedBoards?.length && (
         <div className="mr-4 mt-1 space-y-0.5 border-r border-gray-100 pr-2">

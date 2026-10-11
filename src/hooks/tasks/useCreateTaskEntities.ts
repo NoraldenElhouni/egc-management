@@ -20,7 +20,13 @@ export function useCreateTaskEntities() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const tasksDb = supabase.schema("tasks");
-  const invalidateSidebar = () => queryClient.invalidateQueries({ queryKey: ["tasks-sidebar"] });
+  // The sidebar data feeds the Tasks home cards and search; the directory
+  // is what the space view lists its boards from — both must see a new board.
+  const invalidateSidebar = () => {
+    queryClient.invalidateQueries({ queryKey: ["tasks-sidebar"] });
+    queryClient.invalidateQueries({ queryKey: ["task-directory"] });
+    queryClient.invalidateQueries({ queryKey: ["space-settings"] });
+  };
 
   const createSpace = useMutation({
     mutationFn: async (input: {
@@ -57,8 +63,13 @@ export function useCreateTaskEntities() {
 
   const createFolder = useMutation({
     mutationFn: async ({ spaceId, name }: { spaceId: string; name: string }) => {
-      const { error } = await tasksDb.from("folders").insert({ space_id: spaceId, name, created_by: user?.id ?? null });
+      const { data, error } = await tasksDb
+        .from("folders")
+        .insert({ space_id: spaceId, name, created_by: user?.id ?? null })
+        .select("id")
+        .single();
       if (error) throw error;
+      return data.id;
     },
     onSuccess: invalidateSidebar,
   });
@@ -75,14 +86,19 @@ export function useCreateTaskEntities() {
       name: string;
       zoneId: string | null;
     }) => {
-      const { error } = await tasksDb.from("boards").insert({
-        space_id: spaceId,
-        folder_id: folderId,
-        name,
-        zone_id: zoneId,
-        created_by: user?.id ?? null,
-      });
+      const { data, error } = await tasksDb
+        .from("boards")
+        .insert({
+          space_id: spaceId,
+          folder_id: folderId,
+          name,
+          zone_id: zoneId,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      return data.id;
     },
     onSuccess: invalidateSidebar,
   });

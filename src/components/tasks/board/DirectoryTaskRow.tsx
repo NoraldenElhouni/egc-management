@@ -130,6 +130,14 @@ export default function DirectoryTaskRow({
   const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
   const tags = tagsByTask.get(task.id) ?? [];
 
+  // The status menu offers this task's own set — the statuses of its board —
+  // not every status the page loaded (a space can mix sets). The current
+  // status picks the set, since a task always sits in its board's set.
+  const currentStatus = statuses.find((s) => s.id === task.status_id);
+  const rowStatuses = currentStatus
+    ? statuses.filter((s) => s.status_set_id === currentStatus.status_set_id)
+    : statuses;
+
   // What I may do to THIS task: my rights in its space, plus an assignee's own.
   const { access, userId: myUserId } = useMyTaskAccess();
   const rowCaps = taskRowCaps(
@@ -233,7 +241,7 @@ export default function DirectoryTaskRow({
       )}
 
       <StatusCell
-        statuses={statuses}
+        statuses={rowStatuses}
         currentStatusId={task.status_id}
         onChange={(statusId) => onChangeStatus(task.id, statusId)}
         readOnly={!rowCaps.status}

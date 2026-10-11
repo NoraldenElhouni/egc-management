@@ -134,11 +134,24 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         : { data: [], error: null };
       if (tasksError) throw tasksError;
 
-      const statusIds = Array.from(new Set((allTasks ?? []).map((t) => t.status_id)));
-      const { data: statusRows, error: statusesError } = statusIds.length
-        ? await tasksDb.from("statuses").select("*").in("id", statusIds)
+      // Every status of every set these tasks use — not only the statuses
+      // some task happens to be in right now. Otherwise a space whose tasks
+      // all sit in one status offered that single status in the dropdown.
+      // A row's own menu is narrowed to its board's set by DirectoryTaskRow
+      // (statuses carry their status_set_id).
+      const usedStatusIds = Array.from(new Set((allTasks ?? []).map((t) => t.status_id)));
+      const { data: usedStatusRows, error: usedStatusesError } = usedStatusIds.length
+        ? await tasksDb.from("statuses").select("*").in("id", usedStatusIds)
         : { data: [], error: null };
-      if (statusesError) throw statusesError;
+      if (usedStatusesError) throw usedStatusesError;
+      const statusSetIds = Array.from(new Set((usedStatusRows ?? []).map((s) => s.status_set_id)));
+      const { data: setStatusRows, error: setStatusesError } = statusSetIds.length
+        ? await tasksDb.from("statuses").select("*").in("status_set_id", statusSetIds).order("sort_order", { ascending: true })
+        : { data: [], error: null };
+      if (setStatusesError) throw setStatusesError;
+      // Whole sets first; anything a task uses that isn't in them (it shouldn't happen) is kept too.
+      const statusRows = [...(setStatusRows ?? [])];
+      for (const s of usedStatusRows ?? []) if (!statusRows.some((r) => r.id === s.id)) statusRows.push(s);
 
       const tasks = allTasks ?? [];
       const taskIds = tasks.map((t) => t.id);
@@ -409,9 +422,9 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
 
   // Unlike useTaskBoard.ts's own createTask, this can't lean on
   // query.data.statuses to find the board's "not started" status —
-  // TaskDirectoryData.statuses only holds statuses actually used by
-  // tasks already fetched, which is empty or partial for a board with
-  // few or zero tasks. Resolves the board's own status set fresh instead
+  // TaskDirectoryData.statuses only holds the sets of tasks already
+  // fetched, which is nothing for a board with no tasks yet (and a space
+  // can mix sets). Resolves the board's own status set fresh instead
   // (same fallback chain resolveStatusSetId.ts already shares with
   // useTaskBoard.ts/useTaskDetail.ts).
   const createTask = useMutation({
