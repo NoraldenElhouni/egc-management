@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../../lib/adminSupabase";
+import { supabase } from "../../lib/supabaseClient";
 import { Employees } from "../../types/global.type";
 import { UserFormValues } from "../../types/schema/users.schema";
 
@@ -67,7 +68,7 @@ export const createEmployee = async (data: UserFormValues) => {
     return t === "" ? null : t;
   };
 
-  const uploaded_by = await supabaseAdmin.auth
+  const uploaded_by = await supabase.auth
     .getUser()
     .then(({ data }) => data.user?.id ?? null);
 

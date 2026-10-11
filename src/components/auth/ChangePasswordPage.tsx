@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock } from "lucide-react";
-import { supabaseAdmin } from "../../lib/adminSupabase";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function ChangePasswordPage() {
@@ -44,13 +43,13 @@ export default function ChangePasswordPage() {
       }
 
       // 1️⃣ Update Supabase auth password
-      const { error: authError } = await supabaseAdmin.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         password,
       });
       if (authError) throw authError;
 
       // 2️⃣ Update profile flag
-      const { data: auth } = await supabaseAdmin.auth.getUser();
+      const { data: auth } = await supabase.auth.getUser();
       const userId = auth.user?.id;
       if (!userId) throw new Error("No active session");
 
