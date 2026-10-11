@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { AlarmClock, CheckCircle2, CircleDashed, ListChecks, ListTodo, Loader, Lock, UserX } from "lucide-react";
+import { AlarmClock, CheckCircle2, CircleDashed, ListChecks, ListTodo, Loader, UserX } from "lucide-react";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
 import type { DirectoryFilterState } from "./directoryFilters";
 import { activeKpiKey, kpiFilters, type KpiKey } from "./spaceKpiFilters";
@@ -54,7 +54,7 @@ function KpiCard({
       disabled={disabled}
       aria-pressed={active}
       title={disabled ? undefined : active ? "إلغاء التصفية" : kpi.action}
-      className={`flex w-full items-center gap-3 rounded-xl border bg-white px-3 py-2.5 text-right shadow-sm transition ${
+      className={`flex w-full min-w-0 items-center gap-2.5 rounded-xl border bg-white px-2.5 py-2.5 text-right shadow-sm transition ${
         alert && !active ? "border-red-200" : "border-gray-100"
       } ${disabled ? "cursor-default opacity-70" : "cursor-pointer hover:shadow-md"}`}
       style={active ? { borderColor: kpi.tone, boxShadow: `0 0 0 1px ${kpi.tone}`, background: `${kpi.tone}0D` } : undefined}
@@ -69,8 +69,8 @@ function KpiCard({
         <div className="text-lg font-semibold leading-tight text-gray-900" style={alert ? { color: kpi.tone } : undefined}>
           {kpi.value}
         </div>
-        <div className="text-xs text-gray-500">{kpi.label}</div>
-        {kpi.hint && <div className="text-xs text-gray-400">{kpi.hint}</div>}
+        <div className="truncate text-xs text-gray-500">{kpi.label}</div>
+        {kpi.hint && <div className="truncate text-xs text-gray-400">{kpi.hint}</div>}
       </div>
     </button>
   );
@@ -101,7 +101,6 @@ export default function SpaceKpiStrip({
     let inProgress = 0;
     let overdue = 0;
     let unassigned = 0;
-    let blocked = 0;
     for (const t of data.tasks) {
       if (doneStatusIds.has(t.status_id)) done++;
       if (closedStatusIds.has(t.status_id)) continue;
@@ -110,7 +109,6 @@ export default function SpaceKpiStrip({
       if (inProgressStatusIds.has(t.status_id)) inProgress++;
       if (t.is_overdue) overdue++;
       if ((data.assigneesByTask.get(t.id) ?? []).length === 0) unassigned++;
-      if (data.blockedTaskIds.has(t.id)) blocked++;
     }
 
     const total = data.tasks.length;
@@ -191,23 +189,14 @@ export default function SpaceKpiStrip({
         count: unassigned,
         action: "عرض المهام غير المعينة",
       },
-      {
-        key: "blocked",
-        label: "محظورة",
-        value: String(blocked),
-        icon: <Lock className="h-4 w-4" />,
-        tone: "#6B7280",
-        raw: blocked,
-        count: blocked,
-        action: "عرض المهام المحظورة",
-      },
     ];
   }, [data]);
 
   const activeKey = useMemo(() => activeKpiKey(filters, data), [filters, data]);
 
+  // All seven cards on one row, whatever the width.
   return (
-    <div className="grid grid-cols-2 gap-2.5 border-b border-gray-100 px-6 py-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
+    <div className="grid grid-cols-7 gap-2 border-b border-gray-100 px-6 py-3">
       {kpis.map((kpi) => {
         const active = activeKey === kpi.key;
         return (
