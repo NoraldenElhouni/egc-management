@@ -1,6 +1,6 @@
 import { ElementType } from "react";
 
-type KpiTone = "indigo" | "green" | "amber" | "blue";
+type KpiTone = "indigo" | "green" | "amber" | "blue" | "red";
 
 interface KpiCardProps {
   label: string;
@@ -14,6 +14,7 @@ const toneMap: Record<KpiTone, string> = {
   green: "bg-green-50 text-green-600",
   amber: "bg-amber-50 text-amber-600",
   blue: "bg-blue-50 text-blue-600",
+  red: "bg-red-50 text-red-600",
 };
 
 const KpiCard = ({

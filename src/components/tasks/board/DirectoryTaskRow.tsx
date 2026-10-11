@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Link2, Lock, CheckCircle2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
@@ -88,6 +88,9 @@ interface DirectoryTaskRowProps {
   /** Both only read when showSource is set. */
   boardNamesById?: Map<string, string>;
   spaceNameByBoardId?: Map<string, string>;
+  /** Small extra marker right after the title (the space tour's "this
+   * week" / "updated" pills). */
+  titleBadge?: ReactNode;
   onOpenTask: (taskId: string) => void;
   onChangeStatus: (taskId: string, statusId: string) => void;
   onChangeTaskType: (taskId: string, taskTypeId: string) => void;
@@ -118,6 +121,7 @@ export default function DirectoryTaskRow({
   showCompleted = false,
   boardNamesById,
   spaceNameByBoardId,
+  titleBadge,
   onOpenTask,
   onChangeStatus,
   onChangeTaskType,
@@ -175,6 +179,7 @@ export default function DirectoryTaskRow({
           <button onClick={() => onOpenTask(task.id)} className="truncate text-sm text-gray-800 hover:underline">
             {task.title}
           </button>
+          {titleBadge}
 
           {tags.length > 0 && (
             <span

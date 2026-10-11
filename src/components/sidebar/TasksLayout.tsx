@@ -18,6 +18,7 @@ import {
   FileStack,
   Tag,
   Trophy,
+  LayoutDashboard,
   Plus,
   AlertTriangle,
   X,
@@ -148,6 +149,7 @@ const TasksLayoutInner = () => {
   // only make sense for someone who can see more than their own tasks.
   const canBrowse = !!access && (access.view_all || Object.keys(access.spaces).length > 0);
   const { can: canSeePerformance } = useCan("view_task_performance");
+  const { can: canSeeDashboard } = useCan("view_task_dashboard");
   const navigate = useNavigate();
   const [showNewSpace, setShowNewSpace] = useState(false);
 
@@ -272,6 +274,13 @@ const TasksLayoutInner = () => {
               <FolderKanban className="h-5 w-5" />
             </Link>
           </Tooltip>
+          {canSeeDashboard && (
+            <Tooltip label="لوحة المعلومات" side="left">
+              <Link to="/tasks/dashboard" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                <LayoutDashboard className="h-5 w-5" />
+              </Link>
+            </Tooltip>
+          )}
           {canSeePerformance && (
             <Tooltip label="أداء المهام" side="left">
               <Link to="/tasks/performance" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
@@ -469,6 +478,15 @@ const TasksLayoutInner = () => {
                   <span className="flex-1 truncate">حسب المشروع</span>
                 </Link>
                 </>)}
+                {canSeeDashboard && (
+                  <Link
+                    to="/tasks/dashboard"
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                  >
+                    <LayoutDashboard className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span className="flex-1 truncate">لوحة المعلومات</span>
+                  </Link>
+                )}
                 {canSeePerformance && (
                   <Link
                     to="/tasks/performance"

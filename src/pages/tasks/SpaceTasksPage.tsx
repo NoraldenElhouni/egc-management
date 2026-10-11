@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Plus, Search, Settings, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, Plus, Presentation, Search, Settings, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
@@ -11,6 +11,7 @@ import { activeKpiKey } from "../../components/tasks/board/spaceKpiFilters";
 import CollapseAllButtons from "../../components/tasks/board/CollapseAllButtons";
 import OverdueNotifyButton from "../../components/tasks/board/OverdueNotifyButton";
 import NewBoardModal from "../../components/sidebar/NewBoardModal";
+import SpaceTourDialog from "../../components/tasks/tour/SpaceTourDialog";
 import {
   countActiveFilters,
   createDefaultFilters,
@@ -33,6 +34,11 @@ import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 // sidebar's space name/icon (TasksLayout.tsx's SpaceSection — the small
 // chevron still just expands/collapses the inline board tree) and from
 // TasksPage.tsx's space cards.
+//
+// "جولة في المساحة" opens SpaceTourDialog: the same data as slides
+// (overdue, in progress, not started, unassigned, recently done). A task's
+// detail panel (this page's nested task/:taskId route, the <Outlet /> below)
+// opens on top of the tour — keep the Outlet AFTER the tour so it paints over it.
 
 interface BoardGroup {
   key: string;
@@ -71,7 +77,8 @@ function AddTaskRow({ onAdd }: { onAdd: (title: string) => void }) {
 }
 
 export default function SpaceTasksPage() {
-  const { spaceId } = useParams<{ spaceId: string }>();
+  // taskId is the nested detail panel's param, visible here too.
+  const { spaceId, taskId } = useParams<{ spaceId: string; taskId?: string }>();
   const navigate = useNavigate();
   const { data, loading, error, ...mutations } = useTaskDirectory({ spaceId });
   const { data: sidebarData } = useTasksSidebar();
@@ -84,6 +91,8 @@ export default function SpaceTasksPage() {
   const [sort, setSort] = useState<DirectorySortState>({ ...DEFAULT_SORT, groupSort: "order" });
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showNewBoard, setShowNewBoard] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const closeTour = useCallback(() => setShowTour(false), []);
   const searching = search.trim().length > 0;
 
   const spaceNode = useMemo(() => {
@@ -188,6 +197,14 @@ export default function SpaceTasksPage() {
           </div>
           <CollapseAllButtons onExpandAll={expandAll} onCollapseAll={collapseAll} searching={searching} />
           <OverdueNotifyButton visibleTasks={visibleTasks} data={data} filters={filters} searchTerm={search} />
+          <button
+            onClick={() => setShowTour(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            title="ملخص المساحة كشرائح: المتأخرة، قيد التنفيذ، لم تبدأ، غير المعينة، والمنجزة مؤخراً"
+          >
+            <Presentation className="h-3.5 w-3.5" />
+            جولة في المساحة
+          </button>
           {/* The space tree that used to hold these left the sidebar, so the
               space's own page is where boards are added and settings opened. */}
           {spaceCaps.create && (
@@ -325,6 +342,23 @@ export default function SpaceTasksPage() {
       </div>
 
       {showNewBoard && spaceId && <NewBoardModal spaceId={spaceId} onClose={() => setShowNewBoard(false)} />}
+
+      {showTour && (
+        <SpaceTourDialog
+          data={data}
+          spaceName={spaceNode?.space.name ?? "المساحة"}
+          spaceColor={spaceColor}
+          panelOpen={!!taskId}
+          onClose={closeTour}
+          onOpenTask={(id) => navigate(`/tasks/space/${spaceId}/task/${id}`)}
+          onChangeStatus={mutations.onChangeStatus}
+          onChangeTaskType={mutations.onChangeTaskType}
+          onChangePriority={mutations.onChangePriority}
+          onChangeStartDate={mutations.onChangeStartDate}
+          onChangeDueDate={mutations.onChangeDueDate}
+          onChangeAssignees={mutations.onChangeAssignees}
+        />
+      )}
 
       <Outlet />
     </div>
