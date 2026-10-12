@@ -2,6 +2,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { Lock } from "lucide-react";
 import Tooltip from "../../ui/Tooltip";
 import type { BarSpan } from "./ganttScale";
+import { addWorkingDays, workingDayOnOrAfter, workingDaysBetween } from "../board/workingDays";
 
 // One task's bar on the Gantt (TaskGantt.tsx). The page is dir="rtl", so
 // time runs right → left: a bar's RIGHT edge is its start date and its
@@ -12,6 +13,14 @@ import type { BarSpan } from "./ganttScale";
 // updates and no drag ghost image. The bar previews the drag locally and
 // only reports once, on release — the mutation behind onCommit is
 // optimistic, so the bar doesn't snap back while the save is in flight.
+//
+// On a real (calendar) board a task is a start plus a number of working
+// days (`scheduling` below): the drag snaps to working days (Friday is
+// skipped), a linked task can't be dragged before its predecessors end
+// (`earliestDay`), and what's reported is what the gesture changed —
+// move = new start (same days), right edge = new start and days, left
+// edge = new days. The server works out the due date and moves the
+// tasks linked after it. A summary (parent with subtasks) isn't draggable.
 
 export const ROW_H = 36;
 export const BAR_H = 20;
@@ -36,10 +45,55 @@ interface DragState {
 }
 
 /** Which DB dates to write, as day indexes — a key is only present when
- * that column should change. */
+ * that column should change. A scheduled bar reports durationDays
+ * (working days) instead of endDay. */
 export interface BarChange {
   startDay?: number;
   endDay?: number;
+  durationDays?: number;
+}
+
+/** A calendar board's task: start + working days, maybe linked. */
+export interface BarScheduling {
+  durationDays: number;
+  /** tasks.earliest_start as a day index; null = not linked. */
+  earliestDay: number | null;
+}
+
+interface ScheduledDrag {
+  startDay: number;
+  endDay: number;
+  durationDays: number;
+  /** The start was held back at earliestDay. */
+  clamped: boolean;
+}
+
+function applyScheduledDrag(span: BarSpan, sched: BarScheduling, mode: DragMode, delta: number): ScheduledDrag {
+  const floor = sched.earliestDay;
+  const clampStart = (day: number) => {
+    const snapped = workingDayOnOrAfter(day);
+    return floor !== null && snapped < floor ? { day: floor, clamped: true } : { day: snapped, clamped: false };
+  };
+  if (mode === "move") {
+    const { day, clamped } = clampStart(span.startDay + delta);
+    return { startDay: day, endDay: addWorkingDays(day, sched.durationDays), durationDays: sched.durationDays, clamped };
+  }
+  if (mode === "start") {
+    const { day, clamped } = clampStart(Math.min(span.startDay + delta, span.endDay));
+    const startDay = Math.min(day, span.endDay);
+    const durationDays = Math.max(1, workingDaysBetween(startDay, span.endDay));
+    return { startDay, endDay: addWorkingDays(startDay, durationDays), durationDays, clamped };
+  }
+  const durationDays = Math.max(1, workingDaysBetween(span.startDay, Math.max(span.endDay + delta, span.startDay)));
+  return { startDay: span.startDay, endDay: addWorkingDays(span.startDay, durationDays), durationDays, clamped: false };
+}
+
+function scheduledChange(span: BarSpan, sched: BarScheduling, mode: DragMode, next: ScheduledDrag): BarChange {
+  if (mode === "move") return next.startDay !== span.startDay ? { startDay: next.startDay } : {};
+  if (mode === "end") return next.durationDays !== sched.durationDays ? { durationDays: next.durationDays } : {};
+  return next.startDay !== span.startDay || next.durationDays !== sched.durationDays
+    ? { startDay: next.startDay, durationDays: next.durationDays }
+    : {};
 }
 
 function applyDrag(span: BarSpan, mode: DragMode, delta: number): { startDay: number; endDay: number } {
@@ -97,6 +151,14 @@ interface GanttBarProps {
   onCommit: (change: BarChange) => void;
   /** No edit rights: the bar can be clicked open but never dragged. */
   readOnly?: boolean;
+  /** Calendar boards: drag in working days, respecting links. */
+  scheduling?: BarScheduling | null;
+  /** A parent with subtasks: drawn as a bracket spanning them, not draggable. */
+  summary?: boolean;
+  /** "لا يمكن أن تبدأ قبل …" for a drag held back by the task's links. */
+  describeFloor?: (day: number) => string;
+  /** Hovering the bar highlights its chain of links. */
+  onHover?: (hovering: boolean) => void;
 }
 
 export default function GanttBar({
@@ -112,13 +174,22 @@ export default function GanttBar({
   labelInset,
   onOpen,
   onCommit,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
+  scheduling = null,
+  summary = false,
+  describeFloor,
+  onHover,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const readOnly = readOnlyProp || summary;
 
-  const view = drag ? applyDrag(span, drag.mode, drag.delta) : span;
+  const scheduled = drag && scheduling ? applyScheduledDrag(span, scheduling, drag.mode, drag.delta) : null;
+  const view = scheduled ?? (drag ? applyDrag(span, drag.mode, drag.delta) : span);
   const isMilestone = span.kind === "milestone";
+  const hoverHandlers = onHover
+    ? { onMouseEnter: () => onHover(true), onMouseLeave: () => onHover(false) }
+    : {};
 
   const begin = (mode: DragMode) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return;
@@ -149,11 +220,17 @@ export default function GanttBar({
       return;
     }
     if (finished.delta === 0) return;
-    const change = toChange(span, finished.mode, applyDrag(span, finished.mode, finished.delta));
+    const change = scheduling
+      ? scheduledChange(span, scheduling, finished.mode, applyScheduledDrag(span, scheduling, finished.mode, finished.delta))
+      : toChange(span, finished.mode, applyDrag(span, finished.mode, finished.delta));
     if (Object.keys(change).length > 0) onCommit(change);
   };
 
-  const dragLabel = drag?.moved ? describe(view.startDay, view.endDay) : null;
+  const dragLabel = drag?.moved
+    ? scheduled?.clamped && scheduling?.earliestDay != null && describeFloor
+      ? describeFloor(scheduling.earliestDay)
+      : describe(view.startDay, view.endDay)
+    : null;
   const tooltip = drag ? null : `${title} · ${describe(span.startDay, span.endDay)}`;
   const pointerHandlers = {
     onPointerMove,
@@ -161,10 +238,37 @@ export default function GanttBar({
     onPointerCancel: () => setDrag(null),
   };
   const dragLabelEl = dragLabel && (
-    <span className="pointer-events-none absolute -top-5 right-0 z-10 whitespace-nowrap rounded bg-gray-800 px-1.5 py-0.5 text-[10px] text-white">
+    <span
+      className={`pointer-events-none absolute -top-5 right-0 z-10 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] text-white ${
+        scheduled?.clamped ? "bg-red-600" : "bg-gray-800"
+      }`}
+    >
       {dragLabel}
     </span>
   );
+
+  if (summary && !isMilestone) {
+    // A parent's span over its subtasks: a bracket, clickable, not draggable.
+    const right = (span.startDay - rangeStart) * pxPerDay;
+    const width = Math.max((span.endDay - span.startDay + 1) * pxPerDay, MIN_BAR_W);
+    return (
+      <>
+        <div
+          {...hoverHandlers}
+          onClick={onOpen}
+          className={`absolute cursor-pointer ${done ? "opacity-50" : ""}`}
+          style={{ right, width, top: ROW_H / 2 - 6, height: 12 }}
+        >
+          <Tooltip label={`${title} · ${describe(span.startDay, span.endDay)} · محسوبة من المهام الفرعية`} className="h-full w-full">
+            <span className="block h-full w-full border-x-[3px] border-gray-700">
+              <span className="mt-[3px] block h-1.5 w-full bg-gray-600" />
+            </span>
+          </Tooltip>
+        </div>
+        <OutsideLabel right={right + width + 6} title={title} blocked={blocked} done={done} />
+      </>
+    );
+  }
 
   if (isMilestone) {
     const size = 14;
@@ -174,6 +278,7 @@ export default function GanttBar({
         <div
           ref={barRef}
           {...pointerHandlers}
+          {...hoverHandlers}
           onPointerDown={begin("move")}
           className={`absolute select-none touch-none ${drag?.moved ? "z-[2] cursor-grabbing" : "cursor-grab"}`}
           style={{ right: center - size / 2, top: (ROW_H - size) / 2, width: size, height: size }}
@@ -203,10 +308,11 @@ export default function GanttBar({
       <div
         ref={barRef}
         {...pointerHandlers}
+        {...hoverHandlers}
         onPointerDown={begin("move")}
         className={`absolute select-none touch-none rounded ${done ? "opacity-50" : ""} ${
           overdue ? "ring-2 ring-red-400 ring-offset-1" : ""
-        } ${drag?.moved ? "z-[2] cursor-grabbing shadow-md" : "cursor-grab"}`}
+        } ${scheduled?.clamped ? "ring-2 ring-red-500" : ""} ${drag?.moved ? "z-[2] cursor-grabbing shadow-md" : readOnly ? "cursor-pointer" : "cursor-grab"}`}
         style={{
           right,
           top: (ROW_H - BAR_H) / 2,
@@ -232,7 +338,7 @@ export default function GanttBar({
             )}
           </span>
         </Tooltip>
-        {resizable && (
+        {resizable && !readOnly && (
           <>
             {/* RTL: right edge = start date, left edge = due date. */}
             <span

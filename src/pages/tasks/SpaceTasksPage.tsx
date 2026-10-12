@@ -25,6 +25,7 @@ import {
 } from "../../components/tasks/board/directoryFilters";
 import type { TaskRow } from "../../hooks/tasks/useTaskBoard";
 import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
+import { useCreateTaskDialog } from "../../components/tasks/schedule/CreateTaskDialogContext";
 
 // "All tasks in this space" — same full inline-edit/filter/sort shape as
 // AssigneeViewPage.tsx/TaskTypeViewPage.tsx/ProjectViewPage.tsx, but
@@ -46,33 +47,17 @@ interface BoardGroup {
   tasks: TaskRow[];
 }
 
-// Same add-row UI/behavior as board/TaskTable.tsx's own bottom-of-list
-// input — own local draft state since each board group needs an
-// independent one.
-function AddTaskRow({ onAdd }: { onAdd: (title: string) => void }) {
-  const [title, setTitle] = useState("");
-
-  const submit = () => {
-    const trimmed = title.trim();
-    if (trimmed) onAdd(trimmed);
-    setTitle("");
-  };
-
+// Same add row as board/TaskTable.tsx's: a task needs a start date and its
+// working days, so it opens the create dialog for that board.
+function AddTaskRow({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-      <Plus className="h-3.5 w-3.5 text-gray-400" />
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
-          if (e.key === "Escape") setTitle("");
-        }}
-        onBlur={submit}
-        placeholder="إضافة مهمة..."
-        className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-      />
-    </div>
+    <button
+      onClick={onAdd}
+      className="flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+    >
+      <Plus className="h-3.5 w-3.5" />
+      إضافة مهمة
+    </button>
   );
 }
 
@@ -83,6 +68,7 @@ export default function SpaceTasksPage() {
   const { data, loading, error, ...mutations } = useTaskDirectory({ spaceId });
   const { data: sidebarData } = useTasksSidebar();
   const spaceCaps = useSpaceCaps(spaceId);
+  const { openCreateTask } = useCreateTaskDialog();
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<DirectoryFilterState>(createDefaultFilters());
@@ -332,7 +318,7 @@ export default function SpaceTasksPage() {
                     {group.tasks.length === 0 && (
                       <div className="px-3 py-3 text-center text-sm text-gray-400">لا توجد مهام في هذه اللوحة بعد</div>
                     )}
-                    {spaceCaps.create && <AddTaskRow onAdd={(title) => mutations.onCreateTask(group.key, title)} />}
+                    {spaceCaps.create && <AddTaskRow onAdd={() => openCreateTask({ boardId: group.key })} />}
                   </>
                 )}
               </div>

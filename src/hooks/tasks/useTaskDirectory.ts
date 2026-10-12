@@ -9,6 +9,7 @@ import { resolveStatusSetId } from "./resolveStatusSetId";
 import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
 import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 import { recordAssignees, recordTaskPatch } from "./taskUndo";
+import { invalidateSchedule, saveTaskSchedule } from "./useTaskSchedule";
 
 // =====================================================================
 // Shared data + mutations for the "directory" views — AssigneeViewPage
@@ -363,24 +364,52 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     onSuccess: invalidate,
   });
 
+  // A real board's dates go through the scheduler (useTaskSchedule.ts),
+  // which also moves the tasks linked after this one; a template's "Day N"
+  // dates are written directly.
   const updateStartDate = useMutation({
     mutationFn: async ({ taskId, startDate }: { taskId: string; startDate: string | null }) => {
       const prevTask = query.data?.tasks.find((t) => t.id === taskId);
+      if (prevTask && !prevTask.is_template) {
+        if (startDate) await saveTaskSchedule(prevTask, { startDate });
+        return;
+      }
       const { error } = await tasksDb.from("tasks").update({ start_date: startDate }).eq("id", taskId);
       if (error) throw error;
       if (prevTask) recordTaskPatch("تغيير تاريخ البدء", taskId, { start_date: prevTask.start_date }, { start_date: startDate });
     },
-    onSuccess: invalidate,
+    onSettled: () => {
+      invalidate();
+      invalidateSchedule(queryClient);
+    },
   });
 
   const updateDueDate = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string | null }) => {
       const prevTask = query.data?.tasks.find((t) => t.id === taskId);
+      if (prevTask && !prevTask.is_template) {
+        if (dueDate) await saveTaskSchedule(prevTask, { dueDate });
+        return;
+      }
       const { error } = await tasksDb.from("tasks").update({ due_date: dueDate }).eq("id", taskId);
       if (error) throw error;
       if (prevTask) recordTaskPatch("تغيير تاريخ الاستحقاق", taskId, { due_date: prevTask.due_date }, { due_date: dueDate });
     },
-    onSuccess: invalidate,
+    onSettled: () => {
+      invalidate();
+      invalidateSchedule(queryClient);
+    },
+  });
+
+  const clearLag = useMutation({
+    mutationFn: async (taskId: string) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
+      if (prevTask) await saveTaskSchedule(prevTask, { lagDays: 0 });
+    },
+    onSettled: () => {
+      invalidate();
+      invalidateSchedule(queryClient);
+    },
   });
 
   const setAssignees = useMutation({
@@ -497,6 +526,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     onChangePriority: (taskId: string, priority: Priority | null) => updatePriority.mutate({ taskId, priority }),
     onChangeStartDate: (taskId: string, startDate: string | null) => updateStartDate.mutate({ taskId, startDate }),
     onChangeDueDate: (taskId: string, dueDate: string | null) => updateDueDate.mutate({ taskId, dueDate }),
+    onClearLag: (taskId: string) => clearLag.mutate(taskId),
     onChangeAssignees: (taskId: string, userIds: string[]) => setAssignees.mutate({ taskId, userIds }),
     onCreateTask: (boardId: string, title: string) => createTask.mutate({ boardId, title }),
   };

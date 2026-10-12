@@ -7,9 +7,12 @@ import type { DependencyTaskRef } from "../../../hooks/tasks/useTaskDetail";
 
 type Direction = "blocks" | "blockedBy";
 
+// A link on the same board is finish-to-start scheduling: the waiting task
+// starts the working day after the other one ends (plus its wait gap), and
+// moves when it moves. A link to another board is shown but moves nothing.
 const DIRECTION_LABELS: Record<Direction, string> = {
-  blockedBy: "في انتظار",
-  blocks: "تحظر",
+  blockedBy: "تبدأ بعد انتهاء",
+  blocks: "تبدأ بعدها",
 };
 
 // "Dependencies — blocks / waiting on, with a green check when a blocker
@@ -27,6 +30,14 @@ function DependencyRow({ item, onRemove }: { item: DependencyTaskRef; onRemove: 
         <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" />
       )}
       <span className="flex-1 truncate text-gray-700">{item.title}</span>
+      {item.otherBoard && (
+        <span
+          className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500"
+          title="مهمة في لوحة أخرى — الارتباط للمعلومة ولا يغيّر التواريخ"
+        >
+          لوحة أخرى
+        </span>
+      )}
       <button onClick={() => onRemove(item.dependencyId)} className="text-gray-400 hover:text-gray-600">
         <X className="h-3 w-3" />
       </button>
@@ -241,8 +252,8 @@ export default function DependenciesSection({
               onChange={(e) => setDirection(e.target.value as Direction)}
               className="mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-xs outline-none"
             >
-              <option value="blockedBy">في انتظار (هذه المهمة تنتظر)</option>
-              <option value="blocks">تحظر (هذه المهمة تحظر)</option>
+              <option value="blockedBy">تبدأ هذه المهمة بعد انتهاء…</option>
+              <option value="blocks">تبدأ بعد انتهاء هذه المهمة…</option>
             </select>
             <input
               autoFocus

@@ -213,7 +213,7 @@ export function fitRange(range: DayRange, zoom: GanttZoom, adapter: DayAdapter, 
   return { startDay, endDay: nextPeriodStart(wantedEnd, zoom, adapter) - 1 };
 }
 
-/** Fri/Sat days in the range, for shading in day and week zoom. Not in
+/** Off days (Friday) in the range, for shading in day and week zoom. Not in
  * month zoom (a 6px day stripe reads as noise), and not on template
  * boards, which have no weekdays. */
 export function weekendDays(range: DayRange, zoom: GanttZoom, adapter: DayAdapter): number[] {
@@ -233,7 +233,7 @@ export interface HeaderCell {
   startDay: number;
   endDay: number;
   label: string;
-  /** Fri/Sat in day zoom — shaded in the header. */
+  /** Friday in day zoom — shaded in the header. */
   weekend?: boolean;
 }
 
@@ -262,9 +262,10 @@ function segment(range: DayRange, keyOf: (day: number) => string, labelOf: (day:
   return cells;
 }
 
-/** Fri (5) and Sat (6) — Libya's weekend. */
+/** Friday (5): the only day off, the same rule the scheduler counts
+ * working days by (board/workingDays.ts, tasks.is_off_day). */
 function isWeekend(weekday: number): boolean {
-  return weekday === 5 || weekday === 6;
+  return weekday === 5;
 }
 
 function calendarHeader(range: DayRange, zoom: GanttZoom): HeaderRows {

@@ -3,6 +3,11 @@ import type { Activity } from "../../../hooks/tasks/useTaskDetail";
 import type { EmployeeLite } from "../../../hooks/tasks/useTaskBoard";
 
 const ACTION_LABELS: Record<string, string> = {
+  // what the tasks_log_activity trigger actually writes
+  insert: "أنشأ المهمة",
+  update: "عدّل المهمة",
+  // the scheduler moved this task because a task it follows changed (credited to whoever changed it)
+  reschedule: "غيّر مهمة سابقة فرُحّلت تواريخ هذه المهمة تلقائياً",
   created: "أنشأ المهمة",
   status_changed: "غيّر الحالة",
   assignee_added: "أضاف مسؤولاً",

@@ -13,6 +13,8 @@ import { emitTaskError } from "./taskErrorBus";
 import { extractErrorMessage } from "./extractErrorMessage";
 import { topmostTaskIds, withDescendants } from "./bulkSelection";
 import { recordAssignees, recordTaskPatch, recordTaskPatches, recordTaskValue } from "./taskUndo";
+import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
+import { dueFromDays, workingDayOnOrAfterString } from "../../components/tasks/board/workingDays";
 
 /** How many tasks a bulk status change updates at once. */
 const BULK_BATCH_SIZE = 6;
@@ -662,6 +664,20 @@ export function useTaskBoard(boardId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  // Dates. A real board's dates belong to the scheduler (useTaskSchedule.ts):
+  // a start, a number of working days or a due date goes to
+  // update_task_schedule, which moves the linked tasks after it too. A
+  // template board ("Day N", nothing chained) writes its dates directly.
+  const scheduleTask = (taskId: string, change: ScheduleChange) => {
+    const prev = query.data?.tasks.find((t) => t.id === taskId);
+    if (!prev) throw new Error("task not loaded");
+    return saveTaskSchedule(prev, change);
+  };
+  const onScheduleSettled = () => {
+    invalidate();
+    invalidateSchedule(queryClient, boardId);
+  };
+
   const updateDueDate = useMutation({
     mutationFn: async ({
       taskId,
@@ -670,6 +686,10 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       dueDate: string | null;
     }) => {
+      if (!query.data?.board.is_template) {
+        if (dueDate) await scheduleTask(taskId, { dueDate });
+        return;
+      }
       const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb
         .from("tasks")
@@ -678,7 +698,7 @@ export function useTaskBoard(boardId: string | undefined) {
       if (error) throw error;
       if (prevTask) recordTaskPatch("تغيير تاريخ الاستحقاق", taskId, { due_date: prevTask.due_date }, { due_date: dueDate });
     },
-    onSuccess: invalidate,
+    onSettled: onScheduleSettled,
   });
 
   const updateStartDate = useMutation({
@@ -689,6 +709,10 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       startDate: string | null;
     }) => {
+      if (!query.data?.board.is_template) {
+        if (startDate) await scheduleTask(taskId, { startDate });
+        return;
+      }
       const prevTask = query.data?.tasks.find((t) => t.id === taskId);
       const { error } = await tasksDb
         .from("tasks")
@@ -697,54 +721,97 @@ export function useTaskBoard(boardId: string | undefined) {
       if (error) throw error;
       if (prevTask) recordTaskPatch("تغيير تاريخ البدء", taskId, { start_date: prevTask.start_date }, { start_date: startDate });
     },
-    onSuccess: invalidate,
+    onSettled: onScheduleSettled,
   });
 
-  // Gantt drag/resize: one update for whichever of the two dates changed
-  // (a moved bar changes both — two separate mutations would mean two of
-  // this board's heavy refetches and a visible flicker between them).
-  // Optimistic, unlike the cell mutations above: a bar snapping back to
-  // its old position until the refetch lands reads as "the drag failed".
-  // An omitted key is left untouched; null clears it.
+  // Working days (DurationCell). On a template board they are calendar days
+  // and the database derives the "Day N" due date from them.
+  const updateDuration = useMutation({
+    mutationFn: async ({ taskId, days }: { taskId: string; days: number }) => {
+      if (!query.data?.board.is_template) {
+        await scheduleTask(taskId, { durationDays: days });
+        return;
+      }
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
+      const { error } = await tasksDb.from("tasks").update({ duration_days: days }).eq("id", taskId);
+      if (error) throw error;
+      if (prevTask) recordTaskPatch("تغيير المدة", taskId, { duration_days: prevTask.duration_days }, { duration_days: days });
+    },
+    onSettled: onScheduleSettled,
+  });
+
+  // The wait gap of a linked task (start_lag_days): working days between its
+  // predecessors' end and its own start.
+  const updateLag = useMutation({
+    mutationFn: ({ taskId, lagDays }: { taskId: string; lagDays: number }) => scheduleTask(taskId, { lagDays }),
+    onSettled: onScheduleSettled,
+  });
+
+  // Gantt drag/resize, one update per gesture. Optimistic for the dragged bar
+  // only — a bar snapping back until the refetch lands reads as "the drag
+  // failed" — while the tasks it pushes along move when the refetch lands.
+  // A real board sends what the gesture changed (start and/or working days)
+  // and the scheduler derives the rest; a template board writes the "Day N"
+  // dates directly. An omitted key is left untouched.
   const updateTaskDates = useMutation({
     mutationFn: async ({
       taskId,
       startDate,
       dueDate,
+      durationDays,
     }: {
       taskId: string;
       startDate?: string | null;
       dueDate?: string | null;
+      durationDays?: number;
     }) => {
+      if (!query.data?.board.is_template) {
+        const change: ScheduleChange = {};
+        if (startDate) change.startDate = startDate;
+        if (durationDays !== undefined) change.durationDays = durationDays;
+        else if (dueDate) change.dueDate = dueDate;
+        if (Object.keys(change).length > 0) await scheduleTask(taskId, change);
+        return;
+      }
       const patch: { start_date?: string | null; due_date?: string | null } = {};
       if (startDate !== undefined) patch.start_date = startDate;
       if (dueDate !== undefined) patch.due_date = dueDate;
       const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);
       if (error) throw error;
     },
-    onMutate: async ({ taskId, startDate, dueDate }) => {
+    onMutate: async ({ taskId, startDate, dueDate, durationDays }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<TaskBoardData>(queryKey);
       if (previous) {
+        const calendar = !previous.board.is_template;
         queryClient.setQueryData<TaskBoardData>(queryKey, {
           ...previous,
-          tasks: previous.tasks.map((t) =>
-            t.id === taskId
-              ? {
-                  ...t,
-                  ...(startDate !== undefined ? { start_date: startDate } : {}),
-                  ...(dueDate !== undefined ? { due_date: dueDate } : {}),
-                }
-              : t,
-          ),
+          tasks: previous.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            if (!calendar) {
+              return {
+                ...t,
+                ...(startDate !== undefined ? { start_date: startDate } : {}),
+                ...(dueDate !== undefined ? { due_date: dueDate } : {}),
+              };
+            }
+            // what the scheduler will do, so the bar lands where it will stay
+            const start = startDate ? workingDayOnOrAfterString(startDate) : t.start_date;
+            const days = durationDays ?? t.duration_days ?? 1;
+            return start
+              ? { ...t, start_date: start, duration_days: days, due_date: dueFromDays(start, days) }
+              : t;
+          }),
         });
       }
       return { previous };
     },
     onSuccess: (_data, { taskId, startDate, dueDate }, context) => {
+      // Real boards: saveTaskSchedule already recorded the undo entry.
+      if (!context?.previous?.board.is_template) return;
       // The cache was already updated optimistically by onMutate, so the old
       // dates come from the snapshot it took, not from query.data.
-      const prevTask = context?.previous?.tasks.find((t) => t.id === taskId);
+      const prevTask = context.previous.tasks.find((t) => t.id === taskId);
       if (!prevTask) return;
       recordTaskPatch(
         "تغيير التواريخ",
@@ -763,7 +830,7 @@ export function useTaskBoard(boardId: string | undefined) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
     },
     onSettled: (_data, _error, { taskId }) => {
-      invalidate();
+      onScheduleSettled();
       queryClient.invalidateQueries({ queryKey: ["task-detail", taskId] });
     },
   });
@@ -990,6 +1057,8 @@ export function useTaskBoard(boardId: string | undefined) {
     updateDueDate: updateDueDate.mutate,
     updateStartDate: updateStartDate.mutate,
     updateTaskDates: updateTaskDates.mutate,
+    updateDuration: updateDuration.mutate,
+    updateLag: updateLag.mutate,
     setAssignees: setAssignees.mutate,
     bulkSetStatus: bulkSetStatus.mutateAsync,
     bulkSetPriority: bulkSetPriority.mutateAsync,

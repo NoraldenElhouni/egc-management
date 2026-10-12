@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 
 // Shared month-grid calendar, opened by both DateCell (due date) and
@@ -55,9 +55,26 @@ interface CalendarPopoverProps {
   /** See StatusCell's align prop — "left" for narrow contexts near the
    * screen's left edge (the D3 detail panel). */
   align?: "left" | "right";
+  /** "YYYY-MM-DD" (or a timestamptz string): days before it can't be
+   * picked — a linked task can't start before its predecessors end, a due
+   * date can't come before the start. */
+  minDate?: string | null;
+  /** Show "إزالة التاريخ". A scheduled task's dates can't be cleared. */
+  allowClear?: boolean;
+  /** One more footer action, e.g. "إلغاء الانتظار" on a linked task's start. */
+  extraAction?: { label: string; onClick: () => void };
 }
 
-export default function CalendarPopover({ value, onChange, onClose, anchorRef, align = "right" }: CalendarPopoverProps) {
+export default function CalendarPopover({
+  value,
+  onChange,
+  onClose,
+  anchorRef,
+  align = "right",
+  minDate = null,
+  allowClear = true,
+  extraAction,
+}: CalendarPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   useClickOutside([anchorRef, popoverRef], onClose);
@@ -114,14 +131,10 @@ export default function CalendarPopover({ value, onChange, onClose, anchorRef, a
   // this instead of the raw `value` prop, since that can be timestamp-
   // shaped and would never string-equal a plain toISO() result.
   const valueISO = parsedValue ? toISO(parsedValue.year, parsedValue.month, parsedValue.day) : null;
-  const [viewYear, setViewYear] = useState(parsedValue?.year ?? today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(parsedValue?.month ?? today.getMonth());
-  // Friday is the weekend day here — picking one is usually a mistake, so
-  // it goes through this inline confirm strip instead of committing
-  // straight away, same "are you sure" posture as this app's confirm()
-  // dialogs elsewhere, just non-blocking to match this popover's own
-  // hand-rolled look instead of a native browser dialog.
-  const [pendingFriday, setPendingFriday] = useState<string | null>(null);
+  const parsedMin = minDate ? parseDateValue(minDate) : null;
+  const minISO = parsedMin ? toISO(parsedMin.year, parsedMin.month, parsedMin.day) : null;
+  const [viewYear, setViewYear] = useState(parsedValue?.year ?? parsedMin?.year ?? today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(parsedValue?.month ?? parsedMin?.month ?? today.getMonth());
 
   const todayISO = toISO(today.getFullYear(), today.getMonth(), today.getDate());
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -129,7 +142,6 @@ export default function CalendarPopover({ value, onChange, onClose, anchorRef, a
   const cells: (number | null)[] = [...Array(startWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
   const goPrevMonth = () => {
-    setPendingFriday(null);
     if (viewMonth === 0) {
       setViewMonth(11);
       setViewYear(viewYear - 1);
@@ -138,7 +150,6 @@ export default function CalendarPopover({ value, onChange, onClose, anchorRef, a
     }
   };
   const goNextMonth = () => {
-    setPendingFriday(null);
     if (viewMonth === 11) {
       setViewMonth(0);
       setViewYear(viewYear + 1);
@@ -147,15 +158,30 @@ export default function CalendarPopover({ value, onChange, onClose, anchorRef, a
     }
   };
 
-  const trySelect = (iso: string) => {
+  // Friday is the only day off (workingDays.ts): no task starts or ends on
+  // one, so it can't be picked at all — the server would move it anyway.
+  const isFridayISO = (iso: string) => {
     const [y, m, d] = iso.split("-").map(Number);
-    if (new Date(y, m - 1, d).getDay() === 5) {
-      setPendingFriday(iso);
-      return;
-    }
+    return new Date(y, m - 1, d).getDay() === 5;
+  };
+  const isDisabled = (iso: string) => isFridayISO(iso) || (!!minISO && iso < minISO);
+
+  const select = (iso: string) => {
+    if (isDisabled(iso)) return;
     onChange(iso);
     onClose();
   };
+
+  // "اليوم", or the first day that can be picked from today on.
+  const firstPickable = (() => {
+    let d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    for (let i = 0; i < 400; i++) {
+      const iso = toISO(d.getFullYear(), d.getMonth(), d.getDate());
+      if (!isDisabled(iso)) return iso;
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    }
+    return todayISO;
+  })();
 
   if (!pos) return null;
 
@@ -183,66 +209,56 @@ export default function CalendarPopover({ value, onChange, onClose, anchorRef, a
             {d}
           </div>
         ))}
-        {cells.map((day, i) =>
-          day === null ? (
-            <div key={i} />
-          ) : (
+        {cells.map((day, i) => {
+          if (day === null) return <div key={i} />;
+          const iso = toISO(viewYear, viewMonth, day);
+          const disabled = isDisabled(iso);
+          return (
             <button
               key={i}
-              onClick={() => trySelect(toISO(viewYear, viewMonth, day))}
+              onClick={() => select(iso)}
+              disabled={disabled}
+              title={isFridayISO(iso) ? "الجمعة عطلة" : disabled ? "قبل أول تاريخ مسموح" : undefined}
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
-                valueISO === toISO(viewYear, viewMonth, day)
+                valueISO === iso
                   ? "bg-primary font-medium text-white"
-                  : toISO(viewYear, viewMonth, day) === todayISO
-                    ? "font-semibold text-primary hover:bg-primary-superLight"
-                    : "text-gray-700 hover:bg-gray-100"
+                  : disabled
+                    ? "cursor-not-allowed text-gray-300 line-through decoration-gray-200"
+                    : iso === todayISO
+                      ? "font-semibold text-primary hover:bg-primary-superLight"
+                      : "text-gray-700 hover:bg-gray-100"
               }`}
             >
               {day}
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
-
-      {pendingFriday && (
-        <div className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
-          <div className="mb-1.5 flex items-center gap-1.5 font-medium">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            هذا يوم الجمعة، هل أنت متأكد؟
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                onChange(pendingFriday);
-                setPendingFriday(null);
-                onClose();
-              }}
-              className="rounded-md bg-amber-600 px-2 py-1 font-medium text-white hover:bg-amber-700"
-            >
-              نعم، تأكيد
-            </button>
-            <button
-              onClick={() => setPendingFriday(null)}
-              className="rounded-md border border-amber-300 px-2 py-1 text-amber-700 hover:bg-amber-100"
-            >
-              إلغاء
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="mt-1.5 flex items-center justify-between border-t border-gray-100 pt-1.5">
         <button
           onClick={() => {
-            setViewYear(today.getFullYear());
-            setViewMonth(today.getMonth());
-            trySelect(todayISO);
+            const [y, m] = firstPickable.split("-").map(Number);
+            setViewYear(y);
+            setViewMonth(m - 1);
+            select(firstPickable);
           }}
           className="text-xs text-primary hover:underline"
         >
-          اليوم
+          {firstPickable === todayISO ? "اليوم" : "أقرب يوم متاح"}
         </button>
-        {value && (
+        {extraAction && (
+          <button
+            onClick={() => {
+              extraAction.onClick();
+              onClose();
+            }}
+            className="text-xs text-amber-600 hover:underline"
+          >
+            {extraAction.label}
+          </button>
+        )}
+        {value && allowClear && (
           <button
             onClick={() => {
               onChange(null);

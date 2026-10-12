@@ -16,6 +16,7 @@ import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks
 import { NO_CAPS, useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { BoardAccessProvider } from "../../components/tasks/BoardAccessContext";
 import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
+import { useCreateTaskDialog } from "../../components/tasks/schedule/CreateTaskDialogContext";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
 // Also the template editor: a template is a board with is_template set
@@ -40,6 +41,8 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     updateStartDate,
     updateDueDate,
     updateTaskDates,
+    updateDuration,
+    updateLag,
     setAssignees,
     bulkSetStatus,
     bulkSetPriority,
@@ -54,6 +57,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     renameField,
     moveTaskTo,
   } = useTaskBoard(boardId);
+  const { openCreateTask } = useCreateTaskDialog();
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showZoneClone, setShowZoneClone] = useState(false);
   // Template push (useTemplateSync.ts): the task ids the dialog opens with.
@@ -89,6 +93,12 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   }
 
   const isTemplate = data.board.is_template;
+  // A template keeps its title-only quick add ("Day N", nothing scheduled);
+  // a real board's task needs a start and working days: the create dialog.
+  const addTask = (title: string, parentTaskId: string | null) =>
+    isTemplate
+      ? title.trim() && createTask({ title, parentTaskId })
+      : openCreateTask({ boardId: data.board.id, parentTaskId, title });
 
   // Without a view on the whole space (an assignee reaching the board from
   // the sidebar) the board shows only the tasks assigned to me. A task whose
@@ -190,6 +200,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             dependencies={data.dependencies}
             blockedTaskIds={data.blockedTaskIds}
             onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
+            onAddTask={spaceCaps.create && !isTemplate ? () => addTask("", null) : undefined}
             readOnly={!spaceCaps.edit}
           />
         ) : (
@@ -222,8 +233,10 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             onChangePriority={(taskId, priority) => updatePriority({ taskId, priority })}
             onChangeStartDate={(taskId, startDate) => updateStartDate({ taskId, startDate })}
             onChangeDueDate={(taskId, dueDate) => updateDueDate({ taskId, dueDate })}
+            onChangeDuration={(taskId, days) => updateDuration({ taskId, days })}
+            onChangeLag={(taskId, lagDays) => updateLag({ taskId, lagDays })}
             onChangeAssignees={(taskId, userIds) => setAssignees({ taskId, userIds })}
-            onCreateTask={(title, parentTaskId) => createTask({ title, parentTaskId })}
+            onCreateTask={addTask}
             onChangeValue={(taskId, fieldDefinitionId, value) => setTaskValue({ taskId, fieldDefinitionId, value })}
             onAttachField={attachField}
             onCreateAndAttachField={createAndAttachField}

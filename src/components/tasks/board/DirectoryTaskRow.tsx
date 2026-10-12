@@ -98,6 +98,8 @@ interface DirectoryTaskRowProps {
   onChangeStartDate: (taskId: string, date: string | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
+  /** Remove a linked task's wait gap (useTaskDirectory's clearLag). */
+  onClearLag?: (taskId: string) => void;
 }
 
 export default function DirectoryTaskRow({
@@ -129,6 +131,7 @@ export default function DirectoryTaskRow({
   onChangeStartDate,
   onChangeDueDate,
   onChangeAssignees,
+  onClearLag,
 }: DirectoryTaskRowProps) {
   // description is JSON, { text: string } — same read as board/TaskRow.tsx.
   const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
@@ -270,6 +273,10 @@ export default function DirectoryTaskRow({
         startDate={task.start_date}
         onChange={(date) => onChangeStartDate(task.id, date)}
         readOnly={!rowCaps.edit}
+        earliestStart={task.earliest_start}
+        lagDays={task.start_lag_days}
+        isSummary={task.is_summary}
+        onClearLag={onClearLag ? () => onClearLag(task.id) : undefined}
       />
       <DateCell
         dueDate={task.due_date}
@@ -278,6 +285,8 @@ export default function DirectoryTaskRow({
         completedAt={task.completed_at}
         onChange={(date) => onChangeDueDate(task.id, date)}
         readOnly={!rowCaps.edit}
+        minDate={task.is_template ? null : task.start_date}
+        isSummary={task.is_summary}
       />
       {showCompleted && <CompletedAtCell completedAt={task.completed_at} />}
     </div>

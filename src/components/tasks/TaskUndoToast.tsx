@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Redo2, Undo2, Info } from "lucide-react";
+import { Redo2, Undo2, Info, CalendarClock } from "lucide-react";
 import { setUndoNoticeListener, type UndoNotice } from "../../hooks/tasks/taskUndo";
+import { formatDayWithWeekday } from "./board/workingDays";
 
 // Confirmation for Ctrl/Cmd+Z and redo — without it a silent revert is
 // indistinguishable from "nothing happened". Errors go through the red
 // TaskErrorToast instead; this one is for the normal outcomes.
-function describe(notice: UndoNotice): { text: string; icon: "undo" | "redo" | "info" } {
+function describe(notice: UndoNotice): { text: string; icon: "undo" | "redo" | "info" | "schedule" } {
   switch (notice.kind) {
     case "undo":
       return {
@@ -21,6 +22,13 @@ function describe(notice: UndoNotice): { text: string; icon: "undo" | "redo" | "
       return { text: `تعذّر التراجع عن «${notice.label}» — تغيّرت المهمة منذ ذلك الحين`, icon: "info" };
     case "empty":
       return { text: notice.direction === "undo" ? "لا يوجد ما يمكن التراجع عنه" : "لا يوجد ما يمكن إعادته", icon: "info" };
+    case "schedule":
+      return {
+        text: `تم ترحيل ${notice.moved === 1 ? "مهمة واحدة" : `${notice.moved} مهام`}${
+          notice.boardEnd ? ` · نهاية اللوحة ${formatDayWithWeekday(notice.boardEnd)}` : ""
+        }`,
+        icon: "schedule",
+      };
   }
 }
 
@@ -47,6 +55,7 @@ export default function TaskUndoToast() {
         {icon === "undo" && <Undo2 className="h-4 w-4 shrink-0" />}
         {icon === "redo" && <Redo2 className="h-4 w-4 shrink-0" />}
         {icon === "info" && <Info className="h-4 w-4 shrink-0" />}
+        {icon === "schedule" && <CalendarClock className="h-4 w-4 shrink-0" />}
         <span className="flex-1">{text}</span>
       </div>
     </div>

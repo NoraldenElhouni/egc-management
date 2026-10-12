@@ -73,12 +73,28 @@ interface DateCellProps {
   align?: "left" | "right";
   /** Display only: the popover never opens (no edit rights). */
   readOnly?: boolean;
+  /** The task's start: the due date can't be picked before it. Picking a
+   * due date sets the task's working days (the server counts them). */
+  minDate?: string | null;
+  /** A parent with subtasks: its due date is its latest subtask's. */
+  isSummary?: boolean;
 }
 
-export default function DateCell({ dueDate, isOverdue, statusCategory, completedAt, onChange, align = "right", readOnly = false }: DateCellProps) {
+export default function DateCell({
+  dueDate,
+  isOverdue,
+  statusCategory,
+  completedAt,
+  onChange,
+  align = "right",
+  readOnly: readOnlyProp = false,
+  minDate = null,
+  isSummary = false,
+}: DateCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isTemplate = useTemplateMode();
+  const readOnly = readOnlyProp || isSummary;
 
   const finished = statusCategory === "done" || statusCategory === "closed";
   const completed = statusCategory === "done" && dueDate && completedAt ? completedBadge(dueDate, completedAt) : null;
@@ -148,7 +164,17 @@ export default function DateCell({ dueDate, isOverdue, statusCategory, completed
         </button>
       )}
 
-      {open && <CalendarPopover value={dueDate} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} align={align} />}
+      {open && (
+        <CalendarPopover
+          value={dueDate}
+          onChange={onChange}
+          onClose={() => setOpen(false)}
+          anchorRef={ref}
+          align={align}
+          minDate={minDate}
+          allowClear={false}
+        />
+      )}
     </div>
   );
 }

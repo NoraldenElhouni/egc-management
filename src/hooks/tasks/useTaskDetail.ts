@@ -12,6 +12,7 @@ import { extractMentionedTaskIds } from "./mentionUtils";
 import { notifyUsers } from "../../services/notifications/pushNotifications";
 import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { recordAssignees, recordTaskPatch, recordTaskValue, type TaskPatch } from "./taskUndo";
+import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -21,6 +22,17 @@ import { recordAssignees, recordTaskPatch, recordTaskValue, type TaskPatch } fro
 // is_resolved) — see the migration this hook now assumes exists. `body`
 // stores `{ text: string }`, the same plain shape `description` already
 // uses (build plan §4.7 — jsonb, not HTML, no rich-text editor yet).
+
+// Why tasks.dependency_problem refuses a link ('cross_board' is allowed:
+// such a link is shown but doesn't move dates).
+const DEPENDENCY_PROBLEMS: Record<string, string | null> = {
+  self: "لا يمكن ربط المهمة بنفسها",
+  exists: "المهمتان مرتبطتان بالفعل",
+  lineage: "لا يمكن ربط مهمة بمهمتها الرئيسية أو بإحدى مهامها الفرعية",
+  cycle: "هذا الربط سينشئ حلقة اعتماديات دائرية",
+  forbidden: "لا يمكنك ربط هاتين المهمتين",
+  cross_board: null,
+};
 
 // Toast wording for single-field edits (see taskUndo.ts).
 const FIELD_LABELS: Record<string, string> = {
@@ -47,6 +59,8 @@ export interface DependencyTaskRef {
   title: string;
   statusCategory: Database["tasks"]["Enums"]["status_category"];
   dependencyId: string;
+  /** On another board: shown, but it doesn't move this task's dates. */
+  otherBoard: boolean;
 }
 
 export interface Breadcrumb {
@@ -206,7 +220,7 @@ export function useTaskDetail(taskId: string | undefined) {
 
       const { data: refTasks, error: refTasksError } =
         referencedTaskIds.length
-          ? await tasksDb.from("tasks").select("id, title, status_id").in("id", referencedTaskIds)
+          ? await tasksDb.from("tasks").select("id, title, status_id, board_id").in("id", referencedTaskIds)
           : { data: [], error: null };
       if (refTasksError) throw refTasksError;
 
@@ -239,6 +253,7 @@ export function useTaskDetail(taskId: string | undefined) {
           title: t.title,
           statusCategory: statusById.get(t.status_id)?.category ?? "not_started",
           dependencyId,
+          otherBoard: t.board_id !== task.board_id,
         };
       };
 
@@ -391,6 +406,21 @@ export function useTaskDetail(taskId: string | undefined) {
       }
     },
     onSuccess: invalidate,
+  });
+
+  // Start / working days / due / wait gap of a task on a real board — the
+  // scheduler moves the tasks linked after it too (useTaskSchedule.ts). A
+  // template's "Day N" dates still go through updateField.
+  const updateSchedule = useMutation({
+    mutationFn: async (change: ScheduleChange) => {
+      const prev = query.data?.task;
+      if (!prev) return;
+      await saveTaskSchedule(prev, change);
+    },
+    onSettled: () => {
+      invalidate();
+      invalidateSchedule(queryClient, query.data?.task.board_id);
+    },
   });
 
   const setCustomValue = useMutation({
@@ -614,16 +644,18 @@ export function useTaskDetail(taskId: string | undefined) {
       const blocking_task_id = direction === "blocks" ? taskId : relatedTaskId;
       const blocked_task_id = direction === "blocks" ? relatedTaskId : taskId;
 
-      // Pre-check via the same cycle-detection logic the DB's BEFORE
-      // INSERT trigger (prevent_dependency_cycle) enforces, so a bad pick
-      // surfaces a clear Arabic message instead of a raw trigger error.
-      // The trigger remains the real backstop either way.
-      const { data: wouldCycle, error: checkError } = await tasksDb.rpc("dependency_would_cycle", {
+      // Pre-check with the same rules the DB's BEFORE INSERT trigger
+      // (prevent_dependency_cycle) enforces — no loops, through the
+      // parent/subtask hierarchy too — so a bad pick surfaces a clear Arabic
+      // message instead of a raw trigger error. The trigger remains the real
+      // backstop either way.
+      const { data: problem, error: checkError } = await tasksDb.rpc("dependency_problem", {
         p_blocking_task_id: blocking_task_id,
         p_blocked_task_id: blocked_task_id,
       });
       if (checkError) throw checkError;
-      if (wouldCycle) throw new Error("هذا الربط سينشئ حلقة اعتماديات دائرية");
+      const message = problem ? DEPENDENCY_PROBLEMS[problem] : null;
+      if (message) throw new Error(message);
 
       const { error } = await tasksDb.from("task_dependencies").insert({
         blocking_task_id,
@@ -632,7 +664,11 @@ export function useTaskDetail(taskId: string | undefined) {
       });
       if (error) throw error;
     },
-    onSuccess: invalidate,
+    // a link on the same board moves dates (the scheduler) — refresh everything
+    onSuccess: () => {
+      invalidate();
+      invalidateSchedule(queryClient, query.data?.task.board_id);
+    },
   });
 
   const removeDependency = useMutation({
@@ -640,7 +676,10 @@ export function useTaskDetail(taskId: string | undefined) {
       const { error } = await tasksDb.from("task_dependencies").delete().eq("id", dependencyId);
       if (error) throw error;
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateSchedule(queryClient, query.data?.task.board_id);
+    },
   });
 
   const addLink = useMutation({
@@ -777,6 +816,7 @@ export function useTaskDetail(taskId: string | undefined) {
     error: query.error,
     refetch: query.refetch,
     updateField: updateField.mutate,
+    updateSchedule: updateSchedule.mutate,
     setCustomValue: setCustomValue.mutate,
     setAssignees: setAssignees.mutate,
     satisfyRequirement: satisfyRequirement.mutate,

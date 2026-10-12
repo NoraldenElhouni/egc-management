@@ -35,6 +35,7 @@ import { useMyTaskAccess } from "../../hooks/tasks/useTaskAccess";
 import { useCan } from "../../hooks/permissions/useCan";
 import { useTaskUndoHotkeys } from "../../hooks/tasks/useTaskUndoHotkeys";
 import TaskUndoToast from "../tasks/TaskUndoToast";
+import { CreateTaskDialogProvider } from "../tasks/schedule/CreateTaskDialogContext";
 
 // A failed mutation anywhere in this module (most commonly the
 // completion-gate trigger rejecting a status change, or the reparent
@@ -540,7 +541,9 @@ function TaskUndoHost() {
 
 const TasksLayout = () => (
   <QueryClientProvider client={tasksQueryClient}>
-    <TasksLayoutInner />
+    <CreateTaskDialogProvider>
+      <TasksLayoutInner />
+    </CreateTaskDialogProvider>
     <TaskErrorToast />
     <TaskUndoHost />
   </QueryClientProvider>

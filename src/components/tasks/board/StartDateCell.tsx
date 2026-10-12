@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Link2 } from "lucide-react";
 import CalendarPopover from "./CalendarPopover";
 import DayOffsetPopover from "./DayOffsetPopover";
 import { useTemplateMode } from "../TemplateModeContext";
@@ -38,12 +38,33 @@ interface StartDateCellProps {
   align?: "left" | "right";
   /** Display only: the popover never opens (no edit rights). */
   readOnly?: boolean;
+  /** tasks.earliest_start: set when the task is linked after others. Its
+   * start is then computed (predecessors' end + wait gap), and picking a
+   * date only changes the wait gap — never earlier than this. */
+  earliestStart?: string | null;
+  /** tasks.start_lag_days — the wait gap of a linked task. */
+  lagDays?: number;
+  /** A parent with subtasks: its start is its earliest subtask's. */
+  isSummary?: boolean;
+  /** Linked task with a wait gap: offer to remove it. */
+  onClearLag?: () => void;
 }
 
-export default function StartDateCell({ startDate, onChange, align = "right", readOnly = false }: StartDateCellProps) {
+export default function StartDateCell({
+  startDate,
+  onChange,
+  align = "right",
+  readOnly = false,
+  earliestStart = null,
+  lagDays = 0,
+  isSummary = false,
+  onClearLag,
+}: StartDateCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isTemplate = useTemplateMode();
+  const linked = !!earliestStart;
+  const locked = readOnly || isSummary;
 
   // Template board: "Day N" instead of a calendar date (templateDates.ts).
   if (isTemplate) {
@@ -62,28 +83,54 @@ export default function StartDateCell({ startDate, onChange, align = "right", re
     );
   }
 
+  const tooltip = !startDate
+    ? ""
+    : isSummary
+      ? `${formatSlashDate(startDate)} · محسوب من المهام الفرعية`
+      : linked
+        ? `${formatSlashDate(startDate)} · تبدأ بعد انتهاء المهام السابقة${lagDays > 0 ? ` + انتظار ${lagDays} يوم عمل` : ""}`
+        : formatSlashDate(startDate);
+
   return (
     <div ref={ref} className="relative">
       {startDate ? (
-        <Tooltip label={formatSlashDate(startDate)}>
+        <Tooltip label={tooltip}>
           <button
-            onClick={() => !readOnly && setOpen((v) => !v)}
-            className="whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
+            onClick={() => !locked && setOpen((v) => !v)}
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 ${
+              locked ? "cursor-default" : "hover:bg-gray-100"
+            }`}
           >
+            {linked && !isSummary && <Link2 className="h-3 w-3 shrink-0 text-primary" />}
             {daysPassedLabel(startDate)}
+            {linked && lagDays > 0 && <span className="text-[10px] font-semibold text-amber-600">+{lagDays}</span>}
           </button>
         </Tooltip>
+      ) : readOnly ? (
+        <span className="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] text-gray-300">غير مجدولة</span>
       ) : (
         <button
-          onClick={() => !readOnly && setOpen((v) => !v)}
-          className={`rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-400 ${readOnly ? "hidden" : ""}`}
-          title="تحديد تاريخ البدء"
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-gray-200 px-2 py-0.5 text-[11px] text-gray-400 hover:border-gray-300 hover:text-gray-500"
+          title="المهمة غير مجدولة — اختر تاريخ البدء"
         >
-          <CalendarDays className="h-3.5 w-3.5" />
+          <CalendarDays className="h-3 w-3" />
+          غير مجدولة
         </button>
       )}
 
-      {open && <CalendarPopover value={startDate} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} align={align} />}
+      {open && (
+        <CalendarPopover
+          value={startDate}
+          onChange={onChange}
+          onClose={() => setOpen(false)}
+          anchorRef={ref}
+          align={align}
+          minDate={earliestStart}
+          allowClear={false}
+          extraAction={linked && lagDays > 0 && onClearLag ? { label: "إلغاء الانتظار", onClick: onClearLag } : undefined}
+        />
+      )}
     </div>
   );
 }

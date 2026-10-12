@@ -12,6 +12,9 @@ import RoleAssigneeCell from "../board/RoleAssigneeCell";
 import { useTaskRoles } from "../../../hooks/tasks/useTaskRoles";
 import StartDateCell from "../board/StartDateCell";
 import DateCell from "../board/DateCell";
+import DurationCell from "../board/DurationCell";
+import { useCreateTaskDialog } from "../schedule/CreateTaskDialogContext";
+import { workingDaysLabel } from "../board/workingDays";
 import CustomFieldCell from "../board/CustomFieldCell";
 import LinkedRecordCard from "./LinkedRecordCard";
 import LinkRecordPicker from "./LinkRecordPicker";
@@ -44,6 +47,46 @@ import { TaskDetailSkeleton } from "../TasksSkeletons";
 // internal link (breadcrumb parent, subtasks) return to whichever list
 // actually opened this panel.
 
+/** A linked task's wait gap: working days between its predecessors' end and its start. */
+function LagField({ lagDays, readOnly, onChange }: { lagDays: number; readOnly: boolean; onChange: (lagDays: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const n = Math.floor(Number(draft));
+    setDraft(null);
+    if (Number.isFinite(n) && n >= 0 && n <= 3650 && n !== lagDays) onChange(n);
+  };
+  if (draft !== null) {
+    return (
+      <input
+        autoFocus
+        type="number"
+        min={0}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setDraft(null);
+        }}
+        className="w-20 rounded border border-primary px-1.5 py-0.5 text-center text-xs outline-none"
+        dir="ltr"
+      />
+    );
+  }
+  return (
+    <button
+      onClick={() => !readOnly && setDraft(String(lagDays))}
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${
+        lagDays > 0 ? "bg-amber-50 font-medium text-amber-700" : "bg-gray-50 text-gray-500"
+      } ${readOnly ? "cursor-default" : "hover:bg-gray-100"}`}
+      title="أيام عمل بين انتهاء المهام السابقة وبداية هذه المهمة"
+    >
+      {lagDays > 0 ? `${lagDays} يوم عمل` : "بدون انتظار"}
+    </button>
+  );
+}
+
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
@@ -63,6 +106,7 @@ export default function TaskDetailPanel() {
     loading,
     refetch,
     updateField,
+    updateSchedule,
     setAssignees,
     satisfyRequirement,
     setCustomValue,
@@ -87,6 +131,7 @@ export default function TaskDetailPanel() {
     deleteTask,
     deletingTask,
   } = useTaskDetail(taskId);
+  const { openCreateTask } = useCreateTaskDialog();
   // What I may do on THIS task, as answered by the database (tasks.task_caps).
   // Everything below is a courtesy for people who cannot edit; row-level
   // security refuses the same writes regardless of what the screen shows.
@@ -378,25 +423,65 @@ export default function TaskDetailPanel() {
                   </ul>
                 )}
               </div>
+              {/* A real board's dates are a start plus working days; the
+                  scheduler (updateSchedule) derives the due date and moves
+                  the tasks linked after this one. A template's "Day N"
+                  dates are written directly. */}
               <FieldRow label="تاريخ البدء">
                 <StartDateCell
                   startDate={data.task.start_date}
-                  onChange={(date) => updateField({ start_date: date })}
+                  onChange={(date) =>
+                    isTemplateTask ? updateField({ start_date: date }) : date && updateSchedule({ startDate: date })
+                  }
                   align="left"
                   readOnly={!caps.edit}
+                  earliestStart={data.task.earliest_start}
+                  lagDays={data.task.start_lag_days}
+                  isSummary={data.task.is_summary}
+                  onClearLag={() => updateSchedule({ lagDays: 0 })}
                 />
               </FieldRow>
+              {!isTemplateTask && (
+                <FieldRow label="المدة">
+                  <DurationCell
+                    days={data.task.duration_days}
+                    onChange={(days) => updateSchedule({ durationDays: days })}
+                    readOnly={!caps.edit}
+                    isSummary={data.task.is_summary}
+                    size="md"
+                  />
+                </FieldRow>
+              )}
               <FieldRow label="تاريخ الاستحقاق">
                 <DateCell
                   dueDate={data.task.due_date}
                   isOverdue={data.task.is_overdue}
                   statusCategory={data.statuses.find((s) => s.id === data.task.status_id)?.category}
                   completedAt={data.task.completed_at}
-                  onChange={(date) => updateField({ due_date: date })}
+                  onChange={(date) =>
+                    isTemplateTask ? updateField({ due_date: date }) : date && updateSchedule({ dueDate: date })
+                  }
                   align="left"
                   readOnly={!caps.edit}
+                  minDate={isTemplateTask ? null : data.task.start_date}
+                  isSummary={data.task.is_summary}
                 />
               </FieldRow>
+              {!isTemplateTask && data.task.earliest_start && !data.task.is_summary && (
+                <FieldRow label="انتظار قبل البدء">
+                  <LagField
+                    lagDays={data.task.start_lag_days}
+                    readOnly={!caps.edit}
+                    onChange={(lagDays) => updateSchedule({ lagDays })}
+                  />
+                </FieldRow>
+              )}
+              {!isTemplateTask && data.task.is_summary && (
+                <p className="text-[11px] text-gray-400">
+                  تواريخ هذه المهمة تُحسب من مهامها الفرعية
+                  {data.task.duration_days ? ` (${workingDaysLabel(data.task.duration_days)})` : ""}.
+                </p>
+              )}
               {/* The board's attached custom fields (D2's "+" column
                   editor) previously had no home in this panel — only the
                   dense board row could show or edit them. */}
@@ -483,6 +568,11 @@ export default function TaskDetailPanel() {
                 basePath={basePath}
                 subtasks={data.subtasks}
                 onAdd={(title) => addSubtask(title)}
+                onOpenAdd={
+                  isTemplateTask
+                    ? undefined
+                    : () => openCreateTask({ boardId: data.task.board_id, parentTaskId: data.task.id })
+                }
                 canAdd={caps.create}
               />
             </Section>

@@ -3,6 +3,7 @@ import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, ArrowDownWideNarrow, Ar
 import TaskRow, { rowGridStyle } from "./TaskRow";
 import BulkActionPanel from "./BulkActionPanel";
 import { useBoardAccess } from "../BoardAccessContext";
+import { useTemplateMode } from "../TemplateModeContext";
 import { taskRowCaps } from "../../../hooks/tasks/useTaskAccess";
 import { withDescendants } from "../../../hooks/tasks/bulkSelection";
 import ColumnEditorModal from "./ColumnEditorModal";
@@ -59,6 +60,8 @@ interface TaskTableProps {
   onChangePriority: (taskId: string, priority: Priority | null) => void;
   onChangeStartDate: (taskId: string, date: string | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
+  onChangeDuration: (taskId: string, days: number) => void;
+  onChangeLag: (taskId: string, lagDays: number) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
   onCreateTask: (title: string, parentTaskId: string | null) => void;
   onChangeValue: (taskId: string, fieldDefinitionId: string, value: Json) => void;
@@ -109,6 +112,8 @@ export default function TaskTable({
   onChangePriority,
   onChangeStartDate,
   onChangeDueDate,
+  onChangeDuration,
+  onChangeLag,
   onChangeAssignees,
   onCreateTask,
   onChangeValue,
@@ -133,6 +138,7 @@ export default function TaskTable({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { spaceCaps, assigneeCaps, myUserId } = useBoardAccess();
+  const isTemplate = useTemplateMode();
   // What I may do on a given task: the space's rights plus an assignee's own.
   const capsOf = (taskId: string) =>
     taskRowCaps(spaceCaps, assigneeCaps, !!myUserId && (assigneesByTask.get(taskId) ?? []).includes(myUserId));
@@ -496,6 +502,7 @@ export default function TaskTable({
         {featureSettings.priorities && <div>الأولوية</div>}
         <div>الفريق</div>
         <div>تاريخ البدء</div>
+        <div title="أيام العمل (بدون الجمعة)">المدة</div>
         <div>الاستحقاق</div>
         <div>القسم</div>
         {customColumns.map((col) => (
@@ -580,6 +587,8 @@ export default function TaskTable({
                 onChangePriority={onChangePriority}
                 onChangeStartDate={onChangeStartDate}
                 onChangeDueDate={onChangeDueDate}
+                onChangeDuration={onChangeDuration}
+                onChangeLag={onChangeLag}
                 onChangeAssignees={onChangeAssignees}
                 onCreateTask={onCreateTask}
                 onChangeValue={onChangeValue}
@@ -605,7 +614,18 @@ export default function TaskTable({
           </div>
         )}
 
-        {spaceCaps.create && (
+        {spaceCaps.create && !isTemplate && (
+          // A real board's task needs a start date and its working days, so
+          // adding one always goes through the create dialog.
+          <button
+            onClick={() => onCreateTask("", null)}
+            className="flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            إضافة مهمة
+          </button>
+        )}
+        {spaceCaps.create && isTemplate && (
         <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
           <Plus className="h-3.5 w-3.5 text-gray-400" />
           <input

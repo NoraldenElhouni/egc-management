@@ -7,6 +7,9 @@ interface SubtasksSectionProps {
   basePath: string;
   subtasks: { id: string; title: string; status: StatusRow | null }[];
   onAdd: (title: string) => void;
+  /** Real boards: a subtask needs a start and working days, so "add" opens
+   * the create dialog instead of the inline title field. */
+  onOpenAdd?: () => void;
   /** May add subtasks (edit rights). Default true. */
   canAdd?: boolean;
 }
@@ -18,7 +21,7 @@ interface SubtasksSectionProps {
 // is a deliberate simplification (see build plan D3 note). basePath is
 // whichever list (board/department/my-work) currently hosts the panel —
 // see TaskDetailPanel's own header comment.
-export default function SubtasksSection({ basePath, subtasks, onAdd, canAdd = true }: SubtasksSectionProps) {
+export default function SubtasksSection({ basePath, subtasks, onAdd, onOpenAdd, canAdd = true }: SubtasksSectionProps) {
   const navigate = useNavigate();
   const [newTitle, setNewTitle] = useState("");
 
@@ -46,7 +49,16 @@ export default function SubtasksSection({ basePath, subtasks, onAdd, canAdd = tr
         </button>
       ))}
 
-      {canAdd && (
+      {canAdd && onOpenAdd && (
+        <button
+          onClick={onOpenAdd}
+          className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-right text-sm text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          إضافة مهمة فرعية
+        </button>
+      )}
+      {canAdd && !onOpenAdd && (
         <div className="flex items-center gap-1.5 px-2">
           <Plus className="h-3.5 w-3.5 text-gray-300" />
           <input

@@ -7409,9 +7409,12 @@ export type Database = {
           department_id: string | null
           description: Json
           due_date: string | null
+          duration_days: number | null
+          earliest_start: string | null
           id: string
           is_archived: boolean
           is_overdue: boolean
+          is_summary: boolean
           is_template: boolean
           occurrence_date: string | null
           parent_task_id: string | null
@@ -7422,6 +7425,7 @@ export type Database = {
           source_template_task_id: string | null
           specialization_id: string | null
           start_date: string | null
+          start_lag_days: number
           status_id: string
           task_type_id: string
           template_push_dismissed: boolean
@@ -7438,9 +7442,12 @@ export type Database = {
           department_id?: string | null
           description?: Json
           due_date?: string | null
+          duration_days?: number | null
+          earliest_start?: string | null
           id?: string
           is_archived?: boolean
           is_overdue?: boolean
+          is_summary?: boolean
           is_template?: boolean
           occurrence_date?: string | null
           parent_task_id?: string | null
@@ -7451,6 +7458,7 @@ export type Database = {
           source_template_task_id?: string | null
           specialization_id?: string | null
           start_date?: string | null
+          start_lag_days?: number
           status_id: string
           task_type_id?: string
           template_push_dismissed?: boolean
@@ -7467,9 +7475,12 @@ export type Database = {
           department_id?: string | null
           description?: Json
           due_date?: string | null
+          duration_days?: number | null
+          earliest_start?: string | null
           id?: string
           is_archived?: boolean
           is_overdue?: boolean
+          is_summary?: boolean
           is_template?: boolean
           occurrence_date?: string | null
           parent_task_id?: string | null
@@ -7480,6 +7491,7 @@ export type Database = {
           source_template_task_id?: string | null
           specialization_id?: string | null
           start_date?: string | null
+          start_lag_days?: number
           status_id?: string
           task_type_id?: string
           template_push_dismissed?: boolean
@@ -7814,6 +7826,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_working_days: {
+        Args: { p_days: number; p_start: string }
+        Returns: string
+      }
       advance_recurrence_next_run: {
         Args: { p_rule: Database["tasks"]["Tables"]["recurrence_rules"]["Row"] }
         Returns: string
@@ -7872,11 +7888,33 @@ export type Database = {
           old_id: string
         }[]
       }
+      create_scheduled_task: {
+        Args: {
+          p_anchor_task_id?: string
+          p_board_id: string
+          p_dry_run?: boolean
+          p_duration_days: number
+          p_lag_days?: number
+          p_mode?: string
+          p_parent_task_id?: string
+          p_push_successors?: boolean
+          p_start_date?: string
+          p_title: string
+        }
+        Returns: Json
+      }
       default_task_type_id: { Args: never; Returns: string }
+      dependency_problem: {
+        Args: { p_blocked_task_id: string; p_blocking_task_id: string }
+        Returns: string
+      }
       dependency_would_cycle: {
         Args: { p_blocked_task_id: string; p_blocking_task_id: string }
         Returns: boolean
       }
+      is_off_day: { Args: { p_day: string }; Returns: boolean }
+      local_today: { Args: never; Returns: string }
+      next_working_day: { Args: { p_day: string }; Returns: string }
       generate_recurrence_occurrences: { Args: never; Returns: undefined }
       push_template_tasks: {
         Args: {
@@ -7897,6 +7935,22 @@ export type Database = {
       template_epoch: { Args: never; Returns: string }
       template_space_id: { Args: never; Returns: string }
       template_sync_status: { Args: { p_board_id: string }; Returns: Json }
+      update_task_schedule: {
+        Args: {
+          p_dry_run?: boolean
+          p_due_date?: string
+          p_duration_days?: number
+          p_lag_days?: number
+          p_start_date?: string
+          p_task_id: string
+        }
+        Returns: Json
+      }
+      working_day_on_or_after: { Args: { p_day: string }; Returns: string }
+      working_days_between: {
+        Args: { p_from: string; p_to: string }
+        Returns: number
+      }
     }
     Enums: {
       access_level: "view" | "comment" | "edit" | "full"

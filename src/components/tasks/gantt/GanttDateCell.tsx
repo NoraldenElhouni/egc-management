@@ -18,9 +18,14 @@ interface GanttDateCellProps {
   onChange: (date: string | null) => void;
   /** Red text — the end-date cell of a task with tasks.is_overdue set. */
   overdue?: boolean;
+  /** Calendar boards: days before this can't be picked (a linked task's
+   * earliest start; a due date's start). */
+  minDate?: string | null;
+  /** A summary's dates come from its subtasks: shown, not editable. */
+  locked?: boolean;
 }
 
-export default function GanttDateCell({ value, onChange, overdue = false }: GanttDateCellProps) {
+export default function GanttDateCell({ value, onChange, overdue = false, minDate = null, locked = false }: GanttDateCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isTemplate = useTemplateMode();
@@ -30,10 +35,11 @@ export default function GanttDateCell({ value, onChange, overdue = false }: Gant
   return (
     <div ref={ref} className="relative flex h-full w-full items-center justify-center">
       <button
-        onClick={() => setOpen((v) => !v)}
-        className={`whitespace-nowrap rounded px-1.5 py-0.5 text-xs hover:bg-gray-100 ${
+        onClick={() => !locked && setOpen((v) => !v)}
+        className={`whitespace-nowrap rounded px-1.5 py-0.5 text-xs ${locked ? "cursor-default italic" : "hover:bg-gray-100"} ${
           !value ? "text-gray-300" : overdue ? "font-medium text-red-600" : "text-gray-600"
         }`}
+        title={locked ? "محسوب من المهام الفرعية" : undefined}
       >
         {label}
       </button>
@@ -41,7 +47,14 @@ export default function GanttDateCell({ value, onChange, overdue = false }: Gant
         (isTemplate ? (
           <DayOffsetPopover value={value} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} />
         ) : (
-          <CalendarPopover value={value} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} />
+          <CalendarPopover
+            value={value}
+            onChange={onChange}
+            onClose={() => setOpen(false)}
+            anchorRef={ref}
+            minDate={minDate}
+            allowClear={false}
+          />
         ))}
     </div>
   );

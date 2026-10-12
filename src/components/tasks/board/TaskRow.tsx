@@ -5,10 +5,12 @@ import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
 import StartDateCell from "./StartDateCell";
+import DurationCell from "./DurationCell";
 import AssigneeCell from "./AssigneeCell";
 import RoleAssigneeCell from "./RoleAssigneeCell";
 import { useTemplateRoles } from "../TemplateRolesContext";
 import { useRowCaps } from "../BoardAccessContext";
+import { useTemplateMode } from "../TemplateModeContext";
 import EditGuard from "../EditGuard";
 import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
@@ -23,8 +25,9 @@ import type {
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import type { Json } from "../../../lib/supabase";
 
-const FIXED_COLUMNS_WITH_PRIORITY = "minmax(0,1fr) 120px 84px 96px 92px 92px 100px";
-const FIXED_COLUMNS_NO_PRIORITY = "minmax(0,1fr) 120px 96px 92px 92px 100px";
+// name, status, [priority], team, start, days, due, department
+const FIXED_COLUMNS_WITH_PRIORITY = "minmax(0,1fr) 120px 84px 96px 92px 64px 92px 100px";
+const FIXED_COLUMNS_NO_PRIORITY = "minmax(0,1fr) 120px 96px 92px 64px 92px 100px";
 
 // A dynamic grid template (custom columns vary per board) can't be a
 // static Tailwind class, so both the header (TaskTable) and every row
@@ -75,7 +78,13 @@ interface TaskRowProps {
   onChangePriority: (taskId: string, priority: TaskRowType["priority"]) => void;
   onChangeStartDate: (taskId: string, date: string | null) => void;
   onChangeDueDate: (taskId: string, date: string | null) => void;
+  /** Working days (DurationCell). */
+  onChangeDuration: (taskId: string, days: number) => void;
+  /** Wait gap of a linked task — only ever cleared (0) from the row. */
+  onChangeLag: (taskId: string, lagDays: number) => void;
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
+  /** On a template board: title typed in the inline row. Elsewhere: called
+   * with an empty title to open the create dialog for a subtask. */
   onCreateTask: (title: string, parentTaskId: string) => void;
   onChangeValue: (taskId: string, fieldDefinitionId: string, value: Json) => void;
   draggedId: string | null;
@@ -121,6 +130,8 @@ export default function TaskRow({
   onChangePriority,
   onChangeStartDate,
   onChangeDueDate,
+  onChangeDuration,
+  onChangeLag,
   onChangeAssignees,
   onCreateTask,
   onChangeValue,
@@ -143,6 +154,7 @@ export default function TaskRow({
   const siblings = childrenByParent.get(task.parent_task_id) ?? [];
   // Only provided on template boards: roles sit next to the people.
   const templateRoles = useTemplateRoles();
+  const isTemplate = useTemplateMode();
   // What I may do on THIS task: the space's rights, plus an assignee's own.
   const rowCaps = useRowCaps(assigneesByTask.get(task.id) ?? []);
   const selected = !!selectedIds?.has(task.id);
@@ -347,7 +359,8 @@ export default function TaskRow({
 
             {hovered && !addingChild && rowCaps.create && (
               <button
-                onClick={() => setAddingChild(true)}
+                // a real board's subtask needs a start and days: the create dialog
+                onClick={() => (isTemplate ? setAddingChild(true) : onCreateTask("", task.id))}
                 className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
                 title="إضافة مهمة فرعية"
               >
@@ -391,6 +404,16 @@ export default function TaskRow({
           startDate={task.start_date}
           onChange={(date) => onChangeStartDate(task.id, date)}
           readOnly={!rowCaps.edit}
+          earliestStart={task.earliest_start}
+          lagDays={task.start_lag_days}
+          isSummary={task.is_summary}
+          onClearLag={() => onChangeLag(task.id, 0)}
+        />
+        <DurationCell
+          days={task.duration_days}
+          onChange={(days) => onChangeDuration(task.id, days)}
+          readOnly={!rowCaps.edit}
+          isSummary={task.is_summary}
         />
         <DateCell
           dueDate={task.due_date}
@@ -399,6 +422,8 @@ export default function TaskRow({
           completedAt={task.completed_at}
           onChange={(date) => onChangeDueDate(task.id, date)}
           readOnly={!rowCaps.edit}
+          minDate={task.start_date}
+          isSummary={task.is_summary}
         />
         <div className="truncate text-xs text-gray-400">{department ?? ""}</div>
         {customColumns.map((col) => (
@@ -449,6 +474,8 @@ export default function TaskRow({
               onChangePriority={onChangePriority}
               onChangeStartDate={onChangeStartDate}
               onChangeDueDate={onChangeDueDate}
+              onChangeDuration={onChangeDuration}
+              onChangeLag={onChangeLag}
               onChangeAssignees={onChangeAssignees}
               onCreateTask={onCreateTask}
               onChangeValue={onChangeValue}
