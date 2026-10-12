@@ -119,7 +119,7 @@ export default function AllProjectTeamsPage() {
     const all = projects ?? [];
     const assignments = all.reduce((sum, p) => sum + p.members.length, 0);
     const people = new Set(
-      all.flatMap((p) => p.members.map((m) => m.personId)),
+      all.flatMap((p) => p.members.map((m) => `${m.personType}:${m.personId}`)),
     ).size;
     return {
       projects: all.length,
@@ -444,6 +444,11 @@ function ProjectTeamCard({
                   <span className="text-xs text-gray-900">
                     {member.fullName}
                   </span>
+                  {member.personType === "contractor" && (
+                    <span className="rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-700">
+                      مقاول
+                    </span>
+                  )}
                   <span className="text-[10px] text-gray-500 bg-white border border-gray-200 rounded px-1.5 py-0.5">
                     {member.projectRoleName}
                   </span>

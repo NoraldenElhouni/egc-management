@@ -1,6 +1,11 @@
 import { AlertTriangle, BriefcaseBusiness } from "lucide-react";
 import { useCan } from "../../../hooks/permissions/useCan";
-import { useAssignableStaffForTeam } from "../../../hooks/team/useTeamAssignments";
+import {
+  parseRoleCandidate,
+  roleCandidateId,
+  useRoleCandidateOptions,
+  type TeamPersonType,
+} from "../../../hooks/team/useTeamAssignments";
 import { useAssignablePeople } from "../../../hooks/tasks/useAssignablePeople";
 import type { FilledRole, RoleGap } from "../../../hooks/tasks/useRoleGaps";
 import PersonSearchSelect from "./PersonSearchSelect";
@@ -9,22 +14,24 @@ import PersonSearchSelect from "./PersonSearchSelect";
 // template's tasks use has nobody in it on the target project (see
 // useRoleGaps.ts). Each empty role is settled right here, without leaving
 // the dialog:
-//   - add someone to that role on the project (a real team change — needs
+//   - add someone to that role on the project (a real change — an employee
+//     joins the team, a contractor fills the role; needs
 //     manage_project_team on that project, and a project to add them to)
 //   - assign someone directly to just these tasks
 //   - leave those tasks unassigned for now
 // Filled roles are only summarized; they need no decision.
 
 export type GapChoice =
-  | { kind: "role"; personId: string | null }
+  | { kind: "role"; personId: string | null; personType?: TeamPersonType }
   | { kind: "direct"; personId: string | null }
   | { kind: "skip" };
 
 export interface GapResolution {
   /** every gap has a complete choice */
   valid: boolean;
-  /** team_assignments to create before copying */
-  addToRole: { projectId: string; roleId: string; personId: string }[];
+  /** role holders to create before copying (team_assignments or
+   * project_contractor_roles, by personType) */
+  addToRole: { projectId: string; roleId: string; personId: string; personType: TeamPersonType }[];
   /** {boardId: {roleId: [userIds]}} for the RPCs */
   overrides: Record<string, Record<string, string[]>>;
 }
@@ -46,7 +53,12 @@ export function resolveGapChoices(gaps: RoleGap[], choices: Record<string, GapCh
       continue;
     }
     if (choice.kind === "role" && gap.projectId) {
-      addToRole.push({ projectId: gap.projectId, roleId: gap.roleId, personId: choice.personId });
+      addToRole.push({
+        projectId: gap.projectId,
+        roleId: gap.roleId,
+        personId: choice.personId,
+        personType: choice.personType ?? "employee",
+      });
     } else {
       for (const boardId of gap.boardIds) {
         overrides[boardId] ??= {};
@@ -112,7 +124,7 @@ function GapRow({ gap, choice, onChange }: { gap: RoleGap; choice: GapChoice | u
   // project-scoped: without a project id this always denies, which is
   // exactly right — there's no project team to add anyone to
   const { can: canManageTeam } = useCan("manage_project_team", gap.projectId ?? undefined);
-  const { data: staff = [] } = useAssignableStaffForTeam();
+  const { options: roleOptions } = useRoleCandidateOptions();
   const people = useAssignablePeople();
   const roleDisabledReason = !gap.projectId
     ? "هذه اللوحة ليست ضمن مشروع"
@@ -138,10 +150,12 @@ function GapRow({ gap, choice, onChange }: { gap: RoleGap; choice: GapChoice | u
           <span className="shrink-0 text-gray-700">إضافة شخص لهذا الدور في المشروع</span>
           {choice?.kind === "role" && (
             <PersonSearchSelect
-              options={staff.map((s) => ({ id: s.id, name: s.fullName }))}
-              value={choice.personId}
-              onChange={(personId) => onChange({ kind: "role", personId })}
-              placeholder="اختر الموظف…"
+              options={roleOptions}
+              value={choice.personId ? roleCandidateId(choice.personType ?? "employee", choice.personId) : null}
+              onChange={(value) =>
+                onChange(value ? { kind: "role", ...parseRoleCandidate(value) } : { kind: "role", personId: null })
+              }
+              placeholder="اختر موظفاً أو مقاولاً…"
             />
           )}
           {roleDisabledReason && <span className="text-[11px] text-gray-400">({roleDisabledReason})</span>}
@@ -157,7 +171,11 @@ function GapRow({ gap, choice, onChange }: { gap: RoleGap; choice: GapChoice | u
           <span className="shrink-0 text-gray-700">تكليف مباشر لهذه المهام فقط</span>
           {choice?.kind === "direct" && (
             <PersonSearchSelect
-              options={people.map((p) => ({ id: p.id, name: `${p.first_name} ${p.last_name ?? ""}`.trim() }))}
+              options={people.map((p) => ({
+                id: p.id,
+                name: `${p.first_name} ${p.last_name ?? ""}`.trim(),
+                tag: p.person_type === "contractor" ? "مقاول" : undefined,
+              }))}
               value={choice.personId}
               onChange={(personId) => onChange({ kind: "direct", personId })}
               placeholder="اختر الشخص…"

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Plus, Trash2, X } from "lucide-react";
 import { DndContext, type DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -21,8 +21,7 @@ import { useMyTaskAccess } from "../../../hooks/tasks/useTaskAccess";
 import { useProjectTeam } from "../../../hooks/team/useTeamAssignments";
 import { useCan } from "../../../hooks/permissions/useCan";
 import NewBoardModal from "../../../components/sidebar/NewBoardModal";
-import AddTeamMemberForm from "../../../components/project/team/AddTeamMemberForm";
-import TeamRoster from "../../../components/project/team/TeamRoster";
+import RoleSlotsList from "../../../components/project/team/RoleSlotsList";
 import type { Priority } from "../../../hooks/tasks/useTaskBoard";
 import type { Database, Json } from "../../../lib/supabase";
 import { AdminPageSkeleton, RowsSkeleton } from "../../../components/tasks/TasksSkeletons";
@@ -154,13 +153,15 @@ export default function SpaceSettingsPage() {
 }
 
 // Who holds which role (Project Manager, Architect, ...) on the space's
-// project. Same public.team_assignments the execution-management team screen
-// edits — this is just a second door to it, so template roles resolve to
+// project — employees on the team and contractors filling a role. Same data
+// the execution-management team screen edits, shown role-first: every role
+// is a slot, empty ones waiting for a person, so template roles resolve to
 // the people set here. Editing needs manage_project_team on this project;
-// anyone else sees the roster read-only.
+// anyone else sees the roles read-only.
 function TeamTab({ projectId }: { projectId: string }) {
   const { data: members, isLoading } = useProjectTeam(projectId);
   const { can: canManage } = useCan("manage_project_team", projectId);
+  const { can: canManageRoles } = useCan("manage_project_roles");
 
   if (isLoading) {
     return <RowsSkeleton rows={3} />;
@@ -168,11 +169,18 @@ function TeamTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <p className="text-xs text-gray-500">
-        الأدوار التي تحددها هنا (مدير المشروع، المهندس المعماري...) تُستخدم عند تطبيق القوالب وفي قائمة اختيار المسؤولين.
-      </p>
-      {canManage && <AddTeamMemberForm projectId={projectId} members={members ?? []} />}
-      <TeamRoster projectId={projectId} members={members ?? []} readOnly={!canManage} />
+      <div className="space-y-1 text-xs text-gray-500">
+        <p>
+          الأدوار التي تحددها هنا (مدير المشروع، المهندس المعماري...) تُستخدم عند تطبيق القوالب وفي قائمة اختيار المسؤولين.
+        </p>
+        <p>يمكن أن يشغل الدور موظف أو مقاول — ويظهر في القائمة المقاولون المرتبطون بحساب مستخدم فقط.</p>
+      </div>
+      <RoleSlotsList projectId={projectId} members={members ?? []} readOnly={!canManage} />
+      {canManageRoles && (
+        <Link to="/settings/project-roles" className="inline-block text-xs text-blue-600 hover:text-blue-800">
+          إدارة قائمة الأدوار ←
+        </Link>
+      )}
     </div>
   );
 }

@@ -45,7 +45,14 @@ export default function ProjectPermissionsPage() {
   const { user } = useAuth();
 
   const { data: catalog, isLoading: catalogLoading } = usePermissionCatalog();
-  const { data: team, isLoading: teamLoading } = useProjectTeam(projectId);
+  const { data: roleHolders, isLoading: teamLoading } =
+    useProjectTeam(projectId);
+  // The team only: contractors filling a project role are not team
+  // members and get nothing from the permission layers here.
+  const team = useMemo(
+    () => (roleHolders ?? []).filter((m) => m.personType === "employee"),
+    [roleHolders],
+  );
   const { data: defaults, isLoading: defaultsLoading } =
     useProjectDefaults(projectId);
   const saveDefaults = useSaveProjectDefaults();
@@ -56,7 +63,7 @@ export default function ProjectPermissionsPage() {
   );
 
   const distinctPeople = useMemo(
-    () => new Set((team ?? []).map((m) => m.personId)).size,
+    () => new Set(team.map((m) => m.personId)).size,
     [team],
   );
 
@@ -139,7 +146,7 @@ export default function ProjectPermissionsPage() {
       <TeamMemberOverridesSection
         projectId={projectId}
         catalog={projectScoped}
-        team={team ?? []}
+        team={team}
       />
     </div>
   );

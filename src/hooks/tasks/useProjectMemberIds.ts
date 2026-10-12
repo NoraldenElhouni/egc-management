@@ -3,8 +3,9 @@ import { permissionsDb } from "../../lib/permissionsDb";
 import { projectTeamKey } from "../team/useTeamAssignments";
 
 /**
- * Distinct people on a project's team (public.team_assignments), as a Set of
- * employee ids — the same ids as AssignablePerson.id / task_assignees.user_id.
+ * Distinct people holding a role on a project (public.project_role_holders:
+ * the team plus contractors in project roles), as a Set of user ids — the
+ * same ids as AssignablePerson.id / task_assignees.user_id.
  *
  * Used by the assignee picker to float project members above everyone else.
  * Someone holding two roles on a project has two rows, hence the Set.
@@ -20,11 +21,12 @@ export function useProjectMemberIds(projectId: string | null | undefined, enable
     staleTime: 60 * 1000,
     queryFn: async () => {
       const { data, error } = await permissionsDb
-        .from("team_assignments")
-        .select("person_id")
-        .eq("project_id", projectId as string);
+        .from("project_role_holders")
+        .select("user_id")
+        .eq("project_id", projectId as string)
+        .not("user_id", "is", null);
       if (error) throw error;
-      return new Set((data ?? []).map((r) => r.person_id));
+      return new Set((data ?? []).map((r) => r.user_id as string));
     },
   });
 }

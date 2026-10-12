@@ -4,11 +4,20 @@ import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 
 // A person picker with a search box, for long lists (every employee /
 // assignable person) where a plain <select> means scrolling through
-// everyone. Used by RoleGapsSection's "add to role" and "assign directly".
+// everyone. Used by RoleGapsSection's "add to role" and "assign directly",
+// and by the space settings role slots (RoleSlotsList).
 
 export interface PersonOption {
   id: string;
   name: string;
+  /** Short badge after the name — "مقاول" for contractors. */
+  tag?: string;
+}
+
+// same light amber as the contractor badge in AssigneeCell.tsx
+function OptionTag({ tag }: { tag?: string }) {
+  if (!tag) return null;
+  return <span className="shrink-0 rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-700">{tag}</span>;
 }
 
 export default function PersonSearchSelect({
@@ -38,7 +47,10 @@ export default function PersonSearchSelect({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-xs outline-none hover:border-gray-300"
       >
-        <span className={`truncate ${selected ? "text-gray-800" : "text-gray-400"}`}>{selected?.name ?? placeholder}</span>
+        <span className="flex min-w-0 items-center gap-1">
+          <span className={`truncate ${selected ? "text-gray-800" : "text-gray-400"}`}>{selected?.name ?? placeholder}</span>
+          <OptionTag tag={selected?.tag} />
+        </span>
         <ChevronDown className="h-3 w-3 shrink-0 text-gray-400" />
       </button>
 
@@ -67,11 +79,12 @@ export default function PersonSearchSelect({
                     setOpen(false);
                     setSearch("");
                   }}
-                  className={`block w-full truncate rounded px-2 py-1 text-right text-xs hover:bg-gray-50 ${
+                  className={`flex w-full items-center gap-1.5 rounded px-2 py-1 text-right text-xs hover:bg-gray-50 ${
                     o.id === value ? "font-medium text-primary" : "text-gray-700"
                   }`}
                 >
-                  {o.name}
+                  <span className="truncate">{o.name}</span>
+                  <OptionTag tag={o.tag} />
                 </button>
               ))
             )}

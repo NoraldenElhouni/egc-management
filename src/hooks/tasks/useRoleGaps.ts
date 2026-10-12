@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { permissionsDb } from "../../lib/permissionsDb";
 import { supabase } from "../../lib/supabaseClient";
 
 // Before a template is applied or pushed: which of the project roles its
 // tasks use (tasks.task_role_assignees) are held by somebody on each
-// target board's project (public.team_assignments), and which are empty.
+// target board's project (public.project_role_holders — employees from
+// team_assignments and contractors from project_contractor_roles), and
+// which are empty. A contractor with no login can't take a task, so they
+// don't fill a role.
 // Filled roles need nothing — tasks._assign_roles assigns their holders.
 // Empty ones become "gaps" the dialog asks about (RoleGapsSection.tsx).
 //
@@ -78,31 +82,30 @@ export function useRoleGaps(templateTaskIds: string[], targetBoardIds: string[])
           ? supabase.from("projects").select("id, name").in("id", projectIds)
           : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
         projectIds.length
-          ? supabase
-              .from("team_assignments")
-              .select("project_id, project_role_id, person_id")
+          ? permissionsDb
+              .from("project_role_holders")
+              .select("project_id, project_role_id, user_id, person_type, first_name, last_name")
               .in("project_id", projectIds)
               .in("project_role_id", roleIds)
-          : Promise.resolve({ data: [] as { project_id: string; project_role_id: string; person_id: string }[], error: null }),
+              .not("user_id", "is", null)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (projectsError) throw projectsError;
       if (holdersError) throw holdersError;
       const projectNameById = new Map((projects ?? []).map((p) => [p.id, p.name]));
 
-      const personIds = Array.from(new Set((holders ?? []).map((h) => h.person_id)));
-      const { data: people, error: peopleError } = personIds.length
-        ? await supabase.from("users").select("id, first_name, last_name").in("id", personIds)
-        : { data: [] as { id: string; first_name: string | null; last_name: string | null }[], error: null };
-      if (peopleError) throw peopleError;
-      const personNameById = new Map(
-        (people ?? []).map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "—"]),
-      );
-
+      const personNameById = new Map<string, string>();
       const holdersByProjectRole = new Map<string, string[]>();
       for (const h of holders ?? []) {
+        const userId = h.user_id as string;
+        personNameById.set(
+          userId,
+          (`${h.first_name ?? ""} ${h.last_name ?? ""}`.trim() || "—") +
+            (h.person_type === "contractor" ? " (مقاول)" : ""),
+        );
         const key = `${h.project_id}:${h.project_role_id}`;
         const list = holdersByProjectRole.get(key) ?? [];
-        list.push(h.person_id);
+        list.push(userId);
         holdersByProjectRole.set(key, list);
       }
 

@@ -60,6 +60,7 @@ export default function TeamRoster({ projectId, members, readOnly = false }: Pro
     try {
       await removeMember.mutateAsync({
         assignmentId: member.assignmentId,
+        personType: member.personType,
         projectId,
         personId: member.personId,
         projectRoleId: member.projectRoleId,
@@ -89,6 +90,7 @@ export default function TeamRoster({ projectId, members, readOnly = false }: Pro
     try {
       await updateRole.mutateAsync({
         assignmentId: member.assignmentId,
+        personType: member.personType,
         projectId,
         projectRoleId: editRoleId,
       });
@@ -147,8 +149,16 @@ export default function TeamRoster({ projectId, members, readOnly = false }: Pro
                     <UserRound size={15} className="text-gray-500" />
                   </span>
                   <span>
-                    <span className="block text-sm text-gray-900">
+                    <span className="flex items-center gap-1.5 text-sm text-gray-900">
                       {member.fullName}
+                      {/* same marker as the task assignee picker
+                          (AssigneeCell.tsx): fills the role, but is not
+                          on the team and gets no project permissions */}
+                      {member.personType === "contractor" && (
+                        <span className="rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-700">
+                          مقاول
+                        </span>
+                      )}
                     </span>
                     <span className="block text-[11px] text-gray-400" dir="ltr">
                       {member.email}
@@ -188,7 +198,9 @@ export default function TeamRoster({ projectId, members, readOnly = false }: Pro
                 ) : confirmId === member.assignmentId ? (
                   <span className="flex items-center gap-2">
                     <span className="text-xs text-gray-600">
-                      إزالة من الفريق؟
+                      {member.personType === "contractor"
+                        ? "إزالة من الدور؟"
+                        : "إزالة من الفريق؟"}
                     </span>
                     <Button
                       variant="error"

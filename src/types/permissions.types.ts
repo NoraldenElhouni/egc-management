@@ -139,6 +139,39 @@ export type ProjectRoleRow = {
 };
 
 /**
+ * tasks/migrations/2026-10-12_contractor_project_roles_e.sql. A
+ * contractor filling a project role on a project, so template role tasks
+ * reach them. Not team membership — it grants no permissions.
+ */
+export type ProjectContractorRoleRow = {
+  id: string;
+  project_id: string;
+  contractor_id: string;
+  project_role_id: string;
+  assigned_at: string;
+  assigned_by: string | null;
+};
+
+/**
+ * Same migration. The public.project_role_holders view: team_assignments
+ * (employees) unioned with project_contractor_roles (contractors).
+ * assignment_id is the row in whichever of the two tables it came from;
+ * user_id is null for a contractor whose login was removed.
+ */
+export type ProjectRoleHolderRow = {
+  assignment_id: string;
+  project_id: string;
+  project_role_id: string;
+  user_id: string | null;
+  contractor_id: string | null;
+  person_type: "employee" | "contractor";
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  assigned_at: string;
+};
+
+/**
  * phase1-schema.sql section 9. What share of a project a person
  * receives. UNIQUE (project_id, person_id) — one row per person per
  * project, which is the structural fix for the old table's
@@ -439,6 +472,26 @@ export type PermissionsDatabase = {
         };
         Relationships: [];
       };
+      project_contractor_roles: {
+        Row: ProjectContractorRoleRow;
+        Insert: {
+          id?: string;
+          project_id: string;
+          contractor_id: string;
+          project_role_id: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          contractor_id?: string;
+          project_role_id?: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Relationships: [];
+      };
       // Unchanged by Phase 1, but declared here so the team hooks can
       // read it through the same client rather than juggling two.
       project_roles: {
@@ -470,7 +523,10 @@ export type PermissionsDatabase = {
       };
     };
     Views: {
-      [_ in never]: never;
+      project_role_holders: {
+        Row: ProjectRoleHolderRow;
+        Relationships: [];
+      };
     };
     Functions: {
       effective_permissions: {

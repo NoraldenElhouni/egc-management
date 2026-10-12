@@ -3,6 +3,8 @@ import { permissionsDb } from "../../lib/permissionsDb";
 import { supabase } from "../../lib/supabaseClient";
 import {
   ALL_PROJECT_TEAMS_KEY,
+  PROJECT_ROLE_HOLDER_COLUMNS,
+  toTeamMember,
   type TeamMember,
 } from "./useTeamAssignments";
 
@@ -14,11 +16,11 @@ import {
 // nobody has to open 63
 // projects one at a time to find out where a person is assigned.
 //
-// FOUR QUERIES, NOT ONE PER PROJECT. Everything is fetched in bulk and
+// THREE QUERIES, NOT ONE PER PROJECT. Everything is fetched in bulk and
 // joined in JS, the same way useProjectTeam does it and for the same
 // reason: team_assignments is hand-typed with no Relationships, so a
 // PostgREST embed would not typecheck. At today's size — 63 projects,
-// 115 assignments — this is four round trips total, versus 63 if the
+// 115 assignments — this is three round trips total, versus 63 if the
 // page mounted one useProjectTeam per project.
 //
 // PROJECTS WITH NO TEAM ARE INCLUDED, with an empty members array.
@@ -51,49 +53,29 @@ export function useAllProjectTeams() {
             .select("id, name, serial_number, status")
             .order("serial_number", { ascending: true }),
           permissionsDb
-            .from("team_assignments")
-            .select("id, project_id, person_id, project_role_id, assigned_at"),
+            .from("project_role_holders")
+            .select(PROJECT_ROLE_HOLDER_COLUMNS),
         ]);
 
       if (projectsError) throw projectsError;
       if (error) throw error;
 
+      // Employees and contractors in project roles alike — the view
+      // unions team_assignments and project_contractor_roles.
       const assignments = rows ?? [];
-      const personIds = Array.from(
-        new Set(assignments.map((r) => r.person_id)),
-      );
       const roleIds = Array.from(
         new Set(assignments.map((r) => r.project_role_id)),
       );
 
-      const [{ data: users }, { data: roles }] = await Promise.all([
-        personIds.length
-          ? supabase
-              .from("users")
-              .select("id, first_name, last_name, email")
-              .in("id", personIds)
-          : Promise.resolve({ data: [] as never[] }),
-        roleIds.length
-          ? permissionsDb.from("project_roles").select("id, name").in("id", roleIds)
-          : Promise.resolve({ data: [] as never[] }),
-      ]);
+      const { data: roles } = roleIds.length
+        ? await permissionsDb.from("project_roles").select("id, name").in("id", roleIds)
+        : { data: [] as never[] };
 
-      const userById = new Map((users ?? []).map((u) => [u.id, u]));
       const roleById = new Map((roles ?? []).map((r) => [r.id, r.name]));
 
       const byProject = new Map<string, TeamMember[]>();
       for (const row of assignments) {
-        const user = userById.get(row.person_id);
-        const member: TeamMember = {
-          assignmentId: row.id,
-          personId: row.person_id,
-          fullName:
-            `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || "—",
-          email: user?.email ?? null,
-          projectRoleId: row.project_role_id,
-          projectRoleName: roleById.get(row.project_role_id) ?? "—",
-          assignedAt: row.assigned_at,
-        };
+        const member = toTeamMember(row, roleById.get(row.project_role_id));
         const list = byProject.get(row.project_id);
         if (list) list.push(member);
         else byProject.set(row.project_id, [member]);

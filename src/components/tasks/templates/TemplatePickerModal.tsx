@@ -126,6 +126,7 @@ export default function TemplatePickerModal({
         await addTeamMember.mutateAsync({
           projectId: a.projectId,
           personId: a.personId,
+          personType: a.personType,
           projectRoleId: a.roleId,
           assignedBy: user?.id ?? null,
         });

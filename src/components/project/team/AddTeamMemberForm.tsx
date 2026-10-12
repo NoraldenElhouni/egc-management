@@ -3,7 +3,9 @@ import { UserPlus } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import {
   TeamMember,
+  TeamPersonType,
   useAddTeamMember,
+  useAssignableContractorsForRoles,
   useAssignableStaffForTeam,
   useProjectRoles,
 } from "../../../hooks/team/useTeamAssignments";
@@ -14,6 +16,11 @@ import Button from "../../ui/Button";
 // Add a team member — implementation guide section 4.4 steps 2 to 6.
 // =====================================================================
 // Two fields. Person and project role. That is the whole form.
+//
+// The person can be an employee (a team member, team_assignments) or a
+// contractor filling the role (project_contractor_roles) — same roles,
+// so template role tasks reach either. A contractor is not a team member
+// and gets no project permissions from this.
 //
 // NO PERCENTAGE FIELD, and no link to the distribution screen. The guide
 // is explicit (section 4.5): "Do not put '…and set their percentage' at
@@ -41,7 +48,10 @@ export default function AddTeamMemberForm({
   onAdded,
 }: Props) {
   const { user } = useAuth();
+  const [personType, setPersonType] = useState<TeamPersonType>("employee");
   const { data: staff, isLoading: staffLoading } = useAssignableStaffForTeam();
+  const { data: contractors, isLoading: contractorsLoading } =
+    useAssignableContractorsForRoles();
   const { data: roles, isLoading: rolesLoading } = useProjectRoles();
   const addMember = useAddTeamMember();
 
@@ -53,7 +63,10 @@ export default function AddTeamMemberForm({
   // The exact combinations already held. This is the ONLY thing that
   // disables anything in this form.
   const heldCombinations = useMemo(
-    () => new Set(members.map((m) => `${m.personId}:${m.projectRoleId}`)),
+    () =>
+      new Set(
+        members.map((m) => `${m.personType}:${m.personId}:${m.projectRoleId}`),
+      ),
     [members],
   );
 
@@ -63,17 +76,21 @@ export default function AddTeamMemberForm({
   // entirely — which the old form did — was wrong.
   const personOptions = useMemo(
     () =>
-      (staff ?? []).map((person) => ({
-        label: person.fullName,
-        value: person.id,
-      })),
-    [staff],
+      ((personType === "contractor" ? contractors : staff) ?? []).map(
+        (person) => ({
+          label: person.fullName,
+          value: person.id,
+        }),
+      ),
+    [personType, staff, contractors],
   );
+  const peopleLoading =
+    personType === "contractor" ? contractorsLoading : staffLoading;
 
   const duplicateSelected =
     personId !== "" &&
     projectRoleId !== "" &&
-    heldCombinations.has(`${personId}:${projectRoleId}`);
+    heldCombinations.has(`${personType}:${personId}:${projectRoleId}`);
 
   // Purely informational. Rendered as a plain sentence, never as a
   // warning, and with no way to act on it.
@@ -101,10 +118,15 @@ export default function AddTeamMemberForm({
       await addMember.mutateAsync({
         projectId,
         personId,
+        personType,
         projectRoleId,
         assignedBy: user?.id ?? null,
       });
-      setSuccess("تمت إضافة العضو إلى الفريق.");
+      setSuccess(
+        personType === "contractor"
+          ? "تمت إضافة المقاول إلى الدور."
+          : "تمت إضافة العضو إلى الفريق.",
+      );
       setPersonId("");
       setProjectRoleId("");
       onAdded?.();
@@ -131,15 +153,45 @@ export default function AddTeamMemberForm({
         </div>
       )}
 
+      <div className="inline-flex rounded-md border border-gray-200 p-0.5 text-sm">
+        {(
+          [
+            ["employee", "موظف"],
+            ["contractor", "مقاول"],
+          ] as const
+        ).map(([type, label]) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => {
+              setPersonType(type);
+              setPersonId("");
+            }}
+            disabled={addMember.isPending}
+            className={`rounded px-3 py-1 ${
+              personType === type
+                ? "bg-gray-100 font-medium text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <SearchableSelectField
           id="team-person"
-          label="الشخص"
+          label={personType === "contractor" ? "المقاول" : "الشخص"}
           value={personId}
           onChange={setPersonId}
           options={personOptions}
-          placeholder="-- ابحث عن موظف --"
-          disabled={staffLoading || addMember.isPending}
+          placeholder={
+            personType === "contractor"
+              ? "-- ابحث عن مقاول --"
+              : "-- ابحث عن موظف --"
+          }
+          disabled={peopleLoading || addMember.isPending}
         />
 
         {/* A plain select rather than the shared SelectField: that
@@ -178,9 +230,17 @@ export default function AddTeamMemberForm({
           loading={addMember.isPending}
           onClick={handleSubmit}
         >
-          إضافة إلى الفريق
+          {personType === "contractor" ? "إضافة إلى الدور" : "إضافة إلى الفريق"}
         </Button>
       </div>
+
+      {personType === "contractor" && (
+        <p className="text-xs text-gray-500">
+          يظهر هنا المقاولون المرتبطون بحساب مستخدم فقط. المقاول يستلم مهام هذا
+          الدور من القوالب، لكنه لا يصبح عضواً في فريق المشروع ولا يحصل على
+          صلاحياته.
+        </p>
+      )}
 
       {duplicateSelected && (
         <p className="text-xs text-amber-700">

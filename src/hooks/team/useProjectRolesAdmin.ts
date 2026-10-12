@@ -1,18 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { permissionsDb } from "../../lib/permissionsDb";
 import { supabase } from "../../lib/supabaseClient";
+import type { ProjectRoleHolderRow } from "../../types/permissions.types";
 import { ALL_PROJECT_TEAMS_KEY, PROJECT_ROLES_KEY } from "./useTeamAssignments";
 
 // Settings → project roles (public.project_roles): the global list of
 // positions a person can hold on a project team (Project Manager, Site
-// Engineer, ...). Who holds which role where lives in team_assignments;
-// template tasks can also point at a role (tasks.task_role_assignees).
+// Engineer, ...). Who holds which role where lives in team_assignments
+// (employees) and project_contractor_roles (contractors), read together
+// through the project_role_holders view; template tasks can also point
+// at a role (tasks.task_role_assignees).
 //
-// A role can only be deleted while nothing uses it: team_assignments
-// would refuse anyway (ON DELETE RESTRICT), and task_role_assignees would
-// silently lose the template's role assignments (ON DELETE CASCADE), so
-// the UI blocks both.
+// A role can only be deleted while nothing uses it: team_assignments and
+// project_contractor_roles would refuse anyway (ON DELETE RESTRICT), and
+// task_role_assignees would silently lose the template's role assignments
+// (ON DELETE CASCADE), so the UI blocks all three.
 
 const ADMIN_KEY = ["project-roles-admin"];
+
+// A holder's id and name as these screens show them. Contractors are
+// keyed by contractors.id and marked the way the assignee picker marks
+// them, since they share role lists with employees here.
+const holderId = (h: Pick<ProjectRoleHolderRow, "person_type" | "user_id" | "contractor_id">) =>
+  (h.person_type === "contractor" ? h.contractor_id : h.user_id) as string;
+const holderName = (h: Pick<ProjectRoleHolderRow, "person_type" | "first_name" | "last_name">) =>
+  (`${h.first_name ?? ""} ${h.last_name ?? ""}`.trim() || "—") +
+  (h.person_type === "contractor" ? " (مقاول)" : "");
 
 export interface RoleHolderProject {
   projectId: string;
@@ -37,7 +50,9 @@ export function useProjectRolesAdmin() {
       const [{ data: roles, error: rolesError }, { data: assignments, error: assignmentsError }, templateRoles] =
         await Promise.all([
           supabase.from("project_roles").select("id, name").order("name"),
-          supabase.from("team_assignments").select("project_id, person_id, project_role_id"),
+          permissionsDb
+            .from("project_role_holders")
+            .select("project_id, project_role_id, user_id, contractor_id, person_type, first_name, last_name"),
           supabase.schema("tasks").from("task_role_assignees").select("project_role_id"),
         ]);
       if (rolesError) throw rolesError;
@@ -47,22 +62,12 @@ export function useProjectRolesAdmin() {
       const templateRoleRows = templateRoles.error ? [] : (templateRoles.data ?? []);
 
       const projectIds = Array.from(new Set((assignments ?? []).map((a) => a.project_id)));
-      const personIds = Array.from(new Set((assignments ?? []).map((a) => a.person_id)));
-      const [{ data: projects, error: projectsError }, { data: people, error: peopleError }] = await Promise.all([
-        projectIds.length
-          ? supabase.from("projects").select("id, name").in("id", projectIds)
-          : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
-        personIds.length
-          ? supabase.from("users").select("id, first_name, last_name").in("id", personIds)
-          : Promise.resolve({ data: [] as { id: string; first_name: string | null; last_name: string | null }[], error: null }),
-      ]);
+      const { data: projects, error: projectsError } = projectIds.length
+        ? await supabase.from("projects").select("id, name").in("id", projectIds)
+        : { data: [] as { id: string; name: string }[], error: null };
       if (projectsError) throw projectsError;
-      if (peopleError) throw peopleError;
 
       const projectNameById = new Map((projects ?? []).map((p) => [p.id, p.name]));
-      const personNameById = new Map(
-        (people ?? []).map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "—"]),
-      );
 
       const templateCountByRole = new Map<string, number>();
       for (const r of templateRoleRows) {
@@ -78,8 +83,9 @@ export function useProjectRolesAdmin() {
             projectName: projectNameById.get(a.project_id) ?? "—",
             people: [],
           };
-          if (!entry.people.some((p) => p.id === a.person_id)) {
-            entry.people.push({ id: a.person_id, name: personNameById.get(a.person_id) ?? "—" });
+          const id = holderId(a);
+          if (!entry.people.some((p) => p.id === id)) {
+            entry.people.push({ id, name: holderName(a) });
           }
           byProject.set(a.project_id, entry);
         }
@@ -167,47 +173,33 @@ export function useProjectRoleHolders(roleId: string | undefined) {
 
       const [{ data: role, error: roleError }, { data: assignments, error: assignmentsError }] = await Promise.all([
         supabase.from("project_roles").select("id, name").eq("id", roleId).single(),
-        supabase
-          .from("team_assignments")
-          .select("id, project_id, person_id, assigned_at")
+        permissionsDb
+          .from("project_role_holders")
+          .select("assignment_id, project_id, user_id, contractor_id, person_type, first_name, last_name, email, assigned_at")
           .eq("project_role_id", roleId),
       ]);
       if (roleError) throw roleError;
       if (assignmentsError) throw assignmentsError;
 
       const projectIds = Array.from(new Set((assignments ?? []).map((a) => a.project_id)));
-      const personIds = Array.from(new Set((assignments ?? []).map((a) => a.person_id)));
-      const [{ data: projects, error: projectsError }, { data: people, error: peopleError }] = await Promise.all([
-        projectIds.length
-          ? supabase.from("projects").select("id, name").in("id", projectIds)
-          : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
-        personIds.length
-          ? supabase.from("users").select("id, first_name, last_name, email").in("id", personIds)
-          : Promise.resolve({
-              data: [] as { id: string; first_name: string | null; last_name: string | null; email: string | null }[],
-              error: null,
-            }),
-      ]);
+      const { data: projects, error: projectsError } = projectIds.length
+        ? await supabase.from("projects").select("id, name").in("id", projectIds)
+        : { data: [] as { id: string; name: string }[], error: null };
       if (projectsError) throw projectsError;
-      if (peopleError) throw peopleError;
 
       const projectNameById = new Map((projects ?? []).map((p) => [p.id, p.name]));
-      const personById = new Map((people ?? []).map((p) => [p.id, p]));
 
       return {
         roleName: role.name,
-        rows: (assignments ?? []).map((a) => {
-          const person = personById.get(a.person_id);
-          return {
-            assignmentId: a.id,
-            personId: a.person_id,
-            personName: person ? `${person.first_name ?? ""} ${person.last_name ?? ""}`.trim() || "—" : "—",
-            email: person?.email ?? null,
-            projectId: a.project_id,
-            projectName: projectNameById.get(a.project_id) ?? "—",
-            assignedAt: a.assigned_at,
-          };
-        }),
+        rows: (assignments ?? []).map((a) => ({
+          assignmentId: a.assignment_id,
+          personId: holderId(a),
+          personName: holderName(a),
+          email: a.email,
+          projectId: a.project_id,
+          projectName: projectNameById.get(a.project_id) ?? "—",
+          assignedAt: a.assigned_at,
+        })),
       };
     },
   });
