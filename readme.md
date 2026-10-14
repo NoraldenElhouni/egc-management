@@ -5,5 +5,5 @@ powershill
 $env:GITHUB_TOKEN="PASTE_YOUR_REAL_TOKEN_HERE"
 npm run publish
 
-git tag v1.1.6
-git push origin v1.1.6
+git tag v1.1.7
+git push origin v1.1.7
