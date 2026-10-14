@@ -18,8 +18,8 @@ interface GanttDateCellProps {
   onChange: (date: string | null) => void;
   /** Red text — the end-date cell of a task with tasks.is_overdue set. */
   overdue?: boolean;
-  /** Calendar boards: days before this can't be picked (a linked task's
-   * earliest start; a due date's start). */
+  /** Days before this can't be picked (a linked task's earliest start; a
+   * due date's start). */
   minDate?: string | null;
   /** A summary's dates come from its subtasks: shown, not editable. */
   locked?: boolean;
@@ -45,7 +45,14 @@ export default function GanttDateCell({ value, onChange, overdue = false, minDat
       </button>
       {open &&
         (isTemplate ? (
-          <DayOffsetPopover value={value} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} />
+          <DayOffsetPopover
+            value={value}
+            onChange={onChange}
+            onClose={() => setOpen(false)}
+            anchorRef={ref}
+            minOffset={minDate ? dateToDayOffset(minDate) : null}
+            allowClear={false}
+          />
         ) : (
           <CalendarPopover
             value={value}

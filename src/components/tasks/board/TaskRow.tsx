@@ -10,7 +10,6 @@ import AssigneeCell from "./AssigneeCell";
 import RoleAssigneeCell from "./RoleAssigneeCell";
 import { useTemplateRoles } from "../TemplateRolesContext";
 import { useRowCaps } from "../BoardAccessContext";
-import { useTemplateMode } from "../TemplateModeContext";
 import EditGuard from "../EditGuard";
 import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
@@ -155,8 +154,6 @@ export default function TaskRow({
 }: TaskRowProps) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
-  const [addingChild, setAddingChild] = useState(false);
-  const [childTitle, setChildTitle] = useState("");
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
   // the "تبدأ بعد" editor — also opened from the right-click menu
   const [linksOpen, setLinksOpen] = useState(false);
@@ -165,11 +162,10 @@ export default function TaskRow({
   const [menuPoint, setMenuPoint] = useState<{ x: number; y: number } | null>(null);
   const children = childrenByParent.get(task.id) ?? [];
   const hasChildren = children.length > 0;
-  const collapsed = collapsedIds.has(task.id) && !addingChild;
+  const collapsed = collapsedIds.has(task.id);
   const siblings = childrenByParent.get(task.parent_task_id) ?? [];
   // Only provided on template boards: roles sit next to the people.
   const templateRoles = useTemplateRoles();
-  const isTemplate = useTemplateMode();
   // What I may do on THIS task: the space's rights, plus an assignee's own.
   const rowCaps = useRowCaps(assigneesByTask.get(task.id) ?? []);
   const selected = !!selectedIds?.has(task.id);
@@ -195,12 +191,6 @@ export default function TaskRow({
     setDropZone(null);
   };
 
-  const submitChild = () => {
-    const title = childTitle.trim();
-    if (title) onCreateTask(title, task.id);
-    setChildTitle("");
-    setAddingChild(false);
-  };
   const department = task.department_id
     ? departmentNamesById.get(task.department_id)
     : null;
@@ -385,10 +375,10 @@ export default function TaskRow({
               </Tooltip>
             )}
 
-            {hovered && !addingChild && rowCaps.create && (
+            {hovered && rowCaps.create && (
               <button
-                // a real board's subtask needs a start and days: the create dialog
-                onClick={() => (isTemplate ? setAddingChild(true) : onCreateTask("", task.id))}
+                // a subtask needs a start and days: the create dialog
+                onClick={() => onCreateTask("", task.id)}
                 className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
                 title="إضافة مهمة فرعية"
               >
@@ -541,30 +531,6 @@ export default function TaskRow({
               canDrag={canDrag}
             />
           ))}
-
-          {addingChild && (
-            <div
-              className="flex items-center gap-1.5 border-b border-gray-100 px-2 py-1.5"
-              style={{ paddingRight: (depth + 1) * 20 + 16 }}
-            >
-              <Plus className="h-3.5 w-3.5 text-gray-400" />
-              <input
-                autoFocus
-                value={childTitle}
-                onChange={(e) => setChildTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitChild();
-                  if (e.key === "Escape") {
-                    setChildTitle("");
-                    setAddingChild(false);
-                  }
-                }}
-                onBlur={submitChild}
-                placeholder="عنوان المهمة الفرعية..."
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-              />
-            </div>
-          )}
         </>
       )}
     </>

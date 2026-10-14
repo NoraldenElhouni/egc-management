@@ -18,9 +18,10 @@ import {
   workingDayOnOrAfterString,
   workingDaysLabel,
 } from "../board/workingDays";
+import { dateToDayOffset, dayOffsetLabel, dayOffsetToDate } from "../board/templateDates";
 
-// The one way to add a task to a real (non-template) board: a task needs a
-// start date and the number of working days it takes, and usually follows
+// The one way to add a task to any board, a template included: a task needs
+// a start and the number of working days it takes, and usually follows
 // another task. Three placements:
 //
 //   بدون ارتباط   its own start date, nothing before it
@@ -32,6 +33,10 @@ import {
 // Days and due date edit each other (Friday excluded, workingDays.ts). The
 // box at the bottom is the server's dry run of exactly this create: the
 // real start / end and every task that would move.
+//
+// On a template the start is a "Day N" number and every day counts; when the
+// template is applied from a start date, Day N becomes the N-th working day
+// after it (tasks/migrations/2026-10-14_templates_scheduling.sql).
 
 const PLACEMENT_KEY = (boardId: string) => `tasks.createPlacement:${boardId}`;
 
@@ -69,8 +74,12 @@ interface CreateTaskDialogProps extends CreateTaskDialogOptions {
 type UiPlacement = "none" | "after" | "with";
 
 export default function CreateTaskDialog({ boardId, parentTaskId = null, title: initialTitle = "", anchorTaskId = null, onClose }: CreateTaskDialogProps) {
-  const { data: boardTasks, isPending: loadingTasks } = useBoardScheduleTasks(boardId);
+  const { data: schedule, isPending: loadingTasks } = useBoardScheduleTasks(boardId);
+  const boardTasks = schedule?.tasks;
+  const plain = schedule?.isTemplate ?? false;
   const create = useCreateScheduledTask();
+  // "الخميس 2026/10/22" on a board, "يوم 3" on a template
+  const fmtDay = (d: string) => (plain ? dayOffsetLabel(dateToDayOffset(d)) : formatDayWithWeekday(d));
 
   const [title, setTitle] = useState(initialTitle);
   const [placement, setPlacement] = useState<UiPlacement>("none");
@@ -118,6 +127,8 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
   useEffect(() => {
     if (initialized || !boardTasks) return;
     setInitialized(true);
+    // a template starts at Day 0 (the real board's default start is today)
+    if (plain) setStartDate(dayOffsetToDate(0));
     const explicit = anchorTaskId ? byId.get(anchorTaskId) : null;
     if (explicit?.start_date) {
       setPlacement("after");
@@ -133,7 +144,7 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
     setPlacement("none");
     const parentStart = day(parent?.start_date);
     if (parentStart) setStartDate(parentStart);
-  }, [initialized, boardTasks, anchorTaskId, byId, parentTaskId, boardId, lastSibling, parent]);
+  }, [initialized, boardTasks, plain, anchorTaskId, byId, parentTaskId, boardId, lastSibling, parent]);
 
   useEffect(() => {
     titleRef.current?.focus();
@@ -144,10 +155,10 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
 
   const estimatedStart =
     placement === "after" && anchor?.due_date
-      ? nextWorkingDayString(day(anchor.due_date) as string)
+      ? nextWorkingDayString(day(anchor.due_date) as string, plain)
       : placement === "with" && anchor?.start_date
         ? (day(anchor.start_date) as string)
-        : workingDayOnOrAfterString(startDate);
+        : workingDayOnOrAfterString(startDate, plain);
 
   const valid = days >= 1 && days <= 3650 && (!linked || !!anchor);
 
@@ -159,14 +170,14 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
         parentTaskId,
         placement,
         anchorTaskId: linked ? anchorId : null,
-        startDate: linked ? null : workingDayOnOrAfterString(startDate),
+        startDate: linked ? null : workingDayOnOrAfterString(startDate, plain),
         pushSuccessors: placement === "after" ? pushSuccessors : false,
       }
     : null;
   const { preview, previewError, previewLoading } = useCreateTaskPreview(input);
 
   const start = day(preview?.task.start_date) ?? estimatedStart;
-  const due = day(preview?.task.due_date) ?? dueFromDays(start, days);
+  const due = day(preview?.task.due_date) ?? dueFromDays(start, days, plain);
 
   const setDaysValue = (n: number) => {
     const clean = Math.min(3650, Math.max(1, Math.floor(n)));
@@ -195,6 +206,13 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
       // the tasks module's error toast already says why
     }
   };
+
+  const dayText = (v: string | null | undefined) => {
+    const d = day(v);
+    return d ? (plain ? String(dateToDayOffset(d)) : d) : "";
+  };
+  const rangeLabel = (a: string | null | undefined, b: string | null | undefined) =>
+    plain ? `${dayOffsetLabel(Number(dayText(a)))} → ${dayOffsetLabel(Number(dayText(b)))}` : `${dayText(a)} → ${dayText(b)}`;
 
   const filteredAnchors = scheduled.filter((t) => !anchorSearch.trim() || t.title.includes(anchorSearch.trim()));
   const depthOf = (t: BoardScheduleTask) => {
@@ -283,15 +301,32 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
 
             {placement === "none" && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  ref={startRef}
-                  type="button"
-                  onClick={() => setOpenPicker(openPicker === "start" ? null : "start")}
-                  className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-                  {formatDayWithWeekday(workingDayOnOrAfterString(startDate))}
-                </button>
+                {plain ? (
+                  <label className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-1 text-sm text-gray-700">
+                    <span className="text-gray-500">يوم</span>
+                    <input
+                      type="number"
+                      value={dateToDayOffset(startDate)}
+                      onChange={(e) => {
+                        const n = Math.trunc(Number(e.target.value));
+                        if (Number.isFinite(n)) setStartDate(dayOffsetToDate(n));
+                      }}
+                      className="w-16 bg-transparent text-center outline-none"
+                      dir="ltr"
+                      aria-label="يوم البدء"
+                    />
+                  </label>
+                ) : (
+                  <button
+                    ref={startRef}
+                    type="button"
+                    onClick={() => setOpenPicker(openPicker === "start" ? null : "start")}
+                    className="flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
+                    {fmtDay(workingDayOnOrAfterString(startDate))}
+                  </button>
+                )}
                 {lastSibling && (
                   <button
                     type="button"
@@ -305,7 +340,7 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
                     بعد «{lastSibling.title}»
                   </button>
                 )}
-                {openPicker === "start" && (
+                {!plain && openPicker === "start" && (
                   <CalendarPopover
                     value={startDate}
                     onChange={(d) => d && setStartDate(d)}
@@ -328,7 +363,7 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
                   <span className="truncate text-gray-800">{anchor ? anchor.title : "اختر المهمة…"}</span>
                   {anchor && (
                     <span className="shrink-0 text-xs text-gray-400" dir="ltr">
-                      {day(anchor.start_date)} → {day(anchor.due_date)}
+                      {rangeLabel(anchor.start_date, anchor.due_date)}
                     </span>
                   )}
                 </button>
@@ -361,7 +396,7 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
                           >
                             <span className="truncate">{t.title}</span>
                             <span className="shrink-0 text-[11px] text-gray-400" dir="ltr">
-                              {day(t.start_date)} → {day(t.due_date)}
+                              {rangeLabel(t.start_date, t.due_date)}
                             </span>
                           </button>
                         </li>
@@ -408,20 +443,39 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
                 className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary"
                 dir="ltr"
               />
-              <p className="mt-1 text-[11px] text-gray-400">الجمعة لا تُحسب</p>
+              <p className="mt-1 text-[11px] text-gray-400">
+                {plain ? "عند التطبيق: أيام عمل من تاريخ البدء" : "الجمعة لا تُحسب"}
+              </p>
             </div>
             <div>
-              <div className="mb-1 text-xs font-semibold text-gray-500">تاريخ الانتهاء</div>
-              <button
-                ref={dueRef}
-                type="button"
-                onClick={() => setOpenPicker(openPicker === "due" ? null : "due")}
-                className="flex w-full items-center gap-1.5 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-                {formatDayWithWeekday(due)}
-              </button>
-              {openPicker === "due" && (
+              <div className="mb-1 text-xs font-semibold text-gray-500">{plain ? "يوم الانتهاء" : "تاريخ الانتهاء"}</div>
+              {plain ? (
+                <label className="flex w-full items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                  <span className="text-gray-500">يوم</span>
+                  <input
+                    type="number"
+                    value={dateToDayOffset(due)}
+                    onChange={(e) => {
+                      const n = Math.trunc(Number(e.target.value));
+                      if (Number.isFinite(n)) setDaysValue(daysFromDue(start, dayOffsetToDate(n), true));
+                    }}
+                    className="w-full bg-transparent text-center outline-none"
+                    dir="ltr"
+                    aria-label="يوم الانتهاء"
+                  />
+                </label>
+              ) : (
+                <button
+                  ref={dueRef}
+                  type="button"
+                  onClick={() => setOpenPicker(openPicker === "due" ? null : "due")}
+                  className="flex w-full items-center gap-1.5 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
+                  {fmtDay(due)}
+                </button>
+              )}
+              {!plain && openPicker === "due" && (
                 <CalendarPopover
                   value={due}
                   onChange={(d) => d && setDaysValue(daysFromDue(start, d))}
@@ -448,8 +502,8 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
           <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600">
             <div className="flex items-center justify-between">
               <span>
-                تبدأ <span className="font-semibold text-gray-800">{formatDayWithWeekday(start)}</span> وتنتهي{" "}
-                <span className="font-semibold text-gray-800">{formatDayWithWeekday(due)}</span>
+                تبدأ <span className="font-semibold text-gray-800">{fmtDay(start)}</span> وتنتهي{" "}
+                <span className="font-semibold text-gray-800">{fmtDay(due)}</span>
               </span>
               {(previewLoading || loadingTasks) && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
             </div>
@@ -474,7 +528,7 @@ export default function CreateTaskDialog({ boardId, parentTaskId = null, title: 
             )}
             {endBefore && endAfter && endBefore !== endAfter && (
               <div className="mt-2 text-gray-500">
-                نهاية اللوحة: {formatDayWithWeekday(endBefore)} ← <span className="font-semibold text-gray-800">{formatDayWithWeekday(endAfter)}</span>
+                نهاية {plain ? "القالب" : "اللوحة"}: {fmtDay(endBefore)} ← <span className="font-semibold text-gray-800">{fmtDay(endAfter)}</span>
               </div>
             )}
           </div>

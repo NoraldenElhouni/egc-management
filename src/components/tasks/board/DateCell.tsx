@@ -102,18 +102,29 @@ export default function DateCell({
   const dueSoon = !finished && !!dueDate && !isOverdue && new Date(dueDate).getTime() - Date.now() < 2 * 86_400_000;
 
   // Template board: "Day N" instead of a calendar date (templateDates.ts).
+  // Picking a Day sets the task's days (a summary spans its subtasks).
   if (isTemplate) {
     return (
       <div ref={ref} className="relative">
         <button
           onClick={() => !readOnly && setOpen((v) => !v)}
-          className={dueDate
-            ? "whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
-            : "rounded-full px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-100 hover:text-gray-400"}
+          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${
+            dueDate ? "bg-gray-50 font-medium text-gray-500" : "text-gray-300"
+          } ${readOnly ? "cursor-default" : "hover:bg-gray-100"}`}
         >
           {dueDate ? dayOffsetLabel(dateToDayOffset(dueDate)) : "يوم —"}
         </button>
-        {open && <DayOffsetPopover value={dueDate} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} align={align} />}
+        {open && (
+          <DayOffsetPopover
+            value={dueDate}
+            onChange={onChange}
+            onClose={() => setOpen(false)}
+            anchorRef={ref}
+            align={align}
+            minOffset={minDate ? dateToDayOffset(minDate) : null}
+            allowClear={false}
+          />
+        )}
       </div>
     );
   }

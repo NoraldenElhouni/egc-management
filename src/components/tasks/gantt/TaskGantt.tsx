@@ -10,7 +10,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
-  CalendarX2,
   ChevronDown,
   ChevronLeft,
   ChevronsDown,
@@ -27,6 +26,7 @@ import type {
 } from "../../../hooks/tasks/useTaskBoard";
 import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import Tooltip from "../../ui/Tooltip";
+import { dayOffsetLabel } from "../board/templateDates";
 import { PointMenu } from "../board/AnchoredMenu";
 import { useTemplateMode } from "../TemplateModeContext";
 import GanttBar, { MILESTONE_HALF, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
@@ -412,9 +412,9 @@ export default function TaskGantt({
   );
   const undatedCount = tasks.length - datedCount;
 
-  // The board's planned span: first start to last end, in working days.
+  // The board's planned span: first start to last end, in working days
+  // (on a template, in Days).
   const plan = useMemo(() => {
-    if (isTemplate) return null;
     let first: string | null = null;
     let last: string | null = null;
     for (const t of tasks) {
@@ -425,7 +425,11 @@ export default function TaskGantt({
       if (!last || e > last) last = e;
     }
     if (!first || !last) return null;
-    return { end: last, endDay: adapter.toDay(last), workingDays: workingDaysBetween(adapter.toDay(first), adapter.toDay(last)) };
+    return {
+      end: last,
+      endDay: adapter.toDay(last),
+      workingDays: workingDaysBetween(adapter.toDay(first), adapter.toDay(last), isTemplate),
+    };
   }, [tasks, isTemplate, adapter]);
 
   // Hovering a bar lights up its whole chain: everything it waits for and
@@ -709,7 +713,9 @@ export default function TaskGantt({
             <Tooltip label={`من أول مهمة إلى آخرها: ${workingDaysLabel(plan.workingDays)}`}>
               <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                 <CalendarCheck className="h-3.5 w-3.5" />
-                النهاية المخططة {formatDayWithWeekday(plan.end)} · {plan.workingDays} يوم عمل
+                {isTemplate
+                  ? `آخر يوم: ${dayOffsetLabel(plan.endDay)} · ${plan.workingDays} يوم عمل`
+                  : `النهاية المخططة ${formatDayWithWeekday(plan.end)} · ${plan.workingDays} يوم عمل`}
               </span>
             </Tooltip>
           )}
@@ -772,7 +778,7 @@ export default function TaskGantt({
                   <div
                     className="flex shrink-0 items-end justify-center border-l border-gray-100 pb-1.5"
                     style={{ width: DAYS_COL_W }}
-                    title={isTemplate ? "أيام تقويمية" : "أيام العمل (بدون الجمعة)"}
+                    title={isTemplate ? "أيام العمل عند تطبيق القالب" : "أيام العمل (بدون الجمعة)"}
                   >
                     المدة
                   </div>
@@ -886,7 +892,11 @@ export default function TaskGantt({
                   <div
                     className="absolute inset-y-0 border-r-2 border-emerald-400/70"
                     style={{ right: xOf(plan.endDay + 1) }}
-                    title={`النهاية المخططة ${formatDayWithWeekday(dayString(plan.endDay))}`}
+                    title={
+                      isTemplate
+                        ? `آخر يوم: ${dayOffsetLabel(plan.endDay)}`
+                        : `النهاية المخططة ${formatDayWithWeekday(dayString(plan.endDay))}`
+                    }
                   />
                 )}
               </div>
@@ -964,19 +974,6 @@ export default function TaskGantt({
                         >
                           {task.title}
                         </button>
-                        {/* Clear both dates — the task goes back to an
-                            undated row, same as CalendarPopover's
-                            "إزالة التاريخ" but for start and due at once. */}
-                        {span && span.kind !== "none" && !readOnly && isTemplate && (
-                          <Tooltip label="إزالة التواريخ" className="ms-auto shrink-0">
-                            <button
-                              onClick={() => onChangeDates(task.id, { startDate: null, dueDate: null })}
-                              className="invisible rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-red-500 group-hover:visible"
-                            >
-                              <CalendarX2 className="h-3.5 w-3.5" />
-                            </button>
-                          </Tooltip>
-                        )}
                         <ResizeHandle active={resizing} handlers={resizeHandlers} />
                       </div>
                     </div>
@@ -1001,11 +998,12 @@ export default function TaskGantt({
                           readOnly={readOnly}
                           scheduling={
                             // a milestone is drawn at its due date: it keeps the plain start/due drag
-                            isTemplate || span.kind === "milestone"
+                            span.kind === "milestone"
                               ? null
                               : {
                                   durationDays: task.duration_days ?? span.endDay - span.startDay + 1,
                                   earliestDay: task.earliest_start ? adapter.toDay(task.earliest_start) : null,
+                                  plain: isTemplate,
                                 }
                           }
                           summary={task.is_summary}
@@ -1025,9 +1023,9 @@ export default function TaskGantt({
                           pxPerDay={pxPerDay}
                           onPick={(day) => {
                             const date = adapter.fromDay(day);
-                            // a real board: just a start (1 working day; a
-                            // linked task can't start before its links allow)
-                            onChangeDates(task.id, isTemplate ? { startDate: date, dueDate: date } : { startDate: date });
+                            // just a start (1 day; a linked task can't start
+                            // before its links allow)
+                            onChangeDates(task.id, { startDate: date });
                           }}
                         />
                       )}

@@ -66,19 +66,52 @@ export default function StartDateCell({
   const linked = !!earliestStart;
   const locked = readOnly || isSummary;
 
-  // Template board: "Day N" instead of a calendar date (templateDates.ts).
+  // Template board: "Day N" instead of a calendar date (templateDates.ts),
+  // with the same links, wait gap and summary rules as a normal board.
   if (isTemplate) {
+    const tip = isSummary
+      ? "محسوب من المهام الفرعية"
+      : linked
+        ? `تبدأ بعد انتهاء المهام السابقة${lagDays > 0 ? ` + انتظار ${lagDays} يوم` : ""}`
+        : "";
+    const pill = startDate ? (
+      <button
+        onClick={() => !locked && setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 ${
+          locked ? "cursor-default" : "hover:bg-gray-100"
+        }`}
+      >
+        {linked && !isSummary && <Link2 className="h-3 w-3 shrink-0 text-primary" />}
+        {dayOffsetLabel(dateToDayOffset(startDate))}
+        {linked && lagDays > 0 && <span className="text-[10px] font-semibold text-amber-600">+{lagDays}</span>}
+      </button>
+    ) : readOnly ? (
+      <span className="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] text-gray-300">غير مجدولة</span>
+    ) : (
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-gray-200 px-2 py-0.5 text-[11px] text-gray-400 hover:border-gray-300 hover:text-gray-500"
+        title="المهمة غير مجدولة — اختر يوم البدء"
+      >
+        <CalendarDays className="h-3 w-3" />
+        غير مجدولة
+      </button>
+    );
     return (
       <div ref={ref} className="relative">
-        <button
-          onClick={() => !readOnly && setOpen((v) => !v)}
-          className={startDate
-            ? "whitespace-nowrap rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
-            : "rounded-full px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-100 hover:text-gray-400"}
-        >
-          {startDate ? dayOffsetLabel(dateToDayOffset(startDate)) : "يوم —"}
-        </button>
-        {open && <DayOffsetPopover value={startDate} onChange={onChange} onClose={() => setOpen(false)} anchorRef={ref} align={align} />}
+        {tip ? <Tooltip label={tip}>{pill}</Tooltip> : pill}
+        {open && (
+          <DayOffsetPopover
+            value={startDate}
+            onChange={onChange}
+            onClose={() => setOpen(false)}
+            anchorRef={ref}
+            align={align}
+            minOffset={earliestStart ? dateToDayOffset(earliestStart) : null}
+            allowClear={false}
+            extraAction={linked && lagDays > 0 && onClearLag ? { label: "إلغاء الانتظار", onClick: onClearLag } : undefined}
+          />
+        )}
       </div>
     );
   }

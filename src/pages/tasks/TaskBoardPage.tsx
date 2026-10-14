@@ -12,6 +12,7 @@ import { TemplateRolesProvider } from "../../components/tasks/TemplateRolesConte
 import { useTaskRoles } from "../../hooks/tasks/useTaskRoles";
 import TemplateSyncBanner from "../../components/tasks/templates/TemplateSyncBanner";
 import PushToBoardsModal from "../../components/tasks/templates/PushToBoardsModal";
+import TemplateChangesModal from "../../components/tasks/templates/TemplateChangesModal";
 import { useTemplateSyncActions, useTemplateSyncStatus } from "../../hooks/tasks/useTemplateSync";
 import { NO_CAPS, useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { BoardAccessProvider } from "../../components/tasks/BoardAccessContext";
@@ -49,7 +50,6 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     bulkSetPriority,
     bulkAssign,
     bulkDelete,
-    createTask,
     setTaskValue,
     attachField,
     createAndAttachField,
@@ -64,6 +64,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   const [showZoneClone, setShowZoneClone] = useState(false);
   // Template push (useTemplateSync.ts): the task ids the dialog opens with.
   const [pushTaskIds, setPushTaskIds] = useState<string[] | null>(null);
+  const [reviewingChanges, setReviewingChanges] = useState(false);
   const { status: syncStatus } = useTemplateSyncStatus(boardId);
   const { dismiss } = useTemplateSyncActions();
   // Project roles on a template's tasks (useTaskRoles.ts) — loaded only for templates.
@@ -95,12 +96,10 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   }
 
   const isTemplate = data.board.is_template;
-  // A template keeps its title-only quick add ("Day N", nothing scheduled);
-  // a real board's task needs a start and working days: the create dialog.
+  // A task needs a start and working days (a "Day N" on a template): always
+  // the create dialog.
   const addTask = (title: string, parentTaskId: string | null) =>
-    isTemplate
-      ? title.trim() && createTask({ title, parentTaskId })
-      : openCreateTask({ boardId: data.board.id, parentTaskId, title });
+    openCreateTask({ boardId: data.board.id, parentTaskId, title });
 
   // Without a view on the whole space (an assignee reaching the board from
   // the sidebar) the board shows only the tasks assigned to me. A task whose
@@ -116,6 +115,9 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
   // Pushing only makes sense on a template, or on a board built from one.
   const canPush = !!syncStatus && (isTemplate || syncStatus.templateBoards.length > 0);
   const pendingTaskIds = canPush && spaceCaps.edit ? syncStatus.pendingTaskIds : [];
+  // edits / removals on a template since boards took their copies
+  const changedCount = isTemplate && spaceCaps.edit ? (syncStatus?.changedTaskIds.length ?? 0) : 0;
+  const removedCount = isTemplate && spaceCaps.edit ? (syncStatus?.removedCount ?? 0) : 0;
 
   return (
     <TemplateModeProvider value={isTemplate}>
@@ -182,12 +184,15 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
         </div>
       </div>
 
-      {pendingTaskIds.length > 0 && (
+      {(pendingTaskIds.length > 0 || changedCount > 0 || removedCount > 0) && (
         <TemplateSyncBanner
           isTemplate={isTemplate}
           pendingCount={pendingTaskIds.length}
+          changedCount={changedCount}
+          removedCount={removedCount}
           onPush={() => setPushTaskIds(pendingTaskIds)}
           onDismiss={() => dismiss({ boardId: data.board.id, taskIds: pendingTaskIds })}
+          onReviewChanges={() => setReviewingChanges(true)}
         />
       )}
 
@@ -204,7 +209,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
             onLink={(pair) => link(pair)}
             onUnlink={(pair) => unlink([pair])}
-            onAddTask={spaceCaps.create && !isTemplate ? () => addTask("", null) : undefined}
+            onAddTask={spaceCaps.create ? () => addTask("", null) : undefined}
             readOnly={!spaceCaps.edit}
           />
         ) : (
@@ -291,6 +296,10 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
           initialTaskIds={pushTaskIds}
           onClose={() => setPushTaskIds(null)}
         />
+      )}
+
+      {reviewingChanges && (
+        <TemplateChangesModal templateBoardId={data.board.id} onClose={() => setReviewingChanges(false)} />
       )}
 
       {showZoneClone && (

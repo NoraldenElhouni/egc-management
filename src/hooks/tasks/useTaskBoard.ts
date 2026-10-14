@@ -641,17 +641,7 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       dueDate: string | null;
     }) => {
-      if (!query.data?.board.is_template) {
-        if (dueDate) await scheduleTask(taskId, { dueDate });
-        return;
-      }
-      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
-      const { error } = await tasksDb
-        .from("tasks")
-        .update({ due_date: dueDate })
-        .eq("id", taskId);
-      if (error) throw error;
-      if (prevTask) recordTaskPatch("تغيير تاريخ الاستحقاق", taskId, { due_date: prevTask.due_date }, { due_date: dueDate });
+      if (dueDate) await scheduleTask(taskId, { dueDate });
     },
     onSettled: onScheduleSettled,
   });
@@ -664,34 +654,15 @@ export function useTaskBoard(boardId: string | undefined) {
       taskId: string;
       startDate: string | null;
     }) => {
-      if (!query.data?.board.is_template) {
-        if (startDate) await scheduleTask(taskId, { startDate });
-        return;
-      }
-      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
-      const { error } = await tasksDb
-        .from("tasks")
-        .update({ start_date: startDate })
-        .eq("id", taskId);
-      if (error) throw error;
-      if (prevTask) recordTaskPatch("تغيير تاريخ البدء", taskId, { start_date: prevTask.start_date }, { start_date: startDate });
+      if (startDate) await scheduleTask(taskId, { startDate });
     },
     onSettled: onScheduleSettled,
   });
 
-  // Working days (DurationCell). On a template board they are calendar days
-  // and the database derives the "Day N" due date from them.
+  // Working days (DurationCell). On a template board every Day counts; the
+  // database derives the due date from the days either way.
   const updateDuration = useMutation({
-    mutationFn: async ({ taskId, days }: { taskId: string; days: number }) => {
-      if (!query.data?.board.is_template) {
-        await scheduleTask(taskId, { durationDays: days });
-        return;
-      }
-      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
-      const { error } = await tasksDb.from("tasks").update({ duration_days: days }).eq("id", taskId);
-      if (error) throw error;
-      if (prevTask) recordTaskPatch("تغيير المدة", taskId, { duration_days: prevTask.duration_days }, { duration_days: days });
-    },
+    mutationFn: ({ taskId, days }: { taskId: string; days: number }) => scheduleTask(taskId, { durationDays: days }),
     onSettled: onScheduleSettled,
   });
 
@@ -705,9 +676,9 @@ export function useTaskBoard(boardId: string | undefined) {
   // Gantt drag/resize, one update per gesture. Optimistic for the dragged bar
   // only — a bar snapping back until the refetch lands reads as "the drag
   // failed" — while the tasks it pushes along move when the refetch lands.
-  // A real board sends what the gesture changed (start and/or working days)
-  // and the scheduler derives the rest; a template board writes the "Day N"
-  // dates directly. An omitted key is left untouched.
+  // Sends what the gesture changed (start and/or days) and the scheduler
+  // derives the rest, on a template board too ("Day N", every day counts).
+  // An omitted key is left untouched.
   const updateTaskDates = useMutation({
     mutationFn: async ({
       taskId,
@@ -720,67 +691,34 @@ export function useTaskBoard(boardId: string | undefined) {
       dueDate?: string | null;
       durationDays?: number;
     }) => {
-      if (!query.data?.board.is_template) {
-        const change: ScheduleChange = {};
-        if (startDate) change.startDate = startDate;
-        if (durationDays !== undefined) change.durationDays = durationDays;
-        else if (dueDate) change.dueDate = dueDate;
-        if (Object.keys(change).length > 0) await scheduleTask(taskId, change);
-        return;
-      }
-      const patch: { start_date?: string | null; due_date?: string | null } = {};
-      if (startDate !== undefined) patch.start_date = startDate;
-      if (dueDate !== undefined) patch.due_date = dueDate;
-      const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);
-      if (error) throw error;
+      const change: ScheduleChange = {};
+      if (startDate) change.startDate = startDate;
+      if (durationDays !== undefined) change.durationDays = durationDays;
+      else if (dueDate) change.dueDate = dueDate;
+      if (Object.keys(change).length > 0) await scheduleTask(taskId, change);
     },
-    onMutate: async ({ taskId, startDate, dueDate, durationDays }) => {
+    onMutate: async ({ taskId, startDate, durationDays }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<TaskBoardData>(queryKey);
       if (previous) {
-        const calendar = !previous.board.is_template;
+        const plain = previous.board.is_template;
         queryClient.setQueryData<TaskBoardData>(queryKey, {
           ...previous,
           tasks: previous.tasks.map((t) => {
             if (t.id !== taskId) return t;
-            if (!calendar) {
-              return {
-                ...t,
-                ...(startDate !== undefined ? { start_date: startDate } : {}),
-                ...(dueDate !== undefined ? { due_date: dueDate } : {}),
-              };
-            }
             // what the scheduler will do, so the bar lands where it will stay
-            const start = startDate ? workingDayOnOrAfterString(startDate) : t.start_date;
+            const start = startDate ? workingDayOnOrAfterString(startDate, plain) : t.start_date;
             const days = durationDays ?? t.duration_days ?? 1;
             return start
-              ? { ...t, start_date: start, duration_days: days, due_date: dueFromDays(start, days) }
+              ? { ...t, start_date: start, duration_days: days, due_date: dueFromDays(start, days, plain) }
               : t;
           }),
         });
       }
       return { previous };
     },
-    onSuccess: (_data, { taskId, startDate, dueDate }, context) => {
-      // Real boards: saveTaskSchedule already recorded the undo entry.
-      if (!context?.previous?.board.is_template) return;
-      // The cache was already updated optimistically by onMutate, so the old
-      // dates come from the snapshot it took, not from query.data.
-      const prevTask = context.previous.tasks.find((t) => t.id === taskId);
-      if (!prevTask) return;
-      recordTaskPatch(
-        "تغيير التواريخ",
-        taskId,
-        {
-          ...(startDate !== undefined ? { start_date: prevTask.start_date } : {}),
-          ...(dueDate !== undefined ? { due_date: prevTask.due_date } : {}),
-        },
-        {
-          ...(startDate !== undefined ? { start_date: startDate } : {}),
-          ...(dueDate !== undefined ? { due_date: dueDate } : {}),
-        },
-      );
-    },
+    // saveTaskSchedule records the undo entry
+
     onError: (_error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
     },
@@ -846,39 +784,6 @@ export function useTaskBoard(boardId: string | undefined) {
       invalidateTaskAccess(queryClient);
     },
   });
-
-  const createTask = useMutation({
-    mutationFn: async ({
-      title,
-      parentTaskId,
-    }: {
-      title: string;
-      parentTaskId: string | null;
-    }) => {
-      if (!boardId || !query.data) throw new Error("board not loaded");
-      const firstOpenStatus =
-        query.data.statuses.find((s) => s.category === "not_started") ??
-        query.data.statuses[0];
-      if (!firstOpenStatus) throw new Error("لا توجد حالات معرّفة لهذه اللوحة");
-
-      const maxSort = query.data.tasks
-        .filter((t) => t.parent_task_id === parentTaskId)
-        .reduce((max, t) => Math.max(max, t.sort_order), -1);
-
-      const { error } = await tasksDb.from("tasks").insert({
-        board_id: boardId,
-        parent_task_id: parentTaskId,
-        title,
-        status_id: firstOpenStatus.id,
-        project_id: query.data.projectId,
-        created_by: user?.id ?? null,
-        sort_order: maxSort + 1,
-      });
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-  });
-
   const setTaskValue = useMutation({
     mutationFn: async ({ taskId, fieldDefinitionId, value }: { taskId: string; fieldDefinitionId: string; value: Json }) => {
       const prev = query.data?.valuesByTask.get(taskId)?.get(fieldDefinitionId);
@@ -1019,8 +924,6 @@ export function useTaskBoard(boardId: string | undefined) {
     bulkSetPriority: bulkSetPriority.mutateAsync,
     bulkAssign: bulkAssign.mutateAsync,
     bulkDelete: bulkDelete.mutateAsync,
-    createTask: createTask.mutate,
-    createTaskError: createTask.error as Error | null,
     setTaskValue: setTaskValue.mutate,
     attachField: attachField.mutateAsync,
     createAndAttachField: createAndAttachField.mutateAsync,

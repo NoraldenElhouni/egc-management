@@ -7932,6 +7932,21 @@ export type Database = {
       recompute_overdue_flags: { Args: never; Returns: undefined }
       resolve_status_set: { Args: { p_board_id: string }; Returns: string }
       run_due_date_automations: { Args: never; Returns: undefined }
+      dismiss_template_changes: {
+        Args: { p_removed_ids?: string[]; p_task_ids: string[]; p_template_board_id: string }
+        Returns: number
+      }
+      sync_template_changes: {
+        Args: {
+          p_removed_ids?: string[]
+          p_role_overrides?: Json
+          p_target_board_ids: string[]
+          p_task_ids: string[]
+          p_template_board_id: string
+        }
+        Returns: Json
+      }
+      template_changes: { Args: { p_template_board_id: string }; Returns: Json }
       template_epoch: { Args: never; Returns: string }
       template_space_id: { Args: never; Returns: string }
       template_sync_status: { Args: { p_board_id: string }; Returns: Json }

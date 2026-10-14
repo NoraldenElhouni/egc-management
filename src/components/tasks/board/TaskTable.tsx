@@ -3,7 +3,6 @@ import { Plus, MoreHorizontal, ChevronsDown, ChevronsUp, ArrowDownWideNarrow, Ar
 import TaskRow, { rowGridStyle } from "./TaskRow";
 import BulkActionPanel from "./BulkActionPanel";
 import { useBoardAccess } from "../BoardAccessContext";
-import { useTemplateMode } from "../TemplateModeContext";
 import { taskRowCaps } from "../../../hooks/tasks/useTaskAccess";
 import { withDescendants } from "../../../hooks/tasks/bulkSelection";
 import ColumnEditorModal from "./ColumnEditorModal";
@@ -140,12 +139,10 @@ export default function TaskTable({
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const hasSeededCollapse = useRef(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showColumnEditor, setShowColumnEditor] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { spaceCaps, assigneeCaps, myUserId } = useBoardAccess();
-  const isTemplate = useTemplateMode();
   // What I may do on a given task: the space's rights plus an assignee's own.
   const capsOf = (taskId: string) =>
     taskRowCaps(spaceCaps, assigneeCaps, !!myUserId && (assigneesByTask.get(taskId) ?? []).includes(myUserId));
@@ -335,13 +332,6 @@ export default function TaskTable({
     }
     return Array.from(map.entries()).map(([key, v]) => ({ key, label: v.label, tasks: v.tasks }));
   }, [groupBy, topLevel, boardZoneId, zoneName, departmentNamesById, assigneesByTask, employeesById, taskTypes]);
-
-  const submitNewTask = () => {
-    const title = newTaskTitle.trim();
-    if (!title) return;
-    onCreateTask(title, null);
-    setNewTaskTitle("");
-  };
 
   // The bulk bar fades out as well as in: it stays mounted for the length of
   // the transition after the selection empties, rendered from the last
@@ -623,9 +613,9 @@ export default function TaskTable({
           </div>
         )}
 
-        {spaceCaps.create && !isTemplate && (
-          // A real board's task needs a start date and its working days, so
-          // adding one always goes through the create dialog.
+        {spaceCaps.create && (
+          // A task needs a start and its working days, so adding one always
+          // goes through the create dialog.
           <button
             onClick={() => onCreateTask("", null)}
             className="flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 hover:text-gray-600"
@@ -633,22 +623,6 @@ export default function TaskTable({
             <Plus className="h-3.5 w-3.5" />
             إضافة مهمة
           </button>
-        )}
-        {spaceCaps.create && isTemplate && (
-        <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-          <Plus className="h-3.5 w-3.5 text-gray-400" />
-          <input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitNewTask();
-              if (e.key === "Escape") setNewTaskTitle("");
-            }}
-            onBlur={submitNewTask}
-            placeholder="إضافة مهمة..."
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-          />
-        </div>
         )}
       </div>
     </div>

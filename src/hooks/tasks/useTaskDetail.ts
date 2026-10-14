@@ -582,38 +582,6 @@ export function useTaskDetail(taskId: string | undefined) {
     onSuccess: invalidate,
   });
 
-  const addSubtask = useMutation({
-    mutationFn: async (title: string) => {
-      if (!taskId || !query.data) return;
-      const parent = query.data.task;
-      const firstOpenStatus =
-        query.data.statuses.find((s) => s.category === "not_started") ??
-        query.data.statuses[0];
-      if (!firstOpenStatus) throw new Error("لا توجد حالات معرّفة لهذه اللوحة");
-
-      const { data: siblings, error: siblingsError } = await tasksDb
-        .from("tasks")
-        .select("sort_order")
-        .eq("parent_task_id", taskId);
-      if (siblingsError) throw siblingsError;
-      const maxSort = (siblings ?? []).reduce((m, s) => Math.max(m, s.sort_order), -1);
-
-      const { error } = await tasksDb.from("tasks").insert({
-        board_id: parent.board_id,
-        parent_task_id: taskId,
-        title,
-        status_id: firstOpenStatus.id,
-        project_id: parent.project_id,
-        department_id: parent.department_id,
-        zone_id: parent.zone_id,
-        created_by: user?.id ?? null,
-        sort_order: maxSort + 1,
-      });
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-  });
-
   const removeRelationship = useMutation({
     mutationFn: async (relationshipId: string) => {
       const { error } = await tasksDb.from("task_relationships").delete().eq("id", relationshipId);
@@ -808,7 +776,6 @@ export function useTaskDetail(taskId: string | undefined) {
     addChecklist: addChecklist.mutate,
     addChecklistItem: addChecklistItem.mutate,
     toggleChecklistItem: toggleChecklistItem.mutate,
-    addSubtask: addSubtask.mutate,
     addRelationship: addRelationship.mutate,
     removeRelationship: removeRelationship.mutate,
     addDependency: addDependency.mutate,

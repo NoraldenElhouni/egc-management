@@ -8,7 +8,8 @@ import { workingDaysLabel } from "./workingDays";
 // moves the due date and every task linked after this one. Click to type a
 // new number, Enter / leaving the field saves, Esc cancels. A summary (a
 // parent with subtasks) spans its subtasks, so its days are read-only.
-// On a template board the days are plain calendar days ("Day N" boards).
+// On a template board every Day counts; they become working days (Friday
+// skipped) when the template is applied from a start date.
 
 interface DurationCellProps {
   days: number | null;
@@ -57,14 +58,13 @@ export default function DurationCell({ days, onChange, readOnly = false, isSumma
     );
   }
 
-  const unit = isTemplate ? (days === 1 ? "يوم" : "أيام") : "يوم";
-  const label = days ? `${days} ${unit}` : "—";
+  const label = days ? `${days} يوم` : "—";
   const tooltip = !days
     ? locked ? "" : "عدد أيام العمل"
     : isSummary
       ? `${workingDaysLabel(days)} · من أول مهمة فرعية إلى آخرها`
       : isTemplate
-        ? `${days} يوم تقويمي`
+        ? `${workingDaysLabel(days)} — الجمعة تُستثنى عند تطبيق القالب`
         : `${workingDaysLabel(days)} (بدون الجمعة)`;
 
   const button = (

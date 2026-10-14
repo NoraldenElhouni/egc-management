@@ -115,7 +115,6 @@ export default function TaskDetailPanel() {
     addChecklist,
     addChecklistItem,
     toggleChecklistItem,
-    addSubtask,
     addRelationship,
     removeRelationship,
     addDependency,
@@ -423,16 +422,14 @@ export default function TaskDetailPanel() {
                   </ul>
                 )}
               </div>
-              {/* A real board's dates are a start plus working days; the
-                  scheduler (updateSchedule) derives the due date and moves
-                  the tasks linked after this one. A template's "Day N"
-                  dates are written directly. */}
+              {/* Dates are a start plus days; the scheduler (updateSchedule)
+                  derives the due date and moves the tasks linked after this
+                  one. On a template the start and due are "Day N" and every
+                  day counts. */}
               <FieldRow label="تاريخ البدء">
                 <StartDateCell
                   startDate={data.task.start_date}
-                  onChange={(date) =>
-                    isTemplateTask ? updateField({ start_date: date }) : date && updateSchedule({ startDate: date })
-                  }
+                  onChange={(date) => date && updateSchedule({ startDate: date })}
                   align="left"
                   readOnly={!caps.edit}
                   earliestStart={data.task.earliest_start}
@@ -441,33 +438,29 @@ export default function TaskDetailPanel() {
                   onClearLag={() => updateSchedule({ lagDays: 0 })}
                 />
               </FieldRow>
-              {!isTemplateTask && (
-                <FieldRow label="المدة">
-                  <DurationCell
-                    days={data.task.duration_days}
-                    onChange={(days) => updateSchedule({ durationDays: days })}
-                    readOnly={!caps.edit}
-                    isSummary={data.task.is_summary}
-                    size="md"
-                  />
-                </FieldRow>
-              )}
+              <FieldRow label="المدة">
+                <DurationCell
+                  days={data.task.duration_days}
+                  onChange={(days) => updateSchedule({ durationDays: days })}
+                  readOnly={!caps.edit}
+                  isSummary={data.task.is_summary}
+                  size="md"
+                />
+              </FieldRow>
               <FieldRow label="تاريخ الاستحقاق">
                 <DateCell
                   dueDate={data.task.due_date}
                   isOverdue={data.task.is_overdue}
                   statusCategory={data.statuses.find((s) => s.id === data.task.status_id)?.category}
                   completedAt={data.task.completed_at}
-                  onChange={(date) =>
-                    isTemplateTask ? updateField({ due_date: date }) : date && updateSchedule({ dueDate: date })
-                  }
+                  onChange={(date) => date && updateSchedule({ dueDate: date })}
                   align="left"
                   readOnly={!caps.edit}
-                  minDate={isTemplateTask ? null : data.task.start_date}
+                  minDate={data.task.start_date}
                   isSummary={data.task.is_summary}
                 />
               </FieldRow>
-              {!isTemplateTask && data.task.earliest_start && !data.task.is_summary && (
+              {data.task.earliest_start && !data.task.is_summary && (
                 <FieldRow label="انتظار قبل البدء">
                   <LagField
                     lagDays={data.task.start_lag_days}
@@ -476,7 +469,7 @@ export default function TaskDetailPanel() {
                   />
                 </FieldRow>
               )}
-              {!isTemplateTask && data.task.is_summary && (
+              {data.task.is_summary && (
                 <p className="text-[11px] text-gray-400">
                   تواريخ هذه المهمة تُحسب من مهامها الفرعية
                   {data.task.duration_days ? ` (${workingDaysLabel(data.task.duration_days)})` : ""}.
@@ -568,12 +561,7 @@ export default function TaskDetailPanel() {
               <SubtasksSection
                 basePath={basePath}
                 subtasks={data.subtasks}
-                onAdd={(title) => addSubtask(title)}
-                onOpenAdd={
-                  isTemplateTask
-                    ? undefined
-                    : () => openCreateTask({ boardId: data.task.board_id, parentTaskId: data.task.id })
-                }
+                onOpenAdd={() => openCreateTask({ boardId: data.task.board_id, parentTaskId: data.task.id })}
                 canAdd={caps.create}
               />
             </Section>

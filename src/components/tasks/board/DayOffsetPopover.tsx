@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
-import { dateToDayOffset, dayOffsetToDate } from "./templateDates";
+import { dateToDayOffset, dayOffsetLabel, dayOffsetToDate } from "./templateDates";
 
 // CalendarPopover's stand-in on template boards: a template has no real
 // dates, only "Day N" offsets from whenever it gets applied (see
@@ -16,9 +16,25 @@ interface DayOffsetPopoverProps {
   onClose: () => void;
   anchorRef: RefObject<HTMLElement | null>;
   align?: "left" | "right";
+  /** The earliest Day that can be picked (a linked task can't start before
+   * its predecessors end; a due Day can't precede the start). */
+  minOffset?: number | null;
+  /** Offer "إزالة التاريخ". Off for scheduled tasks: their dates can't be cleared. */
+  allowClear?: boolean;
+  /** A second action under the field, e.g. removing a wait gap. */
+  extraAction?: { label: string; onClick: () => void };
 }
 
-export default function DayOffsetPopover({ value, onChange, onClose, anchorRef, align = "right" }: DayOffsetPopoverProps) {
+export default function DayOffsetPopover({
+  value,
+  onChange,
+  onClose,
+  anchorRef,
+  align = "right",
+  minOffset = null,
+  allowClear = true,
+  extraAction,
+}: DayOffsetPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [draft, setDraft] = useState(value ? String(dateToDayOffset(value)) : "");
@@ -35,9 +51,12 @@ export default function DayOffsetPopover({ value, onChange, onClose, anchorRef, 
     });
   }, [anchorRef, align]);
 
+  const draftNumber = Number(draft);
+  const tooEarly = minOffset !== null && draft.trim() !== "" && Number.isInteger(draftNumber) && draftNumber < minOffset;
+
   const commit = () => {
     const n = Number(draft);
-    if (draft.trim() === "" || !Number.isInteger(n)) return;
+    if (draft.trim() === "" || !Number.isInteger(n) || tooEarly) return;
     onChange(dayOffsetToDate(n));
     onClose();
   };
@@ -70,13 +89,27 @@ export default function DayOffsetPopover({ value, onChange, onClose, anchorRef, 
           حفظ
         </button>
       </div>
-      {value && (
+      {tooEarly && minOffset !== null && (
+        <p className="mt-1 text-[11px] text-red-600">لا يمكن اختيار يوم قبل {dayOffsetLabel(minOffset)}</p>
+      )}
+      {extraAction && (
+        <button
+          onClick={() => {
+            extraAction.onClick();
+            onClose();
+          }}
+          className="mt-1.5 block text-xs text-primary hover:underline"
+        >
+          {extraAction.label}
+        </button>
+      )}
+      {allowClear && value && (
         <button
           onClick={() => {
             onChange(null);
             onClose();
           }}
-          className="mt-1.5 text-xs text-gray-400 hover:text-gray-600"
+          className="mt-1.5 block text-xs text-gray-400 hover:text-gray-600"
         >
           إزالة التاريخ
         </button>

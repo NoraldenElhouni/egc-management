@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import type { StatusRow } from "../../../hooks/tasks/useTaskBoard";
@@ -6,10 +5,8 @@ import type { StatusRow } from "../../../hooks/tasks/useTaskBoard";
 interface SubtasksSectionProps {
   basePath: string;
   subtasks: { id: string; title: string; status: StatusRow | null }[];
-  onAdd: (title: string) => void;
-  /** Real boards: a subtask needs a start and working days, so "add" opens
-   * the create dialog instead of the inline title field. */
-  onOpenAdd?: () => void;
+  /** A subtask needs a start and days, so "add" opens the create dialog. */
+  onOpenAdd: () => void;
   /** May add subtasks (edit rights). Default true. */
   canAdd?: boolean;
 }
@@ -21,16 +18,8 @@ interface SubtasksSectionProps {
 // is a deliberate simplification (see build plan D3 note). basePath is
 // whichever list (board/department/my-work) currently hosts the panel —
 // see TaskDetailPanel's own header comment.
-export default function SubtasksSection({ basePath, subtasks, onAdd, onOpenAdd, canAdd = true }: SubtasksSectionProps) {
+export default function SubtasksSection({ basePath, subtasks, onOpenAdd, canAdd = true }: SubtasksSectionProps) {
   const navigate = useNavigate();
-  const [newTitle, setNewTitle] = useState("");
-
-  const submit = () => {
-    const title = newTitle.trim();
-    if (!title) return;
-    onAdd(title);
-    setNewTitle("");
-  };
 
   return (
     <div className="space-y-1">
@@ -49,7 +38,7 @@ export default function SubtasksSection({ basePath, subtasks, onAdd, onOpenAdd, 
         </button>
       ))}
 
-      {canAdd && onOpenAdd && (
+      {canAdd && (
         <button
           onClick={onOpenAdd}
           className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-right text-sm text-gray-400 hover:bg-gray-50 hover:text-gray-600"
@@ -57,19 +46,6 @@ export default function SubtasksSection({ basePath, subtasks, onAdd, onOpenAdd, 
           <Plus className="h-3.5 w-3.5" />
           إضافة مهمة فرعية
         </button>
-      )}
-      {canAdd && !onOpenAdd && (
-        <div className="flex items-center gap-1.5 px-2">
-          <Plus className="h-3.5 w-3.5 text-gray-300" />
-          <input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            onBlur={submit}
-            placeholder="إضافة مهمة فرعية..."
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-          />
-        </div>
       )}
     </div>
   );

@@ -18,6 +18,12 @@ import { callAddTasksToTemplate, callPushTemplateTasks } from "./copyTaskTree";
 // - On a real board built from a template: tasks added by hand are
 //   "pending" -> add them to the template, then push to the other boards.
 // tasks.template_sync_status() works both out server-side.
+//
+// Edits are offered the same way (2026-10-14_template_edit_sync.sql): a
+// template task that changed after boards took their copies is listed on
+// the template's banner; "مراجعة" opens TemplateChangesModal, which sends the
+// chosen changes to the chosen boards (tasks.sync_template_changes) — only
+// to fields the board's team hasn't changed — or dismisses them.
 
 export interface TemplateSyncStatus {
   isTemplate: boolean;
@@ -26,6 +32,10 @@ export interface TemplateSyncStatus {
   /** Template board: the real boards that have copies of its tasks. */
   usingBoardIds: string[];
   pendingTaskIds: string[];
+  /** Template board: tasks edited since the boards took their copies. */
+  changedTaskIds: string[];
+  /** Template board: archived / deleted template tasks still live on a board. */
+  removedCount: number;
 }
 
 interface RawStatus {
@@ -33,6 +43,9 @@ interface RawStatus {
   template_board_ids: string[];
   using_board_ids: string[];
   pending_task_ids: string[];
+  // absent until 2026-10-14_template_edit_sync.sql is applied
+  changed_task_ids?: string[];
+  removed_count?: number;
 }
 
 export function useTemplateSyncStatus(boardId: string | undefined) {
@@ -57,6 +70,8 @@ export function useTemplateSyncStatus(boardId: string | undefined) {
         templateBoards: templateRows ?? [],
         usingBoardIds: raw.using_board_ids,
         pendingTaskIds: raw.pending_task_ids,
+        changedTaskIds: raw.changed_task_ids ?? [],
+        removedCount: raw.removed_count ?? 0,
       };
     },
   });
@@ -198,5 +213,147 @@ export function useTemplateSyncActions() {
     push: push.mutateAsync,
     pushing: push.isPending,
     dismiss: dismiss.mutateAsync,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Edits to template tasks -> the boards that used the template
+// ---------------------------------------------------------------------
+/** The tracked fields (snapshot keys of tasks_private.template_snapshot). */
+export const TEMPLATE_FIELD_LABELS: Record<string, string> = {
+  title: "العنوان",
+  description: "الوصف",
+  priority: "الأولوية",
+  task_type_id: "النوع",
+  department_id: "القسم",
+  specialization_id: "التخصص",
+  time_estimate_minutes: "الوقت المقدّر",
+  duration_days: "المدة",
+  start_lag_days: "الانتظار قبل البدء",
+  parent: "المهمة الرئيسية",
+  sort_order: "الترتيب",
+  tag_ids: "الوسوم",
+  checklists: "قوائم التحقق",
+  requirements: "المتطلبات",
+  values: "الحقول المخصصة",
+  assignee_ids: "المكلّفون",
+  role_ids: "الأدوار",
+  status: "الحالة",
+  waits_for: "الارتباطات",
+};
+
+export interface TemplateChangeField {
+  key: string;
+  old: unknown;
+  new: unknown;
+}
+
+export interface TemplateChangeBoard {
+  board_id: string;
+  board_name: string;
+  copy_id: string;
+  /** Fields that would be written. */
+  apply: string[];
+  /** Fields the board's team changed themselves, kept as they are. */
+  skip: string[];
+}
+
+export interface TemplateChangedTask {
+  task_id: string;
+  title: string;
+  fields: TemplateChangeField[];
+  boards: TemplateChangeBoard[];
+}
+
+export interface TemplateRemovedCopy {
+  tombstone_id: string | null;
+  template_task_id: string | null;
+  title: string;
+  copy_id: string;
+  board_id: string;
+  board_name: string;
+}
+
+export interface TemplateChanges {
+  tasks: TemplateChangedTask[];
+  removed: TemplateRemovedCopy[];
+}
+
+export interface TemplateSyncReport {
+  updated: number;
+  fields: number;
+  removed: number;
+  skipped: { task_id: string | null; copy_id: string; board_id: string; board_name?: string; field: string; reason: string }[];
+}
+
+export function useTemplateChanges(templateBoardId: string | undefined, enabled: boolean) {
+  const query = useQuery({
+    queryKey: ["template-changes", templateBoardId],
+    enabled: enabled && !!templateBoardId,
+    queryFn: async (): Promise<TemplateChanges> => {
+      const { data, error } = await supabase
+        .schema("tasks")
+        .rpc("template_changes", { p_template_board_id: templateBoardId as string });
+      if (error) throw error;
+      return data as unknown as TemplateChanges;
+    },
+  });
+  return { changes: query.data, loading: query.isPending && enabled };
+}
+
+export function useTemplateChangeActions() {
+  const queryClient = useQueryClient();
+
+  const refresh = (templateBoardId: string, boardIds: string[]) => {
+    queryClient.invalidateQueries({ queryKey: ["template-changes", templateBoardId] });
+    queryClient.invalidateQueries({ queryKey: ["template-sync", templateBoardId] });
+    for (const id of boardIds) {
+      queryClient.invalidateQueries({ queryKey: ["task-board", id] });
+      queryClient.invalidateQueries({ queryKey: ["board-schedule", id] });
+      queryClient.invalidateQueries({ queryKey: ["template-sync", id] });
+    }
+    queryClient.invalidateQueries({ queryKey: ["task-detail"] });
+    queryClient.invalidateQueries({ queryKey: ["task-directory"] });
+  };
+
+  const sync = useMutation({
+    mutationFn: async (input: {
+      templateBoardId: string;
+      taskIds: string[];
+      targetBoardIds: string[];
+      removedIds: string[];
+      /** {boardId: {roleId: [userIds]}} — picks for roles nobody holds. */
+      roleOverrides?: Record<string, Record<string, string[]>>;
+    }): Promise<TemplateSyncReport> => {
+      const { data, error } = await supabase.schema("tasks").rpc("sync_template_changes", {
+        p_template_board_id: input.templateBoardId,
+        p_task_ids: input.taskIds,
+        p_target_board_ids: input.targetBoardIds,
+        p_removed_ids: input.removedIds,
+        p_role_overrides: input.roleOverrides ?? {},
+      });
+      if (error) throw error;
+      return data as unknown as TemplateSyncReport;
+    },
+    onSuccess: (_report, input) => refresh(input.templateBoardId, input.targetBoardIds),
+  });
+
+  const dismiss = useMutation({
+    mutationFn: async (input: { templateBoardId: string; taskIds: string[]; removedIds: string[] }) => {
+      const { error } = await supabase.schema("tasks").rpc("dismiss_template_changes", {
+        p_template_board_id: input.templateBoardId,
+        p_task_ids: input.taskIds,
+        p_removed_ids: input.removedIds,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_data, input) => refresh(input.templateBoardId, []),
+  });
+
+  return {
+    sync: sync.mutateAsync,
+    syncing: sync.isPending,
+    dismiss: dismiss.mutateAsync,
+    dismissing: dismiss.isPending,
   };
 }

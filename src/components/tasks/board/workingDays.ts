@@ -1,9 +1,14 @@
 // Working-day maths for task scheduling — the client's copy of the SQL in
 // tasks/migrations/2026-10-13_task_scheduling_a.sql (tasks.is_off_day,
 // working_day_on_or_after, next_working_day, add_working_days,
-// working_days_between). The server is the source of truth: these exist so
+// working_days_between) and 2026-10-14_templates_scheduling.sql
+// (tasks_private.sd_*). The server is the source of truth: these exist so
 // the create dialog, the days ⇄ due fields and the Gantt drag can show the
 // result instantly; whatever the server returns replaces it.
+//
+// `plain` is a template board: every day counts ("Day N"), there is no
+// Friday. Applying a template from start date S makes Day N the N-th
+// working day after S.
 //
 // Dates are plain "YYYY-MM-DD" strings (a task's start/due is stored as
 // 00:00 UTC of that day), handled as UTC day numbers so the device's
@@ -32,20 +37,23 @@ export function isOffDay(day: number): boolean {
   return weekdayOf(day) === 5;
 }
 
-export function workingDayOnOrAfter(day: number): number {
+export function workingDayOnOrAfter(day: number, plain = false): number {
+  if (plain) return day;
   let d = day;
   while (isOffDay(d)) d += 1;
   return d;
 }
 
-export function nextWorkingDay(day: number): number {
-  return workingDayOnOrAfter(day + 1);
+export function nextWorkingDay(day: number, plain = false): number {
+  return workingDayOnOrAfter(day + 1, plain);
 }
 
 /** The n-th working day, counting the first working day on or after `start` as day 1. */
-export function addWorkingDays(start: number, n: number): number {
+export function addWorkingDays(start: number, n: number, plain = false): number {
+  const days = Math.max(1, Math.floor(n));
+  if (plain) return start + days - 1;
   let d = workingDayOnOrAfter(start);
-  let left = Math.max(1, Math.floor(n)) - 1;
+  let left = days - 1;
   while (left > 0) {
     d += 1;
     if (!isOffDay(d)) left -= 1;
@@ -54,7 +62,9 @@ export function addWorkingDays(start: number, n: number): number {
 }
 
 /** Working days from `from` to `to`, both included; 0 when `to` is before `from`. */
-export function workingDaysBetween(from: number, to: number): number {
+export function workingDaysBetween(from: number, to: number, plain = false): number {
+  if (to < from) return 0;
+  if (plain) return to - from + 1;
   let count = 0;
   for (let d = from; d <= to; d++) if (!isOffDay(d)) count += 1;
   return count;
@@ -62,12 +72,12 @@ export function workingDaysBetween(from: number, to: number): number {
 
 // ---- string versions, for the dialog and the cells ----------------------
 
-export function dueFromDays(start: string, days: number): string {
-  return dayString(addWorkingDays(dayNumber(start), days));
+export function dueFromDays(start: string, days: number, plain = false): string {
+  return dayString(addWorkingDays(dayNumber(start), days, plain));
 }
 
-export function daysFromDue(start: string, due: string): number {
-  return Math.max(1, workingDaysBetween(dayNumber(start), dayNumber(due)));
+export function daysFromDue(start: string, due: string, plain = false): number {
+  return Math.max(1, workingDaysBetween(dayNumber(start), dayNumber(due), plain));
 }
 
 export function isFriday(value: string): boolean {
@@ -85,12 +95,12 @@ export function localToday(): string {
   return parts; // en-CA formats as YYYY-MM-DD
 }
 
-export function workingDayOnOrAfterString(value: string): string {
-  return dayString(workingDayOnOrAfter(dayNumber(value)));
+export function workingDayOnOrAfterString(value: string, plain = false): string {
+  return dayString(workingDayOnOrAfter(dayNumber(value), plain));
 }
 
-export function nextWorkingDayString(value: string): string {
-  return dayString(nextWorkingDay(dayNumber(value)));
+export function nextWorkingDayString(value: string, plain = false): string {
+  return dayString(nextWorkingDay(dayNumber(value), plain));
 }
 
 const WEEKDAY_NAMES = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];

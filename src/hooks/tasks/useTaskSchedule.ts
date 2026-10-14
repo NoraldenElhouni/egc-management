@@ -241,11 +241,23 @@ export interface BoardScheduleTask {
   successorCount: number;
 }
 
+export interface BoardSchedule {
+  tasks: BoardScheduleTask[];
+  /** A template board: days are "Day N" and every day counts (no Friday). */
+  isTemplate: boolean;
+}
+
 export function useBoardScheduleTasks(boardId: string | null | undefined) {
   return useQuery({
     queryKey: ["board-schedule", boardId],
     enabled: !!boardId,
-    queryFn: async (): Promise<BoardScheduleTask[]> => {
+    queryFn: async (): Promise<BoardSchedule> => {
+      const { data: board, error: boardError } = await tasksDb()
+        .from("boards")
+        .select("is_template")
+        .eq("id", boardId as string)
+        .single();
+      if (boardError) throw boardError;
       const { data: tasks, error } = await tasksDb()
         .from("tasks")
         .select("id, title, parent_task_id, sort_order, start_date, due_date, duration_days, is_summary")
@@ -264,7 +276,10 @@ export function useBoardScheduleTasks(boardId: string | null | undefined) {
         if (!onBoard.has(d.blocked_task_id)) continue;
         followers.set(d.blocking_task_id, (followers.get(d.blocking_task_id) ?? 0) + 1);
       }
-      return (tasks ?? []).map((t) => ({ ...t, successorCount: followers.get(t.id) ?? 0 }));
+      return {
+        tasks: (tasks ?? []).map((t) => ({ ...t, successorCount: followers.get(t.id) ?? 0 })),
+        isTemplate: board.is_template,
+      };
     },
   });
 }

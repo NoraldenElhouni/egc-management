@@ -15,9 +15,10 @@ import { addWorkingDays, workingDayOnOrAfter, workingDaysBetween } from "../boar
 // only reports once, on release — the mutation behind onCommit is
 // optimistic, so the bar doesn't snap back while the save is in flight.
 //
-// On a real (calendar) board a task is a start plus a number of working
-// days (`scheduling` below): the drag snaps to working days (Friday is
-// skipped), a linked task can't be dragged before its predecessors end
+// On every board, a template included, a task is a start plus a number of
+// working days (`scheduling` below): the drag snaps to working days (Friday
+// is skipped; on a template every Day counts), a linked task can't be dragged
+// before its predecessors end
 // (`earliestDay`), and what's reported is what the gesture changed —
 // move = new start (same days), right edge = new start and days, left
 // edge = new days. The server works out the due date and moves the
@@ -54,11 +55,13 @@ export interface BarChange {
   durationDays?: number;
 }
 
-/** A calendar board's task: start + working days, maybe linked. */
+/** A task: start + working days, maybe linked. */
 export interface BarScheduling {
   durationDays: number;
   /** tasks.earliest_start as a day index; null = not linked. */
   earliestDay: number | null;
+  /** A template board: every Day counts (no Friday). */
+  plain?: boolean;
 }
 
 interface ScheduledDrag {
@@ -71,22 +74,23 @@ interface ScheduledDrag {
 
 function applyScheduledDrag(span: BarSpan, sched: BarScheduling, mode: DragMode, delta: number): ScheduledDrag {
   const floor = sched.earliestDay;
+  const plain = !!sched.plain;
   const clampStart = (day: number) => {
-    const snapped = workingDayOnOrAfter(day);
+    const snapped = workingDayOnOrAfter(day, plain);
     return floor !== null && snapped < floor ? { day: floor, clamped: true } : { day: snapped, clamped: false };
   };
   if (mode === "move") {
     const { day, clamped } = clampStart(span.startDay + delta);
-    return { startDay: day, endDay: addWorkingDays(day, sched.durationDays), durationDays: sched.durationDays, clamped };
+    return { startDay: day, endDay: addWorkingDays(day, sched.durationDays, plain), durationDays: sched.durationDays, clamped };
   }
   if (mode === "start") {
     const { day, clamped } = clampStart(Math.min(span.startDay + delta, span.endDay));
     const startDay = Math.min(day, span.endDay);
-    const durationDays = Math.max(1, workingDaysBetween(startDay, span.endDay));
-    return { startDay, endDay: addWorkingDays(startDay, durationDays), durationDays, clamped };
+    const durationDays = Math.max(1, workingDaysBetween(startDay, span.endDay, plain));
+    return { startDay, endDay: addWorkingDays(startDay, durationDays, plain), durationDays, clamped };
   }
-  const durationDays = Math.max(1, workingDaysBetween(span.startDay, Math.max(span.endDay + delta, span.startDay)));
-  return { startDay: span.startDay, endDay: addWorkingDays(span.startDay, durationDays), durationDays, clamped: false };
+  const durationDays = Math.max(1, workingDaysBetween(span.startDay, Math.max(span.endDay + delta, span.startDay), plain));
+  return { startDay: span.startDay, endDay: addWorkingDays(span.startDay, durationDays, plain), durationDays, clamped: false };
 }
 
 function scheduledChange(span: BarSpan, sched: BarScheduling, mode: DragMode, next: ScheduledDrag): BarChange {
