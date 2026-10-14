@@ -17,6 +17,7 @@ import { NO_CAPS, useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTas
 import { BoardAccessProvider } from "../../components/tasks/BoardAccessContext";
 import { TaskListPageSkeleton } from "../../components/tasks/TasksSkeletons";
 import { useCreateTaskDialog } from "../../components/tasks/schedule/CreateTaskDialogContext";
+import { useDependencyEdit } from "../../hooks/tasks/dependencyEdit";
 
 // D2 — Zone board (list view), the main screen (build plan Part 7).
 // Also the template editor: a template is a board with is_template set
@@ -58,6 +59,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     moveTaskTo,
   } = useTaskBoard(boardId);
   const { openCreateTask } = useCreateTaskDialog();
+  const { link, unlink } = useDependencyEdit(boardId);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showZoneClone, setShowZoneClone] = useState(false);
   // Template push (useTemplateSync.ts): the task ids the dialog opens with.
@@ -200,6 +202,8 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             dependencies={data.dependencies}
             dependencyFlags={data.dependencyFlags}
             onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
+            onLink={(pair) => link(pair)}
+            onUnlink={(pair) => unlink([pair])}
             onAddTask={spaceCaps.create && !isTemplate ? () => addTask("", null) : undefined}
             readOnly={!spaceCaps.edit}
           />
@@ -218,6 +222,9 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             departmentNamesById={data.departmentNamesById}
             linkedTaskIds={data.linkedTaskIds}
             dependencyFlags={data.dependencyFlags}
+            dependencyLinks={data.dependencyLinks}
+            onLink={(pair) => link(pair)}
+            onUnlink={(pairs) => unlink(pairs)}
             unmetRequirementTaskIds={data.unmetRequirementTaskIds}
             attachedTaskIds={data.attachedTaskIds}
             commentedTaskIds={data.commentedTaskIds}

@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import type { Json } from "../../lib/supabase";
-import type { TaskRow } from "./useTaskBoard";
+import type { DependencyPair, TaskRow } from "./useTaskBoard";
 import { emitTaskError } from "./taskErrorBus";
 import { extractErrorMessage } from "./extractErrorMessage";
 import { invalidateTaskAccess } from "./useTaskAccess";
@@ -23,9 +23,9 @@ import { invalidateTaskAccess } from "./useTaskAccess";
 // edit wrote. If someone else changed it since (or it was deleted), that task
 // is skipped rather than overwritten.
 //
-// Covered: field edits on tasks, assignees, custom values, drag-reorder, and
-// the bulk versions of those. NOT covered: create, delete, comments,
-// checklists, relationships, dependencies, column/field config.
+// Covered: field edits on tasks, assignees, custom values, drag-reorder,
+// dependency links, and the bulk versions of those. NOT covered: create,
+// delete, comments, checklists, relationships, column/field config.
 
 const MAX_ENTRIES = 50;
 
@@ -292,5 +292,56 @@ export function recordTaskValue(taskId: string, fieldDefinitionId: string, prev:
     label: "تعديل حقل مخصص",
     undo: () => applyValueStep(taskId, fieldDefinitionId, next, prev),
     redo: () => applyValueStep(taskId, fieldDefinitionId, prev, next),
+  });
+}
+
+// ---------------------------------------------------------------------
+// Dependency links
+// ---------------------------------------------------------------------
+const pairKey = (p: DependencyPair) => `${p.blocking_task_id}>${p.blocked_task_id}`;
+
+/** Make each link exist (`present`) or not. A link already that way is skipped. */
+async function applyDependencySteps(pairs: DependencyPair[], present: boolean, actorId: string | null): Promise<ApplyResult> {
+  const { data: rows, error } = await tasksDb()
+    .from("task_dependencies")
+    .select("blocking_task_id, blocked_task_id")
+    .in("blocked_task_id", Array.from(new Set(pairs.map((p) => p.blocked_task_id))));
+  if (error) throw error;
+  const existing = new Set((rows ?? []).map(pairKey));
+
+  const live = pairs.filter((p) => existing.has(pairKey(p)) !== present);
+  if (live.length === 0) throw new StaleError();
+
+  if (present) {
+    const { error: insError } = await tasksDb()
+      .from("task_dependencies")
+      .insert(live.map((p) => ({ ...p, created_by: actorId })));
+    if (insError) throw insError;
+  } else {
+    for (const p of live) {
+      const { error: delError } = await tasksDb()
+        .from("task_dependencies")
+        .delete()
+        .eq("blocking_task_id", p.blocking_task_id)
+        .eq("blocked_task_id", p.blocked_task_id);
+      if (delError) throw delError;
+    }
+  }
+  return { applied: live.length, skipped: pairs.length - live.length };
+}
+
+/** Links that were just added or removed (both are one entry, however many). */
+export function recordDependencies(
+  label: string,
+  actorId: string | null,
+  pairs: DependencyPair[],
+  change: "added" | "removed",
+) {
+  if (pairs.length === 0) return;
+  const added = change === "added";
+  pushUndo({
+    label,
+    undo: () => applyDependencySteps(pairs, !added, actorId),
+    redo: () => applyDependencySteps(pairs, added, actorId),
   });
 }

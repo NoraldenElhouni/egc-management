@@ -17,11 +17,12 @@ import type {
   TaskRow as TaskRowType,
   TaskTypeLite,
   TagLite,
+  DependencyPair,
 } from "../../../hooks/tasks/useTaskBoard";
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import type { SpaceFeatureSettings } from "../../../hooks/tasks/useSpaceSettings";
 import type { Json } from "../../../lib/supabase";
-import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
+import type { DependencyFlags, TaskLinks } from "../../../hooks/tasks/dependencyFlags";
 
 type GroupBy = "none" | "department" | "assignee" | "task_type" | "zone";
 
@@ -46,6 +47,10 @@ interface TaskTableProps {
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   dependencyFlags: Map<string, DependencyFlags>;
+  dependencyLinks: Map<string, TaskLinks>;
+  /** Add / remove dependency links (the dependency icons, the right-click menu). */
+  onLink: (pair: DependencyPair) => void;
+  onUnlink: (pairs: DependencyPair[]) => void;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -97,6 +102,9 @@ export default function TaskTable({
   departmentNamesById,
   linkedTaskIds,
   dependencyFlags,
+  dependencyLinks,
+  onLink,
+  onUnlink,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -571,6 +579,9 @@ export default function TaskTable({
                 departmentNamesById={departmentNamesById}
                 linkedTaskIds={linkedTaskIds}
                 dependencyFlags={dependencyFlags}
+                dependencyLinks={dependencyLinks}
+                onLink={onLink}
+                onUnlink={onUnlink}
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
                 attachedTaskIds={attachedTaskIds}
                 commentedTaskIds={commentedTaskIds}

@@ -33,6 +33,46 @@ export const HOLD_STYLE = {
   selected: "border-amber-300 bg-amber-50 text-amber-700",
 } as const;
 
+/** blockedBy: this task waits for the picked one. blocks: the picked one waits for this task. */
+export type LinkDirection = "blockedBy" | "blocks";
+
+export const DIRECTION_STYLES = { blockedBy: WAIT_STYLE, blocks: HOLD_STYLE } as const;
+
+// The add menu's two choices, with the full sentence under them.
+const DIRECTION_CHOICES: { direction: LinkDirection; label: string; hint: string }[] = [
+  { direction: "blockedBy", label: "تنتظر مهمة", hint: "تبدأ هذه المهمة بعد انتهاء…" },
+  { direction: "blocks", label: "مهمة تنتظرها", hint: "تبدأ بعد انتهاء هذه المهمة…" },
+];
+
+/** Which way a new link goes — the panel's add menu and the board's link popover. */
+export function DirectionToggle({ value, onChange }: { value: LinkDirection; onChange: (direction: LinkDirection) => void }) {
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {DIRECTION_CHOICES.map((choice) => {
+          const style = DIRECTION_STYLES[choice.direction];
+          const selected = value === choice.direction;
+          return (
+            <button
+              key={choice.direction}
+              type="button"
+              onClick={() => onChange(choice.direction)}
+              aria-pressed={selected}
+              className={`flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium ${
+                selected ? style.selected : "border-gray-200 text-gray-500 hover:bg-gray-50"
+              }`}
+            >
+              <style.Icon className={`h-3.5 w-3.5 ${selected ? "" : style.text}`} />
+              {choice.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-1 text-[11px] text-gray-400">{DIRECTION_CHOICES.find((c) => c.direction === value)?.hint}</div>
+    </div>
+  );
+}
+
 const MAX_TITLES = 5;
 
 /** "A، B، C" — cut after a few, with how many more. */

@@ -23,6 +23,25 @@ export interface DependencyTaskInfo {
   title: string;
   status_id: string;
   is_archived: boolean;
+  board_id: string;
+}
+
+/** The task at the other end of one link. */
+export interface LinkRef {
+  taskId: string;
+  title: string;
+  /** done/closed */
+  done: boolean;
+  /** On another board than the task it is listed under. */
+  otherBoard: boolean;
+}
+
+/** Every link of one task (archived ends left out), for editing them. */
+export interface TaskLinks {
+  /** Tasks this one starts after. */
+  waitsFor: LinkRef[];
+  /** Tasks that start after this one. */
+  waitedBy: LinkRef[];
 }
 
 export interface DependencyFlagsResult {
@@ -31,6 +50,7 @@ export interface DependencyFlagsResult {
   /** Tasks in the list with at least one active link they wait on. */
   blockedTaskIds: Set<string>;
   dependencyFlags: Map<string, DependencyFlags>;
+  dependencyLinks: Map<string, TaskLinks>;
 }
 
 const isFinished = (category: string | undefined) => category === "done" || category === "closed";
@@ -47,7 +67,12 @@ export async function loadDependencyFlags(
   categoryByStatusId: Map<string, string>,
 ): Promise<DependencyFlagsResult> {
   const tasksDb = supabase.schema("tasks");
-  const empty: DependencyFlagsResult = { dependencies: [], blockedTaskIds: new Set(), dependencyFlags: new Map() };
+  const empty: DependencyFlagsResult = {
+    dependencies: [],
+    blockedTaskIds: new Set(),
+    dependencyFlags: new Map(),
+    dependencyLinks: new Map(),
+  };
   if (!taskIds.length) return empty;
 
   const [waitingResult, holdingResult] = await Promise.all([
@@ -71,7 +96,7 @@ export async function loadDependencyFlags(
     new Set(edges.flatMap((d) => [d.blocking_task_id, d.blocked_task_id]).filter((id) => !taskById.has(id))),
   );
   if (missingIds.length) {
-    const { data, error } = await tasksDb.from("tasks").select("id, title, status_id, is_archived").in("id", missingIds);
+    const { data, error } = await tasksDb.from("tasks").select("id, title, status_id, is_archived, board_id").in("id", missingIds);
     if (error) throw error;
     for (const t of data ?? []) taskById.set(t.id, t);
   }
@@ -97,11 +122,29 @@ export async function loadDependencyFlags(
     return flags;
   };
 
+  const dependencyLinks = new Map<string, TaskLinks>();
+  const linksOf = (id: string) => {
+    let links = dependencyLinks.get(id);
+    if (!links) {
+      links = { waitsFor: [], waitedBy: [] };
+      dependencyLinks.set(id, links);
+    }
+    return links;
+  };
+  const refTo = (other: DependencyTaskInfo, from: DependencyTaskInfo): LinkRef => ({
+    taskId: other.id,
+    title: other.title,
+    done: isFinished(categories.get(other.status_id)),
+    otherBoard: other.board_id !== from.board_id,
+  });
+
   const waitedOnSomething = new Set<string>();
   for (const d of edges) {
     const blocking = taskById.get(d.blocking_task_id);
     const blocked = taskById.get(d.blocked_task_id);
     if (!blocking || !blocked || blocking.is_archived || blocked.is_archived) continue;
+    if (shown.has(blocked.id)) linksOf(blocked.id).waitsFor.push(refTo(blocking, blocked));
+    if (shown.has(blocking.id)) linksOf(blocking.id).waitedBy.push(refTo(blocked, blocking));
     if (shown.has(blocked.id)) waitedOnSomething.add(blocked.id);
     if (isFinished(categories.get(blocking.status_id))) continue;
     if (shown.has(blocked.id)) flagsOf(blocked.id).waitingOn.push(blocking.title);
@@ -114,5 +157,5 @@ export async function loadDependencyFlags(
     else flagsOf(id).cleared = true;
   }
 
-  return { dependencies, blockedTaskIds, dependencyFlags };
+  return { dependencies, blockedTaskIds, dependencyFlags, dependencyLinks };
 }

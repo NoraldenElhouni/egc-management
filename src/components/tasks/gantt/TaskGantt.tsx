@@ -27,6 +27,7 @@ import type {
 } from "../../../hooks/tasks/useTaskBoard";
 import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import Tooltip from "../../ui/Tooltip";
+import { PointMenu } from "../board/AnchoredMenu";
 import { useTemplateMode } from "../TemplateModeContext";
 import GanttBar, { MILESTONE_HALF, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
 import EditGuard from "../EditGuard";
@@ -202,6 +203,10 @@ interface TaskGanttProps {
   dependencies: DependencyPair[];
   dependencyFlags: Map<string, DependencyFlags>;
   onChangeDates: (taskId: string, change: GanttDateChange) => void;
+  /** Drag from a bar's end dot onto another row: that task starts after this one. */
+  onLink?: (pair: DependencyPair) => void;
+  /** Click a link line → remove it. */
+  onUnlink?: (pair: DependencyPair) => void;
   /** Opens the create dialog (real boards, with create rights). */
   onAddTask?: () => void;
   /** No edit rights: bars open the task but cannot be dragged and the date
@@ -223,6 +228,8 @@ export default function TaskGantt({
   dependencies,
   dependencyFlags,
   onChangeDates: onChangeDatesProp,
+  onLink,
+  onUnlink,
   onAddTask,
   readOnly = false,
 }: TaskGanttProps) {
@@ -444,6 +451,62 @@ export default function TaskGantt({
     return ids;
   }, [hoveredId, dependencies]);
   const lagById = useMemo(() => new Map(tasks.map((t) => [t.id, t.start_lag_days ?? 0])), [tasks]);
+  const titleById = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
+
+  // Drag-to-link: from a bar's end dot (GanttBar's onLinkStart) to any
+  // other row — the whole row is the target, not just its thin bar. Points
+  // are in the arrows SVG's own coordinates.
+  const canLink = !readOnly && !!onLink;
+  const arrowsRef = useRef<SVGSVGElement>(null);
+  const [linking, setLinking] = useState<{
+    fromId: string;
+    x0: number;
+    y0: number;
+    x: number;
+    y: number;
+    targetId: string | null;
+  } | null>(null);
+  const linkingRef = useRef(linking);
+  linkingRef.current = linking;
+  const linkActive = !!linking;
+  useEffect(() => {
+    if (!linkActive) return;
+    const move = (e: PointerEvent) => {
+      const box = arrowsRef.current?.getBoundingClientRect();
+      if (!box) return;
+      const row = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-gantt-row]");
+      const hit = row?.getAttribute("data-gantt-row") ?? null;
+      setLinking((prev) =>
+        prev && { ...prev, x: e.clientX - box.left, y: e.clientY - box.top, targetId: hit === prev.fromId ? null : hit },
+      );
+    };
+    const up = () => {
+      const done = linkingRef.current;
+      setLinking(null);
+      if (done?.targetId) onLink?.({ blocking_task_id: done.fromId, blocked_task_id: done.targetId });
+    };
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setLinking(null);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("keydown", key);
+    };
+  }, [linkActive, onLink]);
+  const startLink = (fromId: string) => (e: ReactPointerEvent<HTMLElement>) => {
+    const box = arrowsRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const dot = e.currentTarget.getBoundingClientRect();
+    const x0 = dot.left + dot.width / 2 - box.left;
+    const y0 = dot.top + dot.height / 2 - box.top;
+    setLinking({ fromId, x0, y0, x: x0, y: y0, targetId: null });
+  };
+
+  // Click a link line: a small menu to remove it.
+  const [linkMenu, setLinkMenu] = useState<{ x: number; y: number; pair: DependencyPair } | null>(null);
+  const [hoveredArrow, setHoveredArrow] = useState<string | null>(null);
 
   // Dependency arrows, finish → start: from the blocker's due-date edge
   // (its LEFT edge, RTL) to the blocked task's start edge (its RIGHT
@@ -462,6 +525,7 @@ export default function TaskGantt({
 
     const out: {
       key: string;
+      pair: DependencyPair;
       d: string;
       conflict: boolean;
       lag: number;
@@ -494,6 +558,7 @@ export default function TaskGantt({
       const lag = lagById.get(dep.blocked_task_id) ?? 0;
       out.push({
         key: `${dep.blocking_task_id}-${dep.blocked_task_id}`,
+        pair: { blocking_task_id: dep.blocking_task_id, blocked_task_id: dep.blocked_task_id },
         d: roundedPath(points, LINK_RADIUS),
         conflict: b.startDay < a.endDay,
         lag,
@@ -833,7 +898,12 @@ export default function TaskGantt({
                 const collapsed = collapsedIds.has(task.id);
                 const rollup = rollups.get(task.id);
                 return (
-                  <div key={task.id} className="group flex" style={{ height: ROW_H }}>
+                  <div
+                    key={task.id}
+                    data-gantt-row={task.id}
+                    className={`group flex ${linking?.targetId === task.id ? "bg-blue-50" : ""}`}
+                    style={{ height: ROW_H }}
+                  >
                     <div
                       className="sticky right-0 z-10 flex shrink-0 border-b border-l border-gray-100 bg-white group-hover:bg-gray-50"
                       style={{ width: leftW }}
@@ -941,6 +1011,8 @@ export default function TaskGantt({
                           summary={task.is_summary}
                           describeFloor={describeFloor}
                           onHover={(on) => setHoveredId(on ? task.id : null)}
+                          onLinkStart={canLink && !linking ? startLink(task.id) : undefined}
+                          linkTarget={linking?.targetId === task.id}
                         />
                       ) : rollup ? (
                         <RollupBar
@@ -966,6 +1038,7 @@ export default function TaskGantt({
 
               {/* Dependency arrows — above the bars, below the sticky name column. */}
               <svg
+                ref={arrowsRef}
                 className="pointer-events-none absolute top-0 z-[1]"
                 style={{ right: leftW }}
                 width={trackWidth}
@@ -984,14 +1057,15 @@ export default function TaskGantt({
                 </defs>
                 {arrows.map((a) => {
                   const dim = !!chain && !a.inChain;
-                  const stroke = a.conflict ? "#EF4444" : a.inChain ? "#2563EB" : "#9CA3AF";
+                  const hot = hoveredArrow === a.key;
+                  const stroke = a.conflict ? "#EF4444" : a.inChain || hot ? "#2563EB" : "#9CA3AF";
                   return (
                     <g key={a.key} opacity={dim ? 0.3 : 1}>
                       <path
                         d={a.d}
                         fill="none"
                         stroke={stroke}
-                        strokeWidth={a.inChain ? 2 : 1.5}
+                        strokeWidth={hot ? 2.5 : a.inChain ? 2 : 1.5}
                         strokeDasharray={a.lag > 0 ? "4 3" : undefined}
                         strokeLinejoin="round"
                         markerEnd={`url(#${a.conflict ? "gantt-arrow-conflict" : a.inChain ? "gantt-arrow-chain" : "gantt-arrow"})`}
@@ -1001,14 +1075,61 @@ export default function TaskGantt({
                           انتظار {a.lag}
                         </text>
                       )}
+                      {/* a wide invisible stroke to click — the drawn line is too thin to hit */}
+                      {!readOnly && onUnlink && !linking && (
+                        <path
+                          d={a.d}
+                          fill="none"
+                          stroke="transparent"
+                          strokeWidth={10}
+                          style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                          onMouseEnter={() => setHoveredArrow(a.key)}
+                          onMouseLeave={() => setHoveredArrow(null)}
+                          onClick={(e) => setLinkMenu({ x: e.clientX, y: e.clientY, pair: a.pair })}
+                        />
+                      )}
                     </g>
                   );
                 })}
+                {linking && (
+                  <g pointerEvents="none">
+                    <line
+                      x1={linking.x0}
+                      y1={linking.y0}
+                      x2={linking.x}
+                      y2={linking.y}
+                      stroke="#2563EB"
+                      strokeWidth={2}
+                      strokeDasharray="5 4"
+                    />
+                    <circle cx={linking.x} cy={linking.y} r={4} fill="#2563EB" />
+                  </g>
+                )}
               </svg>
             </div>
           </div>
         </div>
       )}
+      <PointMenu point={linkMenu} onClose={() => setLinkMenu(null)} width={240} className="p-2">
+        {linkMenu && (
+          <>
+            <div className="mb-2 text-xs text-gray-600">
+              <span className="font-semibold">{titleById.get(linkMenu.pair.blocked_task_id)}</span> تبدأ بعد انتهاء{" "}
+              <span className="font-semibold">{titleById.get(linkMenu.pair.blocking_task_id)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onUnlink?.(linkMenu.pair);
+                setLinkMenu(null);
+              }}
+              className="w-full rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+            >
+              إزالة الربط
+            </button>
+          </>
+        )}
+      </PointMenu>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, type ReactNode, type RefObject } from "react";
+import { useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 import { useAnchoredPosition } from "../../../hooks/tasks/useAnchoredPosition";
@@ -63,4 +63,36 @@ function OpenMenu({ onClose, anchorRef, width, align = "right", className = "", 
 export default function AnchoredMenu({ open, ...rest }: AnchoredMenuProps) {
   if (!open) return null;
   return <OpenMenu {...rest} />;
+}
+
+/**
+ * The same menu, opened at a screen point instead of under a trigger — a
+ * right-click menu, or a click on a Gantt link line. A zero-size fixed
+ * anchor sits at the point.
+ */
+export function PointMenu({
+  point,
+  onClose,
+  width,
+  className = "",
+  children,
+}: {
+  point: { x: number; y: number } | null;
+  onClose: () => void;
+  width: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  if (!point) return null;
+  const anchorStyle: CSSProperties = { position: "fixed", left: point.x, top: point.y, width: 0, height: 0 };
+  return (
+    <>
+      {createPortal(<span ref={anchorRef} style={anchorStyle} />, document.body)}
+      {/* keyed by the point: opening again elsewhere places it afresh. RTL: it extends left of the point */}
+      <AnchoredMenu key={`${point.x},${point.y}`} open onClose={onClose} anchorRef={anchorRef} width={width} className={className}>
+        {children}
+      </AnchoredMenu>
+    </>
+  );
 }

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
 import AnchoredMenu from "../board/AnchoredMenu";
-import { HOLD_STYLE, WAIT_STYLE } from "../board/DependencyBadges";
+import { DIRECTION_STYLES, DirectionToggle, type LinkDirection } from "../board/DependencyBadges";
 import { useTemplateMode } from "../TemplateModeContext";
 import type { DependencyTaskRef } from "../../../hooks/tasks/useTaskDetail";
 
-type Direction = "blocks" | "blockedBy";
+type Direction = LinkDirection;
 
 // A link on the same board is finish-to-start scheduling: the waiting task
 // starts the working day after the other one ends (plus its wait gap), and
@@ -18,13 +18,6 @@ const DIRECTION_LABELS: Record<Direction, string> = {
 
 // Same icon + colour as the board row's badges (DependencyBadges.tsx):
 // waiting = red stop, waited on = amber "!".
-const DIRECTION_STYLES = { blockedBy: WAIT_STYLE, blocks: HOLD_STYLE } as const;
-
-// The add menu's two choices, with the full sentence under them.
-const DIRECTION_CHOICES: { direction: Direction; label: string; hint: string }[] = [
-  { direction: "blockedBy", label: "تنتظر مهمة", hint: "تبدأ هذه المهمة بعد انتهاء…" },
-  { direction: "blocks", label: "مهمة تنتظرها", hint: "تبدأ بعد انتهاء هذه المهمة…" },
-];
 
 // "Dependencies — blocks / waiting on, with a green check when a blocker
 // clears" (build plan D3 §6). Ported from RelationshipsSection.tsx's
@@ -289,28 +282,8 @@ export default function DependenciesSection({
         </button>
 
         <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={288} className="p-2">
-            <div className="grid grid-cols-2 gap-1.5">
-              {DIRECTION_CHOICES.map((choice) => {
-                const style = DIRECTION_STYLES[choice.direction];
-                const selected = direction === choice.direction;
-                return (
-                  <button
-                    key={choice.direction}
-                    type="button"
-                    onClick={() => setDirection(choice.direction)}
-                    aria-pressed={selected}
-                    className={`flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium ${
-                      selected ? style.selected : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    <style.Icon className={`h-3.5 w-3.5 ${selected ? "" : style.text}`} />
-                    {choice.label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mb-2 mt-1 text-[11px] text-gray-400">
-              {DIRECTION_CHOICES.find((c) => c.direction === direction)?.hint}
+            <div className="mb-2">
+              <DirectionToggle value={direction} onChange={setDirection} />
             </div>
             <input
               autoFocus

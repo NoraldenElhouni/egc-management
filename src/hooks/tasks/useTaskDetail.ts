@@ -13,6 +13,7 @@ import { notifyUsers } from "../../services/notifications/pushNotifications";
 import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { recordAssignees, recordTaskPatch, recordTaskValue, type TaskPatch } from "./taskUndo";
 import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
+import { addDependency as insertDependency, removeDependencies } from "./dependencyEdit";
 
 // =====================================================================
 // D3 — Task detail (slide-over panel), build plan Part 7.
@@ -22,17 +23,6 @@ import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./use
 // is_resolved) — see the migration this hook now assumes exists. `body`
 // stores `{ text: string }`, the same plain shape `description` already
 // uses (build plan §4.7 — jsonb, not HTML, no rich-text editor yet).
-
-// Why tasks.dependency_problem refuses a link ('cross_board' is allowed:
-// such a link is shown but doesn't move dates).
-const DEPENDENCY_PROBLEMS: Record<string, string | null> = {
-  self: "لا يمكن ربط المهمة بنفسها",
-  exists: "المهمتان مرتبطتان بالفعل",
-  lineage: "لا يمكن ربط مهمة بمهمتها الرئيسية أو بإحدى مهامها الفرعية",
-  cycle: "هذا الربط سينشئ حلقة اعتماديات دائرية",
-  forbidden: "لا يمكنك ربط هاتين المهمتين",
-  cross_board: null,
-};
 
 // Toast wording for single-field edits (see taskUndo.ts).
 const FIELD_LABELS: Record<string, string> = {
@@ -641,28 +631,12 @@ export function useTaskDetail(taskId: string | undefined) {
       direction: "blocks" | "blockedBy";
     }) => {
       if (!taskId) return;
-      const blocking_task_id = direction === "blocks" ? taskId : relatedTaskId;
-      const blocked_task_id = direction === "blocks" ? relatedTaskId : taskId;
-
-      // Pre-check with the same rules the DB's BEFORE INSERT trigger
-      // (prevent_dependency_cycle) enforces — no loops, through the
-      // parent/subtask hierarchy too — so a bad pick surfaces a clear Arabic
-      // message instead of a raw trigger error. The trigger remains the real
-      // backstop either way.
-      const { data: problem, error: checkError } = await tasksDb.rpc("dependency_problem", {
-        p_blocking_task_id: blocking_task_id,
-        p_blocked_task_id: blocked_task_id,
-      });
-      if (checkError) throw checkError;
-      const message = problem ? DEPENDENCY_PROBLEMS[problem] : null;
-      if (message) throw new Error(message);
-
-      const { error } = await tasksDb.from("task_dependencies").insert({
-        blocking_task_id,
-        blocked_task_id,
-        created_by: user?.id ?? null,
-      });
-      if (error) throw error;
+      await insertDependency(
+        direction === "blocks"
+          ? { blocking_task_id: taskId, blocked_task_id: relatedTaskId }
+          : { blocking_task_id: relatedTaskId, blocked_task_id: taskId },
+        user?.id ?? null,
+      );
     },
     // a link on the same board moves dates (the scheduler) — refresh everything
     onSuccess: () => {
@@ -673,8 +647,17 @@ export function useTaskDetail(taskId: string | undefined) {
 
   const removeDependency = useMutation({
     mutationFn: async (dependencyId: string) => {
-      const { error } = await tasksDb.from("task_dependencies").delete().eq("id", dependencyId);
-      if (error) throw error;
+      if (!taskId) return;
+      // by pair, so it can be undone
+      const waitsFor = query.data?.blocking.find((d) => d.dependencyId === dependencyId);
+      const waitedBy = query.data?.blockedByMe.find((d) => d.dependencyId === dependencyId);
+      const pair = waitsFor
+        ? { blocking_task_id: waitsFor.id, blocked_task_id: taskId }
+        : waitedBy
+          ? { blocking_task_id: taskId, blocked_task_id: waitedBy.id }
+          : null;
+      if (!pair) return;
+      await removeDependencies([pair], user?.id ?? null);
     },
     onSuccess: () => {
       invalidate();

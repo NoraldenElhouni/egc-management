@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import StatusCell from "./StatusCell";
@@ -16,13 +16,16 @@ import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
 import DependencyBadges from "./DependencyBadges";
-import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
+import DependencyPopover from "./DependencyPopover";
+import TaskRowMenu from "./TaskRowMenu";
+import type { DependencyFlags, TaskLinks } from "../../../hooks/tasks/dependencyFlags";
 import type {
   CustomColumn,
   StatusRow,
   TaskRow as TaskRowType,
   TaskTypeLite,
   TagLite,
+  DependencyPair,
 } from "../../../hooks/tasks/useTaskBoard";
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import type { Json } from "../../../lib/supabase";
@@ -65,6 +68,10 @@ interface TaskRowProps {
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
   dependencyFlags: Map<string, DependencyFlags>;
+  /** Every link of each task — the "تبدأ بعد" column. */
+  dependencyLinks: Map<string, TaskLinks>;
+  onLink: (pair: DependencyPair) => void;
+  onUnlink: (pairs: DependencyPair[]) => void;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -116,6 +123,9 @@ export default function TaskRow({
   departmentNamesById,
   linkedTaskIds,
   dependencyFlags,
+  dependencyLinks,
+  onLink,
+  onUnlink,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -148,6 +158,11 @@ export default function TaskRow({
   const [addingChild, setAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
+  // the "تبدأ بعد" editor — also opened from the right-click menu
+  const [linksOpen, setLinksOpen] = useState(false);
+  const badgesRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const [menuPoint, setMenuPoint] = useState<{ x: number; y: number } | null>(null);
   const children = childrenByParent.get(task.id) ?? [];
   const hasChildren = children.length > 0;
   const collapsed = collapsedIds.has(task.id) && !addingChild;
@@ -194,12 +209,24 @@ export default function TaskRow({
   // TaskDetailPanel.tsx's own read of the same field.
   const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
   const tags = tagsByTask.get(task.id) ?? [];
+  const statusCategory = statuses.find((s) => s.id === task.status_id)?.category;
+  const flags = dependencyFlags.get(task.id);
+  const hasDependencyBadges = !!flags && (flags.waitingOn.length > 0 || flags.holding.length > 0 || flags.cleared);
+  const openTask = () => navigate(`/tasks/board/${boardId}/task/${task.id}`);
 
   return (
     <>
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        onContextMenu={(e) => {
+          // React bubbles events out of portals: ignore the row's own popovers
+          if (!e.currentTarget.contains(e.target as Node)) return;
+          // a text field keeps the browser's own menu (copy / paste)
+          if ((e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
+          e.preventDefault();
+          setMenuPoint({ x: e.clientX, y: e.clientY });
+        }}
         onDragOver={(e) => {
           if (!draggedId || draggedId === task.id) return;
           e.preventDefault();
@@ -281,9 +308,9 @@ export default function TaskRow({
               popover is position:absolute off a `relative` ancestor inside
               here, and an overflow-hidden ancestor clips absolutely
               positioned descendants too, not just overflowing text. */}
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+          <div ref={titleRef} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
             <button
-              onClick={() => navigate(`/tasks/board/${boardId}/task/${task.id}`)}
+              onClick={openTask}
               className="truncate text-sm text-gray-800 hover:underline"
             >
               {task.title}
@@ -323,7 +350,20 @@ export default function TaskRow({
                 <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
               </Tooltip>
             )}
-            <DependencyBadges flags={dependencyFlags.get(task.id)} />
+            {hasDependencyBadges &&
+              (rowCaps.edit ? (
+                // clicking the icons opens the quick link editor
+                <button
+                  ref={badgesRef}
+                  type="button"
+                  onClick={() => setLinksOpen((v) => !v)}
+                  className="flex shrink-0 items-center gap-1 rounded hover:bg-gray-100"
+                >
+                  <DependencyBadges flags={dependencyFlags.get(task.id)} />
+                </button>
+              ) : (
+                <DependencyBadges flags={dependencyFlags.get(task.id)} />
+              ))}
             {unmetRequirementTaskIds.has(task.id) && (
               <Tooltip label="متطلبات غير مكتملة">
                 <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />
@@ -406,7 +446,7 @@ export default function TaskRow({
         <DateCell
           dueDate={task.due_date}
           isOverdue={task.is_overdue}
-          statusCategory={statuses.find((s) => s.id === task.status_id)?.category}
+          statusCategory={statusCategory}
           completedAt={task.completed_at}
           onChange={(date) => onChangeDueDate(task.id, date)}
           readOnly={!rowCaps.edit}
@@ -427,6 +467,29 @@ export default function TaskRow({
         ))}
         <div />
       </div>
+      <DependencyPopover
+        open={linksOpen}
+        onClose={() => setLinksOpen(false)}
+        anchorRef={hasDependencyBadges && rowCaps.edit ? badgesRef : titleRef}
+        task={task}
+        links={dependencyLinks.get(task.id)}
+        selfDone={statusCategory === "done" || statusCategory === "closed"}
+        childrenByParent={childrenByParent}
+        onLink={onLink}
+        onUnlink={onUnlink}
+      />
+      <TaskRowMenu
+        point={menuPoint}
+        onClose={() => setMenuPoint(null)}
+        task={task}
+        links={dependencyLinks.get(task.id)}
+        childrenByParent={childrenByParent}
+        canEdit={rowCaps.edit}
+        onOpenTask={openTask}
+        onOpenLinks={() => setLinksOpen(true)}
+        onLink={onLink}
+        onUnlink={onUnlink}
+      />
 
       {!collapsed && (
         <>
@@ -447,6 +510,9 @@ export default function TaskRow({
               departmentNamesById={departmentNamesById}
               linkedTaskIds={linkedTaskIds}
               dependencyFlags={dependencyFlags}
+              dependencyLinks={dependencyLinks}
+              onLink={onLink}
+              onUnlink={onUnlink}
               unmetRequirementTaskIds={unmetRequirementTaskIds}
               attachedTaskIds={attachedTaskIds}
               commentedTaskIds={commentedTaskIds}

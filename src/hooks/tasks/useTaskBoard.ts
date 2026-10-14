@@ -15,7 +15,7 @@ import { topmostTaskIds, withDescendants } from "./bulkSelection";
 import { recordAssignees, recordTaskPatch, recordTaskPatches, recordTaskValue } from "./taskUndo";
 import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
 import { dueFromDays, workingDayOnOrAfterString } from "../../components/tasks/board/workingDays";
-import { loadDependencyFlags, type DependencyFlags } from "./dependencyFlags";
+import { loadDependencyFlags, type DependencyFlags, type TaskLinks } from "./dependencyFlags";
 
 /** How many tasks a bulk status change updates at once. */
 const BULK_BATCH_SIZE = 6;
@@ -88,6 +88,8 @@ export interface TaskBoardData {
   /** Per task: what it waits on, what waits on it, or "cleared" once
    * everything it waited on is done — the row's stop / "!" / check icons. */
   dependencyFlags: Map<string, DependencyFlags>;
+  /** Every link of each task, both directions — the "تبدأ بعد" column and its popover. */
+  dependencyLinks: Map<string, TaskLinks>;
   // The edges whose waiting side is on this board (the other side may be
   // on another board). The Gantt view draws an arrow for each edge whose
   // two ends are both on this board.
@@ -374,6 +376,7 @@ export function useTaskBoard(boardId: string | undefined) {
         linkedTaskIds,
         blockedTaskIds: dependencyResult.blockedTaskIds,
         dependencyFlags: dependencyResult.dependencyFlags,
+        dependencyLinks: dependencyResult.dependencyLinks,
         dependencies: dependencyResult.dependencies,
         unmetRequirementTaskIds,
         attachedTaskIds,

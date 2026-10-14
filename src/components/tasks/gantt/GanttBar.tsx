@@ -161,6 +161,11 @@ interface GanttBarProps {
   describeFloor?: (day: number) => string;
   /** Hovering the bar highlights its chain of links. */
   onHover?: (hovering: boolean) => void;
+  /** Editable: hovering shows a dot at the bar's end; dragging it onto
+   * another row makes that task start after this one (TaskGantt). */
+  onLinkStart?: (e: ReactPointerEvent<HTMLElement>) => void;
+  /** The row a link drag is over — outlined. */
+  linkTarget?: boolean;
 }
 
 export default function GanttBar({
@@ -181,17 +186,47 @@ export default function GanttBar({
   summary = false,
   describeFloor,
   onHover,
+  onLinkStart,
+  linkTarget = false,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [hovered, setHovered] = useState(false);
   const readOnly = readOnlyProp || summary;
 
   const scheduled = drag && scheduling ? applyScheduledDrag(span, scheduling, drag.mode, drag.delta) : null;
   const view = scheduled ?? (drag ? applyDrag(span, drag.mode, drag.delta) : span);
   const isMilestone = span.kind === "milestone";
-  const hoverHandlers = onHover
-    ? { onMouseEnter: () => onHover(true), onMouseLeave: () => onHover(false) }
-    : {};
+  const hoverHandlers = {
+    onMouseEnter: () => {
+      setHovered(true);
+      onHover?.(true);
+    },
+    onMouseLeave: () => {
+      setHovered(false);
+      onHover?.(false);
+    },
+  };
+  // A DOM child of the bar (so hovering it still counts as hovering the
+  // bar), drawn just past the due-date end — the bar's left edge, RTL.
+  const linkDot = onLinkStart && hovered && !drag && (
+    // The hit area touches the bar's edge and is wider than the dot, so
+    // moving from the bar onto the dot never leaves the hovered area.
+    <span
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        e.preventDefault();
+        onLinkStart(e);
+      }}
+      title="اسحب إلى مهمة أخرى لتبدأ بعد هذه"
+      className="group/dot absolute top-1/2 z-[3] flex h-6 w-6 -translate-y-1/2 cursor-crosshair items-center justify-start"
+      style={{ left: -22 }}
+    >
+      <span className="ml-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-500 shadow transition-transform group-hover/dot:scale-125" />
+    </span>
+  );
+  const targetOutline = linkTarget ? "outline outline-2 outline-offset-2 outline-blue-500" : "";
 
   const begin = (mode: DragMode) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return;
@@ -266,7 +301,7 @@ export default function GanttBar({
         <div
           {...hoverHandlers}
           onClick={onOpen}
-          className={`absolute cursor-pointer ${done ? "opacity-50" : ""}`}
+          className={`absolute cursor-pointer ${done ? "opacity-50" : ""} ${targetOutline}`}
           style={{ right, width, top: ROW_H / 2 - 6, height: 12 }}
         >
           <Tooltip label={`${title} · ${describe(span.startDay, span.endDay)} · محسوبة من المهام الفرعية`} className="h-full w-full">
@@ -274,6 +309,7 @@ export default function GanttBar({
               <span className="mt-[3px] block h-1.5 w-full bg-gray-600" />
             </span>
           </Tooltip>
+          {linkDot}
         </div>
         <OutsideLabel right={right + width + 6} title={title} dependency={dependency} done={done} />
       </>
@@ -290,7 +326,7 @@ export default function GanttBar({
           {...pointerHandlers}
           {...hoverHandlers}
           onPointerDown={begin("move")}
-          className={`absolute select-none touch-none ${drag?.moved ? "z-[2] cursor-grabbing" : "cursor-grab"}`}
+          className={`absolute select-none touch-none ${drag?.moved ? "z-[2] cursor-grabbing" : "cursor-grab"} ${targetOutline}`}
           style={{ right: center - size / 2, top: (ROW_H - size) / 2, width: size, height: size }}
         >
           <Tooltip label={tooltip} className="h-full w-full">
@@ -302,6 +338,7 @@ export default function GanttBar({
             />
           </Tooltip>
           {dragLabelEl}
+          {linkDot}
         </div>
         <OutsideLabel right={center + MILESTONE_HALF + 4} title={title} dependency={dependency} done={done} />
       </>
@@ -322,7 +359,7 @@ export default function GanttBar({
         onPointerDown={begin("move")}
         className={`absolute select-none touch-none rounded ${done ? "opacity-50" : ""} ${
           overdue ? "ring-2 ring-red-400 ring-offset-1" : ""
-        } ${scheduled?.clamped ? "ring-2 ring-red-500" : ""} ${drag?.moved ? "z-[2] cursor-grabbing shadow-md" : readOnly ? "cursor-pointer" : "cursor-grab"}`}
+        } ${scheduled?.clamped ? "ring-2 ring-red-500" : ""} ${drag?.moved ? "z-[2] cursor-grabbing shadow-md" : readOnly ? "cursor-pointer" : "cursor-grab"} ${targetOutline}`}
         style={{
           right,
           top: (ROW_H - BAR_H) / 2,
@@ -362,6 +399,7 @@ export default function GanttBar({
           </>
         )}
         {dragLabelEl}
+        {linkDot}
       </div>
       {!labelInside && <OutsideLabel right={right + width + 6} title={title} dependency={dependency} done={done} />}
     </>
