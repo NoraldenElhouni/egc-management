@@ -22,7 +22,6 @@ export type ExpenseStatus = Database["public"]["Enums"]["expense_status"];
 // ------------------------------------------------------------
 export type Clients = Tables<"clients">;
 export type Specializations = Tables<"specializations">;
-export type SpecializationCategories = Tables<"specialization_categories">;
 export type Contractors = Tables<"contractors">;
 
 export type Projects = Tables<"projects">;
@@ -31,12 +30,10 @@ export type EmployeeCertifications = Tables<"employee_certifications">;
 export type EmployeesDocuments = Tables<"employee_documents">;
 export type ProjectIncome = Tables<"project_incomes">;
 export type ProjectRefund = Tables<"project_refund">;
-export type Services = Tables<"services">;
 export type ProjectExpenses = Tables<"project_expenses">;
 export type Account = Tables<"accounts">;
 export type Users = Tables<"users">;
 export type Roles = Tables<"roles">;
-export type Permissions = Tables<"permissions">;
 export type Company = Tables<"company">;
 export type Payroll = Tables<"payroll">;
 export type Vendor = Tables<"vendors">;
@@ -50,14 +47,10 @@ export type CompanyAccount = Tables<"company_account">;
 
 // Additional
 export type ExpensePayments = Tables<"expense_payments">;
-export type ProjectAssignments = Tables<"project_assignments">;
 export type ProjectRoles = Tables<"project_roles">;
 export type ProjectBalances = Tables<"project_balances">;
 export type ProjectPercentage = Tables<"project_percentage">;
 export type ProjectPercentageLogs = Tables<"project_percentage_logs">;
-export type RolePermissions = Tables<"role_permissions">;
-export type SpecializationPermissions = Tables<"specialization_permissions">;
-export type UserPermissions = Tables<"user_permissions">;
 export type UserRoles = Tables<"user_roles">;
 export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;

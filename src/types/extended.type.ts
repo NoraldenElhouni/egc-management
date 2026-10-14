@@ -4,7 +4,6 @@ import {
   EmployeesDocuments,
   UserRoles,
   Roles,
-  ProjectAssignments,
   Projects,
   ProjectRoles,
   Payroll,
@@ -29,14 +28,6 @@ export type FullProject = Projects & {
   project_balances: ProjectBalances[];
   project_percentage: ProjectPercentage[];
 };
-
-// Project related types (export these for use elsewhere)
-export type ProjectAssignmentWithDetails = ProjectAssignments & {
-  projects: Projects;
-  project_roles: ProjectRoles;
-};
-
-export type EmployeeProjects = ProjectAssignmentWithDetails[];
 
 /**
  * PHASE 4. One project a person is on the team of, as read from
