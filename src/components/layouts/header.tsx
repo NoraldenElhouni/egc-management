@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import ProfileDropdown from "./ProfileDropdown";
 import BackButton from "../ui/BackButton";
+import { SEGMENT_NAMES, useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 
 const Header = () => {
   const location = useLocation();
@@ -30,159 +31,61 @@ const Header = () => {
   };
   const pageTitle = titleFromPath(location.pathname);
 
-  const parts = location.pathname
-    .split("/")
-    .filter(Boolean)
-    .filter((seg) => !/^[0-9a-fA-F-]{8,}$/.test(seg));
-
-  // Simple human-friendly labels for common route segments
-  const segmentNames: Record<string, string> = {
-    "": "اللوحة الرئيسية",
-    dashboard: "لوحة التحكم",
-    hr: "الموارد البشرية",
-    employees: "الموظفين",
-    employee: "الموظف",
-    applicants: "المتقدمين للوظائف",
-    applicant: "المتقدم",
-    "job-requests": "طلبات التوظيف",
-    "evaluation-settings": "إعدادات التقييم",
-    "question-bank": "بنك الأسئلة",
-    crm: "إدارة علاقات العملاء",
-    "supply-chain": "سلسلة التوريد",
-    projects: "المشاريع",
-    project: "المشروع",
-    finance: "المالية",
-    profile: "الملف الشخصي",
-    settings: "الإعدادات",
-    tasks: "المهام",
-    board: "لوحة",
-    department: "قسم",
-    "my-work": "أعمالي",
-    "by-assignee": "حسب الموظف",
-    "by-type": "حسب نوع المهمة",
-    "by-project": "حسب المشروع",
-    task: "مهمة",
-    admin: "الإدارة",
-    fields: "الحقول",
-    space: "مساحة",
-    website: "إدارة الموقع",
-    "hero-slides": "الصور الرئيسية",
-    new: "جديد",
-    attendance: "الحضور والإجازات",
-    payroll: "الرواتب",
-    "loans-advances": "القروض والسلف",
-    announcements: "الإعلانات",
-    "rest-password": "إعادة تعيين كلمة المرور",
-    treasury: "الخزانة",
-    payments: "المدفوعات",
-    company: "الشركة",
-    accounting: "المحاسبة",
-    bookkeeping: "مسك الدفاتر",
-    vendors: "الموردين",
-    contractors: "المقاولون",
-    clients: "العملاء",
-    expense: "المصروف",
-    expenses: "المصروفات",
-    "bulk-expenses": "مصروفات مجمعة",
-    income: "الدخل",
-    maps: "الخرائط",
-    monthly: "الرواتب الشهرية",
-    percentages: "النسب",
-    role: "الدور",
-    roles: "الأدوار",
-    specializations: "التخصصات",
-    invoices: "الفواتير",
-    operations: "العمليات",
-    contracts: "العقود",
-    distribute: "توزيع نسبة",
-    history: "سجل",
-    requests: "طلبات العمل",
-    bids: "العروض",
-    counter: "العرض المضاد",
-    milestones: "مرحلة",
-    reports: "تقارير",
-    team: "الفريق",
-    teams: "فرق المشاريع",
-    permissions: "الصلاحيات",
-    batches: "دفعات",
-    batch: "دفعة",
-    distribution: "التوزيع",
-    shops: "متاجر",
-    divisions: "الأقسام",
-    categories: "التصنيفات",
-    subcategories: "التصنيفات الفرعية",
-    products: "المنتجات",
-    salaries: "الرواتب",
-    orders: "الطلبات",
-    boq: "جدول الكميات",
-    types: "الأنواع",
-    type: "النوع",
-    boqtype: "نوع جدول الكميات",
-    boqtypes: "أنواع جدول الكميات",
-    boqreview: "مراجعة جدول الكميات",
-    zones: "المناطق",
-    "contractor-payments": "مدفوعات المقاولين",
-    tracking: "مدفوعات المقاولين والطلبات والعقود",
-    sessions: "جلسات المستخدمين",
-    banks: "البنوك",
-    logs: "السجلات",
-    "pending-distribution": "مدفوعات قيد التوزيع",
-    "password-reset": "إعادة تعيين كلمة مرور مستخدم",
-    "change-password": "تغيير كلمة المرور",
-    "execution-management": "إدارة التنفيذ",
-    add: "إضافة",
-    edit: "تعديل",
-    view: "عرض",
-    departments: "الأقسام",
-    templates: "القوالب",
-    "project-distributions": "توزيع المشاريع",
-    "project-shares": "حصص المشاريع",
-    shares: "حصص المشاريع",
-    counters: "العدادات",
-  };
+  // ids in the path come back named after their record (project name, task title, ...)
+  const crumbs = useBreadcrumbs(location.pathname);
 
   return (
-    <header className="h-16 flex  items-center justify-between px-4 border-b bg-white shadow-sm">
+    <header className="h-16 flex  items-center justify-between gap-4 px-4 border-b bg-white shadow-sm">
       {/* Left area: page title & breadcrumb */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           {location.pathname !== "/" && (
             <div>
               <BackButton side="right" />
             </div>
           )}
 
-          <nav aria-label="breadcrumb" className="flex items-center gap-2">
-            {parts.length === 0 ? (
+          <nav aria-label="breadcrumb" className="flex items-center gap-2 min-w-0">
+            {crumbs.length === 0 ? (
               <h1 className="text-lg font-semibold text-slate-800">
                 <Link to="/">{pageTitle}</Link>
               </h1>
             ) : (
-              <ol className="flex items-center gap-2 text-sm text-slate-600">
+              <ol className="flex items-center gap-2 text-sm text-slate-600 min-w-0 overflow-hidden">
                 {/* Home link */}
-                <li className="flex items-center">
+                <li className="flex items-center shrink-0">
                   <Link to="/" className="hover:underline">
-                    {segmentNames[""]}
+                    {SEGMENT_NAMES[""]}
                   </Link>
                   <span className="text-slate-400 mx-1">/</span>
                 </li>
 
                 {/* Each segment */}
-                {parts.map((seg, idx) => {
-                  const path = "/" + parts.slice(0, idx + 1).join("/");
-                  const isLast = idx === parts.length - 1;
-                  const name = segmentNames[seg] ?? seg.replace(/-/g, " ");
+                {crumbs.map((crumb, idx) => {
+                  const isLast = idx === crumbs.length - 1;
+                  const label = crumb.loading ? (
+                    <span className="inline-block h-3 w-20 rounded bg-slate-200 animate-pulse align-middle" />
+                  ) : (
+                    crumb.label
+                  );
 
                   return (
-                    <li key={path} className="flex items-center">
+                    <li key={crumb.path} className="flex items-center min-w-0">
                       {isLast ? (
-                        <span className="text-lg font-semibold text-slate-800">
-                          {name}
+                        <span
+                          className="text-lg font-semibold text-slate-800 truncate max-w-[260px]"
+                          title={crumb.label}
+                        >
+                          {label}
                         </span>
                       ) : (
                         <>
-                          <Link to={path} className="hover:underline">
-                            {name}
+                          <Link
+                            to={crumb.path}
+                            className="hover:underline truncate max-w-[220px]"
+                            title={crumb.label}
+                          >
+                            {label}
                           </Link>
                           <span className="text-slate-400 mx-1">/</span>
                         </>
