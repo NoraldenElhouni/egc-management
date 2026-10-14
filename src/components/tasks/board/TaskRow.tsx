@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Lock, CheckCircle2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
+import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
@@ -15,6 +15,8 @@ import EditGuard from "../EditGuard";
 import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
+import DependencyBadges from "./DependencyBadges";
+import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import type {
   CustomColumn,
   StatusRow,
@@ -62,8 +64,7 @@ interface TaskRowProps {
   taskTypes: Map<string, TaskTypeLite>;
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
-  blockedTaskIds: Set<string>;
-  dependencyClearedTaskIds: Set<string>;
+  dependencyFlags: Map<string, DependencyFlags>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -114,8 +115,7 @@ export default function TaskRow({
   taskTypes,
   departmentNamesById,
   linkedTaskIds,
-  blockedTaskIds,
-  dependencyClearedTaskIds,
+  dependencyFlags,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -323,19 +323,7 @@ export default function TaskRow({
                 <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
               </Tooltip>
             )}
-            {blockedTaskIds.has(task.id) && (
-              <Tooltip label="محظورة — بانتظار مهمة أخرى">
-                <Lock className="h-3 w-3 shrink-0 text-orange-500" aria-label="محظورة — بانتظار مهمة أخرى" />
-              </Tooltip>
-            )}
-            {!blockedTaskIds.has(task.id) && dependencyClearedTaskIds.has(task.id) && (
-              <Tooltip label="تم تحرير الاعتمادية — جاهزة للبدء">
-                <CheckCircle2
-                  className="h-3 w-3 shrink-0 text-emerald-500"
-                  aria-label="تم تحرير الاعتمادية — جاهزة للبدء"
-                />
-              </Tooltip>
-            )}
+            <DependencyBadges flags={dependencyFlags.get(task.id)} />
             {unmetRequirementTaskIds.has(task.id) && (
               <Tooltip label="متطلبات غير مكتملة">
                 <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />
@@ -458,8 +446,7 @@ export default function TaskRow({
               taskTypes={taskTypes}
               departmentNamesById={departmentNamesById}
               linkedTaskIds={linkedTaskIds}
-              blockedTaskIds={blockedTaskIds}
-              dependencyClearedTaskIds={dependencyClearedTaskIds}
+              dependencyFlags={dependencyFlags}
               unmetRequirementTaskIds={unmetRequirementTaskIds}
               attachedTaskIds={attachedTaskIds}
               commentedTaskIds={commentedTaskIds}

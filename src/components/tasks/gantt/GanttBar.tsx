@@ -1,6 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Lock } from "lucide-react";
 import Tooltip from "../../ui/Tooltip";
+import { HOLD_STYLE, WAIT_STYLE, holdingLabel, waitingLabel } from "../board/DependencyBadges";
+import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import type { BarSpan } from "./ganttScale";
 import { addWorkingDays, workingDayOnOrAfter, workingDaysBetween } from "../board/workingDays";
 
@@ -141,7 +142,8 @@ interface GanttBarProps {
   /** done/closed status category — drawn faded. */
   done: boolean;
   overdue: boolean;
-  blocked: boolean;
+  /** Stop icon while it waits on an open task, "!" while others wait on it. */
+  dependency?: DependencyFlags;
   /** "من ... إلى ..." for a given (possibly mid-drag) day range. */
   describe: (startDay: number, endDay: number) => string;
   /** How far in from the scroller's right edge the sticky left panel ends
@@ -169,7 +171,7 @@ export default function GanttBar({
   color,
   done,
   overdue,
-  blocked,
+  dependency,
   describe,
   labelInset,
   onOpen,
@@ -231,7 +233,15 @@ export default function GanttBar({
       ? describeFloor(scheduling.earliestDay)
       : describe(view.startDay, view.endDay)
     : null;
-  const tooltip = drag ? null : `${title} · ${describe(span.startDay, span.endDay)}`;
+  const tooltip = drag
+    ? null
+    : [
+        `${title} · ${describe(span.startDay, span.endDay)}`,
+        dependency?.waitingOn.length ? waitingLabel(dependency.waitingOn) : null,
+        dependency?.holding.length ? holdingLabel(dependency.holding) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
   const pointerHandlers = {
     onPointerMove,
     onPointerUp,
@@ -265,7 +275,7 @@ export default function GanttBar({
             </span>
           </Tooltip>
         </div>
-        <OutsideLabel right={right + width + 6} title={title} blocked={blocked} done={done} />
+        <OutsideLabel right={right + width + 6} title={title} dependency={dependency} done={done} />
       </>
     );
   }
@@ -293,7 +303,7 @@ export default function GanttBar({
           </Tooltip>
           {dragLabelEl}
         </div>
-        <OutsideLabel right={center + MILESTONE_HALF + 4} title={title} blocked={blocked} done={done} />
+        <OutsideLabel right={center + MILESTONE_HALF + 4} title={title} dependency={dependency} done={done} />
       </>
     );
   }
@@ -332,7 +342,7 @@ export default function GanttBar({
               // title (and lock) visible beside the panel instead of
               // being cut off by it.
               <span className="sticky flex min-w-0 items-center gap-1" style={{ right: labelInset }}>
-                {blocked && <Lock className="h-3 w-3 shrink-0" />}
+                <DependencyIcons dependency={dependency} onBar />
                 <span className="truncate">{title}</span>
               </span>
             )}
@@ -353,7 +363,7 @@ export default function GanttBar({
         )}
         {dragLabelEl}
       </div>
-      {!labelInside && <OutsideLabel right={right + width + 6} title={title} blocked={blocked} done={done} />}
+      {!labelInside && <OutsideLabel right={right + width + 6} title={title} dependency={dependency} done={done} />}
     </>
   );
 }
@@ -364,12 +374,12 @@ export default function GanttBar({
 function OutsideLabel({
   right,
   title,
-  blocked,
+  dependency,
   done,
 }: {
   right: number;
   title: string;
-  blocked: boolean;
+  dependency?: DependencyFlags;
   done: boolean;
 }) {
   return (
@@ -379,8 +389,29 @@ function OutsideLabel({
       }`}
       style={{ right, top: 0, height: ROW_H }}
     >
-      {blocked && <Lock className="h-3 w-3 shrink-0 text-orange-500" />}
+      <DependencyIcons dependency={dependency} />
       <span className="truncate">{title}</span>
     </span>
+  );
+}
+
+/** The board row's stop / "!" beside a bar's title. On the bar itself each
+ * sits on a white dot so it reads on any status colour. */
+function DependencyIcons({ dependency, onBar = false }: { dependency?: DependencyFlags; onBar?: boolean }) {
+  if (!dependency) return null;
+  const dot = onBar ? "rounded-full bg-white/90 p-px" : "";
+  return (
+    <>
+      {dependency.waitingOn.length > 0 && (
+        <span className={`inline-flex shrink-0 ${dot} ${WAIT_STYLE.text}`}>
+          <WAIT_STYLE.Icon className="h-3 w-3" />
+        </span>
+      )}
+      {dependency.holding.length > 0 && (
+        <span className={`inline-flex shrink-0 ${dot} ${HOLD_STYLE.text}`}>
+          <HOLD_STYLE.Icon className="h-3 w-3" />
+        </span>
+      )}
+    </>
   );
 }

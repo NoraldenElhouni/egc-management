@@ -534,6 +534,7 @@ export default function TaskDetailPanel() {
                 spaceId={data.breadcrumb.spaceId}
                 blocking={data.blocking}
                 blockedByMe={data.blockedByMe}
+                selfDone={["done", "closed"].includes(data.statuses.find((s) => s.id === data.task.status_id)?.category ?? "")}
                 onAdd={(relatedTaskId, direction) => addDependency({ relatedTaskId, direction })}
                 onRemove={(dependencyId) => removeDependency(dependencyId)}
               />

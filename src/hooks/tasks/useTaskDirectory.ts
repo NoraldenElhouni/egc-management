@@ -10,6 +10,7 @@ import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeopl
 import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 import { recordAssignees, recordTaskPatch } from "./taskUndo";
 import { invalidateSchedule, saveTaskSchedule } from "./useTaskSchedule";
+import { loadDependencyFlags, type DependencyFlags } from "./dependencyFlags";
 
 // =====================================================================
 // Shared data + mutations for the "directory" views — AssigneeViewPage
@@ -68,9 +69,8 @@ export interface TaskDirectoryData {
   spaceIdByBoardId: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
-  // Had at least one blocking dependency, but every one of them is now
-  // done/closed — see useTaskBoard.ts's own field for the same reasoning.
-  dependencyClearedTaskIds: Set<string>;
+  /** The row's stop / "!" / check icons — see useTaskBoard.ts's own field. */
+  dependencyFlags: Map<string, DependencyFlags>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -165,7 +165,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         { data: assigneeRows, error: assigneeError },
         { data: taskTypeRows, error: taskTypesError },
         linksResult,
-        dependenciesResult,
+        dependencyResult,
         requirementsResult,
         attachmentsResult,
         commentsResult,
@@ -181,9 +181,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         taskIds.length
           ? tasksDb.from("task_links").select("task_id").in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
-        taskIds.length
-          ? tasksDb.from("task_dependencies").select("blocked_task_id, blocking_task_id").in("blocked_task_id", taskIds)
-          : Promise.resolve({ data: [], error: null }),
+        loadDependencyFlags(taskIds, tasks, new Map(statusRows.map((s) => [s.id, s.category]))),
         taskIds.length
           ? tasksDb.from("task_requirements").select("task_id").in("task_id", taskIds).eq("is_satisfied", false)
           : Promise.resolve({ data: [], error: null }),
@@ -209,7 +207,6 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
       if (assigneeError) throw assigneeError;
       if (taskTypesError) throw taskTypesError;
       if (linksResult.error) throw linksResult.error;
-      if (dependenciesResult.error) throw dependenciesResult.error;
       if (requirementsResult.error) throw requirementsResult.error;
       if (attachmentsResult.error) throw attachmentsResult.error;
       if (commentsResult.error) throw commentsResult.error;
@@ -248,39 +245,6 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         if (parent) parentTitleByTask.set(t.id, parent.title);
       }
 
-      // Same "still-open blocker" rule as useTaskBoard.ts/useDepartmentView.ts.
-      const blockingIds = Array.from(new Set((dependenciesResult.data ?? []).map((d) => d.blocking_task_id)));
-      let openBlockingIds = new Set<string>();
-      if (blockingIds.length) {
-        const { data: blockingTasks, error: blockingError } = await tasksDb
-          .from("tasks")
-          .select("id, status_id")
-          .in("id", blockingIds);
-        if (blockingError) throw blockingError;
-        const blockingStatusIds = Array.from(new Set((blockingTasks ?? []).map((t) => t.status_id)));
-        const { data: blockingStatuses, error: blockingStatusesError } = blockingStatusIds.length
-          ? await tasksDb.from("statuses").select("id, category").in("id", blockingStatusIds)
-          : { data: [], error: null };
-        if (blockingStatusesError) throw blockingStatusesError;
-        const categoryByStatus = new Map((blockingStatuses ?? []).map((s) => [s.id, s.category]));
-        openBlockingIds = new Set(
-          (blockingTasks ?? [])
-            .filter((t) => {
-              const category = categoryByStatus.get(t.status_id);
-              return category !== "done" && category !== "closed";
-            })
-            .map((t) => t.id),
-        );
-      }
-      const blockedTaskIds = new Set(
-        (dependenciesResult.data ?? []).filter((d) => openBlockingIds.has(d.blocking_task_id)).map((d) => d.blocked_task_id),
-      );
-      const dependencyClearedTaskIds = new Set(
-        (dependenciesResult.data ?? [])
-          .map((d) => d.blocked_task_id)
-          .filter((id) => !blockedTaskIds.has(id)),
-      );
-
       return {
         tasks,
         statuses: statusRows ?? [],
@@ -302,8 +266,8 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
             .filter((pair): pair is readonly [string, string] => !!pair[1]),
         ),
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
-        blockedTaskIds,
-        dependencyClearedTaskIds,
+        blockedTaskIds: dependencyResult.blockedTaskIds,
+        dependencyFlags: dependencyResult.dependencyFlags,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),
         attachedTaskIds: new Set((attachmentsResult.data ?? []).map((a) => a.entity_id)),
         commentedTaskIds: new Set((commentsResult.data ?? []).map((c) => c.task_id)),

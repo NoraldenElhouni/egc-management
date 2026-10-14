@@ -15,6 +15,7 @@ import { topmostTaskIds, withDescendants } from "./bulkSelection";
 import { recordAssignees, recordTaskPatch, recordTaskPatches, recordTaskValue } from "./taskUndo";
 import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
 import { dueFromDays, workingDayOnOrAfterString } from "../../components/tasks/board/workingDays";
+import { loadDependencyFlags, type DependencyFlags } from "./dependencyFlags";
 
 /** How many tasks a bulk status change updates at once. */
 const BULK_BATCH_SIZE = 6;
@@ -82,15 +83,14 @@ export interface TaskBoardData {
   taskTypes: Map<string, TaskTypeLite>;
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
+  /** Tasks waiting on another task that isn't done yet. */
   blockedTaskIds: Set<string>;
-  // Had at least one blocking dependency, but every one of them is now
-  // done/closed — distinct from "never had a dependency at all", so the
-  // board row can show a cleared/green indicator instead of just letting
-  // the lock badge silently vanish.
-  dependencyClearedTaskIds: Set<string>;
-  // The raw edges behind the two sets above (blocked side on this board;
-  // the blocking side may be on another board). The Gantt view draws an
-  // arrow for each edge whose two ends are both on this board.
+  /** Per task: what it waits on, what waits on it, or "cleared" once
+   * everything it waited on is done — the row's stop / "!" / check icons. */
+  dependencyFlags: Map<string, DependencyFlags>;
+  // The edges whose waiting side is on this board (the other side may be
+  // on another board). The Gantt view draws an arrow for each edge whose
+  // two ends are both on this board.
   dependencies: DependencyPair[];
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
@@ -191,11 +191,11 @@ export function useTaskBoard(boardId: string | undefined) {
         { data: taskTypeRows, error: taskTypesError },
         { data: departmentRows, error: departmentsError },
         linksResult,
-        dependenciesResult,
         requirementsResult,
         attachmentsResult,
         commentsResult,
         taskTagsResult,
+        dependencyResult,
       ] = await Promise.all([
         taskIds.length
           ? tasksDb
@@ -215,12 +215,6 @@ export function useTaskBoard(boardId: string | undefined) {
           : Promise.resolve({ data: [], error: null }),
         taskIds.length
           ? tasksDb
-              .from("task_dependencies")
-              .select("blocked_task_id, blocking_task_id")
-              .in("blocked_task_id", taskIds)
-          : Promise.resolve({ data: [], error: null }),
-        taskIds.length
-          ? tasksDb
               .from("task_requirements")
               .select("task_id")
               .in("task_id", taskIds)
@@ -235,12 +229,16 @@ export function useTaskBoard(boardId: string | undefined) {
         taskIds.length
           ? tasksDb.from("task_tags").select("task_id, tag_id").in("task_id", taskIds)
           : Promise.resolve({ data: [], error: null }),
+        loadDependencyFlags(
+          taskIds,
+          tasks ?? [],
+          new Map((statuses ?? []).map((s) => [s.id, s.category])),
+        ),
       ]);
       if (assigneeError) throw assigneeError;
       if (taskTypesError) throw taskTypesError;
       if (departmentsError) throw departmentsError;
       if (linksResult.error) throw linksResult.error;
-      if (dependenciesResult.error) throw dependenciesResult.error;
       if (requirementsResult.error) throw requirementsResult.error;
       if (attachmentsResult.error) throw attachmentsResult.error;
       if (commentsResult.error) throw commentsResult.error;
@@ -283,52 +281,6 @@ export function useTaskBoard(boardId: string | undefined) {
       );
 
       const linkedTaskIds = new Set((linksResult.data ?? []).map((r) => r.task_id));
-
-      // A dependency only still "blocks" if the task blocking it hasn't
-      // reached a done/closed status yet.
-      const blockingIds = Array.from(
-        new Set((dependenciesResult.data ?? []).map((d) => d.blocking_task_id)),
-      );
-      let openBlockingIds = new Set<string>();
-      if (blockingIds.length) {
-        const { data: blockingTasks, error: blockingError } = await tasksDb
-          .from("tasks")
-          .select("id, status_id")
-          .in("id", blockingIds);
-        if (blockingError) throw blockingError;
-        const blockingStatusIds = Array.from(
-          new Set((blockingTasks ?? []).map((t) => t.status_id)),
-        );
-        const { data: blockingStatuses, error: blockingStatusesError } =
-          blockingStatusIds.length
-            ? await tasksDb
-                .from("statuses")
-                .select("id, category")
-                .in("id", blockingStatusIds)
-            : { data: [], error: null };
-        if (blockingStatusesError) throw blockingStatusesError;
-        const categoryByStatus = new Map(
-          (blockingStatuses ?? []).map((s) => [s.id, s.category]),
-        );
-        openBlockingIds = new Set(
-          (blockingTasks ?? [])
-            .filter((t) => {
-              const category = categoryByStatus.get(t.status_id);
-              return category !== "done" && category !== "closed";
-            })
-            .map((t) => t.id),
-        );
-      }
-      const blockedTaskIds = new Set(
-        (dependenciesResult.data ?? [])
-          .filter((d) => openBlockingIds.has(d.blocking_task_id))
-          .map((d) => d.blocked_task_id),
-      );
-      const dependencyClearedTaskIds = new Set(
-        (dependenciesResult.data ?? [])
-          .map((d) => d.blocked_task_id)
-          .filter((id) => !blockedTaskIds.has(id)),
-      );
 
       const unmetRequirementTaskIds = new Set(
         (requirementsResult.data ?? []).map((r) => r.task_id),
@@ -420,9 +372,9 @@ export function useTaskBoard(boardId: string | undefined) {
         taskTypes,
         departmentNamesById,
         linkedTaskIds,
-        blockedTaskIds,
-        dependencyClearedTaskIds,
-        dependencies: dependenciesResult.data ?? [],
+        blockedTaskIds: dependencyResult.blockedTaskIds,
+        dependencyFlags: dependencyResult.dependencyFlags,
+        dependencies: dependencyResult.dependencies,
         unmetRequirementTaskIds,
         attachedTaskIds,
         commentedTaskIds,

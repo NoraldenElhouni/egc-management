@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Lock, Plus, X } from "lucide-react";
+import { CheckCircle2, Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabaseClient";
 import AnchoredMenu from "../board/AnchoredMenu";
+import { HOLD_STYLE, WAIT_STYLE } from "../board/DependencyBadges";
 import { useTemplateMode } from "../TemplateModeContext";
 import type { DependencyTaskRef } from "../../../hooks/tasks/useTaskDetail";
 
@@ -15,19 +16,41 @@ const DIRECTION_LABELS: Record<Direction, string> = {
   blocks: "تبدأ بعدها",
 };
 
+// Same icon + colour as the board row's badges (DependencyBadges.tsx):
+// waiting = red stop, waited on = amber "!".
+const DIRECTION_STYLES = { blockedBy: WAIT_STYLE, blocks: HOLD_STYLE } as const;
+
+// The add menu's two choices, with the full sentence under them.
+const DIRECTION_CHOICES: { direction: Direction; label: string; hint: string }[] = [
+  { direction: "blockedBy", label: "تنتظر مهمة", hint: "تبدأ هذه المهمة بعد انتهاء…" },
+  { direction: "blocks", label: "مهمة تنتظرها", hint: "تبدأ بعد انتهاء هذه المهمة…" },
+];
+
 // "Dependencies — blocks / waiting on, with a green check when a blocker
 // clears" (build plan D3 §6). Ported from RelationshipsSection.tsx's
 // search-and-link combobox pattern rather than sharing a component with
 // it — task_relationships and task_dependencies are different tables with
 // different semantics (see that file's own comment on the distinction).
-function DependencyRow({ item, onRemove }: { item: DependencyTaskRef; onRemove: (dependencyId: string) => void }) {
-  const cleared = item.statusCategory === "done" || item.statusCategory === "closed";
+//
+// `active`: the link still holds — the waited-on task isn't done yet.
+function DependencyRow({
+  item,
+  direction,
+  active,
+  onRemove,
+}: {
+  item: DependencyTaskRef;
+  direction: Direction;
+  active: boolean;
+  onRemove: (dependencyId: string) => void;
+}) {
+  const style = DIRECTION_STYLES[direction];
   return (
-    <div className="flex items-center gap-2 rounded-md border border-gray-100 px-2.5 py-1.5 text-sm">
-      {cleared ? (
-        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+    <div className={`flex items-center gap-2 rounded-md border border-r-2 border-gray-100 px-2.5 py-1.5 text-sm ${style.border}`}>
+      {active ? (
+        <style.Icon className={`h-3.5 w-3.5 shrink-0 ${style.text}`} />
       ) : (
-        <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
       )}
       <span className="flex-1 truncate text-gray-700">{item.title}</span>
       {item.otherBoard && (
@@ -41,6 +64,16 @@ function DependencyRow({ item, onRemove }: { item: DependencyTaskRef; onRemove: 
       <button onClick={() => onRemove(item.dependencyId)} className="text-gray-400 hover:text-gray-600">
         <X className="h-3 w-3" />
       </button>
+    </div>
+  );
+}
+
+function GroupHeader({ direction }: { direction: Direction }) {
+  const style = DIRECTION_STYLES[direction];
+  return (
+    <div className={`mb-1 flex items-center gap-1 text-xs font-semibold ${style.text}`}>
+      <style.Icon className="h-3.5 w-3.5" />
+      {DIRECTION_LABELS[direction]}
     </div>
   );
 }
@@ -60,6 +93,8 @@ interface DependenciesSectionProps {
   spaceId: string;
   blocking: DependencyTaskRef[]; // tasks that block this one
   blockedByMe: DependencyTaskRef[]; // tasks waiting on this one
+  /** This task is done/closed: the tasks waiting on it are released. */
+  selfDone: boolean;
   onAdd: (relatedTaskId: string, direction: Direction) => void;
   onRemove: (dependencyId: string) => void;
 }
@@ -70,6 +105,7 @@ export default function DependenciesSection({
   spaceId,
   blocking,
   blockedByMe,
+  selfDone,
   onAdd,
   onRemove,
 }: DependenciesSectionProps) {
@@ -218,20 +254,26 @@ export default function DependenciesSection({
     <div className="space-y-3">
       {blocking.length > 0 && (
         <div>
-          <div className="mb-1 text-xs font-semibold text-gray-500">{DIRECTION_LABELS.blockedBy}</div>
+          <GroupHeader direction="blockedBy" />
           <div className="space-y-1">
             {blocking.map((t) => (
-              <DependencyRow key={t.dependencyId} item={t} onRemove={onRemove} />
+              <DependencyRow
+                key={t.dependencyId}
+                item={t}
+                direction="blockedBy"
+                active={t.statusCategory !== "done" && t.statusCategory !== "closed"}
+                onRemove={onRemove}
+              />
             ))}
           </div>
         </div>
       )}
       {blockedByMe.length > 0 && (
         <div>
-          <div className="mb-1 text-xs font-semibold text-gray-500">{DIRECTION_LABELS.blocks}</div>
+          <GroupHeader direction="blocks" />
           <div className="space-y-1">
             {blockedByMe.map((t) => (
-              <DependencyRow key={t.dependencyId} item={t} onRemove={onRemove} />
+              <DependencyRow key={t.dependencyId} item={t} direction="blocks" active={!selfDone} onRemove={onRemove} />
             ))}
           </div>
         </div>
@@ -247,14 +289,29 @@ export default function DependenciesSection({
         </button>
 
         <AnchoredMenu open={open} onClose={() => setOpen(false)} anchorRef={ref} width={288} className="p-2">
-            <select
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as Direction)}
-              className="mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-xs outline-none"
-            >
-              <option value="blockedBy">تبدأ هذه المهمة بعد انتهاء…</option>
-              <option value="blocks">تبدأ بعد انتهاء هذه المهمة…</option>
-            </select>
+            <div className="grid grid-cols-2 gap-1.5">
+              {DIRECTION_CHOICES.map((choice) => {
+                const style = DIRECTION_STYLES[choice.direction];
+                const selected = direction === choice.direction;
+                return (
+                  <button
+                    key={choice.direction}
+                    type="button"
+                    onClick={() => setDirection(choice.direction)}
+                    aria-pressed={selected}
+                    className={`flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium ${
+                      selected ? style.selected : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <style.Icon className={`h-3.5 w-3.5 ${selected ? "" : style.text}`} />
+                    {choice.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mb-2 mt-1 text-[11px] text-gray-400">
+              {DIRECTION_CHOICES.find((c) => c.direction === direction)?.hint}
+            </div>
             <input
               autoFocus
               value={search}

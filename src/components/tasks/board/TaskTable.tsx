@@ -21,6 +21,7 @@ import type {
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import type { SpaceFeatureSettings } from "../../../hooks/tasks/useSpaceSettings";
 import type { Json } from "../../../lib/supabase";
+import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 
 type GroupBy = "none" | "department" | "assignee" | "task_type" | "zone";
 
@@ -44,8 +45,7 @@ interface TaskTableProps {
   taskTypes: Map<string, TaskTypeLite>;
   departmentNamesById: Map<string, string>;
   linkedTaskIds: Set<string>;
-  blockedTaskIds: Set<string>;
-  dependencyClearedTaskIds: Set<string>;
+  dependencyFlags: Map<string, DependencyFlags>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -96,8 +96,7 @@ export default function TaskTable({
   taskTypes,
   departmentNamesById,
   linkedTaskIds,
-  blockedTaskIds,
-  dependencyClearedTaskIds,
+  dependencyFlags,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -571,8 +570,7 @@ export default function TaskTable({
                 taskTypes={taskTypes}
                 departmentNamesById={departmentNamesById}
                 linkedTaskIds={linkedTaskIds}
-                blockedTaskIds={blockedTaskIds}
-                dependencyClearedTaskIds={dependencyClearedTaskIds}
+                dependencyFlags={dependencyFlags}
                 unmetRequirementTaskIds={unmetRequirementTaskIds}
                 attachedTaskIds={attachedTaskIds}
                 commentedTaskIds={commentedTaskIds}

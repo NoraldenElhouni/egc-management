@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Link2, Lock, CheckCircle2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
+import { Link2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
+import DependencyBadges from "./DependencyBadges";
+import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
@@ -74,8 +76,7 @@ interface DirectoryTaskRowProps {
   /** The space this task's board lives in — what I may do here depends on it. */
   spaceId?: string;
   linkedTaskIds: Set<string>;
-  blockedTaskIds: Set<string>;
-  dependencyClearedTaskIds: Set<string>;
+  dependencyFlags: Map<string, DependencyFlags>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -113,8 +114,7 @@ export default function DirectoryTaskRow({
   parentTitle,
   spaceId,
   linkedTaskIds,
-  blockedTaskIds,
-  dependencyClearedTaskIds,
+  dependencyFlags,
   unmetRequirementTaskIds,
   attachedTaskIds,
   commentedTaskIds,
@@ -205,19 +205,7 @@ export default function DirectoryTaskRow({
               <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
             </Tooltip>
           )}
-          {blockedTaskIds.has(task.id) && (
-            <Tooltip label="محظورة — بانتظار مهمة أخرى">
-              <Lock className="h-3 w-3 shrink-0 text-orange-500" aria-label="محظورة — بانتظار مهمة أخرى" />
-            </Tooltip>
-          )}
-          {!blockedTaskIds.has(task.id) && dependencyClearedTaskIds.has(task.id) && (
-            <Tooltip label="تم تحرير الاعتمادية — جاهزة للبدء">
-              <CheckCircle2
-                className="h-3 w-3 shrink-0 text-emerald-500"
-                aria-label="تم تحرير الاعتمادية — جاهزة للبدء"
-              />
-            </Tooltip>
-          )}
+          <DependencyBadges flags={dependencyFlags.get(task.id)} />
           {unmetRequirementTaskIds.has(task.id) && (
             <Tooltip label="متطلبات غير مكتملة">
               <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />

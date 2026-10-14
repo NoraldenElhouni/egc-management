@@ -198,7 +198,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             statuses={data.statuses}
             taskTypes={data.taskTypes}
             dependencies={data.dependencies}
-            blockedTaskIds={data.blockedTaskIds}
+            dependencyFlags={data.dependencyFlags}
             onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
             onAddTask={spaceCaps.create && !isTemplate ? () => addTask("", null) : undefined}
             readOnly={!spaceCaps.edit}
@@ -217,8 +217,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             taskTypes={data.taskTypes}
             departmentNamesById={data.departmentNamesById}
             linkedTaskIds={data.linkedTaskIds}
-            blockedTaskIds={data.blockedTaskIds}
-            dependencyClearedTaskIds={data.dependencyClearedTaskIds}
+            dependencyFlags={data.dependencyFlags}
             unmetRequirementTaskIds={data.unmetRequirementTaskIds}
             attachedTaskIds={data.attachedTaskIds}
             commentedTaskIds={data.commentedTaskIds}

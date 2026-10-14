@@ -25,6 +25,7 @@ import type {
   TaskRow,
   TaskTypeLite,
 } from "../../../hooks/tasks/useTaskBoard";
+import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import Tooltip from "../../ui/Tooltip";
 import { useTemplateMode } from "../TemplateModeContext";
 import GanttBar, { MILESTONE_HALF, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
@@ -199,7 +200,7 @@ interface TaskGanttProps {
   statuses: StatusRow[];
   taskTypes: Map<string, TaskTypeLite>;
   dependencies: DependencyPair[];
-  blockedTaskIds: Set<string>;
+  dependencyFlags: Map<string, DependencyFlags>;
   onChangeDates: (taskId: string, change: GanttDateChange) => void;
   /** Opens the create dialog (real boards, with create rights). */
   onAddTask?: () => void;
@@ -220,7 +221,7 @@ export default function TaskGantt({
   statuses,
   taskTypes,
   dependencies,
-  blockedTaskIds,
+  dependencyFlags,
   onChangeDates: onChangeDatesProp,
   onAddTask,
   readOnly = false,
@@ -922,7 +923,7 @@ export default function TaskGantt({
                           color={color}
                           done={status?.category === "done" || status?.category === "closed"}
                           overdue={task.is_overdue}
-                          blocked={blockedTaskIds.has(task.id)}
+                          dependency={dependencyFlags.get(task.id)}
                           describe={(s, e) => spanLabel(s, e, adapter)}
                           labelInset={leftW + 6}
                           onOpen={() => openTask(task.id)}
