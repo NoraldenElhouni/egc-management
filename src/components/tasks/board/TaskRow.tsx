@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronLeft, GripVertical, Plus, Link2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import StatusCell from "./StatusCell";
@@ -14,9 +14,7 @@ import EditGuard from "../EditGuard";
 import CustomFieldCell from "./CustomFieldCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
-import DependencyBadges from "./DependencyBadges";
-import DependencyPopover from "./DependencyPopover";
-import TaskRowMenu from "./TaskRowMenu";
+import { RowDependencyIcons, RowLinkOverlays, useRowLinkMenu } from "./RowLinkMenu";
 import type { DependencyFlags, TaskLinks } from "../../../hooks/tasks/dependencyFlags";
 import type {
   CustomColumn,
@@ -155,11 +153,8 @@ export default function TaskRow({
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
-  // the "تبدأ بعد" editor — also opened from the right-click menu
-  const [linksOpen, setLinksOpen] = useState(false);
-  const badgesRef = useRef<HTMLButtonElement>(null);
-  const titleRef = useRef<HTMLDivElement>(null);
-  const [menuPoint, setMenuPoint] = useState<{ x: number; y: number } | null>(null);
+  // right-click menu and the link editor (shared with the space view's row)
+  const linkMenu = useRowLinkMenu();
   const children = childrenByParent.get(task.id) ?? [];
   const hasChildren = children.length > 0;
   const collapsed = collapsedIds.has(task.id);
@@ -201,7 +196,6 @@ export default function TaskRow({
   const tags = tagsByTask.get(task.id) ?? [];
   const statusCategory = statuses.find((s) => s.id === task.status_id)?.category;
   const flags = dependencyFlags.get(task.id);
-  const hasDependencyBadges = !!flags && (flags.waitingOn.length > 0 || flags.holding.length > 0 || flags.cleared);
   const openTask = () => navigate(`/tasks/board/${boardId}/task/${task.id}`);
 
   return (
@@ -209,14 +203,7 @@ export default function TaskRow({
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onContextMenu={(e) => {
-          // React bubbles events out of portals: ignore the row's own popovers
-          if (!e.currentTarget.contains(e.target as Node)) return;
-          // a text field keeps the browser's own menu (copy / paste)
-          if ((e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
-          e.preventDefault();
-          setMenuPoint({ x: e.clientX, y: e.clientY });
-        }}
+        onContextMenu={linkMenu.onContextMenu}
         onDragOver={(e) => {
           if (!draggedId || draggedId === task.id) return;
           e.preventDefault();
@@ -298,7 +285,7 @@ export default function TaskRow({
               popover is position:absolute off a `relative` ancestor inside
               here, and an overflow-hidden ancestor clips absolutely
               positioned descendants too, not just overflowing text. */}
-          <div ref={titleRef} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+          <div ref={linkMenu.titleRef} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
             <button
               onClick={openTask}
               className="truncate text-sm text-gray-800 hover:underline"
@@ -340,20 +327,7 @@ export default function TaskRow({
                 <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
               </Tooltip>
             )}
-            {hasDependencyBadges &&
-              (rowCaps.edit ? (
-                // clicking the icons opens the quick link editor
-                <button
-                  ref={badgesRef}
-                  type="button"
-                  onClick={() => setLinksOpen((v) => !v)}
-                  className="flex shrink-0 items-center gap-1 rounded hover:bg-gray-100"
-                >
-                  <DependencyBadges flags={dependencyFlags.get(task.id)} />
-                </button>
-              ) : (
-                <DependencyBadges flags={dependencyFlags.get(task.id)} />
-              ))}
+            <RowDependencyIcons flags={flags} canEdit={rowCaps.edit} menu={linkMenu} />
             {unmetRequirementTaskIds.has(task.id) && (
               <Tooltip label="متطلبات غير مكتملة">
                 <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />
@@ -457,26 +431,15 @@ export default function TaskRow({
         ))}
         <div />
       </div>
-      <DependencyPopover
-        open={linksOpen}
-        onClose={() => setLinksOpen(false)}
-        anchorRef={hasDependencyBadges && rowCaps.edit ? badgesRef : titleRef}
+      <RowLinkOverlays
+        menu={linkMenu}
         task={task}
+        flags={flags}
         links={dependencyLinks.get(task.id)}
-        selfDone={statusCategory === "done" || statusCategory === "closed"}
-        childrenByParent={childrenByParent}
-        onLink={onLink}
-        onUnlink={onUnlink}
-      />
-      <TaskRowMenu
-        point={menuPoint}
-        onClose={() => setMenuPoint(null)}
-        task={task}
-        links={dependencyLinks.get(task.id)}
+        statusCategory={statusCategory}
         childrenByParent={childrenByParent}
         canEdit={rowCaps.edit}
         onOpenTask={openTask}
-        onOpenLinks={() => setLinksOpen(true)}
         onLink={onLink}
         onUnlink={onUnlink}
       />

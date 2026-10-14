@@ -3,6 +3,7 @@ import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
 import { ChevronDown, ChevronLeft, FileText, Map as MapIcon, Plus, Presentation, Ruler, Search, ShoppingCart, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
+import { useDependencyEdit } from "../../hooks/tasks/dependencyEdit";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
 import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
@@ -134,6 +135,27 @@ export default function SpaceTasksPage() {
 
     return sortDirectoryGroups(boardGroups, sort.groupSort, undefined, data.boardOrderById);
   }, [data, visibleTasks, searching, sort, narrowingCount, hideEmptyBoards]);
+
+  // Each board's tasks as a tree in the board's own order, for the rows' link
+  // editor and "تبدأ بعد المهمة السابقة" — the same order the board view uses,
+  // whatever this page is sorted or filtered by.
+  const childrenByBoard = useMemo(() => {
+    const out = new Map<string, Map<string | null, TaskRow[]>>();
+    if (!data) return out;
+    const sorted = [...data.tasks].sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
+    for (const t of sorted) {
+      let tree = out.get(t.board_id);
+      if (!tree) {
+        tree = new Map();
+        out.set(t.board_id, tree);
+      }
+      const list = tree.get(t.parent_task_id ?? null) ?? [];
+      list.push(t);
+      tree.set(t.parent_task_id ?? null, list);
+    }
+    return out;
+  }, [data]);
+  const { link, unlink } = useDependencyEdit(undefined);
 
   const expandAll = () => setCollapsedKeys(new Set());
   const collapseAll = () => setCollapsedKeys(new Set(groups.map((g) => g.key)));
@@ -290,6 +312,12 @@ export default function SpaceTasksPage() {
                         attachedTaskIds={data.attachedTaskIds}
                         commentedTaskIds={data.commentedTaskIds}
                         onOpenTask={(taskId) => navigate(`/tasks/space/${spaceId}/task/${taskId}`)}
+                        linkEditing={{
+                          dependencyLinks: data.dependencyLinks,
+                          childrenByParent: childrenByBoard.get(task.board_id) ?? new Map(),
+                          onLink: (pair) => link(pair),
+                          onUnlink: (pairs) => unlink(pairs),
+                        }}
                         {...mutations}
                       />
                     ))}

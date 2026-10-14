@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Link2, Camera, Paperclip, MessageSquare, AlignLeft } from "lucide-react";
 import DependencyBadges from "./DependencyBadges";
-import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
+import { RowDependencyIcons, RowLinkOverlays, useRowLinkMenu } from "./RowLinkMenu";
+import type { DependencyFlags, TaskLinks } from "../../../hooks/tasks/dependencyFlags";
 import StatusCell from "./StatusCell";
 import PriorityCell from "./PriorityCell";
 import DateCell from "./DateCell";
@@ -11,7 +12,7 @@ import TaskSourceCell from "./TaskSourceCell";
 import AssigneeCell from "./AssigneeCell";
 import TaskTypeCell from "./TaskTypeCell";
 import Tooltip from "../../ui/Tooltip";
-import type { StatusRow, TaskRow as TaskRowType, TaskTypeLite, TagLite } from "../../../hooks/tasks/useTaskBoard";
+import type { DependencyPair, StatusRow, TaskRow as TaskRowType, TaskTypeLite, TagLite } from "../../../hooks/tasks/useTaskBoard";
 import type { AssignablePerson } from "../../../hooks/tasks/useAssignablePeople";
 import { NO_CAPS, taskRowCaps, useMyTaskAccess } from "../../../hooks/tasks/useTaskAccess";
 
@@ -101,6 +102,15 @@ interface DirectoryTaskRowProps {
   onChangeAssignees: (taskId: string, userIds: string[]) => void;
   /** Remove a linked task's wait gap (useTaskDirectory's clearLag). */
   onClearLag?: (taskId: string) => void;
+  /** Link editing like the board row (right-click menu, clickable ⛔ / !
+   * icons). All four together; without them the row has neither. */
+  linkEditing?: {
+    dependencyLinks: Map<string, TaskLinks>;
+    /** The task's board, in board order (not this page's sort). */
+    childrenByParent: Map<string | null, TaskRowType[]>;
+    onLink: (pair: DependencyPair) => void;
+    onUnlink: (pairs: DependencyPair[]) => void;
+  };
 }
 
 export default function DirectoryTaskRow({
@@ -132,6 +142,7 @@ export default function DirectoryTaskRow({
   onChangeDueDate,
   onChangeAssignees,
   onClearLag,
+  linkEditing,
 }: DirectoryTaskRowProps) {
   // description is JSON, { text: string } — same read as board/TaskRow.tsx.
   const hasDescription = !!(task.description as { text?: string } | null)?.text?.trim();
@@ -152,9 +163,13 @@ export default function DirectoryTaskRow({
     access?.assignee_caps,
     !!myUserId && (assigneesByTask.get(task.id) ?? []).includes(myUserId),
   );
+  const linkMenu = useRowLinkMenu();
+  const flags = dependencyFlags.get(task.id);
 
   return (
+    <>
     <div
+      onContextMenu={linkEditing ? linkMenu.onContextMenu : undefined}
       style={directoryRowGridStyle({ showPriority, showSource, showCompleted })}
       className="min-h-[34px] border-b border-gray-100 px-2 hover:bg-gray-50"
     >
@@ -169,7 +184,7 @@ export default function DirectoryTaskRow({
         {/* Separate overflow-hidden wrapper from TaskTypeCell above — see
             board/TaskRow.tsx's identical note: an overflow-hidden ancestor
             clips its popover otherwise. */}
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+        <div ref={linkMenu.titleRef} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
           {parentTitle && task.parent_task_id && (
             <button
               onClick={() => onOpenTask(task.parent_task_id as string)}
@@ -205,7 +220,11 @@ export default function DirectoryTaskRow({
               <Link2 className="h-3 w-3 shrink-0 text-blue-400" aria-label="مرتبطة بسجل" />
             </Tooltip>
           )}
-          <DependencyBadges flags={dependencyFlags.get(task.id)} />
+          {linkEditing ? (
+            <RowDependencyIcons flags={flags} canEdit={rowCaps.edit} menu={linkMenu} />
+          ) : (
+            <DependencyBadges flags={flags} />
+          )}
           {unmetRequirementTaskIds.has(task.id) && (
             <Tooltip label="متطلبات غير مكتملة">
               <Camera className="h-3 w-3 shrink-0 text-amber-500" aria-label="متطلبات غير مكتملة" />
@@ -278,5 +297,20 @@ export default function DirectoryTaskRow({
       />
       {showCompleted && <CompletedAtCell completedAt={task.completed_at} />}
     </div>
+    {linkEditing && (
+      <RowLinkOverlays
+        menu={linkMenu}
+        task={task}
+        flags={flags}
+        links={linkEditing.dependencyLinks.get(task.id)}
+        statusCategory={currentStatus?.category}
+        childrenByParent={linkEditing.childrenByParent}
+        canEdit={rowCaps.edit}
+        onOpenTask={() => onOpenTask(task.id)}
+        onLink={linkEditing.onLink}
+        onUnlink={linkEditing.onUnlink}
+      />
+    )}
+    </>
   );
 }

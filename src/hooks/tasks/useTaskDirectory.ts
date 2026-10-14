@@ -10,7 +10,7 @@ import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeopl
 import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 import { recordAssignees, recordTaskPatch } from "./taskUndo";
 import { invalidateSchedule, saveTaskSchedule } from "./useTaskSchedule";
-import { loadDependencyFlags, type DependencyFlags } from "./dependencyFlags";
+import { loadDependencyFlags, type DependencyFlags, type TaskLinks } from "./dependencyFlags";
 
 // =====================================================================
 // Shared data + mutations for the "directory" views — AssigneeViewPage
@@ -71,6 +71,8 @@ export interface TaskDirectoryData {
   blockedTaskIds: Set<string>;
   /** The row's stop / "!" / check icons — see useTaskBoard.ts's own field. */
   dependencyFlags: Map<string, DependencyFlags>;
+  /** Every link of each task, both directions — the row's link editor. */
+  dependencyLinks: Map<string, TaskLinks>;
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -268,6 +270,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         linkedTaskIds: new Set((linksResult.data ?? []).map((r) => r.task_id)),
         blockedTaskIds: dependencyResult.blockedTaskIds,
         dependencyFlags: dependencyResult.dependencyFlags,
+        dependencyLinks: dependencyResult.dependencyLinks,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),
         attachedTaskIds: new Set((attachmentsResult.data ?? []).map((a) => a.entity_id)),
         commentedTaskIds: new Set((commentsResult.data ?? []).map((c) => c.task_id)),
