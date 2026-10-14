@@ -7,9 +7,10 @@ import { notifyUsers } from "../../services/notifications/pushNotifications";
 import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
-import type { Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
+import type { DependencyPair, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
 import { recordAssignees, recordTaskPatch } from "./taskUndo";
-import { invalidateSchedule, saveTaskSchedule } from "./useTaskSchedule";
+import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
+import { dueFromDays, workingDayOnOrAfterString } from "../../components/tasks/board/workingDays";
 import { loadDependencyFlags, type DependencyFlags, type TaskLinks } from "./dependencyFlags";
 
 // =====================================================================
@@ -73,6 +74,8 @@ export interface TaskDirectoryData {
   dependencyFlags: Map<string, DependencyFlags>;
   /** Every link of each task, both directions — the row's link editor. */
   dependencyLinks: Map<string, TaskLinks>;
+  /** The links themselves — the space Gantt's lines. */
+  dependencies: DependencyPair[];
   unmetRequirementTaskIds: Set<string>;
   attachedTaskIds: Set<string>;
   commentedTaskIds: Set<string>;
@@ -271,6 +274,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         blockedTaskIds: dependencyResult.blockedTaskIds,
         dependencyFlags: dependencyResult.dependencyFlags,
         dependencyLinks: dependencyResult.dependencyLinks,
+        dependencies: dependencyResult.dependencies,
         unmetRequirementTaskIds: new Set((requirementsResult.data ?? []).map((r) => r.task_id)),
         attachedTaskIds: new Set((attachmentsResult.data ?? []).map((a) => a.entity_id)),
         commentedTaskIds: new Set((commentsResult.data ?? []).map((c) => c.task_id)),
@@ -365,6 +369,58 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     onSettled: () => {
       invalidate();
       invalidateSchedule(queryClient);
+    },
+  });
+
+  // The space Gantt's drag / resize / date and days columns — the same
+  // shape as useTaskBoard.ts's updateTaskDates: one scheduler call per
+  // gesture, optimistic for the dragged bar only (the tasks it pushes move
+  // when the refetch lands).
+  const updateTaskDates = useMutation({
+    mutationFn: async ({
+      taskId,
+      startDate,
+      dueDate,
+      durationDays,
+    }: {
+      taskId: string;
+      startDate?: string | null;
+      dueDate?: string | null;
+      durationDays?: number;
+    }) => {
+      const prevTask = query.data?.tasks.find((t) => t.id === taskId);
+      if (!prevTask) return;
+      const change: ScheduleChange = {};
+      if (startDate) change.startDate = startDate;
+      if (durationDays !== undefined) change.durationDays = durationDays;
+      else if (dueDate) change.dueDate = dueDate;
+      if (Object.keys(change).length > 0) await saveTaskSchedule(prevTask, change);
+    },
+    onMutate: async ({ taskId, startDate, durationDays }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<TaskDirectoryData>(queryKey);
+      if (previous) {
+        queryClient.setQueryData<TaskDirectoryData>(queryKey, {
+          ...previous,
+          tasks: previous.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            // what the scheduler will do, so the bar lands where it will stay
+            const start = startDate ? workingDayOnOrAfterString(startDate) : t.start_date;
+            const days = durationDays ?? t.duration_days ?? 1;
+            return start ? { ...t, start_date: start, duration_days: days, due_date: dueFromDays(start, days) } : t;
+          }),
+        });
+      }
+      return { previous };
+    },
+    // saveTaskSchedule records the undo entry
+    onError: (_error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: (_data, _error, { taskId }) => {
+      invalidate();
+      invalidateSchedule(queryClient);
+      queryClient.invalidateQueries({ queryKey: ["task-detail", taskId] });
     },
   });
 
@@ -494,6 +550,10 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
     onChangeStartDate: (taskId: string, startDate: string | null) => updateStartDate.mutate({ taskId, startDate }),
     onChangeDueDate: (taskId: string, dueDate: string | null) => updateDueDate.mutate({ taskId, dueDate }),
     onClearLag: (taskId: string) => clearLag.mutate(taskId),
+    onChangeTaskDates: (
+      taskId: string,
+      change: { startDate?: string | null; dueDate?: string | null; durationDays?: number },
+    ) => updateTaskDates.mutate({ taskId, ...change }),
     onChangeAssignees: (taskId: string, userIds: string[]) => setAssignees.mutate({ taskId, userIds }),
     onCreateTask: (boardId: string, title: string) => createTask.mutate({ boardId, title }),
   };

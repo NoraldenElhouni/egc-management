@@ -200,8 +200,8 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
         {view === "gantt" ? (
           <TaskGantt
             key={boardId}
-            boardId={data.board.id}
             tasks={boardTasks}
+            onOpenTask={(taskId) => navigate(`/tasks/board/${data.board.id}/gantt/task/${taskId}`)}
             statuses={data.statuses}
             taskTypes={data.taskTypes}
             dependencies={data.dependencies}

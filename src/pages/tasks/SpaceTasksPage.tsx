@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, FileText, Map as MapIcon, Plus, Presentation, Ruler, Search, ShoppingCart, SlidersHorizontal } from "lucide-react";
+import { ChartGantt, ChevronDown, ChevronLeft, FileText, List, Map as MapIcon, Plus, Presentation, Ruler, Search, ShoppingCart, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useDependencyEdit } from "../../hooks/tasks/dependencyEdit";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
@@ -12,6 +12,7 @@ import { activeKpiKey } from "../../components/tasks/board/spaceKpiFilters";
 import CollapseAllButtons from "../../components/tasks/board/CollapseAllButtons";
 import OverdueNotifyButton from "../../components/tasks/board/OverdueNotifyButton";
 import SpaceTourDialog from "../../components/tasks/tour/SpaceTourDialog";
+import TaskGantt, { type GanttGroup } from "../../components/tasks/gantt/TaskGantt";
 import {
   countActiveFilters,
   createDefaultFilters,
@@ -40,6 +41,11 @@ import { useCreateTaskDialog } from "../../components/tasks/schedule/CreateTaskD
 // (overdue, in progress, not started, unassigned, recently done). A task's
 // detail panel (this page's nested task/:taskId route, the <Outlet /> below)
 // opens on top of the tour — keep the Outlet AFTER the tour so it paints over it.
+//
+// `view` comes from the route, like the board page: space/:id is the list,
+// space/:id/gantt every board of the space on one TaskGantt — a header row
+// per board with its task tree under it. Search, the filters and the KPI
+// cards narrow both views the same way.
 
 interface BoardGroup {
   key: string;
@@ -61,11 +67,17 @@ function AddTaskRow({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-export default function SpaceTasksPage() {
+// The Gantt's board rows: a task belongs to its board.
+const boardOf = (task: TaskRow) => task.board_id;
+
+export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   // taskId is the nested detail panel's param, visible here too.
   const { spaceId, taskId } = useParams<{ spaceId: string; taskId?: string }>();
   const navigate = useNavigate();
-  const { data, loading, error, ...mutations } = useTaskDirectory({ spaceId });
+  const { data, loading, error, onChangeTaskDates, ...mutations } = useTaskDirectory({ spaceId });
+  // The detail panel opens under the current view, so closing it stays there.
+  const basePath = `/tasks/space/${spaceId}${view === "gantt" ? "/gantt" : ""}`;
+  const openTask = (id: string) => navigate(`${basePath}/task/${id}`);
   const { data: sidebarData } = useTasksSidebar();
   const spaceCaps = useSpaceCaps(spaceId);
   const { openCreateTask } = useCreateTaskDialog();
@@ -157,6 +169,20 @@ export default function SpaceTasksPage() {
   }, [data]);
   const { link, unlink } = useDependencyEdit(undefined);
 
+  // The Gantt: the boards in the list's order, and the visible tasks in each
+  // board's own order. A subtask whose parent is filtered out moves up to its
+  // board's top level (the board page does the same for assignee-only views).
+  const ganttGroups = useMemo<GanttGroup[]>(
+    () => groups.map((g) => ({ id: g.key, label: g.label, href: `/tasks/board/${g.key}/gantt` })),
+    [groups],
+  );
+  const ganttTasks = useMemo(() => {
+    const visibleIds = new Set(visibleTasks.map((t) => t.id));
+    return [...visibleTasks]
+      .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at))
+      .map((t) => (t.parent_task_id && !visibleIds.has(t.parent_task_id) ? { ...t, parent_task_id: null } : t));
+  }, [visibleTasks]);
+
   const expandAll = () => setCollapsedKeys(new Set());
   const collapseAll = () => setCollapsedKeys(new Set(groups.map((g) => g.key)));
 
@@ -190,6 +216,26 @@ export default function SpaceTasksPage() {
           {spaceNode?.space.name ?? "المساحة"}
         </h1>
         <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-white text-sm">
+            <Link
+              to={`/tasks/space/${spaceId}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${
+                view === "list" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <List className="h-3.5 w-3.5" />
+              قائمة
+            </Link>
+            <Link
+              to={`/tasks/space/${spaceId}/gantt`}
+              className={`flex items-center gap-1.5 border-r border-gray-200 px-3 py-1.5 ${
+                view === "gantt" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <ChartGantt className="h-3.5 w-3.5" />
+              مخطط زمني
+            </Link>
+          </div>
           <div className="flex w-56 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" />
             <input
@@ -201,7 +247,10 @@ export default function SpaceTasksPage() {
               aria-label="بحث عن مهمة"
             />
           </div>
-          <CollapseAllButtons onExpandAll={expandAll} onCollapseAll={collapseAll} searching={searching} />
+          {/* the Gantt has its own expand / collapse buttons */}
+          {view === "list" && (
+            <CollapseAllButtons onExpandAll={expandAll} onCollapseAll={collapseAll} searching={searching} />
+          )}
           <OverdueNotifyButton visibleTasks={visibleTasks} data={data} filters={filters} searchTerm={search} />
           <button
             onClick={() => setShowTour(true)}
@@ -241,98 +290,121 @@ export default function SpaceTasksPage() {
         />
       )}
 
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-3">
-        {spaceNode?.space.project_id && <ProjectSectionLinks projectId={spaceNode.space.project_id} />}
-        {groups.length === 0 ? (
-          <div className="p-6 text-center text-sm text-gray-400">
-            {searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"}
-          </div>
-        ) : (
-          groups.map((group) => {
-            const collapsed = !searching && collapsedKeys.has(group.key);
-            return (
-              <div key={group.key} className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white last:mb-0">
-                {/* A link can't live inside a button, so the header is a row of
-                    siblings: chevron (collapse), board name (opens the board),
-                    and a flex-1 filler that keeps "click anywhere else on the
-                    header to collapse" working as it did when the whole header
-                    was one button. */}
-                <div className="flex w-full items-center gap-2 border-b-2 border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200">
-                  <button
-                    onClick={() => toggle(group.key)}
-                    className="shrink-0 rounded p-0.5 hover:bg-gray-300/60"
-                    title={collapsed ? "توسيع" : "طي"}
-                  >
-                    {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  </button>
-                  <Link
-                    to={`/tasks/board/${group.key}`}
-                    className="truncate hover:text-primary hover:underline"
-                    title="فتح اللوحة"
-                  >
-                    {group.label}
-                  </Link>
-                  <span className="shrink-0 text-xs font-normal text-gray-400">({group.tasks.length})</span>
-                  <button
-                    onClick={() => toggle(group.key)}
-                    className="h-6 flex-1"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                </div>
-
-                {!collapsed && (
-                  <>
-                    <div
-                      style={directoryRowGridStyle()}
-                      className="border-b border-gray-100 bg-white px-2 py-1.5 text-xs font-semibold text-gray-500"
+      {view === "gantt" ? (
+        <div className="flex-1 overflow-hidden">
+          <TaskGantt
+            key={spaceId}
+            tasks={ganttTasks}
+            groups={ganttGroups}
+            groupOf={boardOf}
+            onOpenTask={openTask}
+            statuses={data.statuses}
+            taskTypes={data.taskTypes}
+            dependencies={data.dependencies}
+            dependencyFlags={data.dependencyFlags}
+            onChangeDates={onChangeTaskDates}
+            onLink={(pair) => link(pair)}
+            onUnlink={(pair) => unlink([pair])}
+            onAddToGroup={spaceCaps.create ? (boardId) => openCreateTask({ boardId }) : undefined}
+            readOnly={!spaceCaps.edit}
+            emptyLabel={
+              searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"
+            }
+          />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-3">
+          {spaceNode?.space.project_id && <ProjectSectionLinks projectId={spaceNode.space.project_id} />}
+          {groups.length === 0 ? (
+            <div className="p-6 text-center text-sm text-gray-400">
+              {searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"}
+            </div>
+          ) : (
+            groups.map((group) => {
+              const collapsed = !searching && collapsedKeys.has(group.key);
+              return (
+                <div key={group.key} className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white last:mb-0">
+                  {/* A link can't live inside a button, so the header is a row of
+                      siblings: chevron (collapse), board name (opens the board),
+                      and a flex-1 filler that keeps "click anywhere else on the
+                      header to collapse" working as it did when the whole header
+                      was one button. */}
+                  <div className="flex w-full items-center gap-2 border-b-2 border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200">
+                    <button
+                      onClick={() => toggle(group.key)}
+                      className="shrink-0 rounded p-0.5 hover:bg-gray-300/60"
+                      title={collapsed ? "توسيع" : "طي"}
                     >
-                      <div>عنوان المهمة</div>
-                      <div>الحالة</div>
-                      <div>الأولوية</div>
-                      <div>الفريق</div>
-                      <div>تاريخ البدء</div>
-                      <div>الاستحقاق</div>
-                    </div>
-                    {group.tasks.map((task) => (
-                      <DirectoryTaskRow
-                        key={task.id}
-                        task={task}
-                        spaceId={data.spaceIdByBoardId.get(task.board_id)}
-                        statuses={data.statuses}
-                        employeesById={data.employeesById}
-                        allEmployees={data.allEmployees}
-                        assigneesByTask={data.assigneesByTask}
-                        taskTypes={data.taskTypes}
-                        tagsByTask={data.tagsByTask}
-                        parentTitle={data.parentTitleByTask.get(task.id)}
-                        linkedTaskIds={data.linkedTaskIds}
-                        dependencyFlags={data.dependencyFlags}
-                        unmetRequirementTaskIds={data.unmetRequirementTaskIds}
-                        attachedTaskIds={data.attachedTaskIds}
-                        commentedTaskIds={data.commentedTaskIds}
-                        onOpenTask={(taskId) => navigate(`/tasks/space/${spaceId}/task/${taskId}`)}
-                        linkEditing={{
-                          dependencyLinks: data.dependencyLinks,
-                          childrenByParent: childrenByBoard.get(task.board_id) ?? new Map(),
-                          onLink: (pair) => link(pair),
-                          onUnlink: (pairs) => unlink(pairs),
-                        }}
-                        {...mutations}
-                      />
-                    ))}
-                    {group.tasks.length === 0 && (
-                      <div className="px-3 py-3 text-center text-sm text-gray-400">لا توجد مهام في هذه اللوحة بعد</div>
-                    )}
-                    {spaceCaps.create && <AddTaskRow onAdd={() => openCreateTask({ boardId: group.key })} />}
-                  </>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+                      {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                    <Link
+                      to={`/tasks/board/${group.key}`}
+                      className="truncate hover:text-primary hover:underline"
+                      title="فتح اللوحة"
+                    >
+                      {group.label}
+                    </Link>
+                    <span className="shrink-0 text-xs font-normal text-gray-400">({group.tasks.length})</span>
+                    <button
+                      onClick={() => toggle(group.key)}
+                      className="h-6 flex-1"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                  </div>
 
+                  {!collapsed && (
+                    <>
+                      <div
+                        style={directoryRowGridStyle()}
+                        className="border-b border-gray-100 bg-white px-2 py-1.5 text-xs font-semibold text-gray-500"
+                      >
+                        <div>عنوان المهمة</div>
+                        <div>الحالة</div>
+                        <div>الأولوية</div>
+                        <div>الفريق</div>
+                        <div>تاريخ البدء</div>
+                        <div>الاستحقاق</div>
+                      </div>
+                      {group.tasks.map((task) => (
+                        <DirectoryTaskRow
+                          key={task.id}
+                          task={task}
+                          spaceId={data.spaceIdByBoardId.get(task.board_id)}
+                          statuses={data.statuses}
+                          employeesById={data.employeesById}
+                          allEmployees={data.allEmployees}
+                          assigneesByTask={data.assigneesByTask}
+                          taskTypes={data.taskTypes}
+                          tagsByTask={data.tagsByTask}
+                          parentTitle={data.parentTitleByTask.get(task.id)}
+                          linkedTaskIds={data.linkedTaskIds}
+                          dependencyFlags={data.dependencyFlags}
+                          unmetRequirementTaskIds={data.unmetRequirementTaskIds}
+                          attachedTaskIds={data.attachedTaskIds}
+                          commentedTaskIds={data.commentedTaskIds}
+                          onOpenTask={openTask}
+                          linkEditing={{
+                            dependencyLinks: data.dependencyLinks,
+                            childrenByParent: childrenByBoard.get(task.board_id) ?? new Map(),
+                            onLink: (pair) => link(pair),
+                            onUnlink: (pairs) => unlink(pairs),
+                          }}
+                          {...mutations}
+                        />
+                      ))}
+                      {group.tasks.length === 0 && (
+                        <div className="px-3 py-3 text-center text-sm text-gray-400">لا توجد مهام في هذه اللوحة بعد</div>
+                      )}
+                      {spaceCaps.create && <AddTaskRow onAdd={() => openCreateTask({ boardId: group.key })} />}
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {showTour && (
         <SpaceTourDialog
@@ -341,7 +413,7 @@ export default function SpaceTasksPage() {
           spaceColor={spaceColor}
           panelOpen={!!taskId}
           onClose={closeTour}
-          onOpenTask={(id) => navigate(`/tasks/space/${spaceId}/task/${id}`)}
+          onOpenTask={openTask}
           onChangeStatus={mutations.onChangeStatus}
           onChangeTaskType={mutations.onChangeTaskType}
           onChangePriority={mutations.onChangePriority}

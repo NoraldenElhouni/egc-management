@@ -6,8 +6,9 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   CalendarCheck,
   ChevronDown,
@@ -27,6 +28,7 @@ import type {
 import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import Tooltip from "../../ui/Tooltip";
 import { dayOffsetLabel } from "../board/templateDates";
+import { formatSlashDate } from "../board/taskDates";
 import { PointMenu } from "../board/AnchoredMenu";
 import { useTemplateMode } from "../TemplateModeContext";
 import GanttBar, { MILESTONE_HALF, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
@@ -82,6 +84,12 @@ import {
 // The toolbar shows the board's planned end. Dependencies are added from
 // the create dialog and the task panel. Template boards ("Day N") keep the
 // plain date writes and the clear-dates button.
+//
+// The space page (SpaceTasksPage.tsx, /tasks/space/:id/gantt) shows every
+// board of the space on one chart by passing `groups`: each board gets a
+// header row (name, its first start and last end, a summary bar, "+" to add
+// a task to it) with the board's own task tree under it. Folding every
+// board leaves one bar per board.
 
 const DATE_COL_W = 96;
 const DAYS_COL_W = 64;
@@ -195,8 +203,15 @@ function ignoreDateChange(): void {
   return;
 }
 
+/** A header row on a chart that spans several boards — one per board. */
+export interface GanttGroup {
+  id: string;
+  label: string;
+  /** Where the group's name links to (the board's own Gantt). */
+  href?: string;
+}
+
 interface TaskGanttProps {
-  boardId: string;
   tasks: TaskRow[];
   statuses: StatusRow[];
   taskTypes: Map<string, TaskTypeLite>;
@@ -212,16 +227,25 @@ interface TaskGanttProps {
   /** No edit rights: bars open the task but cannot be dragged and the date
    * columns / clear button are inert. */
   readOnly?: boolean;
+  /** Opens a task's detail panel (the page's nested task/:taskId route). */
+  onOpenTask: (taskId: string) => void;
+  /** Several boards on one chart: a header row per group, in this order,
+   * with the group's tasks (groupOf) under it. */
+  groups?: GanttGroup[];
+  groupOf?: (task: TaskRow) => string;
+  /** The "+" on a group's header row (with create rights). */
+  onAddToGroup?: (groupId: string) => void;
+  emptyLabel?: string;
 }
 
-interface VisibleRow {
-  task: TaskRow;
-  depth: number;
-  hasChildren: boolean;
-}
+type VisibleRow =
+  | { kind: "task"; task: TaskRow; depth: number; hasChildren: boolean }
+  | { kind: "group"; group: GanttGroup; count: number };
+
+// Groups fold in the same set as parent tasks; the prefix keeps the keys apart.
+const groupKey = (groupId: string) => `group:${groupId}`;
 
 export default function TaskGantt({
-  boardId,
   tasks,
   statuses,
   taskTypes,
@@ -232,9 +256,13 @@ export default function TaskGantt({
   onUnlink,
   onAddTask,
   readOnly = false,
+  onOpenTask,
+  groups,
+  groupOf,
+  onAddToGroup,
+  emptyLabel = "لا توجد مهام في هذه اللوحة بعد",
 }: TaskGanttProps) {
   const onChangeDates = readOnly ? ignoreDateChange : onChangeDatesProp;
-  const navigate = useNavigate();
   const isTemplate = useTemplateMode();
   const adapter = useMemo(() => dayAdapter(isTemplate), [isTemplate]);
   const todayRef = useRef<HTMLDivElement>(null);
@@ -347,8 +375,14 @@ export default function TaskGantt({
       else next.add(taskId);
       return next;
     });
+  // With groups this folds the boards too: one summary bar per board.
   const collapseAll = () =>
-    setCollapsedIds(new Set(tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id)));
+    setCollapsedIds(
+      new Set([
+        ...tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id),
+        ...(groups ?? []).map((g) => groupKey(g.id)),
+      ]),
+    );
   const expandAll = () => setCollapsedIds(new Set());
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
@@ -393,18 +427,40 @@ export default function TaskGantt({
   const trackWidth = (range.endDay - range.startDay + 1) * pxPerDay;
   const xOf = (day: number) => (day - range.startDay) * pxPerDay;
 
+  // A group's span: its first start to its last end, over every task in it.
+  const groupSpans = useMemo(() => {
+    const map = new Map<string, { startDay: number; endDay: number }>();
+    if (!groups || !groupOf) return map;
+    for (const t of tasks) {
+      const s = spans.get(t.id);
+      if (!s || s.kind === "none") continue;
+      const id = groupOf(t);
+      const acc = map.get(id);
+      map.set(id, acc ? { startDay: Math.min(acc.startDay, s.startDay), endDay: Math.max(acc.endDay, s.endDay) } : { startDay: s.startDay, endDay: s.endDay });
+    }
+    return map;
+  }, [groups, groupOf, tasks, spans]);
+
   const rows = useMemo(() => {
     const out: VisibleRow[] = [];
-    const walk = (parentId: string | null, depth: number) => {
-      for (const task of childrenByParent.get(parentId) ?? []) {
+    const walk = (list: TaskRow[], depth: number) => {
+      for (const task of list) {
         const hasChildren = childrenByParent.has(task.id);
-        out.push({ task, depth, hasChildren });
-        if (hasChildren && !collapsedIds.has(task.id)) walk(task.id, depth + 1);
+        out.push({ kind: "task", task, depth, hasChildren });
+        if (hasChildren && !collapsedIds.has(task.id)) walk(childrenByParent.get(task.id) ?? [], depth + 1);
       }
     };
-    walk(null, 0);
+    const top = childrenByParent.get(null) ?? [];
+    if (groups && groupOf) {
+      for (const group of groups) {
+        out.push({ kind: "group", group, count: tasks.filter((t) => groupOf(t) === group.id).length });
+        if (!collapsedIds.has(groupKey(group.id))) walk(top.filter((t) => groupOf(t) === group.id), 0);
+      }
+    } else {
+      walk(top, 0);
+    }
     return out;
-  }, [childrenByParent, collapsedIds]);
+  }, [childrenByParent, collapsedIds, groups, groupOf, tasks]);
 
   const datedCount = useMemo(
     () => Array.from(spans.values()).filter((s) => s.kind !== "none").length,
@@ -518,7 +574,10 @@ export default function TaskGantt({
   // a blocker on another board is already shown by the lock icon. Red
   // when the blocked task starts before its blocker is due.
   const arrows = useMemo(() => {
-    const rowIndexById = new Map(rows.map((r, i) => [r.task.id, i]));
+    const rowIndexById = new Map<string, number>();
+    rows.forEach((r, i) => {
+      if (r.kind === "task") rowIndexById.set(r.task.id, i);
+    });
     const x = (day: number) => (day - range.startDay) * pxPerDay;
     const startEdge = (s: BarSpan) =>
       s.kind === "milestone" ? x(s.startDay) + pxPerDay / 2 - MILESTONE_HALF : x(s.startDay);
@@ -655,7 +714,7 @@ export default function TaskGantt({
     scrollEl.scrollLeft = -(fromContentRight - anchor.cursorFromRight);
   }, [pxPerDay]);
 
-  const openTask = (taskId: string) => navigate(`/tasks/board/${boardId}/gantt/task/${taskId}`);
+  const openTask = onOpenTask;
 
   const commit = (taskId: string, change: BarChange) =>
     onChangeDates(taskId, {
@@ -745,9 +804,9 @@ export default function TaskGantt({
         </div>
       </div>
 
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && !groups?.length ? (
         <div className="flex flex-1 items-center justify-center text-sm text-gray-400">
-          لا توجد مهام في هذه اللوحة بعد
+          {emptyLabel}
         </div>
       ) : (
         <div
@@ -901,7 +960,31 @@ export default function TaskGantt({
                 )}
               </div>
 
-              {rows.map(({ task, depth, hasChildren }) => {
+              {rows.map((row) => {
+                if (row.kind === "group") {
+                  const key = groupKey(row.group.id);
+                  return (
+                    <GroupRow
+                      key={key}
+                      group={row.group}
+                      count={row.count}
+                      span={groupSpans.get(row.group.id) ?? null}
+                      collapsed={collapsedIds.has(key)}
+                      onToggle={() => toggleCollapse(key)}
+                      onAdd={onAddToGroup ? () => onAddToGroup(row.group.id) : undefined}
+                      columns={columns}
+                      leftW={leftW}
+                      nameW={nameW}
+                      trackWidth={trackWidth}
+                      xOf={xOf}
+                      pxPerDay={pxPerDay}
+                      formatDay={(day) => formatSlashDate(adapter.fromDay(day))}
+                      plain={isTemplate}
+                      resizeHandle={<ResizeHandle active={resizing} handlers={resizeHandlers} />}
+                    />
+                  );
+                }
+                const { task, depth, hasChildren } = row;
                 const span = spans.get(task.id);
                 const status = statusById.get(task.status_id);
                 const color = status?.color ?? DEFAULT_STATUS_COLOR;
@@ -1177,14 +1260,115 @@ function ResizeHandle({
 }
 
 /** A parent's summary line (no dates of its own) — not draggable; edit
- * the subtasks, or give the parent its own dates in the panel. */
-function RollupBar({ right, width }: { right: number; width: number }) {
+ * the subtasks, or give the parent its own dates in the panel. `strong` is
+ * a board's span on the space chart. */
+function RollupBar({ right, width, strong = false }: { right: number; width: number; strong?: boolean }) {
   return (
     <div
-      className="pointer-events-none absolute border-x-2 border-gray-500"
+      className={`pointer-events-none absolute border-x-2 ${strong ? "border-gray-700" : "border-gray-500"}`}
       style={{ right, width: Math.max(width, MIN_BAR_W), top: ROW_H / 2 - 4, height: 8 }}
     >
-      <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 bg-gray-400/70" />
+      <div
+        className={`absolute inset-x-0 top-1/2 -translate-y-1/2 ${strong ? "h-2 bg-gray-600/80" : "h-1.5 bg-gray-400/70"}`}
+      />
+    </div>
+  );
+}
+
+/** A board's header row on the space chart: its name (opens the board),
+ * task count, "+", its first start / last end, and a summary bar. */
+function GroupRow({
+  group,
+  count,
+  span,
+  collapsed,
+  onToggle,
+  onAdd,
+  columns,
+  leftW,
+  nameW,
+  trackWidth,
+  xOf,
+  pxPerDay,
+  formatDay,
+  plain,
+  resizeHandle,
+}: {
+  group: GanttGroup;
+  count: number;
+  span: { startDay: number; endDay: number } | null;
+  collapsed: boolean;
+  onToggle: () => void;
+  onAdd?: () => void;
+  columns: DateColumns;
+  leftW: number;
+  nameW: number;
+  trackWidth: number;
+  xOf: (day: number) => number;
+  pxPerDay: number;
+  formatDay: (day: number) => string;
+  plain: boolean;
+  resizeHandle: ReactNode;
+}) {
+  const days = span ? workingDaysBetween(span.startDay, span.endDay, plain) : null;
+  return (
+    <div className="flex" style={{ height: ROW_H }}>
+      <div
+        className="sticky right-0 z-10 flex shrink-0 border-b border-l border-gray-200 bg-gray-100 text-xs text-gray-500"
+        style={{ width: leftW }}
+      >
+        {columns.start && (
+          <div className="flex shrink-0 items-center justify-center border-l border-gray-200" style={{ width: DATE_COL_W }}>
+            {span ? formatDay(span.startDay) : "—"}
+          </div>
+        )}
+        {columns.days && (
+          <div
+            className="flex shrink-0 items-center justify-center border-l border-gray-200 italic"
+            style={{ width: DAYS_COL_W }}
+            title={days ? `من أول مهمة في اللوحة إلى آخرها: ${workingDaysLabel(days)}` : undefined}
+          >
+            {days ? `${days} يوم` : "—"}
+          </div>
+        )}
+        {columns.end && (
+          <div className="flex shrink-0 items-center justify-center border-l border-gray-200" style={{ width: DATE_COL_W }}>
+            {span ? formatDay(span.endDay) : "—"}
+          </div>
+        )}
+        <div className="relative flex shrink-0 items-center gap-1.5 px-2" style={{ width: nameW }}>
+          <button onClick={onToggle} className="shrink-0 rounded p-0.5 text-gray-500 hover:bg-gray-200" title={collapsed ? "توسيع" : "طي"}>
+            {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+          {group.href ? (
+            <Link
+              to={group.href}
+              className="min-w-0 truncate text-sm font-semibold text-gray-800 hover:text-primary hover:underline"
+              title="فتح اللوحة"
+            >
+              {group.label}
+            </Link>
+          ) : (
+            <span className="min-w-0 truncate text-sm font-semibold text-gray-800">{group.label}</span>
+          )}
+          <span className="shrink-0 text-gray-400">({count})</span>
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="mr-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+              title="إضافة مهمة إلى هذه اللوحة"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {resizeHandle}
+        </div>
+      </div>
+      <div className="relative shrink-0 border-b border-gray-200 bg-gray-100/60" style={{ width: trackWidth }}>
+        {span && (
+          <RollupBar right={xOf(span.startDay)} width={(span.endDay - span.startDay + 1) * pxPerDay} strong />
+        )}
+      </div>
     </div>
   );
 }
