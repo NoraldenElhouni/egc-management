@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { Users, UserCog, Shapes, Building2, FolderKanban, Building, User, Search, X, Layers, Plus, Settings } from "lucide-react";
 import { useTasksSidebar, type BoardWithCount, type SpaceNode, type SpaceType } from "../../hooks/tasks/useTasksSidebar";
@@ -6,6 +6,10 @@ import { matchSpaceNode } from "../../hooks/tasks/tasksSidebarSearch";
 import { useMyTaskAccess, useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import NewBoardModal from "../../components/sidebar/NewBoardModal";
 import { SpaceCardsPageSkeleton } from "../../components/tasks/TasksSkeletons";
+import ProjectsDueDateTimeline from "../../components/project/ProjectsDueDateTimeline";
+import { useProjects, type ProjectExecution } from "../../hooks/execution-management/project/useProjects";
+import { useProjectTaskEnds } from "../../hooks/tasks/useProjectTaskEnds";
+import { formatDate } from "../../utils/helpper";
 
 // The /tasks index route — what shows before a space/board is picked.
 // D1's actual spec is just "the sidebar" (already built, TasksLayout.tsx),
@@ -17,6 +21,13 @@ import { SpaceCardsPageSkeleton } from "../../components/tasks/TasksSkeletons";
 // board name (matching logic shared with the sidebar search:
 // hooks/tasks/tasksSidebarSearch.ts). While a term is typed the view
 // shortcuts step aside so the page shows only results.
+//
+// At the top, the slim delivery timeline (ProjectsDueDateTimeline, compact)
+// of the projects whose task space I can open: each sits at the end of its
+// last task (useProjectTaskEnds — the plan end its space's Gantt shows), or
+// at its estimated due date while it has no dated tasks. Its card shows both
+// dates, flagged when the tasks run past the estimate; a project opens its
+// space.
 
 const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
   project: "مساحات المشاريع",
@@ -67,6 +78,25 @@ function CountBadge({ count }: { count: number }) {
   return (
     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
       {count} مفتوحة
+    </span>
+  );
+}
+
+/** Calendar days the tasks end after the estimated due date (0 when not later). */
+function lateDays(taskEnd: string | null | undefined, estimate: string | null): number {
+  if (!taskEnd || !estimate) return 0;
+  const days = Math.round((Date.parse(taskEnd.slice(0, 10)) - Date.parse(estimate.slice(0, 10))) / 86_400_000);
+  return Math.max(days, 0);
+}
+
+/** A project's two dates in its timeline card: where its tasks end, and its estimate. */
+function ProjectEndDates({ taskEnd, estimate }: { taskEnd: string | undefined; estimate: string | null }) {
+  const late = lateDays(taskEnd, estimate);
+  return (
+    <span className="mt-0.5 block text-[10px] leading-4 text-gray-500">
+      <span className="block">{taskEnd ? `نهاية المهام: ${formatDate(taskEnd)}` : "لا توجد مهام مجدولة"}</span>
+      {estimate && <span className="block">التسليم المتوقع: {formatDate(estimate)}</span>}
+      {late > 0 && <span className="block font-medium text-rose-700">بعد التسليم المتوقع بـ {late} يوم</span>}
     </span>
   );
 }
@@ -185,6 +215,28 @@ export default function TasksPage() {
     })).filter((g) => g.results.length > 0);
   }, [data, search, searching]);
 
+  // The delivery timeline: projects whose task space I can open (the same
+  // rule as the space cards below), each linked to that space.
+  const { data: projects } = useProjects();
+  const timeline = useMemo(() => {
+    const spaceByProject = new Map<string, string>();
+    for (const node of data?.spacesByType.project ?? []) {
+      const projectId = node.space.project_id;
+      if (projectId && access?.spaces[node.space.id] && !spaceByProject.has(projectId)) {
+        spaceByProject.set(projectId, node.space.id);
+      }
+    }
+    return {
+      spaceByProject,
+      projects: (projects ?? []).filter((p) => spaceByProject.has(p.id)),
+    };
+  }, [data, access, projects]);
+  const { taskEnds, loading: taskEndsLoading } = useProjectTaskEnds(Array.from(timeline.spaceByProject.keys()));
+  const taskEndOf = useCallback(
+    (p: ProjectExecution) => taskEnds?.get(p.id) ?? p.estimated_due_date,
+    [taskEnds],
+  );
+
   if (onlyOwnTasks) return <Navigate to="/tasks/my-work" replace />;
   if (loading) {
     return <SpaceCardsPageSkeleton />;
@@ -223,6 +275,19 @@ export default function TasksPage() {
           )}
         </div>
       </div>
+
+      {/* waits for the task ends, so pills don't jump from the estimate to the plan end */}
+      {!searching && timeline.projects.length > 0 && !taskEndsLoading && (
+        <ProjectsDueDateTimeline
+          variant="compact"
+          title="مواعيد انتهاء المشاريع حسب المهام"
+          projects={timeline.projects}
+          dueDateOf={taskEndOf}
+          projectHref={(p) => `/tasks/space/${timeline.spaceByProject.get(p.id)}`}
+          isLate={(p) => lateDays(taskEnds?.get(p.id), p.estimated_due_date) > 0}
+          renderProjectDetail={(p) => <ProjectEndDates taskEnd={taskEnds?.get(p.id)} estimate={p.estimated_due_date} />}
+        />
+      )}
 
       {searching && searchGroups.length === 0 && (
         <div className="rounded-lg border border-dashed border-gray-200 p-8 text-center text-sm text-gray-400">
