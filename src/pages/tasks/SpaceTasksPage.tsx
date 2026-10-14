@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Plus, Presentation, Search, Settings, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, Plus, Presentation, Search, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
@@ -10,7 +10,6 @@ import SpaceKpiStrip from "../../components/tasks/board/SpaceKpiStrip";
 import { activeKpiKey } from "../../components/tasks/board/spaceKpiFilters";
 import CollapseAllButtons from "../../components/tasks/board/CollapseAllButtons";
 import OverdueNotifyButton from "../../components/tasks/board/OverdueNotifyButton";
-import NewBoardModal from "../../components/sidebar/NewBoardModal";
 import SpaceTourDialog from "../../components/tasks/tour/SpaceTourDialog";
 import {
   countActiveFilters,
@@ -76,7 +75,6 @@ export default function SpaceTasksPage() {
   // settings) by default — the same order the space is organised in.
   const [sort, setSort] = useState<DirectorySortState>({ ...DEFAULT_SORT, groupSort: "order" });
   const [showFilterDialog, setShowFilterDialog] = useState(false);
-  const [showNewBoard, setShowNewBoard] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const closeTour = useCallback(() => setShowTour(false), []);
   const searching = search.trim().length > 0;
@@ -191,27 +189,6 @@ export default function SpaceTasksPage() {
             <Presentation className="h-3.5 w-3.5" />
             جولة في المساحة
           </button>
-          {/* The space tree that used to hold these left the sidebar, so the
-              space's own page is where boards are added and settings opened. */}
-          {spaceCaps.create && (
-            <button
-              onClick={() => setShowNewBoard(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              لوحة جديدة
-            </button>
-          )}
-          {spaceCaps.manage && (
-            <Link
-              to={`/tasks/space/${spaceId}/settings`}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-              title="إعدادات المساحة"
-            >
-              <Settings className="h-3.5 w-3.5" />
-              الإعدادات
-            </Link>
-          )}
           <button
             onClick={() => setShowFilterDialog(true)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
@@ -326,7 +303,6 @@ export default function SpaceTasksPage() {
         )}
       </div>
 
-      {showNewBoard && spaceId && <NewBoardModal spaceId={spaceId} onClose={() => setShowNewBoard(false)} />}
 
       {showTour && (
         <SpaceTourDialog
