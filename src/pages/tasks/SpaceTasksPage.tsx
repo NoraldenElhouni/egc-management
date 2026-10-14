@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronLeft, Plus, Presentation, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, FileText, Map as MapIcon, Plus, Presentation, Ruler, Search, ShoppingCart, SlidersHorizontal } from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
 import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
@@ -206,6 +206,7 @@ export default function SpaceTasksPage() {
 
       <SpaceKpiStrip data={data} filters={filters} onSelect={setFilters} />
 
+
       {showFilterDialog && (
         <DirectoryFilterSortPopover
           filters={filters}
@@ -219,6 +220,7 @@ export default function SpaceTasksPage() {
       )}
 
       <div className="flex-1 overflow-y-auto bg-gray-50 p-3">
+        {spaceNode?.space.project_id && <ProjectSectionLinks projectId={spaceNode.space.project_id} />}
         {groups.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-400">
             {searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"}
@@ -322,6 +324,32 @@ export default function SpaceTasksPage() {
       )}
 
       <Outlet />
+    </div>
+  );
+}
+
+// The project's own sections, under the space's KPI cards. Each button opens
+// that section's page for this space's project; the destination pages keep
+// their own permission guards.
+function ProjectSectionLinks({ projectId }: { projectId: string }) {
+  const sections = [
+    { label: "الاتفاقات", to: `/operations/contracts/project/${projectId}`, icon: FileText },
+    { label: "حصر الكميات", to: `/operations/boq/project/${projectId}`, icon: Ruler },
+    { label: "الخرائط", to: `/operations/maps/project/${projectId}`, icon: MapIcon },
+    { label: "المشتريات", to: `/shops/orders/project/${projectId}`, icon: ShoppingCart },
+  ];
+  return (
+    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {sections.map(({ label, to, icon: Icon }) => (
+        <Link
+          key={label}
+          to={to}
+          className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        >
+          <Icon className="h-5 w-5 text-gray-400" />
+          {label}
+        </Link>
+      ))}
     </div>
   );
 }
