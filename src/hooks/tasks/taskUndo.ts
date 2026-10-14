@@ -68,7 +68,10 @@ export type UndoNotice =
   | { kind: "stale"; label: string }
   | { kind: "empty"; direction: "undo" | "redo" }
   // A schedule edit moved other tasks along the chain (useTaskSchedule.ts).
-  | { kind: "schedule"; moved: number; boardEnd: string | null };
+  | { kind: "schedule"; moved: number; boardEnd: string | null }
+  // Days typed on a task with no start: it was linked after the task that
+  // ends latest (tasks.update_task_schedule).
+  | { kind: "linked"; title: string };
 
 type NoticeListener = (notice: UndoNotice) => void;
 let noticeListener: NoticeListener | null = null;
@@ -79,6 +82,10 @@ export function setUndoNoticeListener(next: NoticeListener | null): void {
 
 export function emitScheduleNotice(moved: number, boardEnd: string | null): void {
   if (moved > 0) noticeListener?.({ kind: "schedule", moved, boardEnd });
+}
+
+export function emitLinkedNotice(title: string): void {
+  noticeListener?.({ kind: "linked", title });
 }
 
 // ---------------------------------------------------------------------

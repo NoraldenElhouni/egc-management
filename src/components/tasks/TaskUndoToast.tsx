@@ -22,6 +22,8 @@ function describe(notice: UndoNotice): { text: string; icon: "undo" | "redo" | "
       return { text: `تعذّر التراجع عن «${notice.label}» — تغيّرت المهمة منذ ذلك الحين`, icon: "info" };
     case "empty":
       return { text: notice.direction === "undo" ? "لا يوجد ما يمكن التراجع عنه" : "لا يوجد ما يمكن إعادته", icon: "info" };
+    case "linked":
+      return { text: `تبدأ بعد «${notice.title}» — رُبطت بها`, icon: "schedule" };
     case "schedule":
       return {
         text: `تم ترحيل ${notice.moved === 1 ? "مهمة واحدة" : `${notice.moved} مهام`}${

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { supabase } from "../../lib/supabaseClient";
 import type { Json } from "../../lib/supabase";
 import type { TaskRow } from "./useTaskBoard";
-import { emitScheduleNotice, recordTaskPatch, type TaskPatch } from "./taskUndo";
+import { emitLinkedNotice, emitScheduleNotice, recordTaskPatch, type TaskPatch } from "./taskUndo";
 
 // =====================================================================
 // Task scheduling (tasks/migrations/2026-10-13_task_scheduling_a.sql)
@@ -53,6 +53,8 @@ export interface ScheduleResult {
   moved: ScheduleMove[];
   board_end_before: string | null;
   board_end_after: string | null;
+  /** Days typed on a task with no start: the task it was linked after (the one that ends latest). */
+  linked_after?: { id: string; title: string } | null;
 }
 
 export type Placement = "none" | "after" | "with" | "append";
@@ -164,7 +166,8 @@ export function invalidateSchedule(queryClient: QueryClient, boardId?: string | 
 export async function saveTaskSchedule(prev: ScheduleTaskRef, change: ScheduleChange): Promise<ScheduleResult> {
   const result = await callUpdate(prev.id, change);
   recordScheduleUndo(prev, change, result.task);
-  emitScheduleNotice(result.moved.length, result.board_end_after);
+  if (result.linked_after) emitLinkedNotice(result.linked_after.title);
+  else emitScheduleNotice(result.moved.length, result.board_end_after);
   return result;
 }
 
