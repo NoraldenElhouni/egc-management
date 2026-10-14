@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   app: {
     Tables: {
@@ -2728,36 +2728,6 @@ export type Database = {
           },
         ]
       }
-      department_permission_grants_backup_20260908: {
-        Row: {
-          allowed: boolean | null
-          department_id: string | null
-          granted_at: string | null
-          granted_by: string | null
-          note: string | null
-          permission_id: string | null
-          scope: Database["public"]["Enums"]["grant_scope_enum"] | null
-        }
-        Insert: {
-          allowed?: boolean | null
-          department_id?: string | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
-        }
-        Update: {
-          allowed?: boolean | null
-          department_id?: string | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
-        }
-        Relationships: []
-      }
       departments: {
         Row: {
           code: string
@@ -3299,35 +3269,6 @@ export type Database = {
           },
         ]
       }
-      permissions: {
-        Row: {
-          id: string
-          name: string
-          parent_permission_id: string | null
-          type: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          parent_permission_id?: string | null
-          type: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          parent_permission_id?: string | null
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "permissions_parent_permission_id_fkey"
-            columns: ["parent_permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_balances: {
         Row: {
           balance: number
@@ -3368,6 +3309,62 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_contractor_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          contractor_id: string
+          id: string
+          project_id: string
+          project_role_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          contractor_id: string
+          id?: string
+          project_id: string
+          project_role_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          contractor_id?: string
+          id?: string
+          project_id?: string
+          project_role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_contractor_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contractor_roles_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contractor_roles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contractor_roles_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -3987,33 +3984,6 @@ export type Database = {
           },
         ]
       }
-      project_permission_defaults_backup_20260908: {
-        Row: {
-          allowed: boolean | null
-          granted_at: string | null
-          granted_by: string | null
-          note: string | null
-          permission_id: string | null
-          project_id: string | null
-        }
-        Insert: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          project_id?: string | null
-        }
-        Update: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          project_id?: string | null
-        }
-        Relationships: []
-      }
       project_refund: {
         Row: {
           amount: number
@@ -4099,62 +4069,6 @@ export type Database = {
         }
         Relationships: []
       }
-      project_user_permissions: {
-        Row: {
-          allowed: boolean
-          granted_at: string
-          granted_by: string | null
-          permission_id: string
-          project_id: string
-          user_id: string
-        }
-        Insert: {
-          allowed?: boolean
-          granted_at?: string
-          granted_by?: string | null
-          permission_id: string
-          project_id: string
-          user_id: string
-        }
-        Update: {
-          allowed?: boolean
-          granted_at?: string
-          granted_by?: string | null
-          permission_id?: string
-          project_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pup_granted_by_fkey"
-            columns: ["granted_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pup_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pup_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pup_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       projects: {
         Row: {
           address: string | null
@@ -4235,44 +4149,6 @@ export type Database = {
           },
         ]
       }
-      request_milestones: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          order_index: number
-          percentage: number
-          request_id: string
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          order_index?: number
-          percentage?: number
-          request_id: string
-          title: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          order_index?: number
-          percentage?: number
-          request_id?: string
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "request_milestones_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "work_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       role_permission_grants: {
         Row: {
           allowed: boolean
@@ -4325,66 +4201,6 @@ export type Database = {
           },
         ]
       }
-      role_permission_grants_backup_20260908: {
-        Row: {
-          allowed: boolean | null
-          granted_at: string | null
-          granted_by: string | null
-          note: string | null
-          permission_id: string | null
-          role_id: string | null
-          scope: Database["public"]["Enums"]["grant_scope_enum"] | null
-        }
-        Insert: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          role_id?: string | null
-          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
-        }
-        Update: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          role_id?: string | null
-          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
-        }
-        Relationships: []
-      }
-      role_permissions: {
-        Row: {
-          permission_id: string
-          role_id: string
-        }
-        Insert: {
-          permission_id: string
-          role_id: string
-        }
-        Update: {
-          permission_id?: string
-          role_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_permissions_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "role_permissions_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       roles: {
         Row: {
           code: string
@@ -4405,45 +4221,6 @@ export type Database = {
           number?: number
         }
         Relationships: []
-      }
-      services: {
-        Row: {
-          category_id: string | null
-          id: string
-          name: string
-          specialization_id: string | null
-          unit: string | null
-        }
-        Insert: {
-          category_id?: string | null
-          id?: string
-          name: string
-          specialization_id?: string | null
-          unit?: string | null
-        }
-        Update: {
-          category_id?: string | null
-          id?: string
-          name?: string
-          specialization_id?: string | null
-          unit?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "services_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "specialization_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "services_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       shop_cart_items: {
         Row: {
@@ -5065,65 +4842,6 @@ export type Database = {
         }
         Relationships: []
       }
-      specialization_categories: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          specialization_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          specialization_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          specialization_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "specialization_categories_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      specialization_permissions: {
-        Row: {
-          permission_id: string
-          specialization_id: string
-        }
-        Insert: {
-          permission_id: string
-          specialization_id: string
-        }
-        Update: {
-          permission_id?: string
-          specialization_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "specialization_permissions_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "specialization_permissions_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       specializations: {
         Row: {
           id: string
@@ -5265,36 +4983,6 @@ export type Database = {
           },
         ]
       }
-      team_member_permission_grants_backup_20260908: {
-        Row: {
-          allowed: boolean | null
-          granted_at: string | null
-          granted_by: string | null
-          note: string | null
-          permission_id: string | null
-          project_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          project_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          project_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       update: {
         Row: {
           android_url: string | null
@@ -5373,62 +5061,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_permission_grants_backup_20260908: {
-        Row: {
-          allowed: boolean | null
-          granted_at: string | null
-          granted_by: string | null
-          note: string | null
-          permission_id: string | null
-          scope: Database["public"]["Enums"]["grant_scope_enum"] | null
-          user_id: string | null
-        }
-        Insert: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
-          user_id?: string | null
-        }
-        Update: {
-          allowed?: boolean | null
-          granted_at?: string | null
-          granted_by?: string | null
-          note?: string | null
-          permission_id?: string | null
-          scope?: Database["public"]["Enums"]["grant_scope_enum"] | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      user_permissions: {
-        Row: {
-          allowed: boolean
-          permission_id: string
-          user_id: string
-        }
-        Insert: {
-          allowed: boolean
-          permission_id: string
-          user_id: string
-        }
-        Update: {
-          allowed?: boolean
-          permission_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_permissions_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
             referencedColumns: ["id"]
           },
         ]
@@ -5732,54 +5364,6 @@ export type Database = {
           },
         ]
       }
-      work_request_items: {
-        Row: {
-          created_at: string
-          custom_name: string | null
-          description: string | null
-          id: string
-          quantity: number
-          request_id: string
-          service_id: string | null
-          unit: string
-        }
-        Insert: {
-          created_at?: string
-          custom_name?: string | null
-          description?: string | null
-          id?: string
-          quantity: number
-          request_id: string
-          service_id?: string | null
-          unit?: string
-        }
-        Update: {
-          created_at?: string
-          custom_name?: string | null
-          description?: string | null
-          id?: string
-          quantity?: number
-          request_id?: string
-          service_id?: string | null
-          unit?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "work_request_items_request_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "work_requests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_request_items_service_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       work_requests: {
         Row: {
           bid_deadline: string | null
@@ -5883,6 +5467,21 @@ export type Database = {
         }
         Relationships: []
       }
+      project_role_holders: {
+        Row: {
+          assigned_at: string | null
+          assignment_id: string | null
+          contractor_id: string | null
+          email: string | null
+          first_name: string | null
+          last_name: string | null
+          person_type: string | null
+          project_id: string | null
+          project_role_id: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_contract_payment: {
@@ -5981,15 +5580,6 @@ export type Database = {
           vendor_name: string
         }[]
       }
-      has_permission: {
-        Args: { p_perm_name: string; p_user: string }
-        Returns: boolean
-      }
-      has_project_permission: {
-        Args: { p_perm: string; p_project: string; p_user: string }
-        Returns: boolean
-      }
-      is_admin: { Args: never; Returns: boolean }
       map_payment_type_to_account_type: {
         Args: { p: Database["public"]["Enums"]["payment_type"] }
         Returns: Database["public"]["Enums"]["account_type"]
@@ -6060,7 +5650,6 @@ export type Database = {
           project_balance: Json
         }[]
       }
-      reset_project_fresh: { Args: { p_project_id: string }; Returns: Json }
       resolve_permission_ladder: {
         Args: {
           p_permission_id?: string
@@ -6845,9 +6434,9 @@ export type Database = {
           id: string
           is_archived: boolean
           is_template: boolean
+          manager_user_id: string | null
           name: string
           owner_user_id: string | null
-          manager_user_id: string | null
           project_id: string | null
           settings: Json
           space_type: Database["tasks"]["Enums"]["space_type"]
@@ -6864,9 +6453,9 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_template?: boolean
+          manager_user_id?: string | null
           name: string
           owner_user_id?: string | null
-          manager_user_id?: string | null
           project_id?: string | null
           settings?: Json
           space_type: Database["tasks"]["Enums"]["space_type"]
@@ -6883,9 +6472,9 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_template?: boolean
+          manager_user_id?: string | null
           name?: string
           owner_user_id?: string | null
-          manager_user_id?: string | null
           project_id?: string | null
           settings?: Json
           space_type?: Database["tasks"]["Enums"]["space_type"]
@@ -7188,35 +6777,6 @@ export type Database = {
           },
         ]
       }
-      task_role_assignees: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          project_role_id: string
-          task_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          project_role_id: string
-          task_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          project_role_id?: string
-          task_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_role_assignees_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       task_relationships: {
         Row: {
           created_at: string
@@ -7300,6 +6860,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "task_requirements_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_role_assignees: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          project_role_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          project_role_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          project_role_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_role_assignees_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -7603,6 +7192,41 @@ export type Database = {
           },
         ]
       }
+      template_copy_state: {
+        Row: {
+          c: Json
+          copy_task_id: string
+          removal_dismissed: boolean
+          t: Json
+          template_board_id: string
+          updated_at: string
+        }
+        Insert: {
+          c: Json
+          copy_task_id: string
+          removal_dismissed?: boolean
+          t: Json
+          template_board_id: string
+          updated_at?: string
+        }
+        Update: {
+          c?: Json
+          copy_task_id?: string
+          removal_dismissed?: boolean
+          t?: Json
+          template_board_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_copy_state_copy_task_id_fkey"
+            columns: ["copy_task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_field_definitions: {
         Row: {
           field_definition_id: string
@@ -7632,6 +7256,38 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_removed_tasks: {
+        Row: {
+          copy_task_id: string
+          id: string
+          removed_at: string
+          template_board_id: string
+          template_title: string
+        }
+        Insert: {
+          copy_task_id: string
+          id?: string
+          removed_at?: string
+          template_board_id: string
+          template_title: string
+        }
+        Update: {
+          copy_task_id?: string
+          id?: string
+          removed_at?: string
+          template_board_id?: string
+          template_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_removed_tasks_copy_task_id_fkey"
+            columns: ["copy_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -7826,12 +7482,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_working_days: {
-        Args: { p_days: number; p_start: string }
-        Returns: string
+      _assign_roles: {
+        Args: {
+          p_created_by: string
+          p_role_overrides: Json
+          p_target_board_id: string
+        }
+        Returns: undefined
       }
-      advance_recurrence_next_run: {
-        Args: { p_rule: Database["tasks"]["Tables"]["recurrence_rules"]["Row"] }
+      _copy_task_extras: {
+        Args: {
+          p_all_columns: boolean
+          p_created_by: string
+          p_shift_days: number
+          p_source_board_id: string
+          p_target_board_id: string
+        }
+        Returns: undefined
+      }
+      _has_ancestor_in: {
+        Args: { p_ids: string[]; p_task_id: string }
+        Returns: boolean
+      }
+      _inferred_anchor: {
+        Args: { p_template_side_is_old: boolean }
         Returns: string
       }
       add_tasks_to_template: {
@@ -7844,6 +7518,14 @@ export type Database = {
           source_task_id: string
           template_task_id: string
         }[]
+      }
+      add_working_days: {
+        Args: { p_days: number; p_start: string }
+        Returns: string
+      }
+      advance_recurrence_next_run: {
+        Args: { p_rule: Database["tasks"]["Tables"]["recurrence_rules"]["Row"] }
+        Returns: string
       }
       apply_template_board: {
         Args: {
@@ -7903,6 +7585,10 @@ export type Database = {
         }
         Returns: Json
       }
+      dashboard_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       default_task_type_id: { Args: never; Returns: string }
       dependency_problem: {
         Args: { p_blocked_task_id: string; p_blocking_task_id: string }
@@ -7912,10 +7598,76 @@ export type Database = {
         Args: { p_blocked_task_id: string; p_blocking_task_id: string }
         Returns: boolean
       }
+      dismiss_template_changes: {
+        Args: {
+          p_removed_ids?: string[]
+          p_task_ids: string[]
+          p_template_board_id: string
+        }
+        Returns: number
+      }
+      generate_recurrence_occurrences: { Args: never; Returns: undefined }
       is_off_day: { Args: { p_day: string }; Returns: boolean }
       local_today: { Args: never; Returns: string }
+      my_access: { Args: never; Returns: Json }
       next_working_day: { Args: { p_day: string }; Returns: string }
-      generate_recurrence_occurrences: { Args: never; Returns: undefined }
+      performance_person_tasks: {
+        Args: { p_from: string; p_to: string; p_user_id: string }
+        Returns: {
+          completed_at: string
+          due_date: string
+          kind: string
+          lateness_ratio: number
+          multiplier: number
+          on_time: boolean
+          planned_days: number
+          points: number
+          scored: boolean
+          share: number
+          task_id: string
+          title: string
+          weight: number
+        }[]
+      }
+      performance_summary: {
+        Args: {
+          p_department_id?: string
+          p_from: string
+          p_person_type?: string
+          p_to: string
+        }
+        Returns: {
+          avg_late_ratio: number
+          department_id: string
+          efficiency: number
+          first_name: string
+          is_contractor: boolean
+          is_eligible: boolean
+          last_name: string
+          max_points: number
+          on_time_rate: number
+          open_overdue: number
+          points: number
+          scored_tasks: number
+          unscored_tasks: number
+          user_id: string
+        }[]
+      }
+      performance_trend: {
+        Args: {
+          p_department_id?: string
+          p_from: string
+          p_person_type?: string
+          p_to: string
+        }
+        Returns: {
+          efficiency: number
+          max_points: number
+          month: string
+          points: number
+          scored_tasks: number
+        }[]
+      }
       push_template_tasks: {
         Args: {
           p_created_by: string
@@ -7932,10 +7684,6 @@ export type Database = {
       recompute_overdue_flags: { Args: never; Returns: undefined }
       resolve_status_set: { Args: { p_board_id: string }; Returns: string }
       run_due_date_automations: { Args: never; Returns: undefined }
-      dismiss_template_changes: {
-        Args: { p_removed_ids?: string[]; p_task_ids: string[]; p_template_board_id: string }
-        Returns: number
-      }
       sync_template_changes: {
         Args: {
           p_removed_ids?: string[]
@@ -7945,6 +7693,19 @@ export type Database = {
           p_template_board_id: string
         }
         Returns: Json
+      }
+      task_caps: {
+        Args: { p_ids: string[] }
+        Returns: {
+          can_comment: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_status: boolean
+          can_view: boolean
+          is_assignee: boolean
+          level: number
+          task_id: string
+        }[]
       }
       template_changes: { Args: { p_template_board_id: string }; Returns: Json }
       template_epoch: { Args: never; Returns: string }
