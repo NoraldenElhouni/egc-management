@@ -15,9 +15,16 @@ import {
   ExpenseType,
   MapType,
   Phase,
+  ProjectExpenses,
   ProjectMaps,
 } from "../../types/global.type";
 import { normalizeError } from "../useMaps";
+
+// A project_expenses row with the vendor / contractor names it is read with.
+type ExpenseWithJoins = ProjectExpenses & {
+  vendors: { vendor_name: string | null } | null;
+  contractors: { first_name: string | null; last_name: string | null } | null;
+};
 
 export function useBookProject(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetailsForBook | null>(
@@ -55,9 +62,9 @@ export function useBookProject(projectId: string) {
         // 2. Fetch ALL expenses in batches
         const pageSize = 1000;
         let from = 0;
-        let expenses: any[] = [];
+        const expenses: ExpenseWithJoins[] = [];
 
-        while (true) {
+        for (;;) {
           const { data: batch, error: expenseError } = await supabase
             .from("project_expenses")
             .select(

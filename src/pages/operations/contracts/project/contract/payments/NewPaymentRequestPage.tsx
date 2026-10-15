@@ -98,9 +98,10 @@ const NewPaymentRequestPage = () => {
   // ── derived values (contract is non-null here) ────────────────────────────
 
   const contractRemaining = contract.total_amount - totalPaidSoFar;
+  const contractMilestones = contract.milestones;
 
   function milestoneRemaining(milestoneId: string): number {
-    const m = contract!.milestones.find((m) => m.id === milestoneId);
+    const m = contractMilestones.find((m) => m.id === milestoneId);
     if (!m) return 0;
     return Math.max(m.amount - (claimedByMilestone[milestoneId] ?? 0), 0);
   }

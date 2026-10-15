@@ -5,9 +5,6 @@ import GenericTable from "../../../tables/table";
 import { ProjectExpensePercentageFormValues } from "../../../../types/schema/ProjectBook.schema";
 import { PostgrestError } from "@supabase/supabase-js";
 import { ProjectExpenses } from "../../../../types/global.type";
-import OverviewStatus from "../../../ui/OverviewStatus";
-import { Hash } from "lucide-react";
-import { formatCurrency } from "../../../../utils/helpper";
 import ProjectExpensePercentageForm from "../../form/ProjectExpensePercentageForm";
 
 interface BookProjectExpensePercentageTabProps {

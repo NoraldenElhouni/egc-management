@@ -81,9 +81,9 @@ const PeriodDistributionEditForm = ({ periods, onSave }: Props) => {
 
     const employeeIds = new Set<string>();
     periods.forEach((p) =>
-      p.items
-        .filter((i) => i.item_type === "employee" && i.user_id)
-        .forEach((i) => employeeIds.add(i.user_id!)),
+      p.items.forEach((i) => {
+        if (i.item_type === "employee" && i.user_id) employeeIds.add(i.user_id);
+      }),
     );
 
     employeeIds.forEach((empId) => {

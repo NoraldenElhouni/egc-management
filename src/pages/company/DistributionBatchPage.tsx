@@ -12,8 +12,9 @@ const CURRENCIES = ["LYD", "USD", "EUR"];
 type Tab = "projects" | "employees";
 
 const BatchDetailPage = () => {
-  const { date } = useParams<{ date: string }>();
-  const { batch, loading, error } = useBatchDetail(date!);
+  // the route always carries :date; "" makes the hook do nothing, as undefined did
+  const { date = "" } = useParams<{ date: string }>();
+  const { batch, loading, error } = useBatchDetail(date);
 
   const [activeTab, setActiveTab] = useState<Tab>("projects");
   const [projectSearch, setProjectSearch] = useState("");
@@ -101,7 +102,7 @@ const BatchDetailPage = () => {
           <ProjectsCard
             projects={filteredProjects}
             totalsByCurrency={batch.totalsByCurrency}
-            date={date!}
+            date={date}
           />
           {filteredProjects.length === 0 && (
             <p className="text-center text-gray-400 text-sm py-8">
@@ -128,7 +129,7 @@ const BatchDetailPage = () => {
           <EmployeesCard
             employees={filteredEmployees}
             totalsByCurrency={batch.totalsByCurrency}
-            date={date!}
+            date={date}
           />
           {filteredEmployees.length === 0 && (
             <p className="text-center text-gray-400 text-sm py-8">

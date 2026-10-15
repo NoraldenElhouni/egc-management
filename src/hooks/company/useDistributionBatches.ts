@@ -94,8 +94,9 @@ export function useDistributionBatches() {
           employee_ids: employeeIds,
         };
 
-        if (!batchMap.has(date)) batchMap.set(date, []);
-        batchMap.get(date)!.push(period);
+        const datePeriods = batchMap.get(date);
+        if (datePeriods) datePeriods.push(period);
+        else batchMap.set(date, [period]);
       }
 
       // Build batch summaries — only count ACTIVE periods in totals

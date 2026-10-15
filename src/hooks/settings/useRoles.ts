@@ -4,20 +4,6 @@ import { supabase } from "../../lib/supabaseClient";
 import { RoleFormValues } from "../../types/schema/Role.schema";
 import { Roles, Users } from "../../types/global.type";
 
-type Roleswithpermissions = {
-  code: string;
-  id: string;
-  name: string;
-  number: number;
-  role_permissions: {
-    permission_id: string;
-    permissions: {
-      id: string;
-      name: string;
-    };
-  }[];
-} | null;
-
 export function useRoles() {
   const [roles, setRoles] = useState<Roles[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +43,9 @@ export function useRoles() {
 }
 
 export function useRole(id: string) {
-  const [role, setRole] = useState<Roleswithpermissions | null>(null);
+  // A role's permissions are in role_permission_grants, edited at
+  // /settings/permissions/roles/:id (the old role_permissions table is gone).
+  const [role, setRole] = useState<Roles | null>(null);
   const [users, setUsers] = useState<Users[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
@@ -68,15 +56,7 @@ export function useRole(id: string) {
       try {
         const { data, error } = await supabase
           .from("roles")
-          .select(
-            `
-              *,
-              role_permissions (
-                permission_id,
-                permissions ( * )
-              )
-            `,
-          )
+          .select("*")
           .eq("id", id)
           .single();
         if (error) {

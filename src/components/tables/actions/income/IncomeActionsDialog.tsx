@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Button from "../../../ui/Button";
 import { useIncome } from "../../../../hooks/projects/useIncome";
-import { ProjectIncome } from "../../../../types/global.type";
 import PrintDepositButton from "../../../PrintDepositButton";
 
 type Props = {

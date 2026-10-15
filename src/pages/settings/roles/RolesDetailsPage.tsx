@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useRole } from "../../../hooks/settings/useRoles";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -70,18 +70,6 @@ const RolesDetailsPage = () => {
   useEffect(() => {
     if (role) reset({ id, name: role.name || "", code: role.code || "" });
   }, [role, id, reset]);
-
-  const permissions = useMemo(() => {
-    const list =
-      role?.role_permissions
-        ?.map((rp) => rp.permissions?.name)
-        .filter(Boolean) ?? [];
-    if (list.length) return list as string[];
-
-    return (role?.role_permissions
-      ?.map((rp) => rp.permission_id)
-      .filter(Boolean) ?? []) as string[];
-  }, [role]);
 
   const onSubmit = async (data: RoleUpdateValues) => {
     setSaving(true);
@@ -203,27 +191,16 @@ const RolesDetailsPage = () => {
 
           {/* Permissions Card */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">الصلاحيات</h2>
-              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
-                {permissions.length} صلاحية
-              </span>
-            </div>
-
-            {role.role_permissions.length ? (
-              <ul className="flex flex-wrap gap-2">
-                {role.role_permissions.map((rp) => (
-                  <li
-                    key={rp.permission_id}
-                    className="px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-800"
-                  >
-                    {rp.permissions?.name ?? "غير معروفة"}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-sm text-gray-400">لا توجد صلاحيات</div>
-            )}
+            <h2 className="mb-2 text-sm font-semibold text-gray-900">الصلاحيات</h2>
+            <p className="mb-3 text-sm text-gray-500">
+              صلاحيات هذا الدور تُدار في صفحة صلاحيات الأدوار.
+            </p>
+            <Link
+              to={`/settings/permissions/roles/${id}`}
+              className="inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-primary hover:bg-gray-50"
+            >
+              فتح صلاحيات الدور
+            </Link>
           </div>
         </div>
 

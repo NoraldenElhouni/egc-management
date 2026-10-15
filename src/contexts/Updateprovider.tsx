@@ -54,10 +54,10 @@ export async function getCurrentVersion(): Promise<string> {
   //   });
   if (
     typeof window !== "undefined" &&
-    (window as any).electronAPI?.getVersion
+    window.electronAPI?.getVersion
   ) {
     try {
-      const version = await (window as any).electronAPI.getVersion();
+      const version = await window.electronAPI.getVersion();
       if (typeof version === "string") return version;
     } catch {
       // fall through
@@ -72,7 +72,7 @@ export async function getCurrentVersion(): Promise<string> {
 
 const UpdateContext = createContext<UpdateContextType>({
   status: "checking",
-  recheck: async () => {},
+  recheck: () => Promise.resolve(),
 });
 
 export function useUpdate() {
@@ -146,9 +146,9 @@ function ForceUpdateOverlay() {
   const handleUpdate = () => {
     if (
       typeof window !== "undefined" &&
-      (window as any).electronAPI?.openExternal
+      window.electronAPI?.openExternal
     ) {
-      (window as any).electronAPI.openExternal(
+      window.electronAPI.openExternal(
         "https://github.com/NoraldenElhouni/egc-management/releases/latest",
       );
     } else {

@@ -12,7 +12,8 @@ const CLIENT_ROLE_ID = "803c44ac-0af1-4586-81a2-67e1bc7eb7ef";
 export function useClients() {
   const [clients, setClients] = useState<Clients[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
+  // PostgrestError / AuthError / Error: the screens only read .message
+  const [error, setError] = useState<{ message: string } | null>(null);
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -153,7 +154,7 @@ export function useClients() {
       return { data: data as Clients, error: null };
     } catch (err) {
       console.error("unexpected error inserting client", err);
-      setError(err);
+      setError(err instanceof Error ? err : new Error(String(err)));
       setLoading(false);
       return { data: null, error: err };
     }

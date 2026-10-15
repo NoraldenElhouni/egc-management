@@ -112,7 +112,8 @@ export async function savePeriodGroupDistribution(
   const bankRow = rows.find((r) => r.type === "bank");
   const companyRow = rows.find((r) => r.type === "company");
   const employeeRows = rows.filter(
-    (r) => r.type === "employee" && r.employeeId,
+    (r): r is PeriodEditRow & { employeeId: string } =>
+      r.type === "employee" && !!r.employeeId,
   );
 
   try {
@@ -182,8 +183,8 @@ export async function savePeriodGroupDistribution(
 
         if (oldItem) {
           const delta = newAmount - Number(oldItem.total);
-          await adjustEmployeeAccount(row.employeeId!, isBank, delta);
-          await adjustPayroll(row.employeeId!, period.end_date, delta);
+          await adjustEmployeeAccount(row.employeeId, isBank, delta);
+          await adjustPayroll(row.employeeId, period.end_date, delta);
           const { error } = await supabase
             .from("project_percentage_period_items")
             .update({
@@ -195,8 +196,8 @@ export async function savePeriodGroupDistribution(
             .eq("id", oldItem.id);
           if (error) throw error;
         } else {
-          await adjustEmployeeAccount(row.employeeId!, isBank, newAmount);
-          await adjustPayroll(row.employeeId!, period.end_date, newAmount);
+          await adjustEmployeeAccount(row.employeeId, isBank, newAmount);
+          await adjustPayroll(row.employeeId, period.end_date, newAmount);
           const { error } = await supabase
             .from("project_percentage_period_items")
             .insert({
@@ -217,12 +218,13 @@ export async function savePeriodGroupDistribution(
 
       const keptIds = new Set(employeeRows.map((r) => r.employeeId));
       const removedItems = oldEmployeeItems.filter(
-        (i) => i.user_id && !keptIds.has(i.user_id),
+        (i): i is typeof i & { user_id: string } =>
+          !!i.user_id && !keptIds.has(i.user_id),
       );
       for (const item of removedItems) {
-        await adjustEmployeeAccount(item.user_id!, isBank, -Number(item.total));
+        await adjustEmployeeAccount(item.user_id, isBank, -Number(item.total));
         await adjustPayroll(
-          item.user_id!,
+          item.user_id,
           period.end_date,
           -Number(item.total),
         );

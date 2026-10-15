@@ -3,7 +3,7 @@ import { getOrCreateDeviceId } from "./deviceId";
 
 const APP_ID = "electron";
 
-const electronAPI = () => (window as any).electronAPI;
+const electronAPI = () => window.electronAPI;
 
 // Upserts a row in app.user_sessions so we can see who is using this app,
 // on what version/platform. Best-effort: never throws, since this must not

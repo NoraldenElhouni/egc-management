@@ -72,9 +72,9 @@ export function useDistributionHistory() {
       // Enrich employee names from employees table
       const employeeIds = new Set<string>();
       (data ?? []).forEach((p: DistributionPeriod) =>
-        p.items
-          .filter((i) => i.item_type === "employee" && i.user_id)
-          .forEach((i) => employeeIds.add(i.user_id!)),
+        p.items.forEach((i) => {
+          if (i.item_type === "employee" && i.user_id) employeeIds.add(i.user_id);
+        }),
       );
 
       const nameMap: Record<string, string> = {};
@@ -228,9 +228,9 @@ export function useDistributionHistory() {
 
       // ── 3. Void pending payroll records ──────────────────────────────────
       // Target: payroll rows for employees in this period, pay_date = period.end_date, status='pending'
-      const employeeIds = period.items
-        .filter((i) => i.item_type === "employee" && i.user_id)
-        .map((i) => i.user_id!);
+      const employeeIds = period.items.flatMap((i) =>
+        i.item_type === "employee" && i.user_id ? [i.user_id] : [],
+      );
 
       if (employeeIds.length > 0) {
         const { error: payrollError } = await supabase

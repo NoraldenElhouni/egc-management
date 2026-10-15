@@ -5,8 +5,8 @@ import Dialog from "../../ui/Dialog";
 import Button from "../../ui/Button";
 import { translateStatus } from "../../../utils/translations";
 
-interface ContractorPaymentsFiltersDialogProps {
-  table: Table<any>;
+interface ContractorPaymentsFiltersDialogProps<TData> {
+  table: Table<TData>;
   statusOptions: string[];
   projectOptions: string[];
   contractorOptions: string[];
@@ -18,13 +18,13 @@ interface ContractorPaymentsFiltersDialogProps {
  * Both share the same column ids (contractor, project, status, created_by,
  * created_at), so this one component drives either table.
  */
-export default function ContractorPaymentsFiltersDialog({
+export default function ContractorPaymentsFiltersDialog<TData>({
   table,
   statusOptions,
   projectOptions,
   contractorOptions,
   employeeOptions,
-}: ContractorPaymentsFiltersDialogProps) {
+}: ContractorPaymentsFiltersDialogProps<TData>) {
   const [open, setOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");

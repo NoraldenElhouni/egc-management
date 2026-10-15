@@ -92,18 +92,18 @@ export function useBatchDetail(date: string) {
         const isReversed = period.status === "reversed";
         const currency: string = period.currency ?? "LYD";
 
-        if (!projectMap.has(pid)) {
-          projectMap.set(pid, {
+        let proj = projectMap.get(pid);
+        if (!proj) {
+          proj = {
             projectId: pid,
             projectName: period.project?.name ?? "—",
             projectSerial: period.project?.serial_number ?? null,
             totalsByCurrency: {},
             employeeCount: 0,
             hasReversed: false,
-          });
+          };
+          projectMap.set(pid, proj);
         }
-
-        const proj = projectMap.get(pid)!;
 
         if (isReversed) {
           proj.hasReversed = true;
@@ -113,14 +113,7 @@ export function useBatchDetail(date: string) {
             Number(period.total_amount);
         }
 
-        // Count unique employees in this period
-        const empIds = new Set<string>(
-          (period.items as RawItem[])
-            .filter((i) => i.item_type === "employee" && i.user_id !== null)
-            .map((i) => i.user_id as string),
-        );
-        // We'll recount properly below; just accumulate for now
-        empIds.forEach(() => {}); // placeholder
+        // employees are counted per project below
       }
 
       // ── Build employee map ─────────────────────────────────────────────────
@@ -145,8 +138,11 @@ export function useBatchDetail(date: string) {
         const currency: string = period.currency ?? "LYD";
         const pid = period.project_id;
 
-        if (!projectEmployeeIds.has(pid))
-          projectEmployeeIds.set(pid, new Set());
+        let projectEmployees = projectEmployeeIds.get(pid);
+        if (!projectEmployees) {
+          projectEmployees = new Set();
+          projectEmployeeIds.set(pid, projectEmployees);
+        }
 
         for (const item of (period.items as RawItem[]).filter(
           (i) =>
@@ -155,22 +151,23 @@ export function useBatchDetail(date: string) {
             i.employee !== null,
         )) {
           const uid = item.user_id as string;
-          const emp = item.employee!;
+          const emp = item.employee;
+          if (!emp) continue; // the filter above already dropped these
 
-          projectEmployeeIds.get(pid)!.add(uid);
+          projectEmployees.add(uid);
 
-          if (!employeeMap.has(uid)) {
-            employeeMap.set(uid, {
+          let entry = employeeMap.get(uid);
+          if (!entry) {
+            entry = {
               employeeId: uid,
               firstName: emp.first_name,
               lastName: emp.last_name,
               specialization: emp.specializations?.name ?? null,
               projectIds: new Set(),
               totalsByCurrency: {},
-            });
+            };
+            employeeMap.set(uid, entry);
           }
-
-          const entry = employeeMap.get(uid)!;
           entry.projectIds.add(pid);
 
           if (!isReversed) {
