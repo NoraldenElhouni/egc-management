@@ -4,6 +4,7 @@ import type { ActivityRow } from "../../../../types/logs.types";
 import {
   amountOf,
   changesOf,
+  contextOf,
   formatDateTime,
   sourceLabel,
   subjectOf,
@@ -74,19 +75,18 @@ export const getActivityLogColumns = (
   {
     id: "subject",
     accessorFn: (e) =>
-      [subjectOf(e), e.project_name, e.reason, ...changesOf(e).map((c) => c.label)]
+      [subjectOf(e), contextOf(e), e.reason, ...changesOf(e).map((c) => c.label)]
         .filter(Boolean)
         .join(" "),
     header: "التفاصيل",
     cell: ({ row }) => {
       const e = row.original;
       const changes = changesOf(e);
+      const context = contextOf(e);
       return (
         <div className="min-w-[14rem] max-w-md text-xs">
           <p className="text-gray-800">{subjectOf(e)}</p>
-          {e.project_name && e.log_name !== "project_status" && (
-            <p className="text-gray-400">{e.project_name}</p>
-          )}
+          {context && <p className="text-gray-400">{context}</p>}
           {e.reason && <p className="mt-1 text-amber-800">السبب: {e.reason}</p>}
           {changes.slice(0, 3).map((c) => (
             <p key={c.field} className="text-gray-500">

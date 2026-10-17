@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
 import Dialog from "../../ui/Dialog";
 import Button from "../../ui/Button";
-import { SearchableSelectField } from "../../ui/inputs/SearchableSelectField";
+import { FilterDate, FilterSelect, FiltersButton, type FilterOption } from "./FilterControls";
 import type { LogGroup } from "../../../types/logs.types";
 
 export interface ActivityLogFilterState {
@@ -24,7 +23,7 @@ export const EMPTY_ACTIVITY_FILTERS: ActivityLogFilterState = {
   toDate: "",
 };
 
-type Option = { value: string; label: string };
+type Option = FilterOption;
 
 interface ActivityLogFiltersDialogProps {
   value: ActivityLogFilterState;
@@ -35,43 +34,6 @@ interface ActivityLogFiltersDialogProps {
   projectOptions: Option[];
   userOptions: Option[];
   optionsLoading?: boolean;
-}
-
-const labelClass = "text-xs font-medium text-gray-500";
-const inputClass =
-  "px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
-
-const ALL: Option = { value: "", label: "الكل" };
-
-function FilterSelect({
-  id,
-  label,
-  options,
-  selected,
-  onSelect,
-  loading,
-}: {
-  id: string;
-  label: string;
-  options: Option[];
-  selected: string;
-  onSelect: (v: string) => void;
-  loading?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className={labelClass}>{label}</label>
-      <SearchableSelectField
-        id={id}
-        hideLabel
-        placeholder="الكل"
-        options={[ALL, ...options]}
-        value={selected}
-        onChange={onSelect}
-        loading={loading}
-      />
-    </div>
-  );
 }
 
 /**
@@ -103,19 +65,7 @@ export default function ActivityLogFiltersDialog({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="relative flex items-center gap-2 px-3 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        <SlidersHorizontal className="w-4 h-4" />
-        فلاتر
-        {activeCount > 0 && (
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
-            {activeCount}
-          </span>
-        )}
-      </button>
+      <FiltersButton activeCount={activeCount} onClick={() => setOpen(true)} />
 
       <Dialog isOpen={open} onClose={() => setOpen(false)}>
         <div dir="rtl" className="space-y-4">
@@ -154,26 +104,8 @@ export default function ActivityLogFiltersDialog({
               loading={optionsLoading}
             />
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="activity-from" className={labelClass}>التاريخ من</label>
-              <input
-                id="activity-from"
-                type="date"
-                value={value.fromDate}
-                onChange={(e) => set("fromDate", e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="activity-to" className={labelClass}>التاريخ إلى</label>
-              <input
-                id="activity-to"
-                type="date"
-                value={value.toDate}
-                onChange={(e) => set("toDate", e.target.value)}
-                className={inputClass}
-              />
-            </div>
+            <FilterDate id="activity-from" label="التاريخ من" value={value.fromDate} onChange={(v) => set("fromDate", v)} />
+            <FilterDate id="activity-to" label="التاريخ إلى" value={value.toDate} onChange={(v) => set("toDate", v)} />
           </div>
 
           <div className="flex items-center justify-between pt-2">

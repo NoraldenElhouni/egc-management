@@ -7,10 +7,12 @@ import type {
   HistoryRefType,
   LogEvent,
   LogHealth,
+  TaskLogFilters,
 } from "../../types/logs.types";
 
 const HISTORY_PAGE = 100;
 const ACTIVITY_PAGE = 100;
+const TASK_LOG_PAGE = 100;
 
 /**
  * True when the user holds at least one of the four log permissions.
@@ -22,9 +24,13 @@ export function useCanViewLogs(): boolean | undefined {
   return LOG_PERMISSIONS.some((p) => data?.has(p));
 }
 
-/** Older pages are fetched with `before` = the oldest row's occurred_at. */
+/**
+ * Older pages are fetched with `before` = the oldest row's occurred_at.
+ * get_task_activity() can return more than a page ("with ties"), never
+ * fewer unless it reached the end.
+ */
 function nextBefore(lastPage: LogEvent[], pageSize: number) {
-  return lastPage.length === pageSize
+  return lastPage.length >= pageSize
     ? lastPage[lastPage.length - 1].occurred_at
     : undefined;
 }
@@ -88,6 +94,68 @@ export function useActivityLog(filters: ActivityFilters, enabled = true) {
       return (data ?? []) as unknown as LogEvent[];
     },
     getNextPageParam: (lastPage) => nextBefore(lastPage, ACTIVITY_PAGE),
+  });
+}
+
+/**
+ * The task log page (سجل المهام): the tasks module's own history made
+ * readable by get_task_activity(). Empty unless the user has view_task_logs.
+ */
+export function useTaskActivityLog(filters: TaskLogFilters, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: ["logs", "tasks", filters],
+    enabled,
+    staleTime: 15_000,
+    placeholderData: keepPreviousData,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await supabase.rpc("get_task_activity", {
+        p_space_id: orUndefined(filters.spaceId),
+        p_project_id: orUndefined(filters.projectId),
+        p_actor_id: orUndefined(filters.actorId),
+        p_actions: orUndefined(filters.actions),
+        p_from: orUndefined(filters.from),
+        p_to: orUndefined(filters.to),
+        p_limit: TASK_LOG_PAGE,
+        p_before: pageParam,
+      });
+      if (error) throw error;
+      return (data ?? []) as unknown as LogEvent[];
+    },
+    getNextPageParam: (lastPage) => nextBefore(lastPage, TASK_LOG_PAGE),
+  });
+}
+
+const PARTY_LABEL: Record<string, string> = {
+  vendor: "مورد",
+  contractor: "مقاول",
+  client: "عميل",
+};
+
+/** Projects and users for the log pages' filter dialogs. */
+export function useLogFilterOptions() {
+  return useQuery({
+    queryKey: ["logs", "filter-options"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const [projects, users] = await Promise.all([
+        supabase.from("projects").select("id, name, code").order("serial_number", { ascending: true }),
+        supabase.from("users").select("id, first_name, last_name, party_type").order("first_name"),
+      ]);
+      if (projects.error) throw projects.error;
+      if (users.error) throw users.error;
+      return {
+        projects: (projects.data ?? []).map((p) => ({
+          value: p.id,
+          label: p.code ? `${p.code} — ${p.name}` : p.name,
+        })),
+        users: (users.data ?? []).map((u) => {
+          const name = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || "—";
+          const party = PARTY_LABEL[u.party_type as string];
+          return { value: u.id, label: party ? `${name} (${party})` : name };
+        }),
+      };
+    },
   });
 }
 

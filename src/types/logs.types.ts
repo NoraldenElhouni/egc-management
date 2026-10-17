@@ -3,8 +3,11 @@
 // The functions themselves are typed in the generated src/lib/supabase.ts;
 // these narrow its plain strings to the values the logging system uses.
 
-/** logs.catalog.log_group: which of the four view_*_logs permissions covers a log. */
-export type LogGroup = "finance" | "access" | "operations" | "hr";
+/**
+ * logs.catalog.log_group: which of the four view_*_logs permissions covers a
+ * log. "tasks" is the task log (get_task_activity, view_task_logs).
+ */
+export type LogGroup = "finance" | "access" | "operations" | "hr" | "tasks";
 
 /** Who caused the event (02-proposed-tables.md §2.1). */
 export type LogSource =
@@ -22,7 +25,8 @@ export interface LogEvent {
   log_group: LogGroup;
   /** Arabic name of the log (logs.catalog). */
   log_label: string | null;
-  id: number;
+  /** A number for the logs tables; the task log returns task_activity's uuid. */
+  id: number | string;
   occurred_at: string;
   action: string;
   /** Arabic label from logs.labels; falls back to the action token. */
@@ -80,6 +84,17 @@ export interface LogHealth {
   last_error_at: string | null;
   last_log_name: string | null;
   last_message: string | null;
+}
+
+/** get_task_activity() filters; null/empty means no filter. */
+export interface TaskLogFilters {
+  spaceId?: string | null;
+  projectId?: string | null;
+  actorId?: string | null;
+  actions?: string[] | null;
+  /** ISO timestamps */
+  from?: string | null;
+  to?: string | null;
 }
 
 export interface ActivityFilters {

@@ -19,6 +19,7 @@ import {
   Tag,
   Trophy,
   LayoutDashboard,
+  History,
   Plus,
   AlertTriangle,
   X,
@@ -151,6 +152,7 @@ const TasksLayoutInner = () => {
   const canBrowse = !!access && (access.view_all || Object.keys(access.spaces).length > 0);
   const { can: canSeePerformance } = useCan("view_task_performance");
   const { can: canSeeDashboard } = useCan("view_task_dashboard");
+  const { can: canSeeTaskLog } = useCan("view_task_logs");
   const navigate = useNavigate();
   const [showNewSpace, setShowNewSpace] = useState(false);
 
@@ -286,6 +288,13 @@ const TasksLayoutInner = () => {
             <Tooltip label="أداء المهام" side="left">
               <Link to="/tasks/performance" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
                 <Trophy className="h-5 w-5" />
+              </Link>
+            </Tooltip>
+          )}
+          {canSeeTaskLog && (
+            <Tooltip label="سجل المهام" side="left">
+              <Link to="/tasks/activity" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                <History className="h-5 w-5" />
               </Link>
             </Tooltip>
           )}
@@ -495,6 +504,15 @@ const TasksLayoutInner = () => {
                   >
                     <Trophy className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                     <span className="flex-1 truncate">أداء المهام</span>
+                  </Link>
+                )}
+                {canSeeTaskLog && (
+                  <Link
+                    to="/tasks/activity"
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                  >
+                    <History className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span className="flex-1 truncate">سجل المهام</span>
                   </Link>
                 )}
               </div>

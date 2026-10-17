@@ -61,6 +61,13 @@ const FIELD_LABELS: Record<string, string> = {
   cash_balance: "الرصيد النقدي",
   loan_debt: "السلف",
   base_salary: "الراتب الأساسي",
+  // task log (get_task_activity)
+  due_date: "تاريخ الاستحقاق",
+  title: "العنوان",
+  priority: "الأولوية",
+  task_type: "نوع المهمة",
+  parent: "المهمة الأم",
+  description: "الوصف",
 };
 
 export const fieldLabel = (field: string) => FIELD_LABELS[field] ?? field;
@@ -134,6 +141,7 @@ const NEGATIVE = new Set([
   "declined", "rejected", "revoked", "deleted", "hard_deleted", "removed",
   "cancelled", "senior_rejected", "price_rejected", "reversed", "unapproved",
   "item_removed", "self_deleted", "quote_withdrawn",
+  "unassigned", "archived", "dependency_removed",
 ]);
 const POSITIVE = new Set([
   "approved", "granted", "paid", "completed", "price_approved", "senior_approved",
@@ -213,9 +221,23 @@ export function subjectOf(event: LogEvent): string {
       return str(d.employee_name) ?? "موظف";
     case "hr_hiring":
       return str(d.applicant_name) ?? str(d.position_title) ?? "توظيف";
+    case "task":
+      return str(d.task_title) ? `«${d.task_title}»` : "مهمة";
     default:
       return event.log_label ?? event.log_name;
   }
+}
+
+/**
+ * Where the row belongs, shown under its subject: the space and board for a
+ * task, the project otherwise (not repeated for a project's own status).
+ */
+export function contextOf(event: LogEvent): string | null {
+  const d = event.detail ?? {};
+  if (event.log_name === "task") {
+    return [str(d.space_name), str(d.board_name)].filter(Boolean).join(" / ") || null;
+  }
+  return event.log_name === "project_status" ? null : event.project_name;
 }
 
 /** The event's amount, when it has one. balance_change carries the delta. */
@@ -227,6 +249,18 @@ export function amountOf(event: LogEvent): string | null {
   if (event.log_name === "balance_change") return `${value >= 0 ? "+" : "−"}${text}`;
   return text;
 }
+
+/** Date filter (<input type="date"> value) → ISO timestamp at local midnight. */
+export const dayStartIso = (value: string) =>
+  value ? new Date(`${value}T00:00:00`).toISOString() : null;
+
+/** Date filter → local midnight of the next day, for an inclusive "to" date. */
+export const dayAfterIso = (value: string) => {
+  if (!value) return null;
+  const d = new Date(`${value}T00:00:00`);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString();
+};
 
 /** Full date and time, for tooltips and the activity table. */
 export function formatDateTime(iso: string): string {

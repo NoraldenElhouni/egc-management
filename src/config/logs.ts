@@ -48,3 +48,32 @@ export const LOG_NAMES: { name: string; group: LogGroup; label: string }[] = [
   { name: "employee_terms", group: "hr", label: "بيانات التوظيف" },
   { name: "hr_hiring", group: "hr", label: "التوظيف" },
 ];
+
+/**
+ * The task log (سجل المهام, /tasks/activity, migration 12) reads the tasks
+ * module's own history through get_task_activity() and has its own
+ * permission; it is not one of the groups above.
+ */
+export const TASK_LOG_PERMISSION = "view_task_logs";
+
+/** Events the task log shows, for its filter. Labels mirror logs.labels. */
+export const TASK_LOG_ACTIONS: { action: string; label: string }[] = [
+  { action: "created", label: "أُنشئت المهمة" },
+  { action: "completed", label: "اكتملت المهمة" },
+  { action: "cancelled", label: "أُلغيت المهمة" },
+  { action: "reopened", label: "أُعيد فتح المهمة" },
+  { action: "status_changed", label: "تغيّرت الحالة" },
+  { action: "dates_changed", label: "تغيّرت المواعيد" },
+  { action: "rescheduled", label: "رُحّلت المواعيد تلقائياً" },
+  { action: "assigned", label: "أُسندت المهمة" },
+  { action: "unassigned", label: "أُزيل مسؤول" },
+  { action: "renamed", label: "تغيّر العنوان" },
+  { action: "priority_changed", label: "تغيّرت الأولوية" },
+  { action: "type_changed", label: "تغيّر نوع المهمة" },
+  { action: "moved", label: "نُقلت المهمة" },
+  { action: "description_changed", label: "عُدّل الوصف" },
+  { action: "archived", label: "أُرشفت المهمة" },
+  { action: "unarchived", label: "أُعيدت من الأرشيف" },
+  { action: "dependency_added", label: "رُبطت بمهمة سابقة" },
+  { action: "dependency_removed", label: "أُزيل ربط بمهمة سابقة" },
+];

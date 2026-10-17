@@ -17,6 +17,7 @@ import RequireTaskAccess from "../tasks/RequireTaskAccess";
 import RequirePermission from "../auth/RequirePermission";
 import PerformancePage from "../../pages/tasks/PerformancePage";
 import DashboardPage from "../../pages/tasks/DashboardPage";
+import TaskLogPage from "../../pages/tasks/TaskLogPage";
 
 // App.tsx gates the whole /tasks/* mount point behind one section-level
 // permission (view_tasks_section: the menu entry). Inside it, access to
@@ -87,6 +88,9 @@ export default function TasksRoutes() {
         </Route>
         <Route element={<RequirePermission permission="view_task_dashboard" />}>
           <Route path="dashboard" element={<DashboardPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_task_logs" />}>
+          <Route path="activity" element={<TaskLogPage />} />
         </Route>
         <Route element={<RequireTaskAccess scope="space" />}>
           <Route path="space/:spaceId/settings" element={<SpaceSettingsPage />} />

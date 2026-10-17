@@ -57,6 +57,13 @@ export function mergeBalanceRows(events: LogEvent[]): LogEvent[] {
   return out;
 }
 
+/**
+ * Rows a person's action caused rather than made: balance updates after an
+ * expense, tasks the scheduler moved after a task's dates changed.
+ */
+const isSideEffect = (e: LogEvent) =>
+  e.log_name === "balance_change" || (e.log_name === "task" && e.action === "rescheduled");
+
 /** True when `next` (older) belongs to the same user action as `prev`. */
 function sameAction(prev: LogEvent, next: LogEvent) {
   if (prev.tx_id === next.tx_id) return true;
@@ -70,8 +77,9 @@ function sameAction(prev: LogEvent, next: LogEvent) {
 
 /**
  * Newest-first events → one row per user action. The row shows the event
- * the person actually made (the oldest that is not a balance change: the
- * expense, the payment…) and carries the rest in `related`, newest first.
+ * the person actually made (the oldest that is not a side effect: the
+ * expense, the payment, the task edit…) and carries the rest in `related`,
+ * newest first.
  */
 export function groupOperations(events: LogEvent[]): ActivityRow[] {
   const rows: ActivityRow[] = [];
@@ -82,7 +90,7 @@ export function groupOperations(events: LogEvent[]): ActivityRow[] {
       rows.push(run[0]);
     } else if (run.length > 1) {
       const oldestFirst = [...run].reverse();
-      const lead = oldestFirst.find((e) => e.log_name !== "balance_change") ?? oldestFirst[0];
+      const lead = oldestFirst.find((e) => !isSideEffect(e)) ?? oldestFirst[0];
       rows.push({ ...lead, related: run.filter((e) => e !== lead) });
     }
     run = [];

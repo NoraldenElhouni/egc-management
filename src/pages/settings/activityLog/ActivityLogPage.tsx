@@ -1,65 +1,21 @@
 import { useCallback, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
-import { supabase } from "../../../lib/supabaseClient";
 import ActivityFeed from "../../../components/logs/ActivityFeed";
 import ActivityLogFiltersDialog, {
   EMPTY_ACTIVITY_FILTERS,
   type ActivityLogFilterState,
 } from "../../../components/tables/filters/ActivityLogFiltersDialog";
-import { useLogHealth } from "../../../hooks/logs/useActivityLog";
+import { useLogFilterOptions, useLogHealth } from "../../../hooks/logs/useActivityLog";
 import { useMyPermissions } from "../../../hooks/permissions/useCan";
 import { LOG_GROUPS, LOG_NAMES } from "../../../config/logs";
 import type { ActivityFilters } from "../../../types/logs.types";
-import { formatDateTime } from "../../../components/logs/logFormat";
-
-const PARTY_LABEL: Record<string, string> = {
-  vendor: "مورد",
-  contractor: "مقاول",
-  client: "عميل",
-};
-
-/** Projects and users for the filter dialog's searchable selects. */
-function useFilterOptions() {
-  return useQuery({
-    queryKey: ["logs", "filter-options"],
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const [projects, users] = await Promise.all([
-        supabase.from("projects").select("id, name, code").order("serial_number", { ascending: true }),
-        supabase.from("users").select("id, first_name, last_name, party_type").order("first_name"),
-      ]);
-      if (projects.error) throw projects.error;
-      if (users.error) throw users.error;
-      return {
-        projects: (projects.data ?? []).map((p) => ({
-          value: p.id,
-          label: p.code ? `${p.code} — ${p.name}` : p.name,
-        })),
-        users: (users.data ?? []).map((u) => {
-          const name = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || "—";
-          const party = PARTY_LABEL[u.party_type as string];
-          return { value: u.id, label: party ? `${name} (${party})` : name };
-        }),
-      };
-    },
-  });
-}
-
-/** <input type="date"> value → ISO timestamp at local midnight. */
-const dayStart = (value: string) => (value ? new Date(`${value}T00:00:00`).toISOString() : null);
-const dayAfter = (value: string) => {
-  if (!value) return null;
-  const d = new Date(`${value}T00:00:00`);
-  d.setDate(d.getDate() + 1);
-  return d.toISOString();
-};
+import { dayAfterIso, dayStartIso, formatDateTime } from "../../../components/logs/logFormat";
 
 const ActivityLogPage = () => {
   const { data: permissions } = useMyPermissions();
   const [filterState, setFilterState] = useState<ActivityLogFilterState>(EMPTY_ACTIVITY_FILTERS);
 
-  const { data: options, isPending: optionsLoading } = useFilterOptions();
+  const { data: options, isPending: optionsLoading } = useLogFilterOptions();
   const { data: health } = useLogHealth();
 
   // Only the groups (and their logs) this user may read.
@@ -82,8 +38,8 @@ const ActivityLogPage = () => {
       logNames: filterState.logName ? [filterState.logName] : null,
       projectId: filterState.projectId || null,
       actorId: filterState.actorId || null,
-      from: dayStart(filterState.fromDate),
-      to: dayAfter(filterState.toDate),
+      from: dayStartIso(filterState.fromDate),
+      to: dayAfterIso(filterState.toDate),
     }),
     [filterState],
   );
