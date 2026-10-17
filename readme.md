@@ -16,13 +16,13 @@ The main system of **EGC — المجموعة الهندسية**. It's a desktop
 
 ## 1. How it works
 
-| Part | Details |
-|---|---|
-| App | Electron + React + TypeScript (Vite, Electron Forge) |
-| Database, logins, files | Supabase project **EGC**: ref `bhcprgzqhvnymthgtvtw`, region eu-central-1 |
-| Uploaded files | Supabase Storage buckets: `attachments`, `employees`, `reports`, `site-media` |
-| Reports and PDF printing | `https://pdf-service.engroup.ly` (`VITE_MANAGEMENT_API_URL`) |
-| Logs screen | Logs service at `VITE_LOGS_API_URL` |
+| Part                     | Details                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| App                      | Electron + React + TypeScript (Vite, Electron Forge)                          |
+| Database, logins, files  | Supabase project **EGC**: ref `bhcprgzqhvnymthgtvtw`, region eu-central-1     |
+| Uploaded files           | Supabase Storage buckets: `attachments`, `employees`, `reports`, `site-media` |
+| Reports and PDF printing | `https://pdf-service.engroup.ly` (`VITE_MANAGEMENT_API_URL`)                  |
+| Logs screen              | Logs service at `VITE_LOGS_API_URL`                                           |
 
 **The same Supabase project also serves EGC's mobile apps and website.** A change to the database affects all of them.
 
@@ -31,6 +31,7 @@ The main system of **EGC — المجموعة الهندسية**. It's a desktop
 ## 2. Setting up a computer for development
 
 **You need:**
+
 - Node.js + npm
 - [Supabase CLI](https://supabase.com/docs/guides/cli) (`brew install supabase/tap/supabase`)
 - Docker Desktop (only needed for backups and restores)
@@ -44,14 +45,14 @@ npm run types      # regenerate src/lib/supabase.ts from the live database (afte
 
 **The `.env` file** (never commit it; it's already in `.gitignore`):
 
-| Name | What it is | Where to get it |
-|---|---|---|
-| `VITE_SUPABASE_URL` | The project URL | Supabase Dashboard → Project Settings → API |
-| `VITE_SUPABASE_ANON_KEY` | Public (anon) key | same place |
-| `VITE_SUPABASE_SERVICE_KEY` | Service-role key, used for admin actions such as creating accounts. **See §6** | same place |
-| `VITE_MANAGEMENT_API_URL` | PDF and management service | optional, defaults to `https://pdf-service.engroup.ly` |
-| `VITE_LOGS_API_URL` | Logs service | optional |
-| `VITE_APP_VERSION` | Version shown when not running inside Electron | optional |
+| Name                        | What it is                                                                     | Where to get it                                        |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `VITE_SUPABASE_URL`         | The project URL                                                                | Supabase Dashboard → Project Settings → API            |
+| `VITE_SUPABASE_ANON_KEY`    | Public (anon) key                                                              | same place                                             |
+| `VITE_SUPABASE_SERVICE_KEY` | Service-role key, used for admin actions such as creating accounts. **See §6** | same place                                             |
+| `VITE_MANAGEMENT_API_URL`   | PDF and management service                                                     | optional, defaults to `https://pdf-service.engroup.ly` |
+| `VITE_LOGS_API_URL`         | Logs service                                                                   | optional                                               |
+| `VITE_APP_VERSION`          | Version shown when not running inside Electron                                 | optional                                               |
 
 **Where things are in the code:** screens are in `src/pages/` and `src/components/`, data hooks in `src/hooks/`, and the Supabase clients in `src/lib/`. Coding conventions are in `AGENTS.md` and `CLAUDE.md`.
 
@@ -68,8 +69,8 @@ GitHub builds the app for you. Pushing a version tag runs the workflow in `.gith
    ```
 2. **Tag and push the tag.** This starts the build:
    ```bash
-   git tag v1.1.10
-   git push origin v1.1.10
+   git tag v1.1.11
+   git push origin v1.1.11
    ```
 3. **Wait for the build** on GitHub → Actions ("Build and Publish (Windows + macOS)").
 4. **Publish the release.** The workflow creates a **draft**. Open GitHub → Releases, check the files, and press **Publish release**. Users can't see a draft.
@@ -77,6 +78,7 @@ GitHub builds the app for you. Pushing a version tag runs the workflow in `.gith
    ```sql
    insert into public."update" (type, version, is_must) values ('desktop', '1.1.10', true);
    ```
+
    - On start-up, anyone running an older version gets a blocking screen with a button to the latest GitHub release.
    - The check runs before login. If it can't reach the database, it lets the user in rather than locking them out.
 
@@ -105,11 +107,12 @@ for b in attachments employees reports site-media; do
 done
 ```
 
-If a storage command says *"Access token not provided"*, run `supabase login` once and try again.
+If a storage command says _"Access token not provided"_, run `supabase login` once and try again.
 
 **Check the backup:**
+
 - `data.sql` should end with `RESET ALL;`.
-- `pg_dump` warnings about *"circular foreign-key constraints"* are normal. The restore in §5 handles them.
+- `pg_dump` warnings about _"circular foreign-key constraints"_ are normal. The restore in §5 handles them.
 
 **Keep backups safe:** they contain salaries, payroll, bank details and password hashes. Keep them off git and off shared drives; an encrypted disk or a password-protected archive is best. Keep more than one copy, and at least one off this computer.
 
@@ -131,8 +134,9 @@ If a storage command says *"Access token not provided"*, run `supabase login` on
    - `hypopg`
    - `index_advisor`
    - `supabase_vault` is usually already on.
-3. **Get the new connection string** (Project Settings → Database → *Session pooler*, port 5432) and its password.
+3. **Get the new connection string** (Project Settings → Database → _Session pooler_, port 5432) and its password.
 4. **Load the backup.** There's no `psql` on this Mac, so this runs it through Docker:
+
    ```bash
    D=~/EGC-backups/2026-10-15        # the backup folder to restore
    NEW_DB_URL='postgresql://postgres.<new-ref>:<password>@<host>:5432/postgres'
@@ -144,8 +148,10 @@ If a storage command says *"Access token not provided"*, run `supabase login` on
      --command 'SET session_replication_role = replica' \
      --file /backup/data.sql
    ```
+
    - It's all one transaction: if anything fails, nothing is loaded. Fix the error and run it again.
    - `session_replication_role = replica` switches foreign-key checks off while the data loads, which is why the circular-key warnings don't matter.
+
 5. **Upload the files back to Storage:**
    ```bash
    supabase link --project-ref <new-ref>
