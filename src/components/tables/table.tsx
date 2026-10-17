@@ -5,11 +5,13 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
+  getExpandedRowModel,
   flexRender,
   ColumnDef,
   SortingState,
   ColumnFiltersState,
   RowSelectionState,
+  ExpandedState,
   Table,
   Row,
   FilterFn,
@@ -101,6 +103,16 @@ type GenericTableProps<TData> = {
    */
   searchAdornment?: (table: Table<TData>) => React.ReactNode;
 
+  /**
+   * Opt-in expandable rows: the children of a row, shown under it once it
+   * is expanded (`row.getToggleExpandedHandler()` in a cell). The search
+   * keeps a parent when any child matches and opens every row while it has
+   * text.
+   */
+  getSubRows?: (row: TData) => TData[] | undefined;
+  /** Stable row ids, so expanded/selected rows survive new data. */
+  getRowId?: (row: TData, index: number) => string;
+
   link?: string;
   linkLabel?: string;
   linkVariant?: ButtonVariant;
@@ -125,6 +137,8 @@ export default function GenericTable<TData extends object>({
   header,
   headerActions,
   searchAdornment,
+  getSubRows,
+  getRowId,
   link,
   linkLabel,
   linkVariant,
@@ -136,6 +150,7 @@ export default function GenericTable<TData extends object>({
   );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
   React.useEffect(() => {
     if (clearSelectionSignal !== undefined) {
@@ -152,11 +167,18 @@ export default function GenericTable<TData extends object>({
       columnFilters,
       globalFilter,
       rowSelection,
+      expanded: getSubRows && globalFilter ? true : expanded,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
+    onExpandedChange: setExpanded,
+    getSubRows,
+    getRowId,
+    getExpandedRowModel: getSubRows ? getExpandedRowModel() : undefined,
+    autoResetExpanded: false,
+    filterFromLeafRows: !!getSubRows,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: enableFiltering ? getFilteredRowModel() : undefined,
@@ -302,7 +324,7 @@ export default function GenericTable<TData extends object>({
                   key={row.id}
                   className={`hover:bg-gray-50 transition-colors ${
                     onRowClick ? "cursor-pointer" : ""
-                  } ${row.getIsSelected() ? "bg-blue-50" : ""}`}
+                  } ${row.getIsSelected() ? "bg-blue-50" : row.depth > 0 ? "bg-gray-50" : ""}`}
                   onClick={() => onRowClick && onRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (

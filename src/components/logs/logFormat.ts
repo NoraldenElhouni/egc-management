@@ -178,8 +178,11 @@ export function subjectOf(event: LogEvent): string {
       return `دفعة مصروف${serial ? ` #${serial}` : ""}`;
     case "project_cash":
       return `${CASH_KIND[String(d.kind)] ?? "قيد"}${serial ? ` #${serial}` : ""}`;
-    case "balance_change":
-      return `${BALANCE_TABLE[String(d.balance_table)] ?? "رصيد"} — ${fieldLabel(String(d.field ?? ""))}`;
+    case "balance_change": {
+      const table = BALANCE_TABLE[String(d.balance_table)] ?? "رصيد";
+      // Merged rows (groupEvents.ts) carry several fields in detail.changes.
+      return typeof d.field === "string" ? `${table} — ${fieldLabel(d.field)}` : table;
+    }
     case "payroll":
       return `راتب ${str(d.employee_name) ?? ""}`.trim();
     case "distribution_run":

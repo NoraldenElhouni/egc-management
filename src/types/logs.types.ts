@@ -49,6 +49,12 @@ export interface LogEvent {
   detail: Record<string, unknown> | null;
 }
 
+/**
+ * A row of the activity table: one event, or the lead event of one user
+ * action with the other events it caused in `related` (see groupEvents.ts).
+ */
+export type ActivityRow = LogEvent & { related?: ActivityRow[] };
+
 /** get_history(p_ref_type, …): which record's history to load. */
 export type HistoryRefType =
   | "shop_order"

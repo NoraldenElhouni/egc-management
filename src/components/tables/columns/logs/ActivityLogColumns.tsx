@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
-import type { LogEvent } from "../../../../types/logs.types";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import type { ActivityRow } from "../../../../types/logs.types";
 import {
   amountOf,
   changesOf,
@@ -17,11 +18,12 @@ const toneText = {
 
 /**
  * Columns for the activity log. `onActorClick` narrows the page to one
- * person's actions; omit it where the table is not filterable.
+ * person's actions; omit it where the table is not filterable. A row with
+ * `related` events (one user action, see groupEvents.ts) opens to show them.
  */
 export const getActivityLogColumns = (
   onActorClick?: (actorId: string, actorName: string) => void,
-): ColumnDef<LogEvent>[] => [
+): ColumnDef<ActivityRow>[] => [
   {
     accessorKey: "occurred_at",
     header: "الوقت",
@@ -48,12 +50,22 @@ export const getActivityLogColumns = (
     cell: ({ row }) => {
       const e = row.original;
       return (
-        <div className="min-w-[10rem]">
+        <div className={`min-w-[10rem] ${row.depth > 0 ? "border-r-2 border-gray-300 pr-3" : ""}`}>
           <p className={`text-sm font-semibold ${toneText[toneOf(e.action)]}`}>{e.action_label}</p>
           {(e.from_label || e.to_label) && (
             <p className="text-xs text-gray-500 mt-0.5">
               {e.from_label ?? "—"} ← {e.to_label ?? "—"}
             </p>
+          )}
+          {row.getCanExpand() && (
+            <button
+              type="button"
+              onClick={row.getToggleExpandedHandler()}
+              className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              {row.subRows.length} تغييرات مرتبطة
+              {row.getIsExpanded() ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
           )}
         </div>
       );
