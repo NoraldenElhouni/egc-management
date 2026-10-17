@@ -9,6 +9,8 @@ import EmployeeRole from "../../components/hr/employee/EmployeeRole";
 import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 import EmployeeOverridesTab from "../../components/permissions/EmployeeOverridesTab";
 import PerformanceReviews from "../../components/hr/employee/PerformanceReviews";
+import HistoryTimeline from "../../components/logs/HistoryTimeline";
+import { LOG_PERMISSIONS } from "../../config/logs";
 // import SalaryDetails from "../../components/hr/employee/SalaryDetails";
 
 export default function EmployeeDetailsPage() {
@@ -78,14 +80,26 @@ export default function EmployeeDetailsPage() {
       ),
       permission: "manage_permissions_company",
     },
+    {
+      // Salary, department, roles, teams, permissions and payroll over
+      // time. Any log permission opens the tab; the database then returns
+      // only the log groups this user may read.
+      id: "history",
+      label: "السجل",
+      content: (
+        <HistoryTimeline refType="employee" refId={employee.id ?? ""} title="سجل الموظف" />
+      ),
+      permission: [...LOG_PERMISSIONS],
+    },
   ];
 
   // Every tab is permission-gated now — issue 19's last two holdouts
   // (this file) converted. No hardcoded role check remains anywhere in
-  // this component.
-  const canView = (tab: { permission?: string }) => {
+  // this component. An array means any one of them.
+  const canView = (tab: { permission?: string | string[] }) => {
     if (!tab.permission) return true; // public tab
-    return allowedPermissions.has(tab.permission);
+    const required = Array.isArray(tab.permission) ? tab.permission : [tab.permission];
+    return required.some((p) => allowedPermissions.has(p));
   };
 
   const visibleTabs = tabs.filter(canView);

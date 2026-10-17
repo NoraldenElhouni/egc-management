@@ -13,6 +13,7 @@ import { useOrderDetails } from "../../../hooks/shop/orders/useOrderDetails";
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
 import { OrderItemsColumns } from "../../../components/tables/columns/shops/orders/OrderItemsColumns";
+import HistoryTimeline from "../../../components/logs/HistoryTimeline";
 
 const timelineSteps = (
   order: NonNullable<ReturnType<typeof useOrderDetails>["order"]>,
@@ -220,6 +221,16 @@ const OrderDetailsPage = () => {
             enableSorting
           />
         </div>
+
+        {/* What actually happened, including every rejection and its
+            reason — the مسار الطلب timeline above only shows the
+            expected steps. */}
+        <HistoryTimeline
+          refType="shop_order"
+          refId={orderId}
+          title="سجل الطلب"
+          showSubject={false}
+        />
       </div>
     </div>
   );

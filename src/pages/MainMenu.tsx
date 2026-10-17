@@ -11,9 +11,11 @@ import {
   Store,
   FolderCog,
   ListTodo,
+  History,
 } from "lucide-react";
 import { ComponentType } from "react";
 import { useVisibleMenuItems } from "../hooks/permissions/useMenuPermissions";
+import { LOG_PERMISSIONS } from "../config/logs";
 
 const MainMenu = () => {
   const menuItems = [
@@ -95,6 +97,15 @@ const MainMenu = () => {
       // manage_permissions_company, view_user_sessions) entirely. Real
       // section permission now.
       permission: "view_settings_section",
+    },
+    {
+      // Its own card, not only an entry under Settings: Head Finance
+      // holds view_finance_logs but not view_settings_section. Any one
+      // of the four log permissions opens it.
+      label: "سجل النشاط",
+      icon: History,
+      path: "/settings/activity-log",
+      permission: [...LOG_PERMISSIONS],
     },
   ];
 

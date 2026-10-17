@@ -5484,36 +5484,6 @@ export type Database = {
       }
     }
     Functions: {
-      accept_contract_payment: {
-        Args: {
-          p_approved_by: string
-          p_currency: string
-          p_payment_id: string
-          p_payment_method: string
-        }
-        Returns: {
-          account: Json
-          contract: Json
-          expense: Json
-          payment: Json
-          project: Json
-          project_balance: Json
-        }[]
-      }
-      accept_payroll_payment: {
-        Args: {
-          p_account_id: string
-          p_approved_by: string
-          p_payment_method: string
-          p_payroll_id: string
-        }
-        Returns: {
-          expense_id: string
-          message: string
-          payment_id: string
-          success: boolean
-        }[]
-      }
       can_do: {
         Args: {
           p_permission_name: string
@@ -5537,6 +5507,44 @@ export type Database = {
           source_layer: string
         }[]
       }
+      get_activity: {
+        Args: {
+          p_actor_id?: string
+          p_before?: string
+          p_from?: string
+          p_groups?: string[]
+          p_limit?: number
+          p_log_names?: string[]
+          p_project_id?: string
+          p_to?: string
+        }
+        Returns: {
+          action: string
+          action_label: string
+          actor_id: string
+          actor_name: string
+          actor_party: string
+          amount: number
+          currency: string
+          detail: Json
+          from_label: string
+          from_value: string
+          id: number
+          log_group: string
+          log_label: string
+          log_name: string
+          occurred_at: string
+          project_id: string
+          project_name: string
+          reason: string
+          source: string
+          subject_id: string
+          subject_type: string
+          to_label: string
+          to_value: string
+          tx_id: number
+        }[]
+      }
       get_contractors_expenses: {
         Args: { p_project_id: string }
         Returns: {
@@ -5545,6 +5553,49 @@ export type Database = {
           last_name: string
           latest_expense_date: string
           total_amount: number
+        }[]
+      }
+      get_history: {
+        Args: {
+          p_before?: string
+          p_limit?: number
+          p_ref_id: string
+          p_ref_type: string
+        }
+        Returns: {
+          action: string
+          action_label: string
+          actor_id: string
+          actor_name: string
+          actor_party: string
+          amount: number
+          currency: string
+          detail: Json
+          from_label: string
+          from_value: string
+          id: number
+          log_group: string
+          log_label: string
+          log_name: string
+          occurred_at: string
+          project_id: string
+          project_name: string
+          reason: string
+          source: string
+          subject_id: string
+          subject_type: string
+          to_label: string
+          to_value: string
+          tx_id: number
+        }[]
+      }
+      get_log_health: {
+        Args: never
+        Returns: {
+          errors_7d: number
+          last_error_at: string
+          last_log_name: string
+          last_message: string
         }[]
       }
       get_my_contractor_project_expenses: {
@@ -5579,10 +5630,6 @@ export type Database = {
           vendor_id: string
           vendor_name: string
         }[]
-      }
-      map_payment_type_to_account_type: {
-        Args: { p: Database["public"]["Enums"]["payment_type"] }
-        Returns: Database["public"]["Enums"]["account_type"]
       }
       merge_contractors: {
         Args: {
@@ -5632,24 +5679,6 @@ export type Database = {
           source_layer: string
         }[]
       }
-      process_expense_payment: {
-        Args: {
-          p_amount: number
-          p_created_by: string
-          p_currency: string
-          p_expense_id: string
-          p_payment_method: string
-          p_project_id: string
-        }
-        Returns: {
-          account: Json
-          expense: Json
-          payment: Json
-          payment_id: string
-          project: Json
-          project_balance: Json
-        }[]
-      }
       resolve_permission_ladder: {
         Args: {
           p_permission_id?: string
@@ -5664,252 +5693,6 @@ export type Database = {
           permission_name: string
           source_layer: string
         }[]
-      }
-      rpc_add_project_expense: {
-        Args: {
-          p_contractor_id?: string
-          p_created_by: string
-          p_currency: Database["public"]["Enums"]["currency_type"]
-          p_description: string
-          p_expense_date: string
-          p_expense_id?: string
-          p_expense_type: Database["public"]["Enums"]["expense_type"]
-          p_paid_amount?: number
-          p_payment_method?: Database["public"]["Enums"]["payment_method"]
-          p_phase: Database["public"]["Enums"]["phase_type"]
-          p_project_id: string
-          p_total_amount: number
-          p_vendor_id?: string
-        }
-        Returns: {
-          amount_paid: number
-          contractor_id: string | null
-          created_at: string
-          created_by: string
-          currency: Database["public"]["Enums"]["currency_type"]
-          deleted_at: string | null
-          deleted_by: string | null
-          description: string | null
-          discounting: number | null
-          expense_date: string
-          expense_id: string | null
-          expense_type: Database["public"]["Enums"]["expense_type"]
-          id: string
-          is_edited: boolean | null
-          is_percentage: boolean | null
-          payment_counter: number
-          phase: Database["public"]["Enums"]["phase_type"]
-          project_id: string
-          serial_number: number | null
-          status: Database["public"]["Enums"]["expense_status"] | null
-          total_amount: number
-          updated_at: string
-          vendor_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "project_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      rpc_add_project_expense_percentage: {
-        Args: {
-          p_contractor_id?: string
-          p_created_by: string
-          p_currency: Database["public"]["Enums"]["currency_type"]
-          p_description: string
-          p_expense_date: string
-          p_expense_id?: string
-          p_expense_type: Database["public"]["Enums"]["expense_type"]
-          p_paid_amount?: number
-          p_payment_method?: Database["public"]["Enums"]["payment_method"]
-          p_percentage?: number
-          p_phase: Database["public"]["Enums"]["phase_type"]
-          p_project_id: string
-          p_total_amount: number
-          p_vendor_id?: string
-        }
-        Returns: {
-          amount_paid: number
-          contractor_id: string | null
-          created_at: string
-          created_by: string
-          currency: Database["public"]["Enums"]["currency_type"]
-          deleted_at: string | null
-          deleted_by: string | null
-          description: string | null
-          discounting: number | null
-          expense_date: string
-          expense_id: string | null
-          expense_type: Database["public"]["Enums"]["expense_type"]
-          id: string
-          is_edited: boolean | null
-          is_percentage: boolean | null
-          payment_counter: number
-          phase: Database["public"]["Enums"]["phase_type"]
-          project_id: string
-          serial_number: number | null
-          status: Database["public"]["Enums"]["expense_status"] | null
-          total_amount: number
-          updated_at: string
-          vendor_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "project_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      rpc_delete_expense_payment: {
-        Args: { p_deleted_by: string; p_payment_id: string }
-        Returns: Json
-      }
-      rpc_process_expense_payment: {
-        Args: {
-          p_amount: number
-          p_created_by: string
-          p_currency: Database["public"]["Enums"]["currency_type"]
-          p_expense_id: string
-          p_payment_method: Database["public"]["Enums"]["payment_method"]
-          p_project_id: string
-        }
-        Returns: {
-          amount_paid: number
-          contractor_id: string | null
-          created_at: string
-          created_by: string
-          currency: Database["public"]["Enums"]["currency_type"]
-          deleted_at: string | null
-          deleted_by: string | null
-          description: string | null
-          discounting: number | null
-          expense_date: string
-          expense_id: string | null
-          expense_type: Database["public"]["Enums"]["expense_type"]
-          id: string
-          is_edited: boolean | null
-          is_percentage: boolean | null
-          payment_counter: number
-          phase: Database["public"]["Enums"]["phase_type"]
-          project_id: string
-          serial_number: number | null
-          status: Database["public"]["Enums"]["expense_status"] | null
-          total_amount: number
-          updated_at: string
-          vendor_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "project_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      rpc_process_expense_payment_percentage: {
-        Args: {
-          p_amount: number
-          p_created_by: string
-          p_currency: Database["public"]["Enums"]["currency_type"]
-          p_expense_id: string
-          p_payment_method: Database["public"]["Enums"]["payment_method"]
-          p_percentage: number
-          p_project_id: string
-        }
-        Returns: {
-          amount_paid: number
-          contractor_id: string | null
-          created_at: string
-          created_by: string
-          currency: Database["public"]["Enums"]["currency_type"]
-          deleted_at: string | null
-          deleted_by: string | null
-          description: string | null
-          discounting: number | null
-          expense_date: string
-          expense_id: string | null
-          expense_type: Database["public"]["Enums"]["expense_type"]
-          id: string
-          is_edited: boolean | null
-          is_percentage: boolean | null
-          payment_counter: number
-          phase: Database["public"]["Enums"]["phase_type"]
-          project_id: string
-          serial_number: number | null
-          status: Database["public"]["Enums"]["expense_status"] | null
-          total_amount: number
-          updated_at: string
-          vendor_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "project_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      rpc_soft_delete_project_expense: {
-        Args: {
-          p_currency: Database["public"]["Enums"]["currency_type"]
-          p_deleted_by: string
-          p_expense_id: string
-        }
-        Returns: Json
-      }
-      rpc_update_expense_payment: {
-        Args: {
-          p_new_account_id: string
-          p_new_amount: number
-          p_payment_id: string
-          p_updated_by: string
-        }
-        Returns: Json
-      }
-      rpc_update_project_expense: {
-        Args: {
-          p_contractor_id?: string
-          p_currency: Database["public"]["Enums"]["currency_type"]
-          p_description: string
-          p_expense_date: string
-          p_expense_id: string
-          p_expense_ref_id?: string
-          p_expense_type: Database["public"]["Enums"]["expense_type"]
-          p_phase: Database["public"]["Enums"]["phase_type"]
-          p_total_amount: number
-          p_updated_by?: string
-        }
-        Returns: {
-          amount_paid: number
-          contractor_id: string | null
-          created_at: string
-          created_by: string
-          currency: Database["public"]["Enums"]["currency_type"]
-          deleted_at: string | null
-          deleted_by: string | null
-          description: string | null
-          discounting: number | null
-          expense_date: string
-          expense_id: string | null
-          expense_type: Database["public"]["Enums"]["expense_type"]
-          id: string
-          is_edited: boolean | null
-          is_percentage: boolean | null
-          payment_counter: number
-          phase: Database["public"]["Enums"]["phase_type"]
-          project_id: string
-          serial_number: number | null
-          status: Database["public"]["Enums"]["expense_status"] | null
-          total_amount: number
-          updated_at: string
-          vendor_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "project_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
     }
     Enums: {

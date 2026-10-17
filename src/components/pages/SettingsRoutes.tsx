@@ -13,6 +13,8 @@ import ExpenseDetailsPage from "../../pages/settings/expenses/ExpenseDetailsPage
 import BanksPage from "../../pages/settings/banks/BanksPage";
 import UserSessionsPage from "../../pages/settings/sessions/UserSessionsPage";
 import LogsPage from "../../pages/settings/logs/LogsPage";
+import ActivityLogPage from "../../pages/settings/activityLog/ActivityLogPage";
+import { LOG_PERMISSIONS } from "../../config/logs";
 import UserPasswordResetPage from "../../pages/settings/passwordReset/UserPasswordResetPage";
 import WebsitePage from "../../pages/settings/website/WebsitePage";
 import WebsiteCategoriesPage from "../../pages/settings/website/WebsiteCategoriesPage";
@@ -92,6 +94,9 @@ export default function SettingsRoutes() {
         </Route>
         <Route element={<RequirePermission permission="view_audit_logs" />}>
           <Route path="logs" element={<LogsPage />} />
+        </Route>
+        <Route element={<RequirePermission permission={[...LOG_PERMISSIONS]} />}>
+          <Route path="activity-log" element={<ActivityLogPage />} />
         </Route>
         <Route element={<RequirePermission permission="reset_user_password" />}>
           <Route path="password-reset" element={<UserPasswordResetPage />} />

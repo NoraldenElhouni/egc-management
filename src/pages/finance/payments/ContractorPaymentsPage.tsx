@@ -16,6 +16,11 @@ import {
   ContractPayment,
   ContractPaymentPenalty,
 } from "../../../types/contracts.type";
+import ActivityFeed from "../../../components/logs/ActivityFeed";
+import { useMyPermissions } from "../../../hooks/permissions/useCan";
+
+// The history tab: who approved or declined each payment and penalty.
+const PAYMENT_LOGS = { logNames: ["contractor_payment", "contractor_penalty"] };
 
 function uniqueSorted(values: (string | undefined | null)[]): string[] {
   return Array.from(
@@ -31,6 +36,8 @@ const ContractorPaymentsPage = () => {
     loading: printing,
     error: printError,
   } = useContractorPaymentsPdf();
+  const { data: myPermissions } = useMyPermissions();
+  const canViewFinanceLogs = myPermissions?.has("view_finance_logs") ?? false;
 
   const [selectedPayments, setSelectedPayments] = useState<ContractPayment[]>(
     [],
@@ -207,6 +214,25 @@ const ContractorPaymentsPage = () => {
               </>
             ),
           },
+          ...(canViewFinanceLogs
+            ? [
+                {
+                  id: "history",
+                  label: "السجل",
+                  content: (
+                    <div className="p-6">
+                      <h1 className="text-2xl font-semibold text-gray-900">
+                        سجل الدفعات والجزاءات
+                      </h1>
+                      <p className="text-sm text-gray-500 mt-1 mb-4">
+                        من وافق على كل دفعة أو جزاء أو رفضها، ومتى
+                      </p>
+                      <ActivityFeed filters={PAYMENT_LOGS} />
+                    </div>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
     </div>

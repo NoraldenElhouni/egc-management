@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Globe,
   HelpCircle,
+  History,
   KeyRound,
   Landmark,
   Logs,
@@ -16,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import type { NavItem } from "./types";
+import { LOG_PERMISSIONS } from "../logs";
 
 export const SETTINGS_ITEMS: NavItem[] = [
   {
@@ -89,6 +91,13 @@ export const SETTINGS_ITEMS: NavItem[] = [
   },
   // Issue #15: these three were only in the menu-page list before this
   // file existed — absent from the sidebar entirely.
+  {
+    label: "سجل النشاط",
+    icon: History,
+    path: "/settings/activity-log",
+    description: "من فعل ماذا ومتى: الدفعات والصلاحيات والطلبات",
+    permission: [...LOG_PERMISSIONS],
+  },
   {
     label: "السجلات",
     icon: Logs,
