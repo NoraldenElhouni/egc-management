@@ -40,6 +40,8 @@ export const BREADCRUMB_ENTITIES: BreadcrumbEntity[] = [
       "/tasks/:view/task/:id",
       "/tasks/board/:boardId/task/:id",
       "/tasks/board/:boardId/gantt/task/:id",
+      "/tasks/board/:boardId/flow/task/:id",
+      "/tasks/board/:boardId/types/task/:id",
       "/tasks/department/:departmentId/task/:id",
       "/tasks/space/:spaceId/task/:id",
     ],

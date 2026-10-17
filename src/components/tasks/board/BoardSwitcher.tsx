@@ -14,8 +14,8 @@ import { useClickOutside } from "../../../hooks/tasks/useClickOutside";
 interface BoardSwitcherProps {
   spaceId: string;
   currentBoardId: string;
-  /** Keep the user on the same view (list / gantt) after switching. */
-  view: "list" | "gantt";
+  /** Keep the user on the same view (list / gantt / flow / types) after switching. */
+  view: "list" | "gantt" | "flow" | "types";
 }
 
 const bySortOrder = (a: BoardWithCount, b: BoardWithCount) =>
@@ -54,7 +54,7 @@ export default function BoardSwitcher({ spaceId, currentBoardId, view }: BoardSw
   const go = (boardId: string) => {
     setOpen(false);
     if (boardId === currentBoardId) return;
-    navigate(`/tasks/board/${boardId}${view === "gantt" ? "/gantt" : ""}`);
+    navigate(`/tasks/board/${boardId}${view === "list" ? "" : `/${view}`}`);
   };
 
   return (

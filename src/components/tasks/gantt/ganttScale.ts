@@ -1,4 +1,4 @@
-import type { TaskRow, TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
+import type { TaskRow } from "../../../hooks/tasks/useTaskBoard";
 import { MONTH_LABELS } from "../board/CalendarPopover";
 import { toLocalDateInput } from "../board/taskDates";
 import { dateToDayOffset, dayOffsetLabel, dayOffsetToDate } from "../board/templateDates";
@@ -99,11 +99,11 @@ export function dayAdapter(isTemplate: boolean): DayAdapter {
 // ---------------------------------------------------------------------------
 // Bars
 
-export type BarKind = "range" | "milestone" | "none";
+export type BarKind = "range" | "none";
 
 export interface BarSpan {
   kind: BarKind;
-  /** Inclusive day range. A milestone has startDay === endDay. */
+  /** Inclusive day range. */
   startDay: number;
   endDay: number;
   /** Which DB columns actually hold a value — a drag only writes these
@@ -114,27 +114,17 @@ export interface BarSpan {
 
 const NO_SPAN: BarSpan = { kind: "none", startDay: 0, endDay: 0, hasStart: false, hasDue: false };
 
-/** Where a task's bar sits. One date only → a single-day bar on it. A
- * milestone-type task (task_types.name, never the Arabic label) is a
- * single-date diamond at its due date, else its start date (build plan
- * §4.6). */
-export function barSpan(
-  task: TaskRow,
-  taskTypes: ReadonlyMap<string, TaskTypeLite>,
-  adapter: DayAdapter,
-): BarSpan {
+/** Where a task's bar sits. One date only → a single-day bar on it. Every
+ * task is a bar — the old milestone diamond (task_types.name = "milestone")
+ * never matched the stored "Milestone" and was dropped with the 2026-10-17
+ * redesign. */
+export function barSpan(task: TaskRow, adapter: DayAdapter): BarSpan {
   const hasStart = !!task.start_date;
   const hasDue = !!task.due_date;
   if (!hasStart && !hasDue) return NO_SPAN;
 
   const startDay = task.start_date ? adapter.toDay(task.start_date) : null;
   const dueDay = task.due_date ? adapter.toDay(task.due_date) : null;
-
-  const isMilestone = !!task.task_type_id && taskTypes.get(task.task_type_id)?.name === "milestone";
-  if (isMilestone) {
-    const day = (dueDay ?? startDay) as number;
-    return { kind: "milestone", startDay: day, endDay: day, hasStart, hasDue };
-  }
 
   const s = startDay ?? (dueDay as number);
   const e = dueDay ?? (startDay as number);
@@ -333,6 +323,37 @@ function templateHeader(range: DayRange, zoom: GanttZoom): HeaderRows {
 
 export function headerRows(range: DayRange, zoom: GanttZoom, adapter: DayAdapter): HeaderRows {
   return adapter.isTemplate ? templateHeader(range, zoom) : calendarHeader(range, zoom);
+}
+
+/** A bar's second line: "17/10 – 19/10" on a board, "يوم 1–3" on a
+ * template. Day / month only: the year is in the header above. */
+export function spanShort(startDay: number, endDay: number, adapter: DayAdapter): string {
+  if (adapter.isTemplate) {
+    return startDay === endDay ? dayOffsetLabel(startDay) : `يوم ${startDay}–${endDay}`;
+  }
+  const fmt = (day: number) => {
+    const p = calendarParts(day);
+    return `${p.date}/${p.month + 1}`;
+  };
+  return startDay === endDay ? fmt(startDay) : `${fmt(startDay)} – ${fmt(endDay)}`;
+}
+
+/** Arabic counted noun: 1 → `one`, 2 → `two`, 3–10 → "N few", 11+ → "N many". */
+export function arabicCount(n: number, forms: { one: string; two: string; few: string; many: string }): string {
+  if (n === 1) return forms.one;
+  if (n === 2) return forms.two;
+  return n >= 3 && n <= 10 ? `${n} ${forms.few}` : `${n} ${forms.many}`;
+}
+
+export const tasksCount = (n: number) => arabicCount(n, { one: "مهمة واحدة", two: "مهمتان", few: "مهام", many: "مهمة" });
+export const criticalCount = (n: number) =>
+  arabicCount(n, { one: "مهمة حرجة واحدة", two: "مهمتان حرجتان", few: "مهام حرجة", many: "مهمة حرجة" });
+
+/** "يوم" / "يومان" / "3 أيام" / "12 يوم" — the short count on a bar. */
+export function daysShort(n: number): string {
+  if (n === 1) return "يوم";
+  if (n === 2) return "يومان";
+  return n <= 10 ? `${n} أيام` : `${n} يوم`;
 }
 
 /** Tooltip text for a bar: "من 2026/1/5 إلى 2026/1/9" / "من يوم 3 إلى يوم 7".

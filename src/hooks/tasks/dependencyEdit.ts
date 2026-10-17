@@ -2,10 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
 import type { DependencyPair } from "./useTaskBoard";
-import { recordDependencies } from "./taskUndo";
+import { recordDependencies, recordDependencySwap } from "./taskUndo";
 import { invalidateSchedule } from "./useTaskSchedule";
 
-// Adding and removing dependency links — one path for the task panel
+// Adding, removing and reversing dependency links — one path for the task panel
 // (useTaskDetail.ts) and the board's quick ways (the "تبدأ بعد" column, the
 // row's right-click menu, drag-to-link on the Gantt). Both record undo.
 // A link on the same board moves dates (the scheduler runs in the
@@ -57,7 +57,41 @@ export async function removeDependencies(pairs: DependencyPair[], actorId: strin
   recordDependencies(pairs.length > 1 ? "إزالة الروابط" : "إزالة ربط", actorId, pairs, "removed");
 }
 
-/** The board's link / unlink. Failures surface through the tasks error toast. */
+/** A starts after B becomes B starts after A. The old link goes first —
+ * with both in place the new one would be a loop — and comes back if the new
+ * one is refused. One undo entry. */
+export async function reverseDependency(pair: DependencyPair, actorId: string | null): Promise<void> {
+  const reversed = { blocking_task_id: pair.blocked_task_id, blocked_task_id: pair.blocking_task_id };
+  const restore = () => tasksDb().from("task_dependencies").insert({ ...pair, created_by: actorId });
+
+  const { error: delError } = await tasksDb()
+    .from("task_dependencies")
+    .delete()
+    .eq("blocking_task_id", pair.blocking_task_id)
+    .eq("blocked_task_id", pair.blocked_task_id);
+  if (delError) throw delError;
+
+  const { data: problem, error: checkError } = await tasksDb().rpc("dependency_problem", {
+    p_blocking_task_id: reversed.blocking_task_id,
+    p_blocked_task_id: reversed.blocked_task_id,
+  });
+  const message = checkError ? null : problem ? DEPENDENCY_PROBLEMS[problem] : null;
+  if (checkError || message) {
+    await restore();
+    throw checkError ?? new Error(message as string);
+  }
+
+  const { error } = await tasksDb()
+    .from("task_dependencies")
+    .insert({ ...reversed, created_by: actorId });
+  if (error) {
+    await restore();
+    throw error;
+  }
+  recordDependencySwap("عكس اتجاه الربط", actorId, pair, reversed);
+}
+
+/** The board's link / unlink / reverse. Failures surface through the tasks error toast. */
 export function useDependencyEdit(boardId: string | undefined) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -72,6 +106,10 @@ export function useDependencyEdit(boardId: string | undefined) {
     mutationFn: (pairs: DependencyPair[]) => removeDependencies(pairs, actorId),
     onSettled,
   });
+  const reverse = useMutation({
+    mutationFn: (pair: DependencyPair) => reverseDependency(pair, actorId),
+    onSettled,
+  });
 
-  return { link: link.mutate, unlink: unlink.mutate };
+  return { link: link.mutate, unlink: unlink.mutate, reverse: reverse.mutate };
 }

@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FileStack, Copy, ChevronRight, List, ChartGantt } from "lucide-react";
+import { FileStack, Copy, ChevronRight, List, ChartGantt, Workflow, SquareKanban } from "lucide-react";
 import { useTaskBoard } from "../../hooks/tasks/useTaskBoard";
 import TaskTable from "../../components/tasks/board/TaskTable";
 import BoardSwitcher from "../../components/tasks/board/BoardSwitcher";
 import TaskGantt from "../../components/tasks/gantt/TaskGantt";
+import TaskFlow from "../../components/tasks/flow/TaskFlow";
+import TaskTypeBoard from "../../components/tasks/kanban/TaskTypeBoard";
 import TemplatePickerModal from "../../components/tasks/templates/TemplatePickerModal";
 import ZoneCloneModal from "../../components/tasks/clone/ZoneCloneModal";
 import { TemplateModeProvider } from "../../components/tasks/TemplateModeContext";
@@ -25,10 +27,23 @@ import { useDependencyEdit } from "../../hooks/tasks/dependencyEdit";
 // (opened from /tasks/admin/templates), rendered here in template mode —
 // see TemplateModeContext.tsx for what that changes.
 //
-// `view` comes from the route: board/:id is the list, board/:id/gantt the
-// Gantt (TasksRoutes.tsx). Both read the same useTaskBoard query, so
-// switching is instant and edits made in one show up in the other.
-export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
+// `view` comes from the route (TasksRoutes.tsx): board/:id is the list,
+// board/:id/gantt the Gantt, board/:id/flow the link diagram and
+// board/:id/types the board by task type — the last two (and the Gantt's
+// 2026-10-17 redesign) after Construction Flow, the tool a client gave us as
+// the model (plans/construction-flow-comparison/). All four read the same
+// useTaskBoard query, so switching is instant and edits made in one show up
+// in the others.
+export type BoardView = "list" | "gantt" | "flow" | "types";
+
+const VIEW_TABS: { view: BoardView; path: string; label: string; Icon: typeof List }[] = [
+  { view: "list", path: "", label: "قائمة", Icon: List },
+  { view: "gantt", path: "/gantt", label: "مخطط زمني", Icon: ChartGantt },
+  { view: "flow", path: "/flow", label: "مخطط الروابط", Icon: Workflow },
+  { view: "types", path: "/types", label: "الأنواع", Icon: SquareKanban },
+];
+
+export default function TaskBoardPage({ view }: { view: BoardView }) {
   const { boardId } = useParams<{ boardId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -59,7 +74,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
     moveTaskTo,
   } = useTaskBoard(boardId);
   const { openCreateTask } = useCreateTaskDialog();
-  const { link, unlink } = useDependencyEdit(boardId);
+  const { link, unlink, reverse } = useDependencyEdit(boardId);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showZoneClone, setShowZoneClone] = useState(false);
   // Template push (useTemplateSync.ts): the task ids the dialog opens with.
@@ -144,24 +159,18 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-gray-200 text-sm">
-            <Link
-              to={`/tasks/board/${data.board.id}`}
-              className={`flex items-center gap-1.5 px-3 py-1.5 ${
-                view === "list" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <List className="h-3.5 w-3.5" />
-              قائمة
-            </Link>
-            <Link
-              to={`/tasks/board/${data.board.id}/gantt`}
-              className={`flex items-center gap-1.5 border-r border-gray-200 px-3 py-1.5 ${
-                view === "gantt" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <ChartGantt className="h-3.5 w-3.5" />
-              مخطط زمني
-            </Link>
+            {VIEW_TABS.map(({ view: tab, path, label, Icon }, i) => (
+              <Link
+                key={tab}
+                to={`/tasks/board/${data.board.id}${path}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 ${i > 0 ? "border-r border-gray-200" : ""} ${
+                  view === tab ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </Link>
+            ))}
           </div>
           {!isTemplate && spaceCaps.create && (
             <button
@@ -197,7 +206,41 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
       )}
 
       <div className="flex-1 overflow-hidden">
-        {view === "gantt" ? (
+        {view === "flow" ? (
+          <TaskFlow
+            key={boardId}
+            boardName={data.board.name}
+            tasks={boardTasks}
+            statuses={data.statuses}
+            taskTypes={data.taskTypes}
+            dependencies={data.dependencies}
+            dependencyFlags={data.dependencyFlags}
+            onOpenTask={(taskId) => navigate(`/tasks/board/${data.board.id}/flow/task/${taskId}`)}
+            onLink={(pair) => link(pair)}
+            onUnlink={(pair) => unlink([pair])}
+            onReverseLink={(pair) => reverse(pair)}
+            onAddAfter={
+              spaceCaps.create
+                ? (taskId, parentTaskId) => openCreateTask({ boardId: data.board.id, parentTaskId, anchorTaskId: taskId })
+                : undefined
+            }
+            onAddTask={spaceCaps.create ? (parentTaskId) => addTask("", parentTaskId) : undefined}
+            readOnly={!spaceCaps.edit}
+          />
+        ) : view === "types" ? (
+          <TaskTypeBoard
+            key={boardId}
+            tasks={boardTasks}
+            statuses={data.statuses}
+            taskTypes={data.taskTypes}
+            assigneesByTask={data.assigneesByTask}
+            employeesById={employeesById}
+            dependencyFlags={data.dependencyFlags}
+            onOpenTask={(taskId) => navigate(`/tasks/board/${data.board.id}/types/task/${taskId}`)}
+            onChangeTaskType={(taskId, taskTypeId) => updateTaskType({ taskId, taskTypeId })}
+            canAddType={!!access?.edit_all}
+          />
+        ) : view === "gantt" ? (
           <TaskGantt
             key={boardId}
             tasks={boardTasks}
@@ -209,6 +252,7 @@ export default function TaskBoardPage({ view }: { view: "list" | "gantt" }) {
             onChangeDates={(taskId, change) => updateTaskDates({ taskId, ...change })}
             onLink={(pair) => link(pair)}
             onUnlink={(pair) => unlink([pair])}
+            onReverseLink={(pair) => reverse(pair)}
             onAddTask={spaceCaps.create ? () => addTask("", null) : undefined}
             readOnly={!spaceCaps.edit}
           />

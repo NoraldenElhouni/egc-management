@@ -167,7 +167,7 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
     }
     return out;
   }, [data]);
-  const { link, unlink } = useDependencyEdit(undefined);
+  const { link, unlink, reverse } = useDependencyEdit(undefined);
 
   // The Gantt: the boards in the list's order, and the visible tasks in each
   // board's own order. A subtask whose parent is filtered out moves up to its
@@ -304,6 +304,7 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
             onChangeDates={onChangeTaskDates}
             onLink={(pair) => link(pair)}
             onUnlink={(pair) => unlink([pair])}
+            onReverseLink={(pair) => reverse(pair)}
             onAddToGroup={spaceCaps.create ? (boardId) => openCreateTask({ boardId }) : undefined}
             readOnly={!spaceCaps.edit}
             emptyLabel={

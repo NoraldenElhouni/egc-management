@@ -159,3 +159,29 @@ export async function loadDependencyFlags(
 
   return { dependencies, blockedTaskIds, dependencyFlags, dependencyLinks };
 }
+
+/**
+ * Tasks that wait on an open task the chart doesn't show (one on another
+ * board). The Gantt and the link diagram draw every link between the tasks
+ * they show, so only these still need the stop icon.
+ */
+export function externalWaitIds(
+  tasks: { id: string; status_id: string }[],
+  dependencies: DependencyPair[],
+  flags: Map<string, DependencyFlags>,
+  categoryOfStatus: (statusId: string) => string | undefined,
+): Set<string> {
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const out = new Set<string>();
+  for (const t of tasks) {
+    const waiting = flags.get(t.id)?.waitingOn.length ?? 0;
+    if (!waiting) continue;
+    const openHere = dependencies.filter((d) => {
+      if (d.blocked_task_id !== t.id) return false;
+      const blocker = byId.get(d.blocking_task_id);
+      return !!blocker && !isFinished(categoryOfStatus(blocker.status_id));
+    }).length;
+    if (waiting > openHere) out.add(t.id);
+  }
+  return out;
+}

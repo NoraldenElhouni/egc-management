@@ -1,41 +1,47 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Check, ChevronDown, ChevronLeft } from "lucide-react";
 import Tooltip from "../../ui/Tooltip";
-import { HOLD_STYLE, WAIT_STYLE, holdingLabel, waitingLabel } from "../board/DependencyBadges";
+import { WAIT_STYLE, holdingLabel, waitingLabel } from "../board/DependencyBadges";
 import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
+import type { TypeBadge } from "../board/taskTypeBadge";
 import type { BarSpan } from "./ganttScale";
 import { addWorkingDays, workingDayOnOrAfter, workingDaysBetween } from "../board/workingDays";
 
-// One task's bar on the Gantt (TaskGantt.tsx). The page is dir="rtl", so
-// time runs right → left: a bar's RIGHT edge is its start date and its
-// LEFT edge its due date, and dragging leftward moves it later.
+// One task's bar on the Gantt (TaskGantt.tsx). Redesigned 2026-10-17 after
+// Construction Flow's "Days view" (plans/construction-flow-comparison/): there
+// is no side panel any more, so the bar carries the task — title on the first
+// line, dates and days on the second, the task type's badge at its end. A bar
+// too short for that puts the same text just past its end.
 //
-// Pointer events with capture on the bar itself (not native HTML5 drag,
-// which TaskRow uses for reordering): a resize needs continuous movement
-// updates and no drag ghost image. The bar previews the drag locally and
-// only reports once, on release — the mutation behind onCommit is
-// optimistic, so the bar doesn't snap back while the save is in flight.
+// The page is dir="rtl", so time runs right → left: a bar's RIGHT edge is its
+// start and its LEFT edge its end, and dragging leftward moves it later.
 //
-// On every board, a template included, a task is a start plus a number of
-// working days (`scheduling` below): the drag snaps to working days (Friday
-// is skipped; on a template every Day counts), a linked task can't be dragged
-// before its predecessors end
-// (`earliestDay`), and what's reported is what the gesture changed —
-// move = new start (same days), right edge = new start and days, left
-// edge = new days. The server works out the due date and moves the
-// tasks linked after it. A summary (parent with subtasks) isn't draggable.
+// Pointer events with capture on the bar itself (not native HTML5 drag): a
+// resize needs continuous movement and no drag ghost. The bar previews the
+// drag locally — its second line shows the new dates as you drag — and
+// reports once, on release; the mutation behind onCommit is optimistic.
+//
+// A task is a start plus a number of working days (`scheduling`): the drag
+// snaps to working days (Friday skipped; on a template every Day counts), a
+// linked task can't be dragged before its predecessors end (`earliestDay`),
+// and what's reported is what the gesture changed — move = new start (same
+// days), right edge = new start and days, left edge = new days. The server
+// works out the due date and moves the tasks linked after it. A summary (a
+// parent with subtasks) isn't draggable; its chevron folds its subtasks.
 
-export const ROW_H = 36;
-export const BAR_H = 20;
+export const ROW_H = 52;
+export const BAR_H = 36;
 /** Narrower than this and the resize handles would cover the whole bar. */
 const RESIZE_MIN_W = 16;
-/** A bar is never drawn thinner than this, even at month zoom (4px/day). */
+/** A bar is never drawn thinner than this, even at month zoom (2px/day). */
 export const MIN_BAR_W = 6;
-/** Half the diagonal of the rotated 14px milestone square. */
-export const MILESTONE_HALF = 10;
-/** Narrower than this, the title goes beside the bar instead of inside. */
-const LABEL_INSIDE_MIN_W = 80;
+/** Narrower than this, the text goes beside the bar instead of inside. */
+const LABEL_INSIDE_MIN_W = 90;
 /** Pointer travel below this is a click (open the task), not a drag. */
 const CLICK_SLOP = 3;
+/** Inside text stays this far from the scroller's right edge when the bar's
+ * start is scrolled out of view. */
+const LABEL_INSET = 6;
 
 type DragMode = "move" | "start" | "end";
 
@@ -101,40 +107,10 @@ function scheduledChange(span: BarSpan, sched: BarScheduling, mode: DragMode, ne
     : {};
 }
 
-function applyDrag(span: BarSpan, mode: DragMode, delta: number): { startDay: number; endDay: number } {
-  if (mode === "move") return { startDay: span.startDay + delta, endDay: span.endDay + delta };
-  // Resizing clamps at the other edge, so start can never pass due.
-  if (mode === "start") return { startDay: Math.min(span.startDay + delta, span.endDay), endDay: span.endDay };
-  return { startDay: span.startDay, endDay: Math.max(span.endDay + delta, span.startDay) };
-}
-
-/** Only the columns that held a value move with the bar — dragging a
- * due-date-only bar must not invent a start date. A resized edge is
- * always written, and a resize also writes the opposite edge if that
- * column was empty, so the saved task keeps the range the user drew
- * (otherwise a start-only bar would collapse back to one day). */
-function toChange(span: BarSpan, mode: DragMode, next: { startDay: number; endDay: number }): BarChange {
-  const change: BarChange = {};
-  if (mode === "move") {
-    if (span.hasStart) change.startDay = next.startDay;
-    if (span.hasDue) change.endDay = next.endDay;
-    return change;
-  }
-  if (mode === "start" || !span.hasStart) change.startDay = next.startDay;
-  if (mode === "end" || !span.hasDue) change.endDay = next.endDay;
-  return change;
-}
-
-/** White text on dark status colors, dark text on light ones (a yellow
- * "in review" status would otherwise be unreadable). */
-function textColorFor(hex: string): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return "#ffffff";
-  const n = parseInt(m[1], 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.65 ? "#1f2937" : "#ffffff";
+/** The folding control on a parent's bar (or its unscheduled row). */
+export interface BarFold {
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
 interface GanttBarProps {
@@ -142,25 +118,36 @@ interface GanttBarProps {
   rangeStart: number;
   pxPerDay: number;
   title: string;
+  /** The second line for a (possibly mid-drag) range: "17/10 – 19/10 · 3 أيام". */
+  subtitle: (startDay: number, endDay: number, days: number | null) => string;
+  /** "من ... إلى ..." for the tooltip. */
+  describe: (startDay: number, endDay: number) => string;
+  /** The status colour — the bar's tint and its start edge. */
   color: string;
-  /** done/closed status category — drawn faded. */
+  /** done/closed status category — drawn grey with a tick. */
   done: boolean;
   overdue: boolean;
-  /** Stop icon while it waits on an open task, "!" while others wait on it. */
+  /** What it waits on / what waits on it — named in the tooltip. */
   dependency?: DependencyFlags;
-  /** "من ... إلى ..." for a given (possibly mid-drag) day range. */
-  describe: (startDay: number, endDay: number) => string;
-  /** How far in from the scroller's right edge the sticky left panel ends
-   * (plus a little air) — the inside title slides to stay clear of it. */
-  labelInset: number;
+  /** Waits on an open task this chart doesn't draw (another board): the
+   * stop icon before the title. Links drawn on the chart need no icon. */
+  externalWait?: boolean;
+  /** The task type's badge. */
+  badge?: TypeBadge | null;
+  /** Critical-path view: outlined red, or faded. */
+  focus?: "critical" | "dim" | null;
+  /** Critical-path view: "حرجة …" / "يمكن أن تتأخر …", added to the tooltip. */
+  focusNote?: string | null;
   onOpen: () => void;
   onCommit: (change: BarChange) => void;
   /** No edit rights: the bar can be clicked open but never dragged. */
   readOnly?: boolean;
-  /** Calendar boards: drag in working days, respecting links. */
+  /** Start + working days, respecting links. */
   scheduling?: BarScheduling | null;
-  /** A parent with subtasks: drawn as a bracket spanning them, not draggable. */
+  /** A parent with subtasks: its span over them, not draggable. */
   summary?: boolean;
+  /** Parents: the chevron that folds their subtasks. */
+  fold?: BarFold | null;
   /** "لا يمكن أن تبدأ قبل …" for a drag held back by the task's links. */
   describeFloor?: (day: number) => string;
   /** Hovering the bar highlights its chain of links. */
@@ -177,17 +164,22 @@ export default function GanttBar({
   rangeStart,
   pxPerDay,
   title,
+  subtitle,
+  describe,
   color,
   done,
   overdue,
   dependency,
-  describe,
-  labelInset,
+  externalWait = false,
+  badge,
+  focus = null,
+  focusNote = null,
   onOpen,
   onCommit,
   readOnly: readOnlyProp = false,
   scheduling = null,
   summary = false,
+  fold = null,
   describeFloor,
   onHover,
   onLinkStart,
@@ -199,8 +191,9 @@ export default function GanttBar({
   const readOnly = readOnlyProp || summary;
 
   const scheduled = drag && scheduling ? applyScheduledDrag(span, scheduling, drag.mode, drag.delta) : null;
-  const view = scheduled ?? (drag ? applyDrag(span, drag.mode, drag.delta) : span);
-  const isMilestone = span.kind === "milestone";
+  const view = scheduled ?? span;
+  const days = scheduled ? scheduled.durationDays : (scheduling?.durationDays ?? null);
+
   const hoverHandlers = {
     onMouseEnter: () => {
       setHovered(true);
@@ -212,7 +205,7 @@ export default function GanttBar({
     },
   };
   // A DOM child of the bar (so hovering it still counts as hovering the
-  // bar), drawn just past the due-date end — the bar's left edge, RTL.
+  // bar), drawn just past the bar's end — its left edge, RTL.
   const linkDot = onLinkStart && hovered && !drag && (
     // The hit area touches the bar's edge and is wider than the dot, so
     // moving from the bar onto the dot never leaves the hovered area.
@@ -230,7 +223,6 @@ export default function GanttBar({
       <span className="ml-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-500 shadow transition-transform group-hover/dot:scale-125" />
     </span>
   );
-  const targetOutline = linkTarget ? "outline outline-2 outline-offset-2 outline-blue-500" : "";
 
   const begin = (mode: DragMode) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return;
@@ -260,200 +252,200 @@ export default function GanttBar({
       onOpen();
       return;
     }
-    if (finished.delta === 0) return;
-    const change = scheduling
-      ? scheduledChange(span, scheduling, finished.mode, applyScheduledDrag(span, scheduling, finished.mode, finished.delta))
-      : toChange(span, finished.mode, applyDrag(span, finished.mode, finished.delta));
+    if (finished.delta === 0 || !scheduling) return;
+    const change = scheduledChange(span, scheduling, finished.mode, applyScheduledDrag(span, scheduling, finished.mode, finished.delta));
     if (Object.keys(change).length > 0) onCommit(change);
   };
 
-  const dragLabel = drag?.moved
-    ? scheduled?.clamped && scheduling?.earliestDay != null && describeFloor
-      ? describeFloor(scheduling.earliestDay)
-      : describe(view.startDay, view.endDay)
-    : null;
   const tooltip = drag
     ? null
     : [
         `${title} · ${describe(span.startDay, span.endDay)}`,
+        summary ? "محسوبة من المهام الفرعية" : null,
         dependency?.waitingOn.length ? waitingLabel(dependency.waitingOn) : null,
         dependency?.holding.length ? holdingLabel(dependency.holding) : null,
+        focusNote,
       ]
         .filter(Boolean)
         .join(" · ");
-  const pointerHandlers = {
-    onPointerMove,
-    onPointerUp,
-    onPointerCancel: () => setDrag(null),
-  };
-  const dragLabelEl = dragLabel && (
-    <span
-      className={`pointer-events-none absolute -top-5 right-0 z-10 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] text-white ${
-        scheduled?.clamped ? "bg-red-600" : "bg-gray-800"
-      }`}
-    >
-      {dragLabel}
+
+  // Held back by its links: say why, above the bar.
+  const floorLabel = drag?.moved && scheduled?.clamped && scheduling?.earliestDay != null && describeFloor && (
+    <span className="pointer-events-none absolute -top-6 right-0 z-10 whitespace-nowrap rounded bg-red-600 px-1.5 py-0.5 text-[10px] text-white">
+      {describeFloor(scheduling.earliestDay)}
     </span>
   );
 
-  if (summary && !isMilestone) {
-    // A parent's span over its subtasks: a bracket, clickable, not draggable.
-    const right = (span.startDay - rangeStart) * pxPerDay;
-    const width = Math.max((span.endDay - span.startDay + 1) * pxPerDay, MIN_BAR_W);
-    return (
-      <>
-        <div
-          {...hoverHandlers}
-          onClick={onOpen}
-          className={`absolute cursor-pointer ${done ? "opacity-50" : ""} ${targetOutline}`}
-          style={{ right, width, top: ROW_H / 2 - 6, height: 12 }}
-        >
-          <Tooltip label={`${title} · ${describe(span.startDay, span.endDay)} · محسوبة من المهام الفرعية`} className="h-full w-full">
-            <span className="block h-full w-full border-x-[3px] border-gray-700">
-              <span className="mt-[3px] block h-1.5 w-full bg-gray-600" />
-            </span>
-          </Tooltip>
-          {linkDot}
-        </div>
-        <OutsideLabel right={right + width + 6} title={title} dependency={dependency} done={done} />
-      </>
-    );
-  }
-
-  if (isMilestone) {
-    const size = 14;
-    const center = (view.startDay - rangeStart + 0.5) * pxPerDay;
-    return (
-      <>
-        <div
-          ref={barRef}
-          {...pointerHandlers}
-          {...hoverHandlers}
-          onPointerDown={begin("move")}
-          className={`absolute select-none touch-none ${drag?.moved ? "z-[2] cursor-grabbing" : "cursor-grab"} ${targetOutline}`}
-          style={{ right: center - size / 2, top: (ROW_H - size) / 2, width: size, height: size }}
-        >
-          <Tooltip label={tooltip} className="h-full w-full">
-            <span
-              className={`block h-full w-full rotate-45 rounded-[2px] ${done ? "opacity-50" : ""} ${
-                overdue ? "ring-2 ring-red-400 ring-offset-1" : ""
-              }`}
-              style={{ background: color }}
-            />
-          </Tooltip>
-          {dragLabelEl}
-          {linkDot}
-        </div>
-        <OutsideLabel right={center + MILESTONE_HALF + 4} title={title} dependency={dependency} done={done} />
-      </>
-    );
-  }
-
   const right = (view.startDay - rangeStart) * pxPerDay;
   const width = Math.max((view.endDay - view.startDay + 1) * pxPerDay, MIN_BAR_W);
-  const resizable = width >= RESIZE_MIN_W;
+  const resizable = !readOnly && !!scheduling && width >= RESIZE_MIN_W;
   const labelInside = width >= LABEL_INSIDE_MIN_W;
+  const second = subtitle(view.startDay, view.endDay, days);
+
+  const tone = done
+    ? { background: "#F3F4F6", borderColor: "#E5E7EB", borderRightColor: "#9CA3AF" }
+    : summary
+      ? { background: "color-mix(in srgb, #374151 9%, white)", borderColor: "#374151", borderRightColor: "#374151" }
+      : {
+          background: `color-mix(in srgb, ${color} 16%, white)`,
+          borderColor: `color-mix(in srgb, ${color} 45%, white)`,
+          borderRightColor: color,
+        };
+  const ring = linkTarget
+    ? "outline outline-2 outline-offset-2 outline-blue-500"
+    : focus === "critical"
+      ? "outline outline-2 outline-offset-1 outline-red-600"
+      : scheduled?.clamped
+        ? "ring-2 ring-red-500"
+        : overdue && !done
+          ? "ring-2 ring-red-400 ring-offset-1"
+          : "";
+  const cursor = drag?.moved ? "z-[2] cursor-grabbing shadow-md" : readOnly ? "cursor-pointer" : "cursor-grab";
+
+  const label = (
+    <BarLabel
+      title={title}
+      second={second}
+      done={done}
+      externalWait={externalWait}
+      fold={fold}
+      badge={labelInside ? null : badge}
+      onBar={labelInside}
+    />
+  );
 
   return (
     <>
       <div
         ref={barRef}
-        {...pointerHandlers}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => setDrag(null)}
         {...hoverHandlers}
-        onPointerDown={begin("move")}
-        className={`absolute select-none touch-none rounded ${done ? "opacity-50" : ""} ${
-          overdue ? "ring-2 ring-red-400 ring-offset-1" : ""
-        } ${scheduled?.clamped ? "ring-2 ring-red-500" : ""} ${drag?.moved ? "z-[2] cursor-grabbing shadow-md" : readOnly ? "cursor-pointer" : "cursor-grab"} ${targetOutline}`}
-        style={{
-          right,
-          top: (ROW_H - BAR_H) / 2,
-          width,
-          height: BAR_H,
-          background: color,
-          color: textColorFor(color),
-        }}
+        onPointerDown={summary ? undefined : begin("move")}
+        onClick={summary ? onOpen : undefined}
+        className={`absolute select-none touch-none rounded-md border ${summary ? "border-x-[3px]" : "border-r-4"} ${ring} ${cursor}`}
+        style={{ right, top: (ROW_H - BAR_H) / 2, width, height: BAR_H, opacity: focus === "dim" ? 0.35 : undefined, ...tone }}
       >
         <Tooltip label={tooltip} className="h-full w-full">
           {/* overflow-clip, not -hidden: hidden would make this span the
-              nearest scroll container and the sticky title below would
-              stop sticking to the real scroller. */}
-          <span className="flex h-full w-full items-center overflow-clip px-1.5 text-[11px] font-medium">
+              nearest scroll container and the sticky text below would stop
+              sticking to the real scroller. */}
+          <span className="flex h-full w-full items-center overflow-clip pl-6">
             {labelInside && (
-              // Sticky: a bar that starts under the left panel keeps its
-              // title (and lock) visible beside the panel instead of
-              // being cut off by it.
-              <span className="sticky flex min-w-0 items-center gap-1" style={{ right: labelInset }}>
-                <DependencyIcons dependency={dependency} onBar />
-                <span className="truncate">{title}</span>
+              // Sticky: a bar whose start is scrolled out of view keeps its
+              // text at the visible edge instead of losing it.
+              <span className="sticky min-w-0" style={{ right: LABEL_INSET }}>
+                {label}
               </span>
             )}
           </span>
         </Tooltip>
-        {resizable && !readOnly && (
+        {labelInside && badge && (
+          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+            <Badge badge={badge} />
+          </span>
+        )}
+        {resizable && (
           <>
-            {/* RTL: right edge = start date, left edge = due date. */}
+            {/* RTL: right edge = start, left edge = end. */}
             <span
               onPointerDown={begin("start")}
-              className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize rounded-r hover:bg-black/20"
+              className="absolute inset-y-0 -right-1 w-2 cursor-ew-resize rounded-r hover:bg-black/15"
             />
             <span
               onPointerDown={begin("end")}
-              className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize rounded-l hover:bg-black/20"
+              className="absolute inset-y-0 left-0 w-2 cursor-ew-resize rounded-l hover:bg-black/15"
             />
           </>
         )}
-        {dragLabelEl}
+        {floorLabel}
         {linkDot}
       </div>
-      {!labelInside && <OutsideLabel right={right + width + 6} title={title} dependency={dependency} done={done} />}
+      {!labelInside && (
+        // Too short to hold its text: the same text just past its end,
+        // still a way to open the task.
+        <button
+          type="button"
+          onClick={onOpen}
+          className="absolute flex max-w-[260px] items-center text-right"
+          // past the link dot (22px beyond the bar's end)
+          style={{ right: right + width + 24, top: 0, height: ROW_H, opacity: focus === "dim" ? 0.35 : undefined }}
+        >
+          {label}
+        </button>
+      )}
     </>
   );
 }
 
-/** The title beside a bar too short to hold it — just past its due-date
- * end (to its left, RTL). At week/month zoom that's most bars; without
- * this they'd be unlabeled slivers. */
-function OutsideLabel({
-  right,
+/** Title on top, dates · days under it. */
+function BarLabel({
   title,
-  dependency,
+  second,
   done,
+  externalWait,
+  fold,
+  badge,
+  onBar,
 }: {
-  right: number;
   title: string;
-  dependency?: DependencyFlags;
+  second: string;
   done: boolean;
+  externalWait: boolean;
+  fold: BarFold | null;
+  badge: TypeBadge | null | undefined;
+  onBar: boolean;
 }) {
   return (
-    <span
-      className={`pointer-events-none absolute flex max-w-[220px] items-center gap-1 whitespace-nowrap text-xs text-gray-600 ${
-        done ? "opacity-50" : ""
-      }`}
-      style={{ right, top: 0, height: ROW_H }}
-    >
-      <DependencyIcons dependency={dependency} />
-      <span className="truncate">{title}</span>
+    <span className="flex min-w-0 items-center gap-1.5">
+      {fold && <FoldButton fold={fold} />}
+      {badge && <Badge badge={badge} />}
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span
+          className={`flex min-w-0 items-center gap-1 text-[12.5px] font-semibold ${done ? "text-gray-500" : "text-gray-900"}`}
+        >
+          {externalWait && (
+            <span className={`inline-flex shrink-0 ${onBar ? "rounded-full bg-white/90 p-px" : ""} ${WAIT_STYLE.text}`} title="تنتظر مهمة في لوحة أخرى">
+              <WAIT_STYLE.Icon className="h-3 w-3" />
+            </span>
+          )}
+          {done && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />}
+          <span className={`truncate ${done ? "line-through decoration-gray-400" : ""}`}>{title}</span>
+        </span>
+        <span className="truncate text-[11px] text-gray-500">{second}</span>
+      </span>
     </span>
   );
 }
 
-/** The board row's stop / "!" beside a bar's title. On the bar itself each
- * sits on a white dot so it reads on any status colour. */
-function DependencyIcons({ dependency, onBar = false }: { dependency?: DependencyFlags; onBar?: boolean }) {
-  if (!dependency) return null;
-  const dot = onBar ? "rounded-full bg-white/90 p-px" : "";
+export function FoldButton({ fold }: { fold: BarFold }) {
   return (
-    <>
-      {dependency.waitingOn.length > 0 && (
-        <span className={`inline-flex shrink-0 ${dot} ${WAIT_STYLE.text}`}>
-          <WAIT_STYLE.Icon className="h-3 w-3" />
-        </span>
-      )}
-      {dependency.holding.length > 0 && (
-        <span className={`inline-flex shrink-0 ${dot} ${HOLD_STYLE.text}`}>
-          <HOLD_STYLE.Icon className="h-3 w-3" />
-        </span>
-      )}
-    </>
+    <button
+      type="button"
+      // The bar opens the task on click — the chevron only folds.
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        fold.onToggle();
+      }}
+      title={fold.collapsed ? "إظهار المهام الفرعية" : "إخفاء المهام الفرعية"}
+      className="pointer-events-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-600 hover:bg-black/10"
+    >
+      {fold.collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+    </button>
+  );
+}
+
+/** The task type's lettered circle. */
+export function Badge({ badge, size = 18 }: { badge: TypeBadge; size?: number }) {
+  return (
+    <span
+      title={badge.name}
+      className="flex shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none text-white"
+      style={{ background: badge.color, width: size, height: size }}
+    >
+      {badge.label}
+    </span>
   );
 }

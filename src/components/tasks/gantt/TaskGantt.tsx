@@ -9,33 +9,21 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "react-router-dom";
-import {
-  CalendarCheck,
-  ChevronDown,
-  ChevronLeft,
-  ChevronsDown,
-  ChevronsUp,
-  Eye,
-  EyeOff,
-  Plus,
-} from "lucide-react";
+import { ArrowLeftRight, ChevronDown, ChevronLeft, ChevronsDown, ChevronsUp, Crosshair, Maximize2, Plus } from "lucide-react";
 import type {
   DependencyPair,
   StatusRow,
   TaskRow,
   TaskTypeLite,
 } from "../../../hooks/tasks/useTaskBoard";
-import type { DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
-import Tooltip from "../../ui/Tooltip";
+import { externalWaitIds, type DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import { dayOffsetLabel } from "../board/templateDates";
-import { formatSlashDate } from "../board/taskDates";
 import { PointMenu } from "../board/AnchoredMenu";
 import { useTemplateMode } from "../TemplateModeContext";
-import GanttBar, { MILESTONE_HALF, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
-import EditGuard from "../EditGuard";
-import GanttDateCell from "./GanttDateCell";
-import DurationCell from "../board/DurationCell";
-import { formatDayWithWeekday, workingDaysBetween, workingDaysLabel, dayString } from "../board/workingDays";
+import { typeBadges } from "../board/taskTypeBadge";
+import { criticalPath, linkKey, type CriticalPathResult, type CriticalTask } from "../schedule/criticalPath";
+import GanttBar, { BAR_H, FoldButton, MIN_BAR_W, ROW_H, type BarChange } from "./GanttBar";
+import { formatDayWithWeekday, workingDaysBetween, dayString } from "../board/workingDays";
 import {
   MAX_PX_PER_DAY,
   MIN_PX_PER_DAY,
@@ -43,67 +31,68 @@ import {
   ZOOM_PX_PER_DAY,
   barSpan,
   computeRange,
+  criticalCount,
   dayAdapter,
+  daysShort,
   fitRange,
   headerRows,
   spanLabel,
+  spanShort,
+  tasksCount,
   weekendDays,
   zoomForPxPerDay,
   type BarSpan,
   type GanttZoom,
 } from "./ganttScale";
 
-// Board Gantt view — the same board as TaskTable, on a timeline.
-// Reached at /tasks/board/:id/gantt (TasksRoutes.tsx); reads the same
-// ["task-board", boardId] query as the list, so edits made in the task
-// panel show up here without any extra invalidation.
+// Board Gantt view — the same board as TaskTable, on a timeline. Reached at
+// /tasks/board/:id/gantt (TasksRoutes.tsx); reads the same ["task-board",
+// boardId] query as the list, so edits made in the task panel show up here
+// without any extra invalidation.
 //
-// Layout: ONE scroll container in both axes. The left panel — start date,
-// end date, task name, in reading order, so rightmost first (the page is
-// dir="rtl") — is sticky to the right edge and the two-row date header is
-// sticky to the top, so rows and bars stay aligned without syncing two
-// separate scroll positions. Time runs right → left, like
-// ProjectsDueDateTimeline.tsx — every horizontal position is a `right:`
-// offset from the start of the visible range.
+// Redesigned 2026-10-17 after Construction Flow's "Days view", which a client
+// gave us as the model (plans/construction-flow-comparison/): no side panel
+// of columns any more — the timeline fills the screen and each bar carries
+// its own title, dates and days (GanttBar.tsx). Rows run as a staircase:
+// every list of siblings is ordered by start date, subtasks under their
+// parent, unscheduled ones last. Dates are typed in the task panel; here
+// they are dragged.
 //
-// Each date column can be hidden, and the name column is resized by
-// dragging the line between it and the timeline. Zoom is continuous
-// (pxPerDay): Ctrl/Cmd+scroll anywhere on the chart (a trackpad pinch
-// arrives as Ctrl+wheel), or plain scroll over the date header. The
-// Day / Week / Month buttons are presets of the same value.
+// ONE scroll container in both axes, the two-row date header sticky to the
+// top. Time runs right → left (the page is dir="rtl"), so every horizontal
+// position is a `right:` offset from the start of the visible range. Zoom is
+// continuous (pxPerDay): Ctrl/Cmd+scroll anywhere (a trackpad pinch arrives as
+// Ctrl+wheel), or plain scroll over the date header; Day / Week / Month are
+// presets of the same value, and "ملاءمة الكل" fits the whole plan.
 //
-// Scheduling (tasks/migrations/2026-10-13_task_scheduling_a.sql): on a
-// real board a task is a start plus working days (Friday off), linked
-// finish-to-start to the tasks before it. Dragging a bar, resizing it or
-// editing a date / the days column goes to the scheduler, which moves
-// every task linked after it; the dragged bar moves at once, the rest when
-// the board refetches. A linked bar can't be dragged before its
-// predecessors end, a parent with subtasks is a bracket spanning them, and
-// the links are drawn as lines between the bars (dashed with "انتظار N"
-// where a task waits N working days; hovering a bar lights up its chain).
-// The toolbar shows the board's planned end. Dependencies are added from
-// the create dialog and the task panel. Template boards ("Day N") keep the
-// plain date writes and the clear-dates button.
+// Scheduling (tasks/migrations/2026-10-13_task_scheduling_a.sql): on a real
+// board a task is a start plus working days (Friday off), linked
+// finish-to-start to the tasks before it. Dragging a bar or resizing it goes
+// to the scheduler, which moves every task linked after it; the dragged bar
+// moves at once, the rest when the board refetches. A linked bar can't be
+// dragged before its predecessors end, and a parent with subtasks is a summary
+// bar spanning them. Links are drawn between the bars (dashed with "انتظار N"
+// where a task waits N working days; hovering a bar lights up its chain), new
+// ones are dragged from a bar's end dot, and clicking one offers to reverse or
+// remove it. Template boards count in "Day N" with every day counting.
+//
+// "المسار الحرج" (Construction Flow's "Focus on") colours the critical
+// path — schedule/criticalPath.ts — and fades everything that can slip.
 //
 // The space page (SpaceTasksPage.tsx, /tasks/space/:id/gantt) shows every
-// board of the space on one chart by passing `groups`: each board gets a
-// header row (name, its first start and last end, a summary bar, "+" to add
-// a task to it) with the board's own task tree under it. Folding every
-// board leaves one bar per board.
+// board of the space on one chart by passing `groups`: each board gets a band
+// (name, count, "+", a summary bar) with the board's own tasks under it. The
+// critical path is worked out per board there.
 
-const DATE_COL_W = 96;
-const DAYS_COL_W = 64;
-/** Corner radius of the link lines. */
-const LINK_RADIUS = 4;
-const DEFAULT_NAME_W = 260;
-const MIN_NAME_W = 140;
-const MAX_NAME_W = 560;
 const HEADER_ROW_H = 24;
 const HEADER_H = HEADER_ROW_H * 2;
-const INDENT_PX = 20;
-const ZOOMS: GanttZoom[] = ["day", "week", "month"];
 const DEFAULT_STATUS_COLOR = "#6B7280"; // same fallback as StatusCell.tsx
 const ARROW_STUB = 8;
+/** Corner radius of the link lines. */
+const LINK_RADIUS = 4;
+const ZOOMS: GanttZoom[] = ["day", "week", "month"];
+/** "Fit" leaves this much air at each end of the plan. */
+const FIT_MARGIN = 24;
 
 // localStorage — every access wrapped, since storage can be unreadable
 // (private window, blocked site data) and none of this is worth failing
@@ -111,8 +100,6 @@ const ARROW_STUB = 8;
 const PX_STORAGE_KEY = "tasks.ganttPxPerDay";
 // Before scroll-zoom the saved choice was one of "day" | "week" | "month".
 const LEGACY_ZOOM_STORAGE_KEY = "tasks.ganttZoom";
-const COLUMNS_STORAGE_KEY = "tasks.ganttColumns";
-const NAME_W_STORAGE_KEY = "tasks.ganttNameWidth";
 
 function readStored(key: string): string | null {
   try {
@@ -142,25 +129,6 @@ function loadPxPerDay(): number {
   return ZOOM_PX_PER_DAY.day;
 }
 
-interface DateColumns {
-  start: boolean;
-  days: boolean;
-  end: boolean;
-}
-
-function loadColumns(): DateColumns {
-  try {
-    const raw = readStored(COLUMNS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<DateColumns>;
-      return { start: parsed.start !== false, days: parsed.days !== false, end: parsed.end !== false };
-    }
-  } catch {
-    // unparseable — use the default
-  }
-  return { start: true, days: true, end: true };
-}
-
 /** An SVG path through `points` with rounded corners — the link lines. */
 function roundedPath(points: [number, number][], radius: number): string {
   if (points.length < 2) return "";
@@ -186,11 +154,6 @@ function roundedPath(points: [number, number][], radius: number): string {
   return `${d} L ${lx} ${ly}`;
 }
 
-function loadNameWidth(): number {
-  const n = Number(readStored(NAME_W_STORAGE_KEY));
-  return Number.isFinite(n) && n > 0 ? clamp(n, MIN_NAME_W, MAX_NAME_W) : DEFAULT_NAME_W;
-}
-
 export interface GanttDateChange {
   startDate?: string | null;
   dueDate?: string | null;
@@ -203,7 +166,7 @@ function ignoreDateChange(): void {
   return;
 }
 
-/** A header row on a chart that spans several boards — one per board. */
+/** A band on a chart that spans several boards — one per board. */
 export interface GanttGroup {
   id: string;
   label: string;
@@ -222,18 +185,19 @@ interface TaskGanttProps {
   onLink?: (pair: DependencyPair) => void;
   /** Click a link line → remove it. */
   onUnlink?: (pair: DependencyPair) => void;
+  /** Click a link line → turn it around. */
+  onReverseLink?: (pair: DependencyPair) => void;
   /** Opens the create dialog (real boards, with create rights). */
   onAddTask?: () => void;
-  /** No edit rights: bars open the task but cannot be dragged and the date
-   * columns / clear button are inert. */
+  /** No edit rights: bars open the task but cannot be dragged. */
   readOnly?: boolean;
   /** Opens a task's detail panel (the page's nested task/:taskId route). */
   onOpenTask: (taskId: string) => void;
-  /** Several boards on one chart: a header row per group, in this order,
-   * with the group's tasks (groupOf) under it. */
+  /** Several boards on one chart: a band per group, in this order, with the
+   * group's tasks (groupOf) under it. */
   groups?: GanttGroup[];
   groupOf?: (task: TaskRow) => string;
-  /** The "+" on a group's header row (with create rights). */
+  /** The "+" on a group's band (with create rights). */
   onAddToGroup?: (groupId: string) => void;
   emptyLabel?: string;
 }
@@ -245,6 +209,8 @@ type VisibleRow =
 // Groups fold in the same set as parent tasks; the prefix keeps the keys apart.
 const groupKey = (groupId: string) => `group:${groupId}`;
 
+const isFinished = (category: string | undefined) => category === "done" || category === "closed";
+
 export default function TaskGantt({
   tasks,
   statuses,
@@ -254,6 +220,7 @@ export default function TaskGantt({
   onChangeDates: onChangeDatesProp,
   onLink,
   onUnlink,
+  onReverseLink,
   onAddTask,
   readOnly = false,
   onOpenTask,
@@ -266,6 +233,7 @@ export default function TaskGantt({
   const isTemplate = useTemplateMode();
   const adapter = useMemo(() => dayAdapter(isTemplate), [isTemplate]);
   const todayRef = useRef<HTMLDivElement>(null);
+  const badges = useMemo(() => typeBadges(taskTypes), [taskTypes]);
 
   // Continuous zoom. `zoom` (which header cells to draw) is derived from it.
   const [pxPerDay, setPxPerDay] = useState(loadPxPerDay);
@@ -287,50 +255,6 @@ export default function TaskGantt({
     recenterRef.current = true;
     setPxPerDay(ZOOM_PX_PER_DAY[z]);
   };
-
-  // Left panel: two optional date columns, then the resizable name column.
-  const [columns, setColumns] = useState(loadColumns);
-  const toggleColumn = (key: keyof DateColumns) =>
-    setColumns((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      writeStored(COLUMNS_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  const [nameW, setNameW] = useState(loadNameWidth);
-  const leftW =
-    (columns.start ? DATE_COL_W : 0) + (columns.days ? DAYS_COL_W : 0) + (columns.end ? DATE_COL_W : 0) + nameW;
-
-  // Dragging the line on the name column's left edge (the boundary with
-  // the timeline). RTL: the column's right edge is fixed against the date
-  // columns, so moving the line LEFT (clientX shrinking) widens it.
-  // Pointer capture keeps the drag alive when the pointer outruns the
-  // 6px line; the same handlers serve the header cell and every row.
-  const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
-  const [resizing, setResizing] = useState(false);
-  const resizeHandlers = {
-    onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.currentTarget.setPointerCapture(e.pointerId);
-      resizeRef.current = { startX: e.clientX, startW: nameW };
-      setResizing(true);
-    },
-    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
-      const drag = resizeRef.current;
-      if (drag) setNameW(clamp(drag.startW + (drag.startX - e.clientX), MIN_NAME_W, MAX_NAME_W));
-    },
-    onPointerUp: () => {
-      resizeRef.current = null;
-      setResizing(false);
-    },
-    onPointerCancel: () => {
-      resizeRef.current = null;
-      setResizing(false);
-    },
-  };
-  useEffect(() => {
-    if (!resizing) writeStored(NAME_W_STORAGE_KEY, String(nameW));
-  }, [nameW, resizing]);
 
   // The scroll area's visible size — the timeline and its grid stretch to
   // fill it rather than ending partway across (or down) the screen.
@@ -362,40 +286,34 @@ export default function TaskGantt({
     return map;
   }, [tasks]);
 
-  // Every parent starts collapsed, matching the list view. Lazy init is
-  // enough here (unlike TaskTable's ref-guarded seed): this component
-  // only mounts once the board has loaded.
+  // Every parent starts folded, like the list view. Lazy init is enough:
+  // this component only mounts once the board has loaded.
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(
     () => new Set(tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id)),
   );
-  const toggleCollapse = (taskId: string) =>
+  const toggleCollapse = (key: string) =>
     setCollapsedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(taskId)) next.delete(taskId);
-      else next.add(taskId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
+  const parentIds = useMemo(() => tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id), [tasks, childrenByParent]);
+  const anyCollapsed = parentIds.some((id) => collapsedIds.has(id)) || (groups ?? []).some((g) => collapsedIds.has(groupKey(g.id)));
   // With groups this folds the boards too: one summary bar per board.
-  const collapseAll = () =>
-    setCollapsedIds(
-      new Set([
-        ...tasks.filter((t) => childrenByParent.has(t.id)).map((t) => t.id),
-        ...(groups ?? []).map((g) => groupKey(g.id)),
-      ]),
-    );
+  const collapseAll = () => setCollapsedIds(new Set([...parentIds, ...(groups ?? []).map((g) => groupKey(g.id))]));
   const expandAll = () => setCollapsedIds(new Set());
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
 
   const spans = useMemo(() => {
     const map = new Map<string, BarSpan>();
-    for (const t of tasks) map.set(t.id, barSpan(t, taskTypes, adapter));
+    for (const t of tasks) map.set(t.id, barSpan(t, adapter));
     return map;
-  }, [tasks, taskTypes, adapter]);
+  }, [tasks, adapter]);
 
   // A parent with no dates of its own still shows where its subtree sits:
-  // a thin summary line from its earliest descendant start to its latest
-  // descendant due date.
+  // its earliest descendant start to its latest descendant end.
   const rollups = useMemo(() => {
     const map = new Map<string, { startDay: number; endDay: number }>();
     const visit = (taskId: string): { startDay: number; endDay: number } | null => {
@@ -417,7 +335,7 @@ export default function TaskGantt({
     return map;
   }, [childrenByParent, spans]);
 
-  const minDays = viewport.width > leftW ? Math.ceil((viewport.width - leftW) / pxPerDay) : 0;
+  const minDays = viewport.width > 0 ? Math.ceil(viewport.width / pxPerDay) : 0;
   const range = useMemo(
     () => fitRange(computeRange(Array.from(spans.values()), adapter), zoom, adapter, minDays),
     [spans, adapter, zoom, minDays],
@@ -441,10 +359,22 @@ export default function TaskGantt({
     return map;
   }, [groups, groupOf, tasks, spans]);
 
+  // The staircase: each list of siblings by start date (a parent by its
+  // subtree's start), unscheduled last, otherwise in the board's own order.
   const rows = useMemo(() => {
+    const startOf = (t: TaskRow) => {
+      const own = spans.get(t.id);
+      if (own && own.kind !== "none") return own.startDay;
+      return rollups.get(t.id)?.startDay ?? Number.POSITIVE_INFINITY;
+    };
+    const ordered = (list: TaskRow[]) =>
+      list
+        .map((task, index) => ({ task, index, start: startOf(task) }))
+        .sort((a, b) => (a.start === b.start ? a.index - b.index : a.start < b.start ? -1 : 1))
+        .map((x) => x.task);
     const out: VisibleRow[] = [];
     const walk = (list: TaskRow[], depth: number) => {
-      for (const task of list) {
+      for (const task of ordered(list)) {
         const hasChildren = childrenByParent.has(task.id);
         out.push({ kind: "task", task, depth, hasChildren });
         if (hasChildren && !collapsedIds.has(task.id)) walk(childrenByParent.get(task.id) ?? [], depth + 1);
@@ -460,7 +390,7 @@ export default function TaskGantt({
       walk(top, 0);
     }
     return out;
-  }, [childrenByParent, collapsedIds, groups, groupOf, tasks]);
+  }, [childrenByParent, collapsedIds, groups, groupOf, tasks, spans, rollups]);
 
   const datedCount = useMemo(
     () => Array.from(spans.values()).filter((s) => s.kind !== "none").length,
@@ -468,8 +398,8 @@ export default function TaskGantt({
   );
   const undatedCount = tasks.length - datedCount;
 
-  // The board's planned span: first start to last end, in working days
-  // (on a template, in Days).
+  // The planned span: first start to last end, in working days (on a
+  // template, in Days).
   const plan = useMemo(() => {
     let first: string | null = null;
     let last: string | null = null;
@@ -483,10 +413,62 @@ export default function TaskGantt({
     if (!first || !last) return null;
     return {
       end: last,
+      startDay: adapter.toDay(first),
       endDay: adapter.toDay(last),
       workingDays: workingDaysBetween(adapter.toDay(first), adapter.toDay(last), isTemplate),
     };
   }, [tasks, isTemplate, adapter]);
+
+  // --- Critical path ("المسار الحرج") ------------------------------
+  const [focus, setFocus] = useState(false);
+  const critical = useMemo((): { ok: boolean; result: CriticalPathResult | null } | null => {
+    if (!focus) return null;
+    const toInput = (t: TaskRow): CriticalTask => ({
+      id: t.id,
+      parent_task_id: t.parent_task_id,
+      start_date: t.start_date,
+      due_date: t.due_date,
+      start_lag_days: t.start_lag_days,
+      frozen: isFinished(statusById.get(t.status_id)?.category),
+    });
+    // On the space chart each board is its own schedule: links between
+    // boards never move dates, so they never make anything critical.
+    const buckets = new Map<string, TaskRow[]>();
+    for (const t of tasks) {
+      const key = groups && groupOf ? groupOf(t) : "";
+      const list = buckets.get(key) ?? [];
+      list.push(t);
+      buckets.set(key, list);
+    }
+    const merged: CriticalPathResult = { slack: new Map(), critical: new Set(), criticalLinks: new Set(), count: 0 };
+    let ok = true;
+    for (const list of buckets.values()) {
+      const ids = new Set(list.map((t) => t.id));
+      const pairs = dependencies.filter((d) => ids.has(d.blocking_task_id) && ids.has(d.blocked_task_id));
+      const outcome = criticalPath(list.map(toInput), pairs, { plain: isTemplate });
+      if (!outcome.ok) {
+        ok = false;
+        continue;
+      }
+      outcome.result.slack.forEach((v, k) => merged.slack.set(k, v));
+      outcome.result.critical.forEach((k) => merged.critical.add(k));
+      outcome.result.criticalLinks.forEach((k) => merged.criticalLinks.add(k));
+      merged.count += outcome.result.count;
+    }
+    return { ok, result: ok || merged.slack.size > 0 ? merged : null };
+  }, [focus, tasks, dependencies, groups, groupOf, statusById, isTemplate]);
+  const criticalResult = critical?.result ?? null;
+  const unit = isTemplate ? "يوم" : "يوم عمل";
+  const focusOf = (taskId: string): "critical" | "dim" | null => {
+    if (!criticalResult) return null;
+    return criticalResult.critical.has(taskId) ? "critical" : "dim";
+  };
+  const focusNoteOf = (taskId: string): string | null => {
+    if (!criticalResult) return null;
+    if (criticalResult.critical.has(taskId)) return "حرجة — أي تأخير فيها يؤخر النهاية";
+    const slack = criticalResult.slack.get(taskId);
+    return slack !== undefined ? `يمكن أن تتأخر ${slack} ${unit} دون تأخير النهاية` : null;
+  };
 
   // Hovering a bar lights up its whole chain: everything it waits for and
   // everything that waits for it.
@@ -511,10 +493,17 @@ export default function TaskGantt({
     return ids;
   }, [hoveredId, dependencies]);
   const lagById = useMemo(() => new Map(tasks.map((t) => [t.id, t.start_lag_days ?? 0])), [tasks]);
+
+  // Waits on a task this chart doesn't show (another board): the only waits
+  // that keep an icon — every other link is drawn.
+  const externalWaits = useMemo(
+    () => externalWaitIds(tasks, dependencies, dependencyFlags, (id) => statusById.get(id)?.category),
+    [tasks, dependencies, dependencyFlags, statusById],
+  );
   const titleById = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
 
   // Drag-to-link: from a bar's end dot (GanttBar's onLinkStart) to any
-  // other row — the whole row is the target, not just its thin bar. Points
+  // other row — the whole row is the target, not just its bar. Points
   // are in the arrows SVG's own coordinates.
   const canLink = !readOnly && !!onLink;
   const arrowsRef = useRef<SVGSVGElement>(null);
@@ -564,27 +553,27 @@ export default function TaskGantt({
     setLinking({ fromId, x0, y0, x: x0, y: y0, targetId: null });
   };
 
-  // Click a link line: a small menu to remove it.
+  // Click a link line: a small menu to reverse or remove it.
   const [linkMenu, setLinkMenu] = useState<{ x: number; y: number; pair: DependencyPair } | null>(null);
   const [hoveredArrow, setHoveredArrow] = useState<string | null>(null);
 
-  // Dependency arrows, finish → start: from the blocker's due-date edge
-  // (its LEFT edge, RTL) to the blocked task's start edge (its RIGHT
-  // edge). Only edges with both ends visible on this board are drawn —
-  // a blocker on another board is already shown by the lock icon. Red
-  // when the blocked task starts before its blocker is due.
+  // Dependency arrows, finish → start: from the blocker's end edge (its LEFT
+  // edge, RTL) to the blocked task's start edge (its RIGHT edge). Only edges
+  // with both ends on visible rows are drawn — a blocker on another board is
+  // already shown by the stop icon. Red when the blocked task starts before
+  // its blocker ends.
   const arrows = useMemo(() => {
     const rowIndexById = new Map<string, number>();
     rows.forEach((r, i) => {
       if (r.kind === "task") rowIndexById.set(r.task.id, i);
     });
     const x = (day: number) => (day - range.startDay) * pxPerDay;
-    const startEdge = (s: BarSpan) =>
-      s.kind === "milestone" ? x(s.startDay) + pxPerDay / 2 - MILESTONE_HALF : x(s.startDay);
-    const endEdge = (s: BarSpan) =>
-      s.kind === "milestone"
-        ? x(s.startDay) + pxPerDay / 2 + MILESTONE_HALF
-        : x(s.startDay) + Math.max((s.endDay - s.startDay + 1) * pxPerDay, MIN_BAR_W);
+    const spanOf = (id: string) => {
+      const own = spans.get(id);
+      if (own && own.kind !== "none") return own;
+      const rollup = rollups.get(id);
+      return rollup ? { ...rollup, kind: "range" as const } : null;
+    };
 
     const out: {
       key: string;
@@ -595,76 +584,95 @@ export default function TaskGantt({
       label: { x: number; y: number } | null;
       inChain: boolean;
     }[] = [];
-    for (const dep of dependencies) {
-      const from = rowIndexById.get(dep.blocking_task_id);
-      const to = rowIndexById.get(dep.blocked_task_id);
-      if (from === undefined || to === undefined || from === to) continue;
-      const a = spans.get(dep.blocking_task_id);
-      const b = spans.get(dep.blocked_task_id);
-      if (!a || !b || a.kind === "none" || b.kind === "none") continue;
+    // Several links out of one bar leave it a few pixels apart.
+    const visible = dependencies.filter(
+      (d) => rowIndexById.has(d.blocking_task_id) && rowIndexById.has(d.blocked_task_id) && d.blocking_task_id !== d.blocked_task_id,
+    );
+    const outIndex = new Map<string, number>();
+    const byBlocker = new Map<string, DependencyPair[]>();
+    for (const d of visible) byBlocker.set(d.blocking_task_id, [...(byBlocker.get(d.blocking_task_id) ?? []), d]);
+    for (const list of byBlocker.values()) {
+      list
+        .slice()
+        .sort((p, q) => (rowIndexById.get(p.blocked_task_id) as number) - (rowIndexById.get(q.blocked_task_id) as number))
+        .forEach((d, i) => outIndex.set(linkKey(d), i));
+    }
+    const barTop = (ROW_H - BAR_H) / 2;
+
+    for (const dep of visible) {
+      const from = rowIndexById.get(dep.blocking_task_id) as number;
+      const to = rowIndexById.get(dep.blocked_task_id) as number;
+      const a = spanOf(dep.blocking_task_id);
+      const b = spanOf(dep.blocked_task_id);
+      if (!a || !b || from === to) continue;
 
       // SVG coordinates run left → right; convert from right-offsets.
-      const x1 = trackWidth - endEdge(a);
-      const x2 = trackWidth - startEdge(b);
-      const y1 = from * ROW_H + ROW_H / 2;
+      const aStart = trackWidth - x(a.startDay);
+      const x1 = trackWidth - (x(a.startDay) + Math.max((a.endDay - a.startDay + 1) * pxPerDay, MIN_BAR_W));
+      const x2 = trackWidth - x(b.startDay);
       const y2 = to * ROW_H + ROW_H / 2;
+      const down = to > from;
+      // Construction Flow's line: out of the blocker just inside its end,
+      // straight down (or up) to the waiting task's row, then across into
+      // its start.
+      const xv = Math.min(x1 + 10 + (outIndex.get(linkKey(dep)) ?? 0) * 6, aStart - 4);
       let points: [number, number][];
-      if (x2 <= x1 - ARROW_STUB * 2) {
-        points = [[x1, y1], [x1 - ARROW_STUB, y1], [x1 - ARROW_STUB, y2], [x2, y2]];
+      if (x2 <= xv - ARROW_STUB) {
+        points = [[xv, from * ROW_H + (down ? barTop + BAR_H : barTop)], [xv, y2], [x2, y2]];
       } else {
-        // Blocked task starts at/before the blocker's end — route around:
-        // out of the blocker, along the row boundary next to the blocked
-        // row, and back in from its start side.
-        const midY = to > from ? to * ROW_H : (to + 1) * ROW_H;
+        // The waiting task starts before the blocker ends (a conflict):
+        // out of the blocker's end, along the row boundary next to the
+        // waiting row, and back in from its start side.
+        const y1 = from * ROW_H + ROW_H / 2;
+        const midY = down ? to * ROW_H : (to + 1) * ROW_H;
         points = [[x1, y1], [x1 - ARROW_STUB, y1], [x1 - ARROW_STUB, midY], [x2 + ARROW_STUB, midY], [x2 + ARROW_STUB, y2], [x2, y2]];
       }
       const lag = lagById.get(dep.blocked_task_id) ?? 0;
       out.push({
-        key: `${dep.blocking_task_id}-${dep.blocked_task_id}`,
+        key: linkKey(dep),
         pair: { blocking_task_id: dep.blocking_task_id, blocked_task_id: dep.blocked_task_id },
         d: roundedPath(points, LINK_RADIUS),
         conflict: b.startDay < a.endDay,
         lag,
         // the wait label sits on the last stretch, just before the task starts
-        label: lag > 0 && x1 - ARROW_STUB - x2 > 40 ? { x: (x1 - ARROW_STUB + x2) / 2, y: y2 - 4 } : null,
+        label: lag > 0 && points.length === 3 && xv - x2 > 40 ? { x: (xv + x2) / 2, y: y2 - 4 } : null,
         inChain: !!chain && chain.has(dep.blocking_task_id) && chain.has(dep.blocked_task_id),
       });
     }
     return out;
-  }, [rows, dependencies, spans, trackWidth, range, pxPerDay, lagById, chain]);
+  }, [rows, dependencies, spans, rollups, trackWidth, range, pxPerDay, lagById, chain]);
 
   const scrollToToday = () =>
     todayRef.current?.scrollIntoView({ inline: "center", block: "nearest" });
 
   // Open on today rather than on the start of the range, and re-center
-  // after a preset button — but not after a scroll-zoom, which keeps the
-  // date under the cursor fixed instead (below). scrollIntoView rather
-  // than setting scrollLeft: in an RTL scroller scrollLeft runs negative,
-  // which is easy to get backwards.
+  // after a preset button — but not after a scroll-zoom or "fit", which
+  // place a chosen day instead (below). scrollIntoView rather than setting
+  // scrollLeft: in an RTL scroller scrollLeft runs negative, which is easy
+  // to get backwards.
   useEffect(() => {
     if (!recenterRef.current) return;
     recenterRef.current = false;
     scrollToToday();
   }, [pxPerDay]);
 
-  // --- Scroll-zoom -------------------------------------------------------
-  // Ctrl/Cmd+wheel anywhere on the chart (Chromium delivers a trackpad
-  // pinch as Ctrl+wheel), or a plain wheel over the date header. Anything
-  // else is left alone, so scrolling over the rows still scrolls them.
+  // --- Zoom that keeps a day in place -------------------------------------
+  // Ctrl/Cmd+wheel anywhere on the chart (Chromium delivers a trackpad pinch
+  // as Ctrl+wheel), or a plain wheel over the date header. Anything else is
+  // left alone, so scrolling over the rows still scrolls them.
   //
   // A native non-passive listener, not React's onWheel (passive, so its
-  // preventDefault is silently ignored) — the same reason
-  // ProjectsDueDateTimeline.tsx attaches its own. It is attached once, so
-  // it reads the current layout through `latest`.
-  const latest = useRef({ rangeStart: 0, leftW, pxPerDay });
+  // preventDefault is silently ignored). It is attached once, so it reads
+  // the current layout through `latest`.
+  const latest = useRef({ rangeStart: 0, pxPerDay });
   const pxTarget = useRef(pxPerDay); // where zoom is headed, ahead of React's render
-  // The day under the cursor when a zoom burst began, and how far from the
-  // scroller's right edge the cursor was. Held (not recomputed) until the
-  // render lands, so several wheel ticks in one frame share one anchor.
-  const anchorRef = useRef<{ day: number; cursorFromRight: number } | null>(null);
+  // The day to keep in place, and how far from the scroller's right edge it
+  // should sit. Held (not recomputed) until the render lands, so several
+  // wheel ticks in one frame share one anchor. "Fit" sets it too.
+  const anchorRef = useRef<{ day: number; fromRight: number } | null>(null);
 
   useLayoutEffect(() => {
-    latest.current = { rangeStart: range.startDay, leftW, pxPerDay };
+    latest.current = { rangeStart: range.startDay, pxPerDay };
   });
 
   useEffect(() => {
@@ -683,15 +691,12 @@ export default function TaskGantt({
 
       if (!anchorRef.current) {
         const current = latest.current;
-        // Over the sticky left panel there's no date under the cursor —
-        // anchor on the timeline's own right edge instead.
-        const cursorFromRight = Math.max(scrollEl.getBoundingClientRect().right - e.clientX, current.leftW);
+        const fromRight = scrollEl.getBoundingClientRect().right - e.clientX;
         // scrollLeft is 0 at the right edge and negative scrolling left
         // (an RTL scroller in Electron's Chromium).
-        const fromContentRight = -scrollEl.scrollLeft + cursorFromRight;
         anchorRef.current = {
-          day: current.rangeStart + (fromContentRight - current.leftW) / current.pxPerDay,
-          cursorFromRight,
+          day: current.rangeStart + (-scrollEl.scrollLeft + fromRight) / current.pxPerDay,
+          fromRight,
         };
       }
       pxTarget.current = next;
@@ -701,20 +706,40 @@ export default function TaskGantt({
     return () => scrollEl.removeEventListener("wheel", onWheel);
   }, [scrollEl]);
 
-  // After the new scale has rendered, scroll so the anchored day sits under
-  // the cursor again. Placed by absolute day, not by offset: a change of
-  // header granularity re-snaps the range (fitRange), moving where the
-  // range starts.
-  useLayoutEffect(() => {
-    pxTarget.current = pxPerDay;
+  // After the new scale has rendered, scroll so the anchored day sits where
+  // it should. Placed by absolute day, not by offset: a change of header
+  // granularity re-snaps the range (fitRange), moving where it starts.
+  const placeAnchor = () => {
     const anchor = anchorRef.current;
     anchorRef.current = null;
     if (!anchor || !scrollEl) return;
-    const fromContentRight = leftW + (anchor.day - range.startDay) * pxPerDay;
-    scrollEl.scrollLeft = -(fromContentRight - anchor.cursorFromRight);
+    scrollEl.scrollLeft = -((anchor.day - latest.current.rangeStart) * latest.current.pxPerDay - anchor.fromRight);
+  };
+  useLayoutEffect(() => {
+    pxTarget.current = pxPerDay;
+    placeAnchor();
   }, [pxPerDay]);
 
-  const openTask = onOpenTask;
+  // "ملاءمة الكل": the whole plan across the visible width, its start at
+  // the right edge.
+  const fitAll = () => {
+    let first = Number.POSITIVE_INFINITY;
+    let last = Number.NEGATIVE_INFINITY;
+    for (const s of spans.values()) {
+      if (s.kind === "none") continue;
+      first = Math.min(first, s.startDay);
+      last = Math.max(last, s.endDay);
+    }
+    if (!Number.isFinite(first) || viewport.width === 0) return;
+    const next = clamp((viewport.width - FIT_MARGIN * 2) / (last - first + 1), MIN_PX_PER_DAY, MAX_PX_PER_DAY);
+    anchorRef.current = { day: first, fromRight: FIT_MARGIN };
+    if (next === pxPerDay) {
+      placeAnchor();
+      return;
+    }
+    pxTarget.current = next;
+    setPxPerDay(next);
+  };
 
   const commit = (taskId: string, change: BarChange) =>
     onChangeDates(taskId, {
@@ -722,14 +747,17 @@ export default function TaskGantt({
       ...(change.endDay !== undefined ? { dueDate: adapter.fromDay(change.endDay) } : {}),
       ...(change.durationDays !== undefined ? { durationDays: change.durationDays } : {}),
     });
+  const describe = (s: number, e: number) => spanLabel(s, e, adapter);
+  const subtitle = (s: number, e: number, days: number | null) =>
+    `${spanShort(s, e, adapter)} · ${daysShort(days ?? workingDaysBetween(s, e, isTemplate))}`;
   const describeFloor = (day: number) => `لا يمكن أن تبدأ قبل ${spanLabel(day, day, adapter)} — مرتبطة بمهام سابقة`;
 
   const today = adapter.today;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2">
+        <div className="flex flex-wrap items-center gap-2">
           {onAddTask && (
             <button
               onClick={onAddTask}
@@ -739,11 +767,6 @@ export default function TaskGantt({
               إضافة مهمة
             </button>
           )}
-          <div className="flex overflow-hidden rounded-md border border-gray-200" title="إظهار / إخفاء الأعمدة">
-            <ColumnToggle label="تاريخ البدء" on={columns.start} onClick={() => toggleColumn("start")} />
-            <ColumnToggle label="المدة" on={columns.days} onClick={() => toggleColumn("days")} />
-            <ColumnToggle label="تاريخ الانتهاء" on={columns.end} onClick={() => toggleColumn("end")} />
-          </div>
           <div
             className="flex overflow-hidden rounded-md border border-gray-200"
             title="Ctrl + عجلة التمرير للتكبير والتصغير"
@@ -761,46 +784,46 @@ export default function TaskGantt({
             ))}
           </div>
           {today !== null && (
-            <button
-              onClick={scrollToToday}
-              className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-            >
-              اليوم
-            </button>
+            <ToolbarButton onClick={scrollToToday}>اليوم</ToolbarButton>
           )}
-          {plan && (
-            <Tooltip label={`من أول مهمة إلى آخرها: ${workingDaysLabel(plan.workingDays)}`}>
-              <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                <CalendarCheck className="h-3.5 w-3.5" />
-                {isTemplate
-                  ? `آخر يوم: ${dayOffsetLabel(plan.endDay)} · ${plan.workingDays} يوم عمل`
-                  : `النهاية المخططة ${formatDayWithWeekday(plan.end)} · ${plan.workingDays} يوم عمل`}
-              </span>
-            </Tooltip>
-          )}
-          {tasks.length > 0 && undatedCount > 0 && (
-            <span className="text-xs text-gray-400">
-              {datedCount === 0
-                ? "لا توجد مهام بتواريخ بعد — انقر على صف لتحديد تاريخ"
-                : `${undatedCount} غير مجدولة — انقر على صفها لتحديد بدايتها`}
-            </span>
+          <ToolbarButton onClick={fitAll} title="عرض الخطة كاملة">
+            <Maximize2 className="h-3.5 w-3.5" />
+            ملاءمة الكل
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => setFocus((v) => !v)}
+            active={focus}
+            title="المهام التي يؤخر أي تأخير فيها نهاية اللوحة"
+          >
+            <Crosshair className="h-3.5 w-3.5" />
+            المسار الحرج
+          </ToolbarButton>
+          {(parentIds.length > 0 || (groups?.length ?? 0) > 0) && (
+            <ToolbarButton onClick={anyCollapsed ? expandAll : collapseAll}>
+              {anyCollapsed ? <ChevronsDown className="h-3.5 w-3.5" /> : <ChevronsUp className="h-3.5 w-3.5" />}
+              {anyCollapsed ? "توسيع الكل" : "طي الكل"}
+            </ToolbarButton>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={expandAll}
-            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            <ChevronsDown className="h-3.5 w-3.5" />
-            توسيع الكل
-          </button>
-          <button
-            onClick={collapseAll}
-            className="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            <ChevronsUp className="h-3.5 w-3.5" />
-            طي الكل
-          </button>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          {critical &&
+            (critical.ok ? (
+              <span className="rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-700">
+                {criticalCount(criticalResult?.count ?? 0)} — أي تأخير فيها يؤخر النهاية
+              </span>
+            ) : (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                {criticalResult ? "تعذّر حساب بعض اللوحات — " : "تعذّر حساب المسار الحرج — "}أعد تحميل الصفحة
+              </span>
+            ))}
+          <span>
+            {tasksCount(tasks.length)}
+            {plan &&
+              (isTemplate
+                ? ` · ${plan.workingDays} يوم · آخر يوم: ${dayOffsetLabel(plan.endDay)}`
+                : ` · ${plan.workingDays} يوم عمل · النهاية ${formatDayWithWeekday(plan.end)}`)}
+            {undatedCount > 0 && ` · ${undatedCount} غير مجدولة`}
+          </span>
         </div>
       </div>
 
@@ -809,104 +832,62 @@ export default function TaskGantt({
           {emptyLabel}
         </div>
       ) : (
-        <div
-          ref={setScrollEl}
-          className="flex-1 overflow-auto"
-          // scrollIntoView (open on today, the اليوم button, presets) centers
-          // within the scrollport minus this padding — i.e. the timeline
-          // beside the sticky left panel, not the whole width behind it.
-          style={{ scrollPaddingRight: leftW }}
-        >
-          <div className="relative" style={{ width: leftW + trackWidth }}>
+        <div ref={setScrollEl} className="flex-1 overflow-auto">
+          <div className="relative" style={{ width: trackWidth }}>
             {/* Date header — a plain wheel over it zooms (see the wheel
                 listener); data-gantt-header is what that looks for. */}
-            <div data-gantt-header className="sticky top-0 z-20 flex border-b border-gray-200 bg-white">
-              <div
-                className="sticky right-0 z-30 flex shrink-0 border-l border-gray-200 bg-white text-xs font-medium text-gray-500"
-                style={{ width: leftW, height: HEADER_H }}
-              >
-                {columns.start && (
+            <div
+              data-gantt-header
+              className="sticky top-0 z-20 border-b border-gray-200 bg-white"
+              style={{ width: trackWidth, height: HEADER_H }}
+            >
+              {header.top.map((c) => {
+                const width = (c.endDay - c.startDay) * pxPerDay;
+                return (
                   <div
-                    className="flex shrink-0 items-end justify-center border-l border-gray-100 pb-1.5"
-                    style={{ width: DATE_COL_W }}
+                    key={`t${c.startDay}`}
+                    className="absolute top-0 flex items-center border-l border-gray-200 px-2 text-xs font-semibold text-gray-700"
+                    style={{ right: xOf(c.startDay), width, height: HEADER_ROW_H }}
                   >
-                    تاريخ البدء
+                    {/* A sliver of a month at the range's edge: no label
+                        rather than a clipped one. Sticky, so the label stays
+                        in view while its month is scrolled partly away. */}
+                    {width >= 40 && (
+                      <span className="sticky right-1.5 max-w-full truncate">{c.label}</span>
+                    )}
                   </div>
-                )}
-                {columns.days && (
+                );
+              })}
+              {header.bottom.map((c) => {
+                const isCurrent = today !== null && today >= c.startDay && today < c.endDay;
+                return (
                   <div
-                    className="flex shrink-0 items-end justify-center border-l border-gray-100 pb-1.5"
-                    style={{ width: DAYS_COL_W }}
-                    title={isTemplate ? "أيام العمل عند تطبيق القالب" : "أيام العمل (بدون الجمعة)"}
+                    key={`b${c.startDay}`}
+                    className={`absolute flex items-center justify-center overflow-hidden whitespace-nowrap border-l border-t border-gray-100 text-[11px] ${
+                      isCurrent
+                        ? "bg-blue-50 font-semibold text-blue-600"
+                        : c.weekend
+                          ? "bg-gray-50 text-gray-400"
+                          : "text-gray-500"
+                    }`}
+                    style={{
+                      top: HEADER_ROW_H,
+                      right: xOf(c.startDay),
+                      width: (c.endDay - c.startDay) * pxPerDay,
+                      height: HEADER_ROW_H,
+                    }}
                   >
-                    المدة
+                    {c.label}
                   </div>
-                )}
-                {columns.end && (
-                  <div
-                    className="flex shrink-0 items-end justify-center border-l border-gray-100 pb-1.5"
-                    style={{ width: DATE_COL_W }}
-                  >
-                    تاريخ الانتهاء
-                  </div>
-                )}
-                <div className="relative flex shrink-0 items-end px-3 pb-1.5" style={{ width: nameW }}>
-                  المهمة
-                  <ResizeHandle active={resizing} handlers={resizeHandlers} />
-                </div>
-              </div>
-              <div className="relative shrink-0" style={{ width: trackWidth, height: HEADER_H }}>
-                {header.top.map((c) => {
-                  const width = (c.endDay - c.startDay) * pxPerDay;
-                  return (
-                    <div
-                      key={`t${c.startDay}`}
-                      className="absolute top-0 flex items-center border-l border-gray-200 px-2 text-xs font-semibold text-gray-700"
-                      style={{ right: xOf(c.startDay), width, height: HEADER_ROW_H }}
-                    >
-                      {/* A sliver of a month at the range's edge: no
-                          label rather than a clipped one. Sticky, so the
-                          label stays visible beside the left panel while
-                          its month is scrolled under it. */}
-                      {width >= 40 && (
-                        <span className="sticky max-w-full truncate" style={{ right: leftW + 6 }}>
-                          {c.label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-                {header.bottom.map((c) => {
-                  const isCurrent = today !== null && today >= c.startDay && today < c.endDay;
-                  return (
-                    <div
-                      key={`b${c.startDay}`}
-                      className={`absolute flex items-center justify-center overflow-hidden whitespace-nowrap border-l border-t border-gray-100 text-[11px] ${
-                        isCurrent
-                          ? "bg-blue-50 font-semibold text-blue-600"
-                          : c.weekend
-                            ? "bg-gray-50 text-gray-400"
-                            : "text-gray-500"
-                      }`}
-                      style={{
-                        top: HEADER_ROW_H,
-                        right: xOf(c.startDay),
-                        width: (c.endDay - c.startDay) * pxPerDay,
-                        height: HEADER_ROW_H,
-                      }}
-                    >
-                      {c.label}
-                    </div>
-                  );
-                })}
-                {today !== null && (
-                  <div
-                    ref={todayRef}
-                    className={`pointer-events-none absolute w-0.5 ${zoom === "day" ? "" : "bg-blue-400"}`}
-                    style={{ right: xOf(today) + pxPerDay / 2 - 1, top: HEADER_ROW_H, height: HEADER_ROW_H }}
-                  />
-                )}
-              </div>
+                );
+              })}
+              {today !== null && (
+                <div
+                  ref={todayRef}
+                  className={`pointer-events-none absolute w-0.5 ${zoom === "day" ? "" : "bg-blue-400"}`}
+                  style={{ right: xOf(today) + pxPerDay / 2 - 1, top: HEADER_ROW_H, height: HEADER_ROW_H }}
+                />
+              )}
             </div>
 
             {/* Body — at least as tall as the visible area, so the grid
@@ -915,16 +896,12 @@ export default function TaskGantt({
               className="relative"
               style={{ height: Math.max(rows.length * ROW_H, viewport.height - HEADER_H) }}
             >
-              {/* Weekend shading, grid lines, today line — behind the rows.
-                  Period boundaries (week/month) are drawn darker than the
+              {/* Friday shading, grid lines, today and finish lines — behind
+                  the rows. Period boundaries (week/month) are darker than the
                   per-cell lines so the scale reads at a glance. */}
-              <div className="pointer-events-none absolute inset-y-0" style={{ right: leftW, width: trackWidth }}>
+              <div className="pointer-events-none absolute inset-0">
                 {weekends.map((day) => (
-                  <div
-                    key={`w${day}`}
-                    className="absolute inset-y-0 bg-gray-50"
-                    style={{ right: xOf(day), width: pxPerDay }}
-                  />
+                  <div key={`w${day}`} className="absolute inset-y-0 bg-gray-50" style={{ right: xOf(day), width: pxPerDay }} />
                 ))}
                 {header.bottom.map((c) => (
                   <div
@@ -946,7 +923,7 @@ export default function TaskGantt({
                     style={{ right: xOf(today) + pxPerDay / 2 - 1 }}
                   />
                 )}
-                {/* finish line: the end of the board's last task */}
+                {/* finish line: the end of the last task */}
                 {plan && (
                   <div
                     className="absolute inset-y-0 border-r-2 border-emerald-400/70"
@@ -964,7 +941,7 @@ export default function TaskGantt({
                 if (row.kind === "group") {
                   const key = groupKey(row.group.id);
                   return (
-                    <GroupRow
+                    <GroupBand
                       key={key}
                       group={row.group}
                       count={row.count}
@@ -972,156 +949,90 @@ export default function TaskGantt({
                       collapsed={collapsedIds.has(key)}
                       onToggle={() => toggleCollapse(key)}
                       onAdd={onAddToGroup ? () => onAddToGroup(row.group.id) : undefined}
-                      columns={columns}
-                      leftW={leftW}
-                      nameW={nameW}
                       trackWidth={trackWidth}
                       xOf={xOf}
                       pxPerDay={pxPerDay}
-                      formatDay={(day) => formatSlashDate(adapter.fromDay(day))}
-                      plain={isTemplate}
-                      resizeHandle={<ResizeHandle active={resizing} handlers={resizeHandlers} />}
+                      describe={(s, e) => `${spanShort(s, e, adapter)} · ${daysShort(workingDaysBetween(s, e, isTemplate))}`}
                     />
                   );
                 }
-                const { task, depth, hasChildren } = row;
-                const span = spans.get(task.id);
-                const status = statusById.get(task.status_id);
-                const color = status?.color ?? DEFAULT_STATUS_COLOR;
-                const collapsed = collapsedIds.has(task.id);
+                const { task, hasChildren } = row;
+                const own = spans.get(task.id);
                 const rollup = rollups.get(task.id);
+                const span: BarSpan | null =
+                  own && own.kind !== "none"
+                    ? own
+                    : rollup
+                      ? { kind: "range", startDay: rollup.startDay, endDay: rollup.endDay, hasStart: false, hasDue: false }
+                      : null;
+                const status = statusById.get(task.status_id);
+                const fold = hasChildren ? { collapsed: collapsedIds.has(task.id), onToggle: () => toggleCollapse(task.id) } : null;
+                // The server's summary (dates = span of scheduled subtasks), or
+                // a parent drawn from its subtasks because it has no dates of
+                // its own. A parent whose subtasks are all unscheduled is an
+                // ordinary task and can be dragged.
+                const summary = task.is_summary || !(own && own.kind !== "none");
                 return (
                   <div
                     key={task.id}
                     data-gantt-row={task.id}
-                    className={`group flex ${linking?.targetId === task.id ? "bg-blue-50" : ""}`}
-                    style={{ height: ROW_H }}
+                    className={`relative border-b border-gray-50 hover:bg-gray-50/60 ${linking?.targetId === task.id ? "bg-blue-50" : ""}`}
+                    style={{ height: ROW_H, width: trackWidth }}
                   >
-                    <div
-                      className="sticky right-0 z-10 flex shrink-0 border-b border-l border-gray-100 bg-white group-hover:bg-gray-50"
-                      style={{ width: leftW }}
-                    >
-                      {columns.start && (
-                        <div className="shrink-0 border-l border-gray-100" style={{ width: DATE_COL_W }}>
-                          <EditGuard disabled={readOnly}>
-                            <GanttDateCell
-                              value={task.start_date}
-                              onChange={(date) => onChangeDates(task.id, { startDate: date })}
-                              minDate={task.earliest_start}
-                              locked={task.is_summary}
-                            />
-                          </EditGuard>
-                        </div>
-                      )}
-                      {columns.days && (
-                        <div className="flex shrink-0 items-center justify-center border-l border-gray-100" style={{ width: DAYS_COL_W }}>
-                          <DurationCell
-                            days={task.duration_days}
-                            onChange={(days) => onChangeDates(task.id, { durationDays: days })}
-                            readOnly={readOnly}
-                            isSummary={task.is_summary}
-                          />
-                        </div>
-                      )}
-                      {columns.end && (
-                        <div className="shrink-0 border-l border-gray-100" style={{ width: DATE_COL_W }}>
-                          <EditGuard disabled={readOnly}>
-                            <GanttDateCell
-                              value={task.due_date}
-                              overdue={task.is_overdue}
-                              onChange={(date) => onChangeDates(task.id, { dueDate: date })}
-                              minDate={task.start_date}
-                              locked={task.is_summary}
-                            />
-                          </EditGuard>
-                        </div>
-                      )}
-                      <div
-                        className="relative flex shrink-0 items-center gap-1 pl-2"
-                        style={{ width: nameW, paddingRight: 8 + depth * INDENT_PX }}
-                      >
-                        {hasChildren ? (
-                          <button
-                            onClick={() => toggleCollapse(task.id)}
-                            className="shrink-0 text-gray-400 hover:text-gray-600"
-                          >
-                            {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                          </button>
-                        ) : (
-                          <span className="w-3.5 shrink-0" />
-                        )}
-                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
-                        <button
-                          onClick={() => openTask(task.id)}
-                          className="min-w-0 truncate text-sm text-gray-800 hover:underline"
-                        >
-                          {task.title}
-                        </button>
-                        <ResizeHandle active={resizing} handlers={resizeHandlers} />
-                      </div>
-                    </div>
-                    <div
-                      className="relative shrink-0 border-b border-gray-50 group-hover:bg-gray-50/50"
-                      style={{ width: trackWidth }}
-                    >
-                      {span && span.kind !== "none" ? (
-                        <GanttBar
-                          span={span}
-                          rangeStart={range.startDay}
-                          pxPerDay={pxPerDay}
-                          title={task.title}
-                          color={color}
-                          done={status?.category === "done" || status?.category === "closed"}
-                          overdue={task.is_overdue}
-                          dependency={dependencyFlags.get(task.id)}
-                          describe={(s, e) => spanLabel(s, e, adapter)}
-                          labelInset={leftW + 6}
-                          onOpen={() => openTask(task.id)}
-                          onCommit={(change) => commit(task.id, change)}
-                          readOnly={readOnly}
-                          scheduling={
-                            // a milestone is drawn at its due date: it keeps the plain start/due drag
-                            span.kind === "milestone"
-                              ? null
-                              : {
-                                  durationDays: task.duration_days ?? span.endDay - span.startDay + 1,
-                                  earliestDay: task.earliest_start ? adapter.toDay(task.earliest_start) : null,
-                                  plain: isTemplate,
-                                }
-                          }
-                          summary={task.is_summary}
-                          describeFloor={describeFloor}
-                          onHover={(on) => setHoveredId(on ? task.id : null)}
-                          onLinkStart={canLink && !linking ? startLink(task.id) : undefined}
-                          linkTarget={linking?.targetId === task.id}
-                        />
-                      ) : rollup ? (
-                        <RollupBar
-                          right={xOf(rollup.startDay)}
-                          width={(rollup.endDay - rollup.startDay + 1) * pxPerDay}
-                        />
-                      ) : (
-                        <UndatedTrack
-                          rangeStart={range.startDay}
-                          pxPerDay={pxPerDay}
-                          onPick={(day) => {
-                            const date = adapter.fromDay(day);
-                            // just a start (1 day; a linked task can't start
-                            // before its links allow)
-                            onChangeDates(task.id, { startDate: date });
-                          }}
-                        />
-                      )}
-                    </div>
+                    {span ? (
+                      <GanttBar
+                        span={span}
+                        rangeStart={range.startDay}
+                        pxPerDay={pxPerDay}
+                        title={task.title}
+                        subtitle={subtitle}
+                        describe={describe}
+                        color={status?.color ?? DEFAULT_STATUS_COLOR}
+                        done={isFinished(status?.category)}
+                        overdue={task.is_overdue}
+                        dependency={dependencyFlags.get(task.id)}
+                        externalWait={externalWaits.has(task.id)}
+                        badge={badges.get(task.task_type_id) ?? null}
+                        focus={focusOf(task.id)}
+                        focusNote={focusNoteOf(task.id)}
+                        onOpen={() => onOpenTask(task.id)}
+                        onCommit={(change) => commit(task.id, change)}
+                        readOnly={readOnly}
+                        scheduling={
+                          summary
+                            ? null
+                            : {
+                                durationDays: task.duration_days ?? workingDaysBetween(span.startDay, span.endDay, isTemplate),
+                                earliestDay: task.earliest_start ? adapter.toDay(task.earliest_start) : null,
+                                plain: isTemplate,
+                              }
+                        }
+                        summary={summary}
+                        fold={fold}
+                        describeFloor={describeFloor}
+                        onHover={(on) => setHoveredId(on ? task.id : null)}
+                        onLinkStart={canLink && !linking ? startLink(task.id) : undefined}
+                        linkTarget={linking?.targetId === task.id}
+                      />
+                    ) : (
+                      <UndatedRow
+                        title={task.title}
+                        fold={fold}
+                        rangeStart={range.startDay}
+                        pxPerDay={pxPerDay}
+                        readOnly={readOnly}
+                        onOpen={() => onOpenTask(task.id)}
+                        onPick={(day) => onChangeDates(task.id, { startDate: adapter.fromDay(day) })}
+                      />
+                    )}
                   </div>
                 );
               })}
 
-              {/* Dependency arrows — above the bars, below the sticky name column. */}
+              {/* Dependency arrows — above the bars. */}
               <svg
                 ref={arrowsRef}
-                className="pointer-events-none absolute top-0 z-[1]"
-                style={{ right: leftW }}
+                className="pointer-events-none absolute right-0 top-0 z-[1]"
                 width={trackWidth}
                 height={rows.length * ROW_H}
               >
@@ -1129,27 +1040,29 @@ export default function TaskGantt({
                   <marker id="gantt-arrow" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
                     <path d="M0,0 L6,3 L0,6 z" fill="#9CA3AF" />
                   </marker>
-                  <marker id="gantt-arrow-conflict" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M0,0 L6,3 L0,6 z" fill="#EF4444" />
+                  <marker id="gantt-arrow-red" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M0,0 L6,3 L0,6 z" fill="#DC2626" />
                   </marker>
                   <marker id="gantt-arrow-chain" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
                     <path d="M0,0 L6,3 L0,6 z" fill="#2563EB" />
                   </marker>
                 </defs>
                 {arrows.map((a) => {
-                  const dim = !!chain && !a.inChain;
+                  const onPath = !!criticalResult && criticalResult.criticalLinks.has(a.key);
+                  const dim = (!!chain && !a.inChain) || (!!criticalResult && !onPath);
                   const hot = hoveredArrow === a.key;
-                  const stroke = a.conflict ? "#EF4444" : a.inChain || hot ? "#2563EB" : "#9CA3AF";
+                  const red = a.conflict || onPath;
+                  const stroke = red ? "#DC2626" : a.inChain || hot ? "#2563EB" : "#9CA3AF";
                   return (
-                    <g key={a.key} opacity={dim ? 0.3 : 1}>
+                    <g key={a.key} opacity={dim ? 0.25 : 1}>
                       <path
                         d={a.d}
                         fill="none"
                         stroke={stroke}
-                        strokeWidth={hot ? 2.5 : a.inChain ? 2 : 1.5}
+                        strokeWidth={hot ? 2.5 : a.inChain || onPath ? 2 : 1.5}
                         strokeDasharray={a.lag > 0 ? "4 3" : undefined}
                         strokeLinejoin="round"
-                        markerEnd={`url(#${a.conflict ? "gantt-arrow-conflict" : a.inChain ? "gantt-arrow-chain" : "gantt-arrow"})`}
+                        markerEnd={`url(#${red ? "gantt-arrow-red" : a.inChain ? "gantt-arrow-chain" : "gantt-arrow"})`}
                       />
                       {a.label && (
                         <text x={a.label.x} y={a.label.y} textAnchor="middle" fontSize={10} fill="#B45309">
@@ -1157,7 +1070,7 @@ export default function TaskGantt({
                         </text>
                       )}
                       {/* a wide invisible stroke to click — the drawn line is too thin to hit */}
-                      {!readOnly && onUnlink && !linking && (
+                      {!readOnly && (onUnlink || onReverseLink) && !linking && (
                         <path
                           d={a.d}
                           fill="none"
@@ -1191,108 +1104,108 @@ export default function TaskGantt({
           </div>
         </div>
       )}
-      <PointMenu point={linkMenu} onClose={() => setLinkMenu(null)} width={240} className="p-2">
-        {linkMenu && (
-          <>
-            <div className="mb-2 text-xs text-gray-600">
-              <span className="font-semibold">{titleById.get(linkMenu.pair.blocked_task_id)}</span> تبدأ بعد انتهاء{" "}
-              <span className="font-semibold">{titleById.get(linkMenu.pair.blocking_task_id)}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onUnlink?.(linkMenu.pair);
-                setLinkMenu(null);
-              }}
-              className="w-full rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
-            >
-              إزالة الربط
-            </button>
-          </>
-        )}
-      </PointMenu>
-    </div>
-  );
-}
-
-/** One of the show/hide chips for the date columns. */
-function ColumnToggle({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={on}
-      className={`flex items-center gap-1 px-2.5 py-1 text-xs ${
-        on ? "bg-primary-superLight font-medium text-primary" : "text-gray-400 hover:bg-gray-50"
-      }`}
-    >
-      {on ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-      {label}
-    </button>
-  );
-}
-
-/** The draggable line on the name column's left edge — where it meets the
- * timeline. Rendered in the header cell and in every row, so the line is
- * grabbable anywhere down its length; all copies share one set of
- * handlers (TaskGantt's resizeHandlers) and light up together while a
- * drag is in progress. */
-function ResizeHandle({
-  active,
-  handlers,
-}: {
-  active: boolean;
-  handlers: {
-    onPointerDown: (e: ReactPointerEvent<HTMLElement>) => void;
-    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => void;
-    onPointerUp: () => void;
-    onPointerCancel: () => void;
-  };
-}) {
-  return (
-    <span
-      {...handlers}
-      title="اسحب لتغيير عرض العمود"
-      className={`absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none select-none transition-colors ${
-        active ? "bg-primary" : "hover:bg-primary/40"
-      }`}
-    />
-  );
-}
-
-/** A parent's summary line (no dates of its own) — not draggable; edit
- * the subtasks, or give the parent its own dates in the panel. `strong` is
- * a board's span on the space chart. */
-function RollupBar({ right, width, strong = false }: { right: number; width: number; strong?: boolean }) {
-  return (
-    <div
-      className={`pointer-events-none absolute border-x-2 ${strong ? "border-gray-700" : "border-gray-500"}`}
-      style={{ right, width: Math.max(width, MIN_BAR_W), top: ROW_H / 2 - 4, height: 8 }}
-    >
-      <div
-        className={`absolute inset-x-0 top-1/2 -translate-y-1/2 ${strong ? "h-2 bg-gray-600/80" : "h-1.5 bg-gray-400/70"}`}
+      <LinkMenu
+        menu={linkMenu}
+        titleById={titleById}
+        onClose={() => setLinkMenu(null)}
+        onUnlink={onUnlink}
+        onReverse={onReverseLink}
       />
     </div>
   );
 }
 
-/** A board's header row on the space chart: its name (opens the board),
- * task count, "+", its first start / last end, and a summary bar. */
-function GroupRow({
+/** The menu a clicked link line opens — shared with the link diagram. */
+export function LinkMenu({
+  menu,
+  titleById,
+  onClose,
+  onUnlink,
+  onReverse,
+}: {
+  menu: { x: number; y: number; pair: DependencyPair } | null;
+  titleById: Map<string, string>;
+  onClose: () => void;
+  onUnlink?: (pair: DependencyPair) => void;
+  onReverse?: (pair: DependencyPair) => void;
+}) {
+  return (
+    <PointMenu point={menu} onClose={onClose} width={240} className="space-y-1.5 p-2">
+      {menu && (
+        <>
+          <div className="text-xs text-gray-600">
+            <span className="font-semibold">{titleById.get(menu.pair.blocked_task_id)}</span> تبدأ بعد انتهاء{" "}
+            <span className="font-semibold">{titleById.get(menu.pair.blocking_task_id)}</span>
+          </div>
+          {onReverse && (
+            <button
+              type="button"
+              onClick={() => {
+                onReverse(menu.pair);
+                onClose();
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              عكس الاتجاه
+            </button>
+          )}
+          {onUnlink && (
+            <button
+              type="button"
+              onClick={() => {
+                onUnlink(menu.pair);
+                onClose();
+              }}
+              className="w-full rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+            >
+              إزالة الربط
+            </button>
+          )}
+        </>
+      )}
+    </PointMenu>
+  );
+}
+
+function ToolbarButton({
+  onClick,
+  active = false,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+        active ? "border-red-200 bg-red-50 font-medium text-red-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** A board's band on the space chart: its name (opens the board), task
+ * count, "+", and a bar from its first start to its last end. */
+function GroupBand({
   group,
   count,
   span,
   collapsed,
   onToggle,
   onAdd,
-  columns,
-  leftW,
-  nameW,
   trackWidth,
   xOf,
   pxPerDay,
-  formatDay,
-  plain,
-  resizeHandle,
+  describe,
 }: {
   group: GanttGroup;
   count: number;
@@ -1300,88 +1213,64 @@ function GroupRow({
   collapsed: boolean;
   onToggle: () => void;
   onAdd?: () => void;
-  columns: DateColumns;
-  leftW: number;
-  nameW: number;
   trackWidth: number;
   xOf: (day: number) => number;
   pxPerDay: number;
-  formatDay: (day: number) => string;
-  plain: boolean;
-  resizeHandle: ReactNode;
+  describe: (startDay: number, endDay: number) => string;
 }) {
-  const days = span ? workingDaysBetween(span.startDay, span.endDay, plain) : null;
   return (
-    <div className="flex" style={{ height: ROW_H }}>
-      <div
-        className="sticky right-0 z-10 flex shrink-0 border-b border-l border-gray-200 bg-gray-100 text-xs text-gray-500"
-        style={{ width: leftW }}
-      >
-        {columns.start && (
-          <div className="flex shrink-0 items-center justify-center border-l border-gray-200" style={{ width: DATE_COL_W }}>
-            {span ? formatDay(span.startDay) : "—"}
-          </div>
+    <div className="relative flex items-center border-b border-gray-200 bg-gray-100/80" style={{ height: ROW_H, width: trackWidth }}>
+      {span && (
+        <div
+          className="pointer-events-none absolute rounded border-x-[3px] border-gray-700 bg-gray-600/15"
+          style={{ right: xOf(span.startDay), width: Math.max((span.endDay - span.startDay + 1) * pxPerDay, MIN_BAR_W), top: ROW_H / 2 - 5, height: 10 }}
+        />
+      )}
+      {/* sticky: the board's name stays at the visible right edge */}
+      <div className="sticky right-0 z-[2] flex items-center gap-1.5 rounded-l-md bg-gray-100 px-2 py-1 shadow-sm">
+        <button onClick={onToggle} className="shrink-0 rounded p-0.5 text-gray-500 hover:bg-gray-200" title={collapsed ? "توسيع" : "طي"}>
+          {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        {group.href ? (
+          <Link to={group.href} className="truncate text-sm font-semibold text-gray-800 hover:text-primary hover:underline" title="فتح اللوحة">
+            {group.label}
+          </Link>
+        ) : (
+          <span className="truncate text-sm font-semibold text-gray-800">{group.label}</span>
         )}
-        {columns.days && (
-          <div
-            className="flex shrink-0 items-center justify-center border-l border-gray-200 italic"
-            style={{ width: DAYS_COL_W }}
-            title={days ? `من أول مهمة في اللوحة إلى آخرها: ${workingDaysLabel(days)}` : undefined}
+        <span className="shrink-0 text-xs text-gray-400">({count})</span>
+        {span && <span className="shrink-0 text-xs text-gray-500">· {describe(span.startDay, span.endDay)}</span>}
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+            title="إضافة مهمة إلى هذه اللوحة"
           >
-            {days ? `${days} يوم` : "—"}
-          </div>
-        )}
-        {columns.end && (
-          <div className="flex shrink-0 items-center justify-center border-l border-gray-200" style={{ width: DATE_COL_W }}>
-            {span ? formatDay(span.endDay) : "—"}
-          </div>
-        )}
-        <div className="relative flex shrink-0 items-center gap-1.5 px-2" style={{ width: nameW }}>
-          <button onClick={onToggle} className="shrink-0 rounded p-0.5 text-gray-500 hover:bg-gray-200" title={collapsed ? "توسيع" : "طي"}>
-            {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <Plus className="h-3.5 w-3.5" />
           </button>
-          {group.href ? (
-            <Link
-              to={group.href}
-              className="min-w-0 truncate text-sm font-semibold text-gray-800 hover:text-primary hover:underline"
-              title="فتح اللوحة"
-            >
-              {group.label}
-            </Link>
-          ) : (
-            <span className="min-w-0 truncate text-sm font-semibold text-gray-800">{group.label}</span>
-          )}
-          <span className="shrink-0 text-gray-400">({count})</span>
-          {onAdd && (
-            <button
-              onClick={onAdd}
-              className="mr-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
-              title="إضافة مهمة إلى هذه اللوحة"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {resizeHandle}
-        </div>
-      </div>
-      <div className="relative shrink-0 border-b border-gray-200 bg-gray-100/60" style={{ width: trackWidth }}>
-        {span && (
-          <RollupBar right={xOf(span.startDay)} width={(span.endDay - span.startDay + 1) * pxPerDay} strong />
         )}
       </div>
     </div>
   );
 }
 
-/** A task with no dates: hovering shows which day a click would set
- * (start = due = that day). */
-function UndatedTrack({
+/** A task with no dates: its name at the visible right edge, and hovering
+ * the row shows which day a click would give it as a start. */
+function UndatedRow({
+  title,
+  fold,
   rangeStart,
   pxPerDay,
+  readOnly,
+  onOpen,
   onPick,
 }: {
+  title: string;
+  fold: { collapsed: boolean; onToggle: () => void } | null;
   rangeStart: number;
   pxPerDay: number;
+  readOnly: boolean;
+  onOpen: () => void;
   onPick: (day: number) => void;
 }) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
@@ -1391,25 +1280,34 @@ function UndatedTrack({
     return rangeStart + Math.floor((rect.right - e.clientX) / pxPerDay);
   };
   return (
-    <div
-      className="absolute inset-0 cursor-pointer"
-      onMouseMove={(e) => setHoverDay(dayAt(e))}
-      onMouseLeave={() => setHoverDay(null)}
-      onClick={(e) => onPick(dayAt(e))}
-    >
-      {hoverDay !== null && (
+    <>
+      {!readOnly && (
         <div
-          className="pointer-events-none absolute flex items-center justify-center rounded border border-dashed border-gray-300 bg-gray-100 text-gray-400"
-          style={{
-            right: (hoverDay - rangeStart) * pxPerDay,
-            width: Math.max(pxPerDay, MIN_BAR_W),
-            top: (ROW_H - 20) / 2,
-            height: 20,
-          }}
+          className="absolute inset-0 cursor-pointer"
+          onMouseMove={(e) => setHoverDay(dayAt(e))}
+          onMouseLeave={() => setHoverDay(null)}
+          onClick={(e) => onPick(dayAt(e))}
+          title="انقر لتحديد تاريخ البدء"
         >
-          {pxPerDay >= 14 && <Plus className="h-3 w-3" />}
+          {hoverDay !== null && (
+            <div
+              className="pointer-events-none absolute flex items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-100 text-gray-400"
+              style={{ right: (hoverDay - rangeStart) * pxPerDay, width: Math.max(pxPerDay, MIN_BAR_W), top: 10, height: ROW_H - 20 }}
+            >
+              {pxPerDay >= 14 && <Plus className="h-3 w-3" />}
+            </div>
+          )}
         </div>
       )}
-    </div>
+      <div className="pointer-events-none sticky right-2 flex h-full w-max items-center">
+        <span className="pointer-events-auto relative z-[2] flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/90 px-2 py-1 text-xs text-gray-500">
+          {fold && <FoldButton fold={fold} />}
+          <button type="button" onClick={onOpen} className="max-w-[240px] truncate font-medium text-gray-700 hover:underline">
+            {title}
+          </button>
+          <span className="shrink-0">· غير مجدولة</span>
+        </span>
+      </div>
+    </>
   );
 }

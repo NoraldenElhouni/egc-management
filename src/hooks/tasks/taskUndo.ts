@@ -337,6 +337,21 @@ async function applyDependencySteps(pairs: DependencyPair[], present: boolean, a
   return { applied: live.length, skipped: pairs.length - live.length };
 }
 
+/** A link that was turned around: one entry, so one Ctrl+Z puts it back.
+ * Each direction removes before it adds — both at once would be a loop. */
+export function recordDependencySwap(label: string, actorId: string | null, removed: DependencyPair, added: DependencyPair) {
+  const swap = async (from: DependencyPair, to: DependencyPair): Promise<ApplyResult> => {
+    const out = await applyDependencySteps([from], false, actorId);
+    const back = await applyDependencySteps([to], true, actorId);
+    return { applied: out.applied + back.applied, skipped: out.skipped + back.skipped };
+  };
+  pushUndo({
+    label,
+    undo: () => swap(added, removed),
+    redo: () => swap(removed, added),
+  });
+}
+
 /** Links that were just added or removed (both are one entry, however many). */
 export function recordDependencies(
   label: string,

@@ -44,7 +44,9 @@ import TaskLogPage from "../../pages/tasks/TaskLogPage";
 // board/:id/gantt (and space/:id/gantt) is the same page in its Gantt view — a path
 // segment rather than ?view=gantt because TaskDetailPanel's base path is
 // built from pathname alone, so a query param would be dropped every
-// time the panel opened or closed.
+// time the panel opened or closed. board/:id/flow (the link diagram) and
+// board/:id/types (the board by task type) are two more views of the same
+// page, the same way.
 // admin/templates[/:id] (D8) and admin/fields (D11) are also real;
 // task/:id without a list context (D1's search, etc.) goes through
 // TaskRedirect so the panel is never opened without a list mounted
@@ -58,6 +60,12 @@ export default function TasksRoutes() {
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
         <Route path="board/:boardId/gantt" element={<TaskBoardPage view="gantt" />}>
+          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        </Route>
+        <Route path="board/:boardId/flow" element={<TaskBoardPage view="flow" />}>
+          <Route path="task/:taskId" element={<TaskDetailPanel />} />
+        </Route>
+        <Route path="board/:boardId/types" element={<TaskBoardPage view="types" />}>
           <Route path="task/:taskId" element={<TaskDetailPanel />} />
         </Route>
         <Route element={<RequireTaskAccess scope="browse" />}>

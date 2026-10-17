@@ -37,6 +37,7 @@ export const SEGMENT_NAMES: Record<string, string> = {
   tasks: "المهام",
   board: "لوحة",
   gantt: "مخطط جانت",
+  flow: "مخطط الروابط",
   department: "قسم",
   "my-work": "أعمالي",
   "by-assignee": "حسب الموظف",
