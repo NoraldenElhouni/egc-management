@@ -275,8 +275,7 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
         </div>
       </div>
 
-      <SpaceKpiStrip data={data} filters={filters} onSelect={setFilters} />
-
+      {view === "list" && <SpaceKpiStrip data={data} filters={filters} onSelect={setFilters} />}
 
       {showFilterDialog && (
         <DirectoryFilterSortPopover

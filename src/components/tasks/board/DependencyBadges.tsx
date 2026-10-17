@@ -18,19 +18,19 @@ function StopSignIcon({ className = "" }: { className?: string }) {
 }
 
 export const WAIT_STYLE = {
-  Icon: StopSignIcon,
-  text: "text-red-600",
-  chip: "bg-red-50 text-red-600",
-  border: "border-r-red-300",
-  selected: "border-red-300 bg-red-50 text-red-700",
-} as const;
-
-export const HOLD_STYLE = {
   Icon: CircleAlert,
   text: "text-amber-600",
   chip: "bg-amber-50 text-amber-600",
   border: "border-r-amber-300",
   selected: "border-amber-300 bg-amber-50 text-amber-700",
+} as const;
+
+export const HOLD_STYLE = {
+  Icon: StopSignIcon,
+  text: "text-red-600",
+  chip: "bg-red-50 text-red-600",
+  border: "border-r-red-300",
+  selected: "border-red-300 bg-red-50 text-red-700",
 } as const;
 
 /** blockedBy: this task waits for the picked one. blocks: the picked one waits for this task. */
