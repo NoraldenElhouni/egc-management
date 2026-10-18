@@ -15,10 +15,16 @@
 //      fewer crossings.
 //   4. Heights: rounds of pulling every node toward its neighbours' centre
 //      while keeping the gap between boxes.
+//   5. Ours, not CF's: boxes with no links at all are packed in rows under
+//      the chart instead of piling into column 0 — on the whole-board diagram
+//      that's every parent and every unlinked subtask (38 of the template's
+//      92 tasks), which made one column taller than the screen at any zoom.
+//      The rows are about screen-shaped, so a board with no links is a grid.
 //
 // Columns run right → left (the page is dir="rtl"): column 0 is at the right.
-// The caller's node order is the starting order inside a column (the diagram
-// passes tasks by start date), and the result is deterministic.
+// The caller's node order is the starting order inside a column and the order
+// of the packed rows (the diagram passes tasks in outline order), and the
+// result is deterministic.
 
 export interface FlowLayoutOptions {
   nodeW: number;
@@ -55,6 +61,8 @@ interface LayoutNode {
 const DUMMY_H = 14;
 const ORDER_ROUNDS = 6;
 const PLACE_ROUNDS = 8;
+/** Width ÷ height the packed rows aim for — about a screen. */
+const GRID_ASPECT = 16 / 9;
 
 export function flowLayout(
   ids: string[],
@@ -64,6 +72,52 @@ export function flowLayout(
   const known = new Set(ids);
   const edges = links.filter((l) => known.has(l.from) && known.has(l.to) && l.from !== l.to);
   if (ids.length === 0) return { nodes: new Map(), bends: new Map(), width: 0, height: 0 };
+
+  const touched = new Set(edges.flatMap((e) => [e.from, e.to]));
+  const chart = layered(
+    ids.filter((id) => touched.has(id)),
+    edges,
+    nodeH,
+    gapY,
+  );
+  const loose = ids.filter((id) => !touched.has(id));
+
+  // 5. the loose boxes, in rows under the chart, as wide as the chart or
+  // about screen-shaped, whichever is wider
+  const shaped = Math.round(Math.sqrt((loose.length * GRID_ASPECT * (nodeH + gapY)) / (nodeW + gapX)));
+  const perRow = loose.length ? Math.max(1, chart.columns, shaped) : 0;
+  const columns = Math.max(chart.columns, Math.min(perRow, loose.length));
+  const xOf = (column: number) => (columns - 1 - column) * (nodeW + gapX);
+
+  const nodes = new Map<string, FlowPoint & { column: number }>();
+  for (const [id, n] of chart.nodes) nodes.set(id, { x: xOf(n.column), y: n.y, column: n.column });
+  const bends = new Map<string, FlowPoint[]>();
+  for (const [key, points] of chart.bends) bends.set(key, points.map((p) => ({ x: xOf(p.column) + nodeW / 2, y: p.y })));
+  let height = chart.height;
+  const gridTop = chart.height ? chart.height + gapY * 2 : 0;
+  loose.forEach((id, i) => {
+    const column = i % perRow;
+    const y = gridTop + Math.floor(i / perRow) * (nodeH + gapY);
+    nodes.set(id, { x: xOf(column), y, column });
+    height = Math.max(height, y + nodeH);
+  });
+  return { nodes, bends, width: columns * (nodeW + gapX) - gapX, height };
+}
+
+/** Steps 1–4, for boxes that have links. Columns and heights only — the
+ * caller turns columns into x. */
+function layered(
+  ids: string[],
+  edges: { from: string; to: string }[],
+  nodeH: number,
+  gapY: number,
+): {
+  nodes: Map<string, { column: number; y: number }>;
+  bends: Map<string, { column: number; y: number }[]>;
+  columns: number;
+  height: number;
+} {
+  if (ids.length === 0) return { nodes: new Map(), bends: new Map(), columns: 0, height: 0 };
 
   // 1. columns by link depth
   const lay = new Map(ids.map((id) => [id, 0]));
@@ -196,26 +250,23 @@ export function flowLayout(
   }
 
   const top = Math.min(...Array.from(nodes.values(), (n) => n.y));
-  const lastColumn = columns.length - 1;
-  const xOf = (layer: number) => (lastColumn - layer) * (nodeW + gapX);
-
-  const out = new Map<string, FlowPoint & { column: number }>();
+  const out = new Map<string, { column: number; y: number }>();
   let height = 0;
   for (const id of ids) {
     const n = nodes.get(`t${id}`) as LayoutNode;
     const y = Math.round(n.y - top);
-    out.set(id, { x: xOf(n.layer), y, column: n.layer });
+    out.set(id, { column: n.layer, y });
     height = Math.max(height, y + nodeH);
   }
-  const bends = new Map<string, FlowPoint[]>();
+  const bends = new Map<string, { column: number; y: number }[]>();
   for (const { key, dummies } of chains) {
     bends.set(
       key,
       dummies.map((k) => {
         const n = nodes.get(k) as LayoutNode;
-        return { x: xOf(n.layer) + nodeW / 2, y: Math.round(n.y - top + n.h / 2) };
+        return { column: n.layer, y: Math.round(n.y - top + n.h / 2) };
       }),
     );
   }
-  return { nodes: out, bends, width: columns.length * (nodeW + gapX) - gapX, height };
+  return { nodes: out, bends, columns: columns.length, height };
 }

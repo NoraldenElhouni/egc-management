@@ -1,12 +1,20 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Check, ChevronLeft, Crosshair, Maximize2, Minus, Plus, Workflow } from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { Check, Crosshair, ListTree, Maximize2, Minus, Plus, Workflow } from "lucide-react";
 import type { DependencyPair, StatusRow, TaskRow, TaskTypeLite } from "../../../hooks/tasks/useTaskBoard";
 import { externalWaitIds, type DependencyFlags } from "../../../hooks/tasks/dependencyFlags";
 import { WAIT_STYLE } from "../board/DependencyBadges";
 import { useTemplateMode } from "../TemplateModeContext";
 import { typeBadges, type TypeBadge } from "../board/taskTypeBadge";
 import { arabicCount, criticalCount, dayAdapter, daysShort, spanShort, tasksCount } from "../gantt/ganttScale";
-import { Badge, FoldButton } from "../gantt/GanttBar";
+import { Badge } from "../gantt/GanttBar";
 import { LinkMenu } from "../gantt/TaskGantt";
 import { criticalPath, linkKey, type CriticalPathResult } from "../schedule/criticalPath";
 import { workingDaysBetween } from "../board/workingDays";
@@ -18,11 +26,12 @@ import { flowLayout } from "./flowLayout";
 // Reached at /tasks/board/:id/flow (TasksRoutes.tsx), from the same
 // ["task-board", boardId] query as the list and the Gantt.
 //
-// One level of the task tree at a time — most links on our boards join
-// subtasks of the same parent. The top level shows the board's main tasks; a
-// box with subtasks has a chip that opens its level (breadcrumb above). A link
-// whose other end is on another level is drawn to a dashed "ghost" box with
-// that task's name; clicking the ghost goes to its level.
+// The whole board at once: every task and subtask is its own box, placed only
+// by its links. A subtask's box says which task it is under ("ضمن: …"); a
+// parent's box has the Gantt's bracket edges and its subtask count. Boxes
+// with no links (most parents) are packed in rows under the chart, in outline
+// order — each parent followed by its subtasks — so a board with no links is
+// a grid that reads like the list.
 //
 // Positions are never saved: the layout is recomputed from the links, so it
 // can't go stale and two people can't disagree about it.
@@ -30,9 +39,10 @@ import { flowLayout } from "./flowLayout";
 // Gestures: drag the dot on a box's exit edge (its left edge — the chart runs
 // right → left) onto another box to make that one start after it; click a
 // line to reverse or remove it; click a box to open the task; "+" on a box
-// adds a task after it (the create dialog, preset to "after"); drag the
-// background to pan, Ctrl/Cmd + wheel to zoom (a plain wheel scrolls).
-// "المسار الحرج" colours the critical path (schedule/criticalPath.ts).
+// adds a task after it (the create dialog, preset to "after"); the wheel
+// zooms around the cursor and dragging anywhere — boxes and lines too — pans
+// (a drag never counts as a click). "المسار الحرج" colours the critical path
+// (schedule/criticalPath.ts).
 
 const NODE_W = 210;
 const NODE_H = 76;
@@ -43,12 +53,13 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2;
 /** How close (screen px) to a box's entry the link drag snaps to it. */
 const SNAP_PX = 80;
+/** How far (screen px) the pointer moves before a press is a pan, not a click. */
+const DRAG_PX = 4;
 const DEFAULT_STATUS_COLOR = "#6B7280";
 
 const isFinished = (category: string | undefined) => category === "done" || category === "closed";
 
 interface TaskFlowProps {
-  boardName: string;
   tasks: TaskRow[];
   statuses: StatusRow[];
   taskTypes: Map<string, TaskTypeLite>;
@@ -58,16 +69,11 @@ interface TaskFlowProps {
   onLink?: (pair: DependencyPair) => void;
   onUnlink?: (pair: DependencyPair) => void;
   onReverseLink?: (pair: DependencyPair) => void;
-  /** "+" on a box: a new task after it, on the same level. */
+  /** "+" on a box: a new task after it, under the same parent. */
   onAddAfter?: (taskId: string, parentTaskId: string | null) => void;
-  /** The toolbar's "إضافة مهمة", on the level being shown. */
+  /** The toolbar's "إضافة مهمة" (always a main task — null parent). */
   onAddTask?: (parentTaskId: string | null) => void;
   readOnly?: boolean;
-}
-
-interface Box {
-  id: string;
-  ghost: boolean;
 }
 
 interface View {
@@ -77,7 +83,6 @@ interface View {
 }
 
 export default function TaskFlow({
-  boardName,
   tasks,
   statuses,
   taskTypes,
@@ -96,82 +101,84 @@ export default function TaskFlow({
   const badges = useMemo(() => typeBadges(taskTypes), [taskTypes]);
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
-  // Links to other levels are drawn to ghost boxes; only a wait on a task
-  // of another board keeps the stop icon.
+  // Every link on this board is drawn; only a wait on a task of another
+  // board gets the stop icon.
   const externalWaits = useMemo(
     () => externalWaitIds(tasks, dependencies, dependencyFlags, (id) => statusById.get(id)?.category),
     [tasks, dependencies, dependencyFlags, statusById],
   );
 
-  // The level a task belongs to: its parent, or the top (null) when its
-  // parent isn't loaded (an assignee's filtered board).
-  const levelOf = (task: TaskRow): string | null =>
+  // A task's parent, or null (a main task) when its parent isn't loaded
+  // (an assignee's filtered board).
+  const parentOf = (task: TaskRow): string | null =>
     task.parent_task_id && byId.has(task.parent_task_id) ? task.parent_task_id : null;
   const childCount = useMemo(() => {
     const map = new Map<string, number>();
     for (const t of tasks) if (t.parent_task_id && byId.has(t.parent_task_id)) map.set(t.parent_task_id, (map.get(t.parent_task_id) ?? 0) + 1);
     return map;
   }, [tasks, byId]);
-
-  const [level, setLevel] = useState<string | null>(null);
-  // The level's task was deleted (or filtered away): back to the top.
-  const currentLevel = level && byId.has(level) ? level : null;
-  const trail = useMemo(() => {
+  /** Titles from the main task down to this task's parent. */
+  const ancestorsOf = (task: TaskRow): string[] => {
     const out: TaskRow[] = [];
-    let cursor = currentLevel;
+    let cursor = parentOf(task);
     while (cursor) {
       const t = byId.get(cursor);
       if (!t || out.includes(t)) break;
       out.unshift(t);
-      cursor = t.parent_task_id;
+      cursor = parentOf(t);
     }
-    return out;
-  }, [currentLevel, byId]);
+    return out.map((t) => t.title);
+  };
 
   const dayOf = (value: string | null) => (value ? adapter.toDay(value) : null);
   const startOf = (t: TaskRow) => dayOf(t.start_date) ?? Number.POSITIVE_INFINITY;
 
-  // The boxes on this level (by start date, as the layout's first order),
-  // ghosts for the far ends of links that leave it, and the links to draw.
+  // Every task in outline order — each parent followed by its subtasks,
+  // siblings by start date — as the layout's first order inside a column and
+  // the order of its packed rows, and every link with both ends on this board (another board's: the stop
+  // / "!" icon says so).
   const { boxes, links } = useMemo(() => {
-    const here = tasks
-      .filter((t) => levelOf(t) === currentLevel)
-      .map((t, i) => ({ t, i }))
-      .sort((a, b) => {
+    const kids = new Map<string | null, { t: TaskRow; i: number }[]>();
+    tasks.forEach((t, i) => {
+      const parent = parentOf(t);
+      const list = kids.get(parent) ?? [];
+      list.push({ t, i });
+      kids.set(parent, list);
+    });
+    for (const list of kids.values())
+      list.sort((a, b) => {
         const sa = startOf(a.t);
         const sb = startOf(b.t);
         return sa === sb ? a.i - b.i : sa < sb ? -1 : 1;
-      })
-      .map((x) => x.t);
-    const ids = new Set(here.map((t) => t.id));
-    const ghosts: string[] = [];
-    const drawn: { pair: DependencyPair; from: string; to: string; ghost: boolean }[] = [];
-    for (const dep of dependencies) {
-      const a = ids.has(dep.blocking_task_id);
-      const b = ids.has(dep.blocked_task_id);
-      if (a && b) {
-        drawn.push({ pair: dep, from: dep.blocking_task_id, to: dep.blocked_task_id, ghost: false });
-        continue;
-      }
-      if (a === b) continue;
-      const other = a ? dep.blocked_task_id : dep.blocking_task_id;
-      if (!byId.has(other)) continue; // another board: the stop / "!" icon says so
-      if (!ghosts.includes(other)) ghosts.push(other);
-      drawn.push({
-        pair: dep,
-        from: a ? dep.blocking_task_id : `g:${other}`,
-        to: a ? `g:${other}` : dep.blocked_task_id,
-        ghost: true,
       });
+    const order: string[] = [];
+    const seen = new Set<string>();
+    const visit = (parent: string | null) => {
+      for (const { t } of kids.get(parent) ?? []) {
+        if (seen.has(t.id)) continue;
+        seen.add(t.id);
+        order.push(t.id);
+        visit(t.id);
+      }
+    };
+    visit(null);
+    // A parent loop (refused on save, so only bad data) never reaches the top.
+    for (const t of tasks) {
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      order.push(t.id);
+      visit(t.id);
     }
-    const all: Box[] = [...here.map((t) => ({ id: t.id, ghost: false })), ...ghosts.map((id) => ({ id: `g:${id}`, ghost: true }))];
-    return { boxes: all, links: drawn };
-  }, [tasks, dependencies, currentLevel, byId, adapter]);
+    const drawn = dependencies
+      .filter((d) => byId.has(d.blocking_task_id) && byId.has(d.blocked_task_id))
+      .map((d) => ({ pair: d, from: d.blocking_task_id, to: d.blocked_task_id }));
+    return { boxes: order, links: drawn };
+  }, [tasks, dependencies, byId, adapter]);
 
   const layout = useMemo(
     () =>
       flowLayout(
-        boxes.map((b) => b.id),
+        boxes,
         links.map((l) => ({ from: l.from, to: l.to })),
         { nodeW: NODE_W, nodeH: NODE_H, gapX: GAP_X, gapY: GAP_Y },
       ),
@@ -238,13 +245,13 @@ export default function TaskFlow({
     const x = layout.width * k < w - MARGIN * 2 ? (w - layout.width * k) / 2 : w - MARGIN - layout.width * k;
     setView({ x, y: Math.max(MARGIN, (h - layout.height * k) / 2), k });
   };
-  // Fit on opening and on every change of level.
-  const fittedLevel = useRef<string | null | undefined>(undefined);
+  // Fit once, when the chart is first laid out.
+  const fitted = useRef(false);
   useLayoutEffect(() => {
-    if (fittedLevel.current === currentLevel) return;
-    fittedLevel.current = currentLevel;
+    if (fitted.current || layout.width === 0) return;
+    fitted.current = true;
     fit();
-  }, [currentLevel, layout]);
+  }, [layout]);
 
   const zoomAt = (factor: number, cx: number, cy: number) =>
     setView((v) => {
@@ -256,19 +263,18 @@ export default function TaskFlow({
     if (el) zoomAt(factor, el.clientWidth / 2, el.clientHeight / 2);
   };
 
-  // Native, non-passive: React's onWheel can't preventDefault.
+  // The wheel zooms around the cursor, like Construction Flow (panning is
+  // dragging). Native, non-passive: React's onWheel can't preventDefault.
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      if (e.ctrlKey || e.metaKey) {
-        const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-        zoomAt(Math.min(1.25, Math.max(0.8, Math.exp(-delta * 0.002))), e.clientX - rect.left, e.clientY - rect.top);
-      } else {
-        setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
-      }
+      const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      // A trackpad pinch arrives as Ctrl + small deltas: zoom it faster.
+      const rate = e.ctrlKey ? 0.01 : 0.002;
+      zoomAt(Math.min(1.25, Math.max(0.8, Math.exp(-delta * rate))), e.clientX - rect.left, e.clientY - rect.top);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -282,15 +288,32 @@ export default function TaskFlow({
     return { x: (clientX - rect.left - v.x) / v.k, y: (clientY - rect.top - v.y) / v.k };
   };
 
+  // A press anywhere but a box's link dot pans once it moves DRAG_PX; the
+  // click that ends such a drag is swallowed, so dragging over a box or a
+  // line never opens it.
   const [panning, setPanning] = useState<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
-  const onBackgroundDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const dragged = useRef(false);
+  const onPressDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    dragged.current = false;
     if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest("[data-flow-ui]")) return;
+    if ((e.target as HTMLElement).closest("[data-flow-handle]")) return;
     setPanning({ sx: e.clientX, sy: e.clientY, ox: viewRef.current.x, oy: viewRef.current.y });
+  };
+  const onClickAfterDrag = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (!dragged.current) return;
+    dragged.current = false;
+    e.preventDefault();
+    e.stopPropagation();
   };
   useEffect(() => {
     if (!panning) return;
-    const move = (e: PointerEvent) => setView((v) => ({ ...v, x: panning.ox + e.clientX - panning.sx, y: panning.oy + e.clientY - panning.sy }));
+    const move = (e: PointerEvent) => {
+      const dx = e.clientX - panning.sx;
+      const dy = e.clientY - panning.sy;
+      if (!dragged.current && Math.hypot(dx, dy) < DRAG_PX) return;
+      dragged.current = true;
+      setView((v) => ({ ...v, x: panning.ox + dx, y: panning.oy + dy }));
+    };
     const up = () => setPanning(null);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -313,9 +336,9 @@ export default function TaskFlow({
       const k = viewRef.current.k;
       let best: string | null = null;
       let bestDist = Number.POSITIVE_INFINITY;
-      for (const box of boxes) {
-        if (box.ghost || box.id === linkingRef.current?.fromId) continue;
-        const pos = layout.nodes.get(box.id);
+      for (const id of boxes) {
+        if (id === linkingRef.current?.fromId) continue;
+        const pos = layout.nodes.get(id);
         if (!pos) continue;
         // a box's entry is its right edge (the chart runs right → left)
         const ex = pos.x + NODE_W;
@@ -323,7 +346,7 @@ export default function TaskFlow({
         const dist = Math.hypot(p.x - ex, p.y - ey);
         const inside = p.x >= pos.x - 20 && p.x <= pos.x + NODE_W + 20 && p.y >= pos.y - 20 && p.y <= pos.y + NODE_H + 20;
         if ((inside || dist < SNAP_PX / k) && dist < bestDist) {
-          best = box.id;
+          best = id;
           bestDist = dist;
         }
       }
@@ -348,20 +371,6 @@ export default function TaskFlow({
   const [linkMenu, setLinkMenu] = useState<{ x: number; y: number; pair: DependencyPair } | null>(null);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const titleById = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
-
-  // A ghost was clicked: go to its level and point at it for a moment.
-  const [flashId, setFlashId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!flashId) return;
-    const timer = setTimeout(() => setFlashId(null), 1800);
-    return () => clearTimeout(timer);
-  }, [flashId]);
-  const goTo = (taskId: string) => {
-    const t = byId.get(taskId);
-    if (!t) return;
-    setLevel(levelOf(t));
-    setFlashId(taskId);
-  };
 
   // --- Link lines -----------------------------------------------------------
   const paths = useMemo(() => {
@@ -406,7 +415,6 @@ export default function TaskFlow({
         key: linkKey(l.pair),
         pair: l.pair,
         d,
-        ghost: l.ghost,
         lag,
         label: lag > 0 ? { x: (mid.x + midNext.x) / 2, y: (mid.y + midNext.y) / 2 - 6 } : null,
         conflict: end !== null && start !== null && start <= end,
@@ -415,7 +423,6 @@ export default function TaskFlow({
     });
   }, [links, layout, byId, chain, adapter]);
 
-  const levelTaskCount = boxes.filter((b) => !b.ghost).length;
   const linkFrom = linking ? layout.nodes.get(linking.fromId) : null;
 
   return (
@@ -424,35 +431,13 @@ export default function TaskFlow({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {onAddTask && (
             <button
-              onClick={() => onAddTask(currentLevel)}
+              onClick={() => onAddTask(null)}
               className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary/90"
             >
               <Plus className="h-3.5 w-3.5" />
               إضافة مهمة
             </button>
           )}
-          {/* where we are in the task tree */}
-          <nav className="flex min-w-0 items-center gap-1 text-sm">
-            <button
-              onClick={() => setLevel(null)}
-              className={`truncate rounded px-1.5 py-0.5 ${trail.length ? "text-gray-500 hover:bg-gray-100" : "font-semibold text-gray-800"}`}
-            >
-              {boardName}
-            </button>
-            {trail.map((t, i) => (
-              <span key={t.id} className="flex min-w-0 items-center gap-1">
-                <ChevronLeft className="h-3.5 w-3.5 shrink-0 text-gray-300" />
-                <button
-                  onClick={() => setLevel(t.id)}
-                  className={`max-w-[200px] truncate rounded px-1.5 py-0.5 ${
-                    i === trail.length - 1 ? "font-semibold text-gray-800" : "text-gray-500 hover:bg-gray-100"
-                  }`}
-                >
-                  {t.title}
-                </button>
-              </span>
-            ))}
-          </nav>
         </div>
         <div className="flex items-center gap-2">
           {critical &&
@@ -466,14 +451,14 @@ export default function TaskFlow({
               </span>
             ))}
           <span className="text-xs text-gray-500">
-            {tasksCount(levelTaskCount)} ·{" "}
-            {arabicCount(links.filter((l) => !l.ghost).length, { one: "رابط واحد", two: "رابطان", few: "روابط", many: "رابطاً" })}
+            {tasksCount(tasks.length)} ·{" "}
+            {arabicCount(links.length, { one: "رابط واحد", two: "رابطان", few: "روابط", many: "رابطاً" })}
           </span>
           <div className="flex overflow-hidden rounded-md border border-gray-200">
-            <button onClick={() => zoomCentre(1 / 1.2)} className="px-2 py-1 text-gray-600 hover:bg-gray-50" title="تصغير (Ctrl + عجلة التمرير)">
+            <button onClick={() => zoomCentre(1 / 1.2)} className="px-2 py-1 text-gray-600 hover:bg-gray-50" title="تصغير (عجلة التمرير)">
               <Minus className="h-3.5 w-3.5" />
             </button>
-            <button onClick={() => zoomCentre(1.2)} className="border-r border-gray-200 px-2 py-1 text-gray-600 hover:bg-gray-50" title="تكبير (Ctrl + عجلة التمرير)">
+            <button onClick={() => zoomCentre(1.2)} className="border-r border-gray-200 px-2 py-1 text-gray-600 hover:bg-gray-50" title="تكبير (عجلة التمرير)">
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -500,8 +485,9 @@ export default function TaskFlow({
 
       <div
         ref={viewportRef}
-        onPointerDown={onBackgroundDown}
-        className={`relative flex-1 overflow-hidden bg-gray-50 ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+        onPointerDown={onPressDown}
+        onClickCapture={onClickAfterDrag}
+        className={`relative flex-1 select-none overflow-hidden bg-gray-50 ${panning ? "cursor-grabbing" : "cursor-grab"}`}
         style={{
           backgroundImage: "radial-gradient(#D1D5DB 1.2px, transparent 1.2px)",
           backgroundSize: `${24 * view.k}px ${24 * view.k}px`,
@@ -509,10 +495,10 @@ export default function TaskFlow({
           touchAction: "none",
         }}
       >
-        {levelTaskCount === 0 ? (
+        {tasks.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-gray-400">
             <Workflow className="h-8 w-8 text-gray-300" />
-            {currentLevel ? "لا توجد مهام فرعية هنا" : "لا توجد مهام في هذه اللوحة بعد"}
+            لا توجد مهام في هذه اللوحة بعد
           </div>
         ) : (
           <div
@@ -539,7 +525,7 @@ export default function TaskFlow({
                 const hot = hoveredLink === p.key;
                 const blue = !red && (p.inChain || hot);
                 const dim = (!!chain && !p.inChain) || (!!criticalResult && !onPath);
-                const stroke = red ? "#DC2626" : blue ? "#2563EB" : p.ghost ? "#9CA3AF" : "#6B7280";
+                const stroke = red ? "#DC2626" : blue ? "#2563EB" : "#6B7280";
                 return (
                   <g key={p.key} opacity={dim ? 0.2 : 1}>
                     <path
@@ -547,7 +533,7 @@ export default function TaskFlow({
                       fill="none"
                       stroke={stroke}
                       strokeWidth={hot ? 3 : onPath || p.inChain ? 2.5 : 1.75}
-                      strokeDasharray={p.ghost ? "3 4" : p.lag > 0 ? "7 5" : undefined}
+                      strokeDasharray={p.lag > 0 ? "7 5" : undefined}
                       markerEnd={`url(#${red ? "flow-arrow-red" : blue ? "flow-arrow-blue" : "flow-arrow"})`}
                     />
                     {p.label && (
@@ -557,7 +543,6 @@ export default function TaskFlow({
                     )}
                     {!readOnly && (onUnlink || onReverseLink) && !linking && (
                       <path
-                        data-flow-ui
                         d={p.d}
                         fill="none"
                         stroke="transparent"
@@ -582,31 +567,13 @@ export default function TaskFlow({
               )}
             </svg>
 
-            {boxes.map((box) => {
-              const pos = layout.nodes.get(box.id);
-              if (!pos) return null;
-              const taskId = box.ghost ? box.id.slice(2) : box.id;
-              const task = byId.get(taskId);
-              if (!task) return null;
-              if (box.ghost) {
-                const where = task.parent_task_id ? byId.get(task.parent_task_id)?.title : boardName;
-                return (
-                  <button
-                    key={box.id}
-                    data-flow-ui
-                    onClick={() => goTo(taskId)}
-                    title="فتح مستوى هذه المهمة"
-                    className="absolute flex flex-col justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white/70 px-3 text-right hover:border-gray-400"
-                    style={{ left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, opacity: chain && !chain.has(taskId) ? 0.45 : 1 }}
-                  >
-                    <span className="truncate text-[13px] font-medium text-gray-600">{task.title}</span>
-                    <span className="truncate text-[11px] text-gray-400">في: {where}</span>
-                  </button>
-                );
-              }
+            {boxes.map((id) => {
+              const pos = layout.nodes.get(id);
+              const task = byId.get(id);
+              if (!pos || !task) return null;
               return (
                 <FlowBox
-                  key={box.id}
+                  key={id}
                   task={task}
                   x={pos.x}
                   y={pos.y}
@@ -623,8 +590,8 @@ export default function TaskFlow({
                   }
                   externalWait={externalWaits.has(task.id)}
                   badge={badges.get(task.task_type_id) ?? null}
+                  ancestors={ancestorsOf(task)}
                   subtasks={childCount.get(task.id) ?? 0}
-                  onOpenLevel={() => setLevel(task.id)}
                   onOpen={() => onOpenTask(task.id)}
                   onHover={(on) => setHoveredId(on ? task.id : null)}
                   onLinkStart={
@@ -636,9 +603,8 @@ export default function TaskFlow({
                         }
                       : undefined
                   }
-                  onAddAfter={!readOnly && onAddAfter ? () => onAddAfter(task.id, currentLevel) : undefined}
+                  onAddAfter={!readOnly && onAddAfter ? () => onAddAfter(task.id, parentOf(task)) : undefined}
                   linkTarget={linking?.targetId === task.id}
-                  flash={flashId === task.id}
                   tone={
                     criticalResult
                       ? criticalResult.critical.has(task.id)
@@ -684,14 +650,13 @@ function FlowBox({
   subtitle,
   externalWait,
   badge,
+  ancestors,
   subtasks,
-  onOpenLevel,
   onOpen,
   onHover,
   onLinkStart,
   onAddAfter,
   linkTarget,
-  flash,
   tone,
   note,
 }: {
@@ -703,30 +668,29 @@ function FlowBox({
   subtitle: string;
   externalWait: boolean;
   badge: TypeBadge | null;
+  /** Titles from the main task down to this task's parent; empty for a main task. */
+  ancestors: string[];
   subtasks: number;
-  onOpenLevel: () => void;
   onOpen: () => void;
   onHover: (on: boolean) => void;
   onLinkStart?: (e: ReactPointerEvent<HTMLElement>) => void;
   onAddAfter?: () => void;
   linkTarget: boolean;
-  flash: boolean;
   tone: "critical" | "dim" | null;
   note: string | null;
 }) {
   const [hovered, setHovered] = useState(false);
   const ring = linkTarget
     ? "ring-2 ring-blue-500 ring-offset-2"
-    : flash
-      ? "ring-4 ring-amber-400"
-      : tone === "critical"
-        ? "ring-2 ring-red-600"
-        : task.is_overdue && !done
-          ? "ring-2 ring-red-300"
-          : "";
+    : tone === "critical"
+      ? "ring-2 ring-red-600"
+      : task.is_overdue && !done
+        ? "ring-2 ring-red-300"
+        : "";
+  const edge = done ? "#9CA3AF" : color;
+  const parentTitle = ancestors[ancestors.length - 1] ?? null;
   return (
     <div
-      data-flow-ui
       onMouseEnter={() => {
         setHovered(true);
         onHover(true);
@@ -744,10 +708,12 @@ function FlowBox({
         opacity: tone === "dim" ? 0.35 : 1,
         borderColor: "#E5E7EB",
         borderRightWidth: 5,
-        borderRightColor: done ? "#9CA3AF" : color,
+        borderRightColor: edge,
+        // a parent gets both edges, like the Gantt's summary brackets
+        ...(subtasks > 0 && { borderLeftWidth: 3, borderLeftColor: edge }),
         background: done ? "#F9FAFB" : "white",
       }}
-      title={[task.title, note].filter(Boolean).join(" · ")}
+      title={[[...ancestors, task.title].join(" ← "), note].filter(Boolean).join(" · ")}
     >
       <button type="button" onClick={onOpen} className="flex h-full w-full flex-col justify-center gap-0.5 px-3 text-right">
         <span className={`flex min-w-0 items-center gap-1 text-[13px] font-semibold ${done ? "text-gray-500" : "text-gray-900"}`}>
@@ -760,16 +726,19 @@ function FlowBox({
           <span className={`truncate ${done ? "line-through decoration-gray-400" : ""}`}>{task.title}</span>
         </span>
         <span className="truncate text-[11px] text-gray-500">{subtitle}</span>
-        {subtasks > 0 && <span className="h-4" />}
+        {(subtasks > 0 || parentTitle) && (
+          <span className="flex min-w-0 items-center gap-1 text-[11px] text-gray-500">
+            {subtasks > 0 && (
+              <span className="flex shrink-0 items-center gap-0.5">
+                <ListTree className="h-3 w-3" />
+                {arabicCount(subtasks, { one: "مهمة فرعية", two: "مهمتان فرعيتان", few: "مهام فرعية", many: "مهمة فرعية" })}
+              </span>
+            )}
+            {subtasks > 0 && parentTitle && <span className="shrink-0">·</span>}
+            {parentTitle && <span className="truncate">ضمن: {parentTitle}</span>}
+          </span>
+        )}
       </button>
-      {subtasks > 0 && (
-        <span className="absolute bottom-1.5 right-2.5 flex items-center gap-0.5 rounded bg-gray-100 pl-1.5 text-[11px] text-gray-600">
-          <FoldButton fold={{ collapsed: true, onToggle: onOpenLevel }} />
-          <button type="button" onClick={onOpenLevel} className="hover:underline">
-            {arabicCount(subtasks, { one: "مهمة فرعية", two: "مهمتان فرعيتان", few: "مهام فرعية", many: "مهمة فرعية" })}
-          </button>
-        </span>
-      )}
       {badge && (
         <span className="pointer-events-none absolute left-2 top-2">
           <Badge badge={badge} />
@@ -778,6 +747,7 @@ function FlowBox({
       {onLinkStart && hovered && (
         // the exit edge: the box's left side (the chart runs right → left)
         <span
+          data-flow-handle
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             e.preventDefault();

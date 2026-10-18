@@ -209,7 +209,6 @@ export default function TaskBoardPage({ view }: { view: BoardView }) {
         {view === "flow" ? (
           <TaskFlow
             key={boardId}
-            boardName={data.board.name}
             tasks={boardTasks}
             statuses={data.statuses}
             taskTypes={data.taskTypes}
