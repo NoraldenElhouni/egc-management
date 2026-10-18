@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { BellRing } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import type { TaskRow } from "../../../hooks/tasks/useTaskBoard";
+import { useMyTaskAccess } from "../../../hooks/tasks/useTaskAccess";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
 import type { DirectoryFilterState } from "./directoryFilters";
 import OverdueNotifyDialog from "./OverdueNotifyDialog";
@@ -9,6 +10,12 @@ import { resolveOverdueRecipients, sendOverdueReminders, type OverdueSendOutcome
 
 // Renders nothing unless the "متأخرة فقط" filter is on — the button only
 // makes sense against a list that is already just late work.
+//
+// Who may chase (decided 2026-10-18, plans/notification-system/decisions.md
+// C4): admins anywhere — edit_all_tasks, which only the ADM role holds — and
+// a space's creator for the tasks in that space. Anyone else sees no button.
+// This is a UI gate; the server re-checks the same rule once the send moves
+// to public.notify_send_overdue_nudge() in notification Phase 3.
 //
 // Owns the dialog and the send lifecycle so each directory page adds one
 // line rather than five pieces of state.
@@ -32,16 +39,28 @@ export default function OverdueNotifyButton({
   searchTerm,
 }: OverdueNotifyButtonProps) {
   const { user } = useAuth();
+  const { access } = useMyTaskAccess();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [outcome, setOutcome] = useState<OverdueSendOutcome | null>(null);
 
+  const isAdmin = !!access?.edit_all;
+  const chasableTasks = useMemo(() => {
+    if (isAdmin) return visibleTasks;
+    if (!user?.id) return [];
+    return visibleTasks.filter((t) => {
+      const spaceId = data.spaceIdByBoardId.get(t.board_id);
+      return !!spaceId && data.spaceCreatorById.get(spaceId) === user.id;
+    });
+  }, [isAdmin, visibleTasks, data.spaceIdByBoardId, data.spaceCreatorById, user?.id]);
+
   const summary = useMemo(
-    () => resolveOverdueRecipients(visibleTasks, data.assigneesByTask, { excludeUserId: user?.id ?? null }),
-    [visibleTasks, data.assigneesByTask, user?.id],
+    () => resolveOverdueRecipients(chasableTasks, data.assigneesByTask, { excludeUserId: user?.id ?? null }),
+    [chasableTasks, data.assigneesByTask, user?.id],
   );
 
   if (!filters.overdueOnly) return null;
+  if (!isAdmin && chasableTasks.length === 0) return null;
 
   const recipientCount = summary.recipients.length;
 

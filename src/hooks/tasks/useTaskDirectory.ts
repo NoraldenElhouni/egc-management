@@ -68,6 +68,9 @@ export interface TaskDirectoryData {
   spaceNameByBoardId: Map<string, string>;
   /** board_id → the space it lives in; rows use it to look up what I may do there. */
   spaceIdByBoardId: Map<string, string>;
+  /** space id → spaces.created_by. The overdue-reminder button lets a space's
+   * creator chase late work in that space (admins can chase anywhere). */
+  spaceCreatorById: Map<string, string>;
   linkedTaskIds: Set<string>;
   blockedTaskIds: Set<string>;
   /** The row's stop / "!" / check icons — see useTaskBoard.ts's own field. */
@@ -100,6 +103,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
       // column. Both branches populate it; the scoped branch only ever
       // has the one space in it.
       let spaceNamesById = new Map<string, string>();
+      let spaceCreatorById = new Map<string, string>();
       if (spaceId) {
         // Scoped to one already-chosen space — no visibility resolution
         // needed, and boards.space_id covers folder-nested boards too
@@ -108,20 +112,24 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         // own boards query relies on).
         const [{ data, error }, { data: spaceRow, error: spaceError }] = await Promise.all([
           tasksDb.from("boards").select("id, name, space_id, sort_order").eq("space_id", spaceId).eq("is_archived", false).eq("is_template", false),
-          tasksDb.from("spaces").select("id, name").eq("id", spaceId).maybeSingle(),
+          tasksDb.from("spaces").select("id, name, created_by").eq("id", spaceId).maybeSingle(),
         ]);
         if (error) throw error;
         if (spaceError) throw spaceError;
         boards = data ?? [];
         if (spaceRow) spaceNamesById.set(spaceRow.id, spaceRow.name);
+        if (spaceRow?.created_by) spaceCreatorById.set(spaceRow.id, spaceRow.created_by);
       } else {
         const { data: spaces, error: spacesError } = await tasksDb
           .from("spaces")
-          .select("id, name")
+          .select("id, name, created_by")
           .eq("is_archived", false)
           .eq("is_template", false);
         if (spacesError) throw spacesError;
         spaceNamesById = new Map((spaces ?? []).map((s) => [s.id, s.name]));
+        spaceCreatorById = new Map(
+          (spaces ?? []).filter((s) => !!s.created_by).map((s) => [s.id, s.created_by as string]),
+        );
 
         // directory views list spaces I hold a level on; a space that is
         // only visible because it holds a task of mine belongs in My Work
@@ -265,6 +273,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
         boardNamesById: new Map(boards.map((b) => [b.id, b.name])),
         boardOrderById: new Map(boards.map((b) => [b.id, b.sort_order])),
         spaceIdByBoardId: new Map(boards.map((b) => [b.id, b.space_id])),
+        spaceCreatorById,
         spaceNameByBoardId: new Map(
           boards
             .map((b) => [b.id, spaceNamesById.get(b.space_id)] as const)

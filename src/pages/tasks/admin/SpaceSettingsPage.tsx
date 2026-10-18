@@ -708,6 +708,13 @@ const TRIGGER_CONFIG_FIELD: Partial<Record<TriggerType, "status" | "field">> = {
   status_changed: "status",
   field_changed: "field",
 };
+// send_notification stays in ACTION_LABELS so an existing rule still reads
+// correctly, but new rules can't pick it: notifications will come from the
+// notify schema, not from tasks.automations (see
+// plans/notification-system/decisions.md C23). When a runner for these rules
+// exists, its notification action calls notify.emit and this filter goes.
+const NEW_RULE_ACTIONS = (Object.keys(ACTION_LABELS) as ActionType[]).filter((a) => a !== "send_notification");
+
 const ACTION_CONFIG_FIELD: Partial<Record<ActionType, "status" | "priority" | "employee" | "text" | "board" | "template">> = {
   set_status: "status",
   set_priority: "priority",
@@ -913,7 +920,7 @@ function AutomationsTab({ spaceId, statuses }: { spaceId: string; statuses: Stat
               }}
               className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 outline-none"
             >
-              {(Object.keys(ACTION_LABELS) as ActionType[]).map((a) => (
+              {NEW_RULE_ACTIONS.map((a) => (
                 <option key={a} value={a}>
                   {ACTION_LABELS[a]}
                 </option>
