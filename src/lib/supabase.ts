@@ -5621,6 +5621,44 @@ export type Database = {
         }[]
       }
       get_role_by_email: { Args: { p_email: string }; Returns: string }
+      get_task_activity: {
+        Args: {
+          p_actions?: string[]
+          p_actor_id?: string
+          p_before?: string
+          p_from?: string
+          p_limit?: number
+          p_project_id?: string
+          p_space_id?: string
+          p_to?: string
+        }
+        Returns: {
+          action: string
+          action_label: string
+          actor_id: string
+          actor_name: string
+          actor_party: string
+          amount: number
+          currency: string
+          detail: Json
+          from_label: string
+          from_value: string
+          id: string
+          log_group: string
+          log_label: string
+          log_name: string
+          occurred_at: string
+          project_id: string
+          project_name: string
+          reason: string
+          source: string
+          subject_id: string
+          subject_type: string
+          to_label: string
+          to_value: string
+          tx_id: number
+        }[]
+      }
       get_vendor_expenses: {
         Args: { p_project_id: string }
         Returns: {
@@ -5678,6 +5716,104 @@ export type Database = {
           permission_name: string
           source_layer: string
         }[]
+      }
+      notify_admin_attach: { Args: { p_table: string }; Returns: undefined }
+      notify_admin_delete: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      notify_admin_detach: { Args: { p_table: string }; Returns: undefined }
+      notify_admin_history: {
+        Args: { p_key?: string; p_kind?: string; p_limit?: number }
+        Returns: Json
+      }
+      notify_admin_list: { Args: { p_kind: string }; Returns: Json }
+      notify_admin_preview: {
+        Args: { p_kind: string; p_row: Json; p_sample_id?: string }
+        Returns: Json
+      }
+      notify_admin_save: {
+        Args: { p_confirm?: boolean; p_kind: string; p_row: Json }
+        Returns: Json
+      }
+      notify_admin_simulations: { Args: { p_limit?: number }; Returns: Json }
+      notify_admin_tables: { Args: never; Returns: Json }
+      notify_admin_test: { Args: { p_event_key: string }; Returns: number }
+      notify_archive: { Args: { p_ids: string[] }; Returns: number }
+      notify_get_settings: { Args: never; Returns: Json }
+      notify_list: {
+        Args: {
+          p_app?: string
+          p_before?: string
+          p_category?: string
+          p_limit?: number
+          p_unread_only?: boolean
+        }
+        Returns: {
+          body: string
+          category: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_key: string
+          group_count: number
+          id: string
+          link: string
+          priority: string
+          project_id: string
+          read_at: string
+          title: string
+        }[]
+      }
+      notify_log_deliveries: {
+        Args: {
+          p_event_key?: string
+          p_from?: string
+          p_limit?: number
+          p_status?: string
+          p_to?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
+      notify_log_errors: { Args: { p_limit?: number }; Returns: Json }
+      notify_log_stats: { Args: { p_days?: number }; Returns: Json }
+      notify_log_user: {
+        Args: { p_days?: number; p_user_id: string }
+        Returns: Json
+      }
+      notify_mark_all_read: { Args: never; Returns: number }
+      notify_mark_read: { Args: { p_ids: string[] }; Returns: number }
+      notify_push_claim: { Args: { p_limit?: number }; Returns: Json }
+      notify_push_result: { Args: { p_results: Json }; Returns: number }
+      notify_receipt_claim: { Args: { p_limit?: number }; Returns: Json }
+      notify_receipt_result: { Args: { p: Json }; Returns: number }
+      notify_register_device: {
+        Args: {
+          p_app_id: string
+          p_device_id: string
+          p_platform: string
+          p_token: string
+        }
+        Returns: string
+      }
+      notify_send_overdue_nudge: {
+        Args: { p_message: string; p_task_ids: string[]; p_title: string }
+        Returns: Json
+      }
+      notify_set_preference: {
+        Args: { p_category: string; p_mode: string }
+        Returns: undefined
+      }
+      notify_set_settings: { Args: { p_settings: Json }; Returns: Json }
+      notify_subscribe: {
+        Args: { p_entity_id: string; p_entity_type: string; p_mode: string }
+        Returns: undefined
+      }
+      notify_unread_count: { Args: never; Returns: number }
+      notify_unregister_device: {
+        Args: { p_app_id: string; p_device_id: string }
+        Returns: undefined
       }
       resolve_permission_ladder: {
         Args: {

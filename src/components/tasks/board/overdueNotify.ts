@@ -1,5 +1,5 @@
 import type { TaskRow } from "../../../hooks/tasks/useTaskBoard";
-import { notifyUsersDetailed } from "../../../services/notifications/pushNotifications";
+import { sendOverdueNudge } from "../../../services/notifications/notifyApi";
 
 // Pure logic for the "chase the people with overdue work" button — no
 // JSX, so the plural rule and the recipient maths are trivially
@@ -21,6 +21,8 @@ export interface OverdueRecipientSummary {
   unassignedTaskCount: number;
   /** Overdue tasks the acting user is on, excluded from the send. */
   selfTaskCount: number;
+  /** The overdue tasks that have someone to remind — what the server is asked about. */
+  overdueTaskIds: string[];
 }
 
 export const DEFAULT_OVERDUE_TITLE = "تذكير بالمهام المتأخرة";
@@ -55,6 +57,7 @@ export function resolveOverdueRecipients(
   let overdueTaskCount = 0;
   let unassignedTaskCount = 0;
   let selfTaskCount = 0;
+  const overdueTaskIds = new Set<string>();
 
   for (const task of visibleTasks) {
     if (!task.is_overdue) continue;
@@ -71,6 +74,7 @@ export function resolveOverdueRecipients(
 
     let countedSelf = false;
     for (const userId of assignees) {
+      if (!excludeUserId || userId !== excludeUserId) overdueTaskIds.add(task.id);
       if (excludeUserId && userId === excludeUserId) {
         // Counted once per task, not once per assignment.
         if (!countedSelf) {
@@ -89,7 +93,7 @@ export function resolveOverdueRecipients(
     .map(([userId, taskIds]) => ({ userId, taskCount: taskIds.size }))
     .sort((a, b) => b.taskCount - a.taskCount);
 
-  return { recipients, overdueTaskCount, unassignedTaskCount, selfTaskCount };
+  return { recipients, overdueTaskCount, unassignedTaskCount, selfTaskCount, overdueTaskIds: [...overdueTaskIds] };
 }
 
 /**
@@ -127,60 +131,50 @@ export function buildOverdueBody(taskCount: number, message: string): string {
 
 export interface OverdueSendOutcome {
   attemptedUserIds: string[];
+  /** Told: in their inbox, and on their phone when they have the app. */
   deliveredUserIds: string[];
-  /** No push token on file — never received it. */
+  /** Told in the inbox only — no phone app registered. */
   unreachableUserIds: string[];
-  /** Had a token, but the send errored. Retry should target ONLY these. */
+  /** Already reminded about these boards today — not told again. */
+  duplicateUserIds: string[];
+  /** The request failed as a whole. */
   failedUserIds: string[];
   errors: string[];
 }
 
 /**
- * Sends one summary push per person.
- *
- * The body differs between people only by the task count, and
- * notifyUsersDetailed takes one title/body for a whole batch — so
- * recipients are grouped BY COUNT rather than sent one at a time.
- * Everyone with 5 late tasks shares a call, everyone with 3 shares
- * another. Calls = distinct counts, which stays under ten regardless of
- * headcount.
- *
- * No deep link is attached. Fields routes `data.url` straight into
- * router.push, and its own "my work" screen is a company route while
- * contractors — who can also be assignees — live under a different one.
- * A wrong route on tap is worse than no route, so this is left off until
- * the mobile handler grows a per-audience rule.
+ * Sends one summary notification per person through the database
+ * (public.notify_send_overdue_nudge). The server re-checks everything:
+ * the caller holds send_task_reminders or created the space, can see each
+ * task, and the task is still overdue; each person is reminded at most
+ * once a day per board. The notification links to their own tasks screen
+ * in each app (deep links live in notify.deep_links).
  */
 export async function sendOverdueReminders(
+  taskIds: string[],
   recipients: OverdueRecipient[],
   title: string,
   message: string,
 ): Promise<OverdueSendOutcome> {
-  const byCount = new Map<number, string[]>();
-  for (const r of recipients) {
-    const list = byCount.get(r.taskCount) ?? [];
-    list.push(r.userId);
-    byCount.set(r.taskCount, list);
+  const attemptedUserIds = recipients.map((r) => r.userId);
+  try {
+    const result = await sendOverdueNudge(taskIds, title, message);
+    return {
+      attemptedUserIds,
+      deliveredUserIds: [...result.sent, ...result.inbox_only],
+      unreachableUserIds: result.inbox_only,
+      duplicateUserIds: result.duplicate,
+      failedUserIds: [],
+      errors: [],
+    };
+  } catch (err) {
+    return {
+      attemptedUserIds,
+      deliveredUserIds: [],
+      unreachableUserIds: [],
+      duplicateUserIds: [],
+      failedUserIds: attemptedUserIds,
+      errors: [err instanceof Error ? err.message : String(err)],
+    };
   }
-
-  const outcome: OverdueSendOutcome = {
-    attemptedUserIds: recipients.map((r) => r.userId),
-    deliveredUserIds: [],
-    unreachableUserIds: [],
-    failedUserIds: [],
-    errors: [],
-  };
-
-  for (const [taskCount, userIds] of byCount) {
-    const result = await notifyUsersDetailed(userIds, title, buildOverdueBody(taskCount, message));
-
-    outcome.unreachableUserIds.push(...result.unreachableUserIds);
-    outcome.failedUserIds.push(...result.failedUserIds);
-    outcome.errors.push(...result.errors);
-    outcome.deliveredUserIds.push(
-      ...result.reachableUserIds.filter((id) => !result.failedUserIds.includes(id)),
-    );
-  }
-
-  return outcome;
 }

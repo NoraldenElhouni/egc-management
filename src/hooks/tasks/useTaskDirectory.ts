@@ -3,8 +3,6 @@ import { accessSignature, invalidateTaskAccess, useMyTaskAccess } from "./useTas
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
-import { notifyUsers } from "../../services/notifications/pushNotifications";
-import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
 import type { DependencyPair, Priority, StatusRow, TagLite, TaskRow, TaskTypeLite } from "./useTaskBoard";
@@ -299,11 +297,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
       const { error } = await tasksDb.from("tasks").update({ status_id: statusId }).eq("id", taskId);
       if (error) throw error;
       if (prev && prev !== statusId) recordTaskPatch("تغيير الحالة", taskId, { status_id: prev }, { status_id: statusId });
-
-      // Best-effort — a failed dependency check shouldn't fail the
-      // status change itself, same posture as setAssignees' own push.
-      const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
-      if (category === "done") void notifyDependentAssignees(taskId);
+      // "The next task is ready" is sent by the database (notify.task_unblocked).
 
       // Any task that lists this one as a blocker has its own cached
       // detail view keyed by ITS OWN taskId — invalidate those too, or
@@ -459,12 +453,7 @@ export function useTaskDirectory(options?: { spaceId?: string }) {
           .from("task_assignees")
           .insert(toAdd.map((userId) => ({ task_id: taskId, user_id: userId, assigned_by: user.id })));
         if (error) throw error;
-
-        const recipients = toAdd.filter((id) => id !== user.id);
-        if (recipients.length > 0) {
-          const taskTitle = query.data?.tasks.find((t) => t.id === taskId)?.title ?? "مهمة";
-          void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, { url: `/tasks/${taskId}` });
-        }
+        // New assignees are told by the database (task.assigned).
       }
 
       recordAssignees("تعيين المسؤولين", user?.id, [

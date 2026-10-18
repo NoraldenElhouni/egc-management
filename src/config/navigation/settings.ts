@@ -1,5 +1,7 @@
 import {
   Award,
+  Bell,
+  BellRing,
   BookText,
   Box,
   BriefcaseBusiness,
@@ -97,6 +99,20 @@ export const SETTINGS_ITEMS: NavItem[] = [
     path: "/settings/activity-log",
     description: "من فعل ماذا ومتى: الدفعات والصلاحيات والطلبات",
     permission: [...LOG_PERMISSIONS],
+  },
+  {
+    label: "إدارة الإشعارات",
+    icon: Bell,
+    path: "/settings/notifications",
+    description: "ماذا يُرسل ولمن ومتى، دون تحديث التطبيقات",
+    permission: "manage_notifications",
+  },
+  {
+    label: "سجل الإشعارات",
+    icon: BellRing,
+    path: "/settings/notifications/log",
+    description: "ما أُرسل وما لم يُرسل ولماذا",
+    permission: "view_notification_log",
   },
   {
     label: "السجلات",

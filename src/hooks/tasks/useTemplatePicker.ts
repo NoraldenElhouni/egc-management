@@ -4,7 +4,6 @@ import { supabase } from "../../lib/supabaseClient";
 import type { Database } from "../../lib/supabase";
 import { useAuth } from "../useAuth";
 import { callApplyTemplateBoard } from "./copyTaskTree";
-import { notifyNewAssignees } from "../../services/tasks/notifyNewAssignees";
 
 // =====================================================================
 // D4 — Template picker, build plan Part 7.
@@ -183,25 +182,22 @@ export function useTemplatePicker(spaceId: string | undefined, currentBoardId: s
     }) => {
       if (!user?.id) throw new Error("no authenticated user");
 
-      const newTaskIds: string[] = [];
       for (const boardId of targetBoardIds) {
         for (const templateId of templateIds) {
-          newTaskIds.push(
-            ...(await callApplyTemplateBoard({
-              templateBoardId: templateId,
-              targetBoardId: boardId,
-              anchorDate,
-              createdBy: user.id,
-              excludedIds,
-              roleOverrides: roleOverrides[boardId] ?? {},
-            })),
-          );
+          await callApplyTemplateBoard({
+            templateBoardId: templateId,
+            targetBoardId: boardId,
+            anchorDate,
+            createdBy: user.id,
+            excludedIds,
+            roleOverrides: roleOverrides[boardId] ?? {},
+          });
         }
       }
 
-      // people (named, or resolved from a project role) were assigned
-      // server-side; tell them
-      void notifyNewAssignees(newTaskIds, user.id);
+      // The people assigned server-side (named, or resolved from a project
+      // role) are told by the database: one notification per person per
+      // template, with the count (task.assigned, grouped per transaction).
       return { targetBoardIds };
     },
     onSuccess: ({ targetBoardIds }) => {

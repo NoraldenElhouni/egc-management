@@ -23,6 +23,8 @@ import ShopsRoutes from "./pages/ShopsRoutes";
 import ExecutionManagementRoutes from "./pages/ExecutionManagementRoutes";
 import TasksRoutes from "./pages/TasksRoutes";
 import RequirePermission from "./auth/RequirePermission";
+import NotificationsPage from "../pages/notifications/NotificationsPage";
+import NotificationSettingsPage from "../pages/profile/NotificationSettingsPage";
 
 const AppRouter = () => {
   const [session, setSession] = useState(false);
@@ -123,6 +125,8 @@ const AppRouter = () => {
             </Route>
 
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/notifications" element={<NotificationSettingsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
 
             {/* Settings */}
             <Route

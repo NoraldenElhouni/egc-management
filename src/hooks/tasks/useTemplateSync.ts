@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { accessSignature, useMyTaskAccess } from "./useTaskAccess";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../useAuth";
-import { notifyNewAssignees } from "../../services/tasks/notifyNewAssignees";
 import { callAddTasksToTemplate, callPushTemplateTasks } from "./copyTaskTree";
 
 // =====================================================================
@@ -188,7 +187,7 @@ export function useTemplateSyncActions() {
           })
         : [];
 
-      void notifyNewAssignees(newTaskIds, user.id);
+      // New assignees are told by the database (task.assigned, grouped).
       return { ...input, created: newTaskIds.length, addedToTemplate: input.fromBoardId !== input.templateBoardId };
     },
     onSuccess: ({ fromBoardId, templateBoardId, targetBoardIds }) => {

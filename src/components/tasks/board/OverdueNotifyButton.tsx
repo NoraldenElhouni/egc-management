@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { BellRing } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import type { TaskRow } from "../../../hooks/tasks/useTaskBoard";
-import { useMyTaskAccess } from "../../../hooks/tasks/useTaskAccess";
+import { useCan } from "../../../hooks/permissions/useCan";
 import type { TaskDirectoryData } from "../../../hooks/tasks/useTaskDirectory";
 import type { DirectoryFilterState } from "./directoryFilters";
 import OverdueNotifyDialog from "./OverdueNotifyDialog";
@@ -12,10 +12,9 @@ import { resolveOverdueRecipients, sendOverdueReminders, type OverdueSendOutcome
 // makes sense against a list that is already just late work.
 //
 // Who may chase (decided 2026-10-18, plans/notification-system/decisions.md
-// C4): admins anywhere — edit_all_tasks, which only the ADM role holds — and
-// a space's creator for the tasks in that space. Anyone else sees no button.
-// This is a UI gate; the server re-checks the same rule once the send moves
-// to public.notify_send_overdue_nudge() in notification Phase 3.
+// C4): holders of send_task_reminders (the ADM role) anywhere, and a space's
+// creator for the tasks in that space. Anyone else sees no button. The same
+// rule is enforced again by public.notify_send_overdue_nudge().
 //
 // Owns the dialog and the send lifecycle so each directory page adds one
 // line rather than five pieces of state.
@@ -39,12 +38,12 @@ export default function OverdueNotifyButton({
   searchTerm,
 }: OverdueNotifyButtonProps) {
   const { user } = useAuth();
-  const { access } = useMyTaskAccess();
+  const { can: canRemindAll } = useCan("send_task_reminders");
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [outcome, setOutcome] = useState<OverdueSendOutcome | null>(null);
 
-  const isAdmin = !!access?.edit_all;
+  const isAdmin = canRemindAll;
   const chasableTasks = useMemo(() => {
     if (isAdmin) return visibleTasks;
     if (!user?.id) return [];
@@ -73,7 +72,7 @@ export default function OverdueNotifyButton({
     if (sending) return; // guards a double-click on top of the disabled attribute
     setSending(true);
     try {
-      setOutcome(await sendOverdueReminders(summary.recipients, title, message));
+      setOutcome(await sendOverdueReminders(summary.overdueTaskIds, summary.recipients, title, message));
     } finally {
       setSending(false);
     }

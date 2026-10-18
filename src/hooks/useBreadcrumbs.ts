@@ -126,6 +126,8 @@ export const SEGMENT_NAMES: Record<string, string> = {
   view: "عرض",
   website: "إدارة الموقع",
   zones: "المناطق",
+  notifications: "الإشعارات",
+  log: "السجل",
 };
 
 const findEntity = (path: string) =>

@@ -7,8 +7,6 @@ import { useAuth } from "../useAuth";
 import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeople";
 import { resolveStatusSetId } from "./resolveStatusSetId";
 import { DEFAULT_FEATURE_SETTINGS, type SpaceFeatureSettings } from "./useSpaceSettings";
-import { notifyUsers } from "../../services/notifications/pushNotifications";
-import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { emitTaskError } from "./taskErrorBus";
 import { extractErrorMessage } from "./extractErrorMessage";
 import { topmostTaskIds, withDescendants } from "./bulkSelection";
@@ -407,11 +405,8 @@ export function useTaskBoard(boardId: string | undefined) {
       .eq("id", taskId);
     if (error) throw error;
 
-    // Best-effort — a failed dependency check shouldn't fail the
-    // status change itself, same posture as setAssignees' own push.
-    const category = query.data?.statuses.find((s) => s.id === statusId)?.category;
-    // Template boards never notify — nobody is really working them.
-    if (category === "done" && !query.data?.board.is_template) void notifyDependentAssignees(taskId);
+    // "The next task is ready" is sent by the database when this status
+    // change frees a dependent task (notify.task_unblocked).
 
     // Any task that lists this one as a blocker has its own cached
     // detail view keyed by ITS OWN taskId — invalidate those too, or
@@ -528,26 +523,8 @@ export function useTaskBoard(boardId: string | undefined) {
         if (rows.length) {
           const { error } = await tasksDb.from("task_assignees").insert(rows);
           if (error) throw error;
-
-          if (!query.data?.board.is_template) {
-            const tasksByUser = new Map<string, string[]>();
-            for (const row of rows) {
-              if (row.user_id === user.id) continue;
-              tasksByUser.set(row.user_id, [...(tasksByUser.get(row.user_id) ?? []), row.task_id]);
-            }
-            for (const [userId, assignedTaskIds] of tasksByUser) {
-              const single = assignedTaskIds.length === 1;
-              const title = single
-                ? (query.data?.tasks.find((t) => t.id === assignedTaskIds[0])?.title ?? "مهمة")
-                : (query.data?.board.name ?? "");
-              void notifyUsers(
-                [userId],
-                single ? "تم تكليفك بمهمة جديدة" : `تم تكليفك بـ ${assignedTaskIds.length} مهام`,
-                title,
-                { url: single ? `/tasks/${assignedTaskIds[0]}` : `/tasks/board/${boardId}` },
-              );
-            }
-          }
+          // The database tells each new assignee, one notification per person
+          // for the whole insert (task.assigned, grouped per transaction).
         }
       }
 
@@ -757,18 +734,8 @@ export function useTaskBoard(boardId: string | undefined) {
           })),
         );
         if (error) throw error;
-
-        // Best-effort, not awaited into the mutation's own error path —
-        // see the identical note in useTaskDetail.ts's setAssignees.
-        // Template boards don't notify: the people get notified when the
-        // template is applied to a real board, not while it's being edited.
-        const recipients = toAdd.filter((id) => id !== user.id);
-        if (recipients.length > 0 && !query.data?.board.is_template) {
-          const taskTitle = query.data?.tasks.find((t) => t.id === taskId)?.title ?? "مهمة";
-          void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, {
-            url: `/tasks/${taskId}`,
-          });
-        }
+        // New assignees are told by the database (task.assigned); template
+        // tasks are skipped there too.
       }
 
       recordAssignees("تعيين المسؤولين", user?.id, [

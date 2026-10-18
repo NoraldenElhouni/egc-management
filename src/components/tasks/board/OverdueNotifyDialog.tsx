@@ -178,7 +178,7 @@ export default function OverdueNotifyDialog({
 
         <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
           <span className="text-[10px] text-gray-400">
-            {outcome ? "لا يُحفظ سجل بالإشعارات المرسلة." : "لا يمكن التراجع بعد الإرسال."}
+            {outcome ? "يُحفظ التذكير في صندوق إشعارات كل شخص." : "لا يمكن التراجع بعد الإرسال."}
           </span>
           {outcome ? (
             <button
@@ -218,20 +218,30 @@ function ResultPanel({
   return (
     <div className="space-y-3 text-sm">
       <p className="text-gray-700">
-        تم إرسال الطلب إلى <span className="font-semibold">{outcome.deliveredUserIds.length}</span> من{" "}
+        وصل التذكير إلى <span className="font-semibold">{outcome.deliveredUserIds.length}</span> من{" "}
         {outcome.attemptedUserIds.length}.
       </p>
-      {/* "Request sent", not "delivered" — a clean invoke means the Edge
-          Function accepted it, not that Expo accepted the tokens and
-          certainly not that a phone displayed anything. */}
+      {/* In the inbox now; on the phone a few seconds later for whoever has
+          the app — the delivery log shows each push's outcome. */}
       <p className="text-[10px] text-gray-400">
-        الإرسال يعني قبول الطلب — لا يمكن تأكيد وصول الإشعار إلى الجهاز.
+        يظهر في صندوق الإشعارات فوراً، ويصل تنبيه الهاتف خلال ثوانٍ لمن لديه التطبيق.
       </p>
+
+      {outcome.duplicateUserIds.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-gray-500">
+            تم تذكيرهم اليوم بالفعل ({outcome.duplicateUserIds.length})
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            {outcome.duplicateUserIds.map((id) => nameOf(employeesById, id)).join("، ")}
+          </div>
+        </div>
+      )}
 
       {outcome.unreachableUserIds.length > 0 && (
         <div>
           <div className="text-xs font-semibold text-amber-600">
-            لم يصلهم الإشعار — لا يوجد تطبيق مسجّل ({outcome.unreachableUserIds.length})
+            في صندوق الإشعارات فقط — لا يوجد هاتف مسجّل ({outcome.unreachableUserIds.length})
           </div>
           <div className="mt-1 text-xs text-gray-500">
             {outcome.unreachableUserIds

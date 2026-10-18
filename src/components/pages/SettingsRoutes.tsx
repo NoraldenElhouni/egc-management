@@ -14,6 +14,8 @@ import BanksPage from "../../pages/settings/banks/BanksPage";
 import UserSessionsPage from "../../pages/settings/sessions/UserSessionsPage";
 import LogsPage from "../../pages/settings/logs/LogsPage";
 import ActivityLogPage from "../../pages/settings/activityLog/ActivityLogPage";
+import NotificationAdminPage from "../../pages/settings/notifications/NotificationAdminPage";
+import NotificationLogPage from "../../pages/settings/notifications/NotificationLogPage";
 import { LOG_PERMISSIONS } from "../../config/logs";
 import UserPasswordResetPage from "../../pages/settings/passwordReset/UserPasswordResetPage";
 import WebsitePage from "../../pages/settings/website/WebsitePage";
@@ -97,6 +99,12 @@ export default function SettingsRoutes() {
         </Route>
         <Route element={<RequirePermission permission={[...LOG_PERMISSIONS]} />}>
           <Route path="activity-log" element={<ActivityLogPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="manage_notifications" />}>
+          <Route path="notifications" element={<NotificationAdminPage />} />
+        </Route>
+        <Route element={<RequirePermission permission="view_notification_log" />}>
+          <Route path="notifications/log" element={<NotificationLogPage />} />
         </Route>
         <Route element={<RequirePermission permission="reset_user_password" />}>
           <Route path="password-reset" element={<UserPasswordResetPage />} />

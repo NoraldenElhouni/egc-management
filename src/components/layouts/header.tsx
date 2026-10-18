@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import ProfileDropdown from "./ProfileDropdown";
+import NotificationBell from "../notifications/NotificationBell";
 import BackButton from "../ui/BackButton";
 import { SEGMENT_NAMES, useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 
@@ -21,10 +22,14 @@ const Header = () => {
     if (path.startsWith("/projects/new")) return "إنشاء مشروع جديد";
     if (path.startsWith("/projects")) return "المشاريع";
     if (path.startsWith("/finance")) return "المالية";
+    if (path.startsWith("/profile/notifications")) return "إعدادات الإشعارات";
     if (path.startsWith("/profile")) return "الملف الشخصي";
+    if (path.startsWith("/notifications")) return "الإشعارات";
     if (path.startsWith("/settings/evaluation-settings")) return "إعدادات التقييم";
     if (path.startsWith("/settings/question-bank")) return "بنك الأسئلة";
     if (path.startsWith("/settings/activity-log")) return "سجل النشاط";
+    if (path.startsWith("/settings/notifications/log")) return "سجل الإشعارات";
+    if (path.startsWith("/settings/notifications")) return "إدارة الإشعارات";
     if (path.startsWith("/settings/logs")) return "السجلات";
     if (path.startsWith("/settings/sessions")) return "جلسات المستخدمين";
     if (path.startsWith("/settings/roles")) return "إدارة الأدوار";
@@ -114,8 +119,11 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Right area: search and profile */}
-      <ProfileDropdown />
+      {/* Right area: notifications and profile */}
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <ProfileDropdown />
+      </div>
     </header>
   );
 };

@@ -9,8 +9,6 @@ import { useAssignablePeople, type AssignablePerson } from "./useAssignablePeopl
 import type { StatusRow, TaskRow, CustomColumn } from "./useTaskBoard";
 import type { Tag } from "./useAdminCatalog";
 import { extractMentionedTaskIds } from "./mentionUtils";
-import { notifyUsers } from "../../services/notifications/pushNotifications";
-import { notifyDependentAssignees } from "../../services/tasks/notifyDependents";
 import { recordAssignees, recordTaskPatch, recordTaskValue, type TaskPatch } from "./taskUndo";
 import { invalidateSchedule, saveTaskSchedule, type ScheduleChange } from "./useTaskSchedule";
 import { addDependency as insertDependency, removeDependencies } from "./dependencyEdit";
@@ -370,12 +368,8 @@ export function useTaskDetail(taskId: string | undefined) {
         recordTaskPatch(keys.length === 1 ? (FIELD_LABELS[keys[0]] ?? "تعديل المهمة") : "تعديل المهمة", taskId, prev, undoable);
       }
 
-      // Best-effort — a failed dependency check shouldn't fail the
-      // field update itself, same posture as setAssignees' own push.
+      // "The next task is ready" is sent by the database (notify.task_unblocked).
       if (patch.status_id) {
-        const category = query.data?.statuses.find((s) => s.id === patch.status_id)?.category;
-        if (category === "done" && !query.data?.task.is_template) void notifyDependentAssignees(taskId);
-
         // Any task that lists this one as a blocker has its own cached
         // detail view keyed by ITS OWN taskId — a status change here
         // doesn't touch that cache on its own, so its dependency badge
@@ -441,19 +435,8 @@ export function useTaskDetail(taskId: string | undefined) {
           toAdd.map((userId) => ({ task_id: taskId, user_id: userId, assigned_by: user.id })),
         );
         if (error) throw error;
-
-        // Best-effort: a failed push shouldn't fail the assignment
-        // itself, so this isn't awaited into the mutation's own error
-        // path. Skips the assigner themselves — no need to notify
-        // someone they assigned the task to themselves.
-        // Template tasks don't notify — see useTaskBoard.ts's setAssignees.
-        const recipients = toAdd.filter((id) => id !== user.id);
-        if (recipients.length > 0 && !query.data?.task.is_template) {
-          const taskTitle = query.data?.task.title ?? "مهمة";
-          void notifyUsers(recipients, "تم تكليفك بمهمة جديدة", taskTitle, {
-            url: `/tasks/${taskId}`,
-          });
-        }
+        // New assignees are told by the database (task.assigned); the
+        // assigner and template tasks are left out there.
       }
 
       recordAssignees("تعيين المسؤولين", user?.id, [
@@ -674,17 +657,8 @@ export function useTaskDetail(taskId: string | undefined) {
         body: { text },
       });
       if (error) throw error;
-
-      // Best-effort push to the task's creator — same wording and link as
-      // Fields' addComment, so the notification looks and opens the same
-      // whichever app the comment came from. Not awaited (a failed push
-      // must not fail the comment) and never notifies the commenter.
-      const creatorId = query.data?.task.created_by;
-      if (creatorId && creatorId !== user.id) {
-        void notifyUsers([creatorId], "تعليق جديد على مهمتك", `${query.data?.task.title ?? "مهمة"}: ${text}`, {
-          url: `/tasks/${taskId}`,
-        });
-      }
+      // The task's creator and assignees are told by the database
+      // (task.comment_added), whichever app the comment came from.
     },
     onSuccess: invalidate,
   });
