@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabaseAdmin } from "../../../lib/adminSupabase";
+import { adminFindUser, adminResetPassword } from "../../../lib/adminApi";
 import { useCan } from "../../../hooks/permissions/useCan";
 
 interface FoundUser {
@@ -60,18 +60,15 @@ const UserPasswordResetPage = () => {
     setFoundUser(null);
 
     try {
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
+      // The admin-users function checks reset_user_password and returns only
+      // the one matching account, not the whole user list.
+      const { data, error } = await adminFindUser(searchEmail.trim());
       if (error) {
         console.error(error);
         throw error;
       }
 
-      const match = data.users.find(
-        (u) => u.email?.toLowerCase() === searchEmail.trim().toLowerCase(),
-      );
+      const match = data.user;
 
       if (!match || !match.email) {
         setSearchError("لم يتم العثور على مستخدم بهذا البريد الإلكتروني");
@@ -81,7 +78,7 @@ const UserPasswordResetPage = () => {
       setFoundUser({
         id: match.id,
         email: match.email,
-        created_at: match.created_at,
+        created_at: match.created_at ?? "",
       });
     } catch (err: unknown) {
       setSearchError(
@@ -108,21 +105,10 @@ const UserPasswordResetPage = () => {
 
     setResetting(true);
     try {
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(
-        foundUser.id,
-        {
-          password: newPassword,
-        },
-      );
+      // Sets the password and users.first_login = true (forced change at the
+      // next login) in one server-side step.
+      const { error } = await adminResetPassword(foundUser.id, newPassword);
       if (error) throw error;
-
-      const { error: errorUser } = await supabaseAdmin
-        .from("users")
-        .update({
-          first_login: true,
-        })
-        .eq("id", foundUser.id);
-      if (errorUser) throw errorUser;
       setResetSuccess(true);
       setNewPassword("");
       setConfirmPassword("");

@@ -1,4 +1,5 @@
-import { supabaseAdmin } from "../../lib/adminSupabase";
+import { adminCreateUser, adminDeleteUser } from "../../lib/adminApi";
+import { supabase } from "../../lib/supabaseClient";
 import { ContractorFormValues } from "../../types/schema/contractors.schema";
 
 // =====================================================================
@@ -33,11 +34,10 @@ export async function AddContractors(form: ContractorFormValues) {
 
   if (shouldCreateAuthUser) {
     const { data: userData, error: userError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
+      await adminCreateUser("contractor", {
+      email: email,
+      password,
+      userMetadata: {
           firstName: form.firstName,
           lastName: form.lastName,
           phone: (form.phone ?? "").trim() || null,
@@ -45,7 +45,7 @@ export async function AddContractors(form: ContractorFormValues) {
           roleId,
           partyType: "contractor",
         },
-      });
+    });
 
     if (userError) {
       console.error("Error creating auth user:", userError);
@@ -71,7 +71,7 @@ export async function AddContractors(form: ContractorFormValues) {
   let bankName: string | null = null;
 
   if (bankId) {
-    const { data: bank, error: bankErr } = await supabaseAdmin
+    const { data: bank, error: bankErr } = await supabase
       .schema("lookups")
       .from("banks")
       .select("name")
@@ -105,7 +105,7 @@ export async function AddContractors(form: ContractorFormValues) {
     bank_holder_name: (form.bankHolderName ?? "").trim() || null,
   };
 
-  const { data: contractor, error: contractorErr } = await supabaseAdmin
+  const { data: contractor, error: contractorErr } = await supabase
     .from("contractors")
     .insert(contractorPayload)
     .select("id,user_id")
@@ -121,7 +121,7 @@ export async function AddContractors(form: ContractorFormValues) {
   }
 
   if (authUserId) {
-    const { error: userRoleError } = await supabaseAdmin
+    const { error: userRoleError } = await supabase
       .from("user_roles")
       .upsert(
         { role_id: roleId, user_id: authUserId },
@@ -137,7 +137,7 @@ export async function AddContractors(form: ContractorFormValues) {
       };
     }
 
-    const { error: userSpecError } = await supabaseAdmin
+    const { error: userSpecError } = await supabase
       .from("user_specializations")
       .insert({
         specialization_id: form.specializationId,
@@ -176,7 +176,7 @@ export async function AssignUserToContractor({
   const roleId = "20606a44-1f4b-4e0a-af58-abc553b70bc0"; // Contractor role
 
   // 1) Fetch the contractor to get their name/phone for metadata
-  const { data: contractor, error: fetchErr } = await supabaseAdmin
+  const { data: contractor, error: fetchErr } = await supabase
     .from("contractors")
     .select("id, first_name, last_name, phone_number")
     .eq("id", contractorId)
@@ -193,11 +193,10 @@ export async function AssignUserToContractor({
 
   // 2) Create the auth user
   const { data: userData, error: userError } =
-    await supabaseAdmin.auth.admin.createUser({
+    await adminCreateUser("contractor", {
       email: email.trim(),
       password,
-      email_confirm: true,
-      user_metadata: {
+      userMetadata: {
         firstName: contractor.first_name,
         lastName: contractor.last_name ?? "",
         phone: contractor.phone_number ?? null,
@@ -219,7 +218,7 @@ export async function AssignUserToContractor({
   const authUserId = userData.user.id;
 
   // 3) Link the auth user to the contractor row
-  const { error: updateErr } = await supabaseAdmin
+  const { error: updateErr } = await supabase
     .from("contractors")
     .update({ user_id: authUserId, email: email })
     .eq("id", contractorId);
@@ -228,7 +227,7 @@ export async function AssignUserToContractor({
     console.error(updateErr);
 
     // Auth user was created but linking failed — you may want to delete the auth user here
-    await supabaseAdmin.auth.admin.deleteUser(authUserId);
+    await adminDeleteUser(authUserId);
     return {
       success: false,
       error: updateErr,
@@ -237,7 +236,7 @@ export async function AssignUserToContractor({
   }
 
   // 4) Assign the contractor role
-  const { error: roleErr } = await supabaseAdmin
+  const { error: roleErr } = await supabase
     .from("user_roles")
     .upsert(
       { role_id: roleId, user_id: authUserId },
