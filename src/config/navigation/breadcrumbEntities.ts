@@ -69,37 +69,7 @@ export const BREADCRUMB_ENTITIES: BreadcrumbEntity[] = [
     },
   },
 
-  // ---- operations: contracts / rounds / quotes / milestones / boq ----
-  {
-    patterns: ["/operations/contracts/project/:projectId/rounds/:roundId/quotes/:id"],
-    resolve: async (id) => {
-      const quote = await fetchRow(
-        supabase.schema("contracts").from("quotes").select("contractor_id").eq("id", id).maybeSingle(),
-      );
-      return quote ? withPrefix("عرض", await contractorName(quote.contractor_id)) : null;
-    },
-  },
-  {
-    patterns: ["/operations/contracts/project/:projectId/rounds/:id"],
-    resolve: async (id) =>
-      (await fetchRow(supabase.schema("contracts").from("rounds").select("title").eq("id", id).maybeSingle()))
-        ?.title ?? null,
-  },
-  {
-    patterns: ["/operations/contracts/project/:projectId/:contractId/milestones/:id"],
-    resolve: async (id) =>
-      (await fetchRow(supabase.schema("contracts").from("milestones").select("title").eq("id", id).maybeSingle()))
-        ?.title ?? null,
-  },
-  {
-    patterns: ["/operations/contracts/project/:projectId/:id"],
-    resolve: async (id) => {
-      const contract = await fetchRow(
-        supabase.schema("contracts").from("contracts").select("contractor_id").eq("id", id).maybeSingle(),
-      );
-      return contract ? withPrefix("عقد", await contractorName(contract.contractor_id)) : null;
-    },
-  },
+  // ---- operations: boq ----
   {
     patterns: ["/operations/boq/project/:projectId/types/:id"],
     resolve: async (id) =>

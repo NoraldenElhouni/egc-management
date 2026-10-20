@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
-import { ContractPayment, ContractPaymentPenalty } from "../../../types/contracts.type";
+import { ContractPayment } from "../../../types/contracts.type";
 
 export function useContractorPayments() {
   const [payments, setPayments] = useState<ContractPayment[]>([]);
-  const [penalties, setPenalties] = useState<ContractPaymentPenalty[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<PostgrestError | null>(null);
 
@@ -14,24 +13,13 @@ export function useContractorPayments() {
     setError(null);
 
     try {
-      const [
-        { data: paymentsData, error: paymentsError },
-        { data: penaltiesData, error: penaltiesError },
-      ] = await Promise.all([
-        supabase
-          .schema("contracts")
-          .from("payments")
-          .select("*")
-          .order("created_at", { ascending: false }),
-        supabase
-          .schema("contracts")
-          .from("payments_penalties")
-          .select("*")
-          .order("created_at", { ascending: false }),
-      ]);
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .schema("contracts")
+        .from("payments")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (paymentsError) throw paymentsError;
-      if (penaltiesError) throw penaltiesError;
 
       const contractorIds = new Set<string>();
       const projectIds = new Set<string>();
@@ -44,11 +32,6 @@ export function useContractorPayments() {
         createdByIds.add(p.created_by);
         if (p.expense_id) expenseIds.add(p.expense_id);
       });
-      (penaltiesData ?? []).forEach((p) => {
-        contractorIds.add(p.contractor_id);
-        projectIds.add(p.project_id);
-        createdByIds.add(p.created_by);
-      });
 
       const [
         { data: contractorsData, error: contractorsError },
@@ -59,15 +42,13 @@ export function useContractorPayments() {
         contractorIds.size
           ? supabase
               .from("contractors")
-              .select(
-                "id, first_name, last_name, whatsapp_number, bank_account_aproved",
-              )
+              .select("id, first_name, last_name")
               .in("id", Array.from(contractorIds))
           : Promise.resolve({ data: [], error: null }),
         projectIds.size
           ? supabase
               .from("projects")
-              .select("id, name")
+              .select("id, name, serial_number")
               .in("id", Array.from(projectIds))
           : Promise.resolve({ data: [], error: null }),
         createdByIds.size
@@ -79,7 +60,7 @@ export function useContractorPayments() {
         expenseIds.size
           ? supabase
               .from("project_expenses")
-              .select("id, description, serial_number")
+              .select("id, serial_number, description")
               .in("id", Array.from(expenseIds))
           : Promise.resolve({ data: [], error: null }),
       ]);
@@ -99,7 +80,6 @@ export function useContractorPayments() {
       const expensesMap = new Map(
         (expensesData ?? []).map((e) => [e.id, e]),
       );
-      const paymentsMap = new Map((paymentsData ?? []).map((p) => [p.id, p]));
 
       setPayments(
         (paymentsData ?? []).map((p) => ({
@@ -110,18 +90,6 @@ export function useContractorPayments() {
           project: projectsMap.get(p.project_id) ?? null,
           created_by_employee: employeesMap.get(p.created_by) ?? null,
           expense: p.expense_id ? (expensesMap.get(p.expense_id) ?? null) : null,
-        })),
-      );
-
-      setPenalties(
-        (penaltiesData ?? []).map((p) => ({
-          ...p,
-          contractor: contractorsMap.get(p.contractor_id) ?? null,
-          project: projectsMap.get(p.project_id) ?? null,
-          linked_payment: p.payment_id
-            ? (paymentsMap.get(p.payment_id) ?? null)
-            : null,
-          created_by_employee: employeesMap.get(p.created_by) ?? null,
         })),
       );
     } catch (err) {
@@ -136,5 +104,5 @@ export function useContractorPayments() {
     fetchData();
   }, [fetchData]);
 
-  return { payments, penalties, loading, error, refetch: fetchData };
+  return { payments, loading, error, refetch: fetchData };
 }

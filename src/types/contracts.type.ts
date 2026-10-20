@@ -42,3 +42,25 @@ export interface ContractPaymentPenalty extends ContractPaymentPenaltyRow {
   linked_payment: { id: string; payments_number: string } | null;
   created_by_employee: EmployeeSummary | null;
 }
+
+export interface ContractorNameRow {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+}
+
+export interface ContractListRow {
+  id: string;
+  project_id: string;
+  round_id: string;
+  quote_id: string;
+  contractor_id: string;
+  status: "draft" | "active" | "completed" | "cancelled";
+  total_amount: number;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  rounds: { title: string } | null;
+  contractor: ContractorNameRow | null;
+}
+

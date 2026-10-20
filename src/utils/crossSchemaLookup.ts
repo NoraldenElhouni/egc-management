@@ -1,5 +1,5 @@
-import { supabase } from "../../../lib/supabaseClient";
-import { Database } from "../../../lib/supabase";
+import { supabase } from "../lib/supabaseClient";
+import { Database } from "../lib/supabase";
 
 type PublicTableName = keyof Database["public"]["Tables"];
 
@@ -28,3 +28,4 @@ export async function fetchByIds<T extends { id: string }>(
     return acc;
   }, {});
 }
+

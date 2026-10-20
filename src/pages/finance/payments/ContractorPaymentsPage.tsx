@@ -11,11 +11,7 @@ import {
   contractPaymentToPdfItem,
 } from "../../../hooks/finance/payments/useContractorPaymentsPdf";
 import { getContractorPaymentsColumns } from "../../../components/tables/columns/ContractorPaymentsColumns";
-import { getContractorPenaltiesColumns } from "../../../components/tables/columns/ContractorPaymentsPenaltiesColumns";
-import {
-  ContractPayment,
-  ContractPaymentPenalty,
-} from "../../../types/contracts.type";
+import { ContractPayment } from "../../../types/contracts.type";
 import ActivityFeed from "../../../components/logs/ActivityFeed";
 import { useMyPermissions } from "../../../hooks/permissions/useCan";
 
@@ -29,8 +25,7 @@ function uniqueSorted(values: (string | undefined | null)[]): string[] {
 }
 
 const ContractorPaymentsPage = () => {
-  const { payments, penalties, loading, error, refetch } =
-    useContractorPayments();
+  const { payments, loading, error, refetch } = useContractorPayments();
   const {
     generate: generatePdf,
     loading: printing,
@@ -66,35 +61,10 @@ const ContractorPaymentsPage = () => {
     [payments],
   );
 
-  const penaltiesFilterOptions = useMemo(
-    () => ({
-      statuses: uniqueSorted(penalties.map((p) => p.status)),
-      projects: uniqueSorted(penalties.map((p) => p.project?.name)),
-      contractors: uniqueSorted(
-        penalties.map((p) =>
-          p.contractor
-            ? `${p.contractor.first_name} ${p.contractor.last_name ?? ""}`.trim()
-            : undefined,
-        ),
-      ),
-      employees: uniqueSorted(
-        penalties.map((p) =>
-          p.created_by_employee
-            ? `${p.created_by_employee.first_name} ${p.created_by_employee.last_name ?? ""}`.trim()
-            : undefined,
-        ),
-      ),
-    }),
-    [penalties],
-  );
-
   if (loading) return <LoadingPage />;
   if (error) return <ErrorPage error={error.message} />;
 
   const pendingPaymentsCount = payments.filter(
-    (p) => p.status === "pending",
-  ).length;
-  const pendingPenaltiesCount = penalties.filter(
     (p) => p.status === "pending",
   ).length;
 
@@ -124,7 +94,7 @@ const ContractorPaymentsPage = () => {
                     مدفوعات المقاولين
                   </h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    مراجعة دفعات وجزاءات المقاولين والموافقة عليها أو رفضها
+                    مراجعة دفعات المقاولين والموافقة عليها أو رفضها
                   </p>
                 </div>
 
@@ -172,42 +142,6 @@ const ContractorPaymentsPage = () => {
                       projectOptions={paymentsFilterOptions.projects}
                       contractorOptions={paymentsFilterOptions.contractors}
                       employeeOptions={paymentsFilterOptions.employees}
-                    />
-                  )}
-                />
-              </>
-            ),
-          },
-          {
-            id: "penalties",
-            label: "الجزاءات",
-            badge: pendingPenaltiesCount,
-            content: (
-              <>
-                <div className="px-6 pt-6">
-                  <h1 className="text-2xl font-semibold text-gray-900">
-                    مدفوعات المقاولين
-                  </h1>
-                  <p className="text-sm text-gray-500 mt-1">
-                    مراجعة دفعات وجزاءات المقاولين والموافقة عليها أو رفضها
-                  </p>
-                </div>
-                <GenericTable<ContractPaymentPenalty>
-                  data={penalties}
-                  columns={getContractorPenaltiesColumns(refetch)}
-                  enableSorting
-                  enableFiltering
-                  enablePagination
-                  showGlobalFilter
-                  pageSize={10}
-                  emptyMessage="لا توجد جزاءات لعرضها."
-                  searchAdornment={(table) => (
-                    <ContractorPaymentsFiltersDialog
-                      table={table}
-                      statusOptions={penaltiesFilterOptions.statuses}
-                      projectOptions={penaltiesFilterOptions.projects}
-                      contractorOptions={penaltiesFilterOptions.contractors}
-                      employeeOptions={penaltiesFilterOptions.employees}
                     />
                   )}
                 />

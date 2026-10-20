@@ -17,15 +17,12 @@ import {
 
 import {
   useContractor,
-  useContractorContracts,
 } from "../../../hooks/supply-chain/useContractor";
 
 import LoadingPage from "../../../components/ui/LoadingPage";
 import ErrorPage from "../../../components/ui/errorPage";
 import ConfirmDialog from "../../../components/ui/ConfirmDialog";
 import { useCan } from "../../../hooks/permissions/useCan";
-import GenericTable from "../../../components/tables/table";
-import { ContractsColumns } from "../../../components/tables/columns/operations/contracts/ContractsColumns";
 import { formatCurrency, formatDate } from "../../../utils/helpper";
 import VendorContractorPdfButton from "../../../components/pdf-buttons/VendorContractorPdfButton";
 import EditContractorDialog from "../../../components/supply-chain/contractor/EditContractorDialog";
@@ -153,11 +150,6 @@ const ContractorDetailPage = () => {
 
   const { contractor, groupedExpenses, loading, error, refetch } =
     useContractor(contractorId || "");
-  const {
-    contracts,
-    loading: contractsLoading,
-    error: contractsError,
-  } = useContractorContracts(contractorId || "");
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showBankEditDialog, setShowBankEditDialog] = useState(false);
@@ -180,26 +172,6 @@ const ContractorDetailPage = () => {
   );
   const additionalSpecializationNames = specialityNames.slice(1);
 
-  const stats = useMemo(() => {
-    const totalContracts = contracts?.length || 0;
-    const activeContracts =
-      contracts?.filter((c) => c.status === "active").length || 0;
-    const completedContracts =
-      contracts?.filter((c) => c.status === "completed").length || 0;
-    const cancelledContracts =
-      contracts?.filter((c) => c.status === "cancelled").length || 0;
-    const totalValue =
-      contracts?.reduce((acc, c) => acc + Number(c.total_amount || 0), 0) ||
-      0;
-    return {
-      totalContracts,
-      activeContracts,
-      completedContracts,
-      cancelledContracts,
-      totalValue,
-    };
-  }, [contracts]);
-
   const grandTotal = groupedExpenses.reduce(
     (sum, g) =>
       sum + g.expenses.reduce((s, e) => s + Number(e.total_amount), 0),
@@ -219,14 +191,14 @@ const ContractorDetailPage = () => {
     );
   }
 
-  if (loading || contractsLoading)
+  if (loading)
     return <LoadingPage label="جاري تحميل بيانات المقاول..." />;
 
-  if (error || contractsError) {
+  if (error) {
     return (
       <ErrorPage
         label="حدث خطأ أثناء تحميل بيانات المقاول"
-        error={error?.message || contractsError?.message}
+        error={error?.message}
       />
     );
   }
@@ -409,58 +381,27 @@ const ContractorDetailPage = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <SummaryCard
-                title="نسبة إتمام العقود"
-                value={
-                  stats.totalContracts > 0
-                    ? `${Math.round((stats.completedContracts / stats.totalContracts) * 100)}%`
-                    : "0%"
-                }
-                description="نسبة العقود المكتملة من إجمالي العقود"
+                title="إجمالي المصروفات"
+                value={formatCurrency(grandTotal, expenseCurrency || "LYD")}
+                description="إجمالي المصروفات المرتبطة بالمقاول"
               />
               <SummaryCard
-                title="متوسط قيمة العقد"
-                value={
-                  stats.totalContracts > 0
-                    ? formatCurrency(stats.totalValue / stats.totalContracts)
-                    : "0 LYD"
-                }
-                description="متوسط قيمة كل عقد"
+                title="المبلغ المدفوع"
+                value={formatCurrency(grandPaid, expenseCurrency || "LYD")}
+                description="إجمالي المبالغ المسددة"
               />
               <SummaryCard
-                title="العقود النشطة"
-                value={`${stats.activeContracts} نشط`}
-                description="عدد العقود قيد التنفيذ حالياً"
+                title="المبلغ المتبقي"
+                value={formatCurrency(grandTotal - grandPaid, expenseCurrency || "LYD")}
+                description="إجمالي المبالغ المتبقية"
               />
               <SummaryCard
-                title="حالة المقاول"
-                value="نشط"
-                description="الحالة الحالية لحساب المقاول"
+                title="عدد المشاريع"
+                value={`${groupedExpenses.length} مشروع`}
+                description="عدد المشاريع المرتبطة بالمقاول"
               />
             </div>
           </div>
-        </div>
-
-        {/* Contracts Table */}
-        <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                العقود
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                جميع العقود المرساة على هذا المقاول
-              </p>
-            </div>
-          </div>
-          <GenericTable
-            data={contracts ?? []}
-            columns={ContractsColumns}
-            enableSorting
-            enableFiltering
-            showGlobalFilter
-            pageSize={5}
-            initialSorting={[{ id: "created_at", desc: true }]}
-          />
         </div>
 
         {/* Expenses grouped by project */}

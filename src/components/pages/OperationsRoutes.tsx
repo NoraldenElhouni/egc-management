@@ -3,7 +3,6 @@ import RequirePermission from "../auth/RequirePermission";
 import OperationsPage from "../../pages/operations/OperationsPage";
 import OperationsLayout from "../sidebar/OperationsLayout";
 import MapsRoutes from "./operateions/maps/MapsRoutes";
-import ContractsRoutes from "./operateions/contracts/ContractsRoutes";
 import BOQRoutes from "./operateions/BOQ/BOQRoutes";
 import OperationsSettingsRoutes from "./operateions/settings/OperationsSettingsRoutes";
 
@@ -22,7 +21,6 @@ export default function OperationsRoutes() {
         <Route index element={<OperationsPage />} />
 
         <Route path="maps/*" element={<MapsRoutes />} />
-        <Route path="contracts/*" element={<ContractsRoutes />} />
         <Route path="boq/*" element={<BOQRoutes />} />
 
         <Route

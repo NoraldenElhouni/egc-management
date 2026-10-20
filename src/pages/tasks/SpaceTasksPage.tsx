@@ -1,18 +1,35 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSpaceCaps } from "../../hooks/tasks/useTaskAccess";
 import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { ChartGantt, ChevronDown, ChevronLeft, FileText, List, Map as MapIcon, Plus, Presentation, Ruler, Search, ShoppingCart, SlidersHorizontal } from "lucide-react";
+import {
+  ChartGantt,
+  ChevronDown,
+  ChevronLeft,
+  FileText,
+  List,
+  Map as MapIcon,
+  Plus,
+  Presentation,
+  Ruler,
+  Search,
+  ShoppingCart,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useTaskDirectory } from "../../hooks/tasks/useTaskDirectory";
 import { useDependencyEdit } from "../../hooks/tasks/dependencyEdit";
 import { useTasksSidebar } from "../../hooks/tasks/useTasksSidebar";
-import DirectoryTaskRow, { directoryRowGridStyle } from "../../components/tasks/board/DirectoryTaskRow";
+import DirectoryTaskRow, {
+  directoryRowGridStyle,
+} from "../../components/tasks/board/DirectoryTaskRow";
 import DirectoryFilterSortPopover from "../../components/tasks/board/DirectoryFilterSortPopover";
 import SpaceKpiStrip from "../../components/tasks/board/SpaceKpiStrip";
 import { activeKpiKey } from "../../components/tasks/board/spaceKpiFilters";
 import CollapseAllButtons from "../../components/tasks/board/CollapseAllButtons";
 import OverdueNotifyButton from "../../components/tasks/board/OverdueNotifyButton";
 import SpaceTourDialog from "../../components/tasks/tour/SpaceTourDialog";
-import TaskGantt, { type GanttGroup } from "../../components/tasks/gantt/TaskGantt";
+import TaskGantt, {
+  type GanttGroup,
+} from "../../components/tasks/gantt/TaskGantt";
 import {
   countActiveFilters,
   createDefaultFilters,
@@ -74,7 +91,8 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   // taskId is the nested detail panel's param, visible here too.
   const { spaceId, taskId } = useParams<{ spaceId: string; taskId?: string }>();
   const navigate = useNavigate();
-  const { data, loading, error, onChangeTaskDates, ...mutations } = useTaskDirectory({ spaceId });
+  const { data, loading, error, onChangeTaskDates, ...mutations } =
+    useTaskDirectory({ spaceId });
   // The detail panel opens under the current view, so closing it stays there.
   const basePath = `/tasks/space/${spaceId}${view === "gantt" ? "/gantt" : ""}`;
   const openTask = (id: string) => navigate(`${basePath}/task/${id}`);
@@ -83,10 +101,15 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   const { openCreateTask } = useCreateTaskDialog();
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<DirectoryFilterState>(createDefaultFilters());
+  const [filters, setFilters] = useState<DirectoryFilterState>(
+    createDefaultFilters(),
+  );
   // Boards keep their saved order (boards.sort_order, set in space
   // settings) by default — the same order the space is organised in.
-  const [sort, setSort] = useState<DirectorySortState>({ ...DEFAULT_SORT, groupSort: "order" });
+  const [sort, setSort] = useState<DirectorySortState>({
+    ...DEFAULT_SORT,
+    groupSort: "order",
+  });
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const closeTour = useCallback(() => setShowTour(false), []);
@@ -104,19 +127,29 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   const activeFilterCount = countActiveFilters(filters);
   // "Show completed" is the status filter's "all" mode — not narrowing
   // anything down, so it must not hide empty boards or their add-task row.
-  const narrowingCount = activeFilterCount - (filters.statusMode === "all" ? 1 : 0);
+  const narrowingCount =
+    activeFilterCount - (filters.statusMode === "all" ? 1 : 0);
 
   // A KPI card is selected when the filters match its preset exactly. Every
   // card except the default "open" view means "only the boards that have
   // such tasks", so empty boards drop out — including for the "all tasks"
   // card, which the narrowing count above doesn't treat as a filter.
-  const kpiKey = useMemo(() => (data ? activeKpiKey(filters, data) : null), [data, filters]);
+  const kpiKey = useMemo(
+    () => (data ? activeKpiKey(filters, data) : null),
+    [data, filters],
+  );
   const hideEmptyBoards = kpiKey !== null && kpiKey !== "open";
 
   // One definition of "what this page is showing" — shared with the
   // overdue-notify button so its recipients match the visible list.
   const visibleTasks = useMemo(
-    () => (data ? searchDirectoryTasks(filterDirectoryTasks(data.tasks, filters, data), search) : []),
+    () =>
+      data
+        ? searchDirectoryTasks(
+            filterDirectoryTasks(data.tasks, filters, data),
+            search,
+          )
+        : [],
     [data, filters, search],
   );
 
@@ -131,7 +164,8 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
     // board would just be noise among real results.
     const byBoard = new Map<string, TaskRow[]>();
     if (!searching && narrowingCount === 0 && !hideEmptyBoards) {
-      for (const boardId of data.boardNamesById.keys()) byBoard.set(boardId, []);
+      for (const boardId of data.boardNamesById.keys())
+        byBoard.set(boardId, []);
     }
     for (const task of visibleTasks) {
       const list = byBoard.get(task.board_id) ?? [];
@@ -139,13 +173,20 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
       byBoard.set(task.board_id, list);
     }
 
-    const boardGroups: BoardGroup[] = Array.from(byBoard.entries()).map(([boardId, tasks]) => ({
-      key: boardId,
-      label: data.boardNamesById.get(boardId) ?? "لوحة",
-      tasks: sortDirectoryTasks(tasks, sort, data),
-    }));
+    const boardGroups: BoardGroup[] = Array.from(byBoard.entries()).map(
+      ([boardId, tasks]) => ({
+        key: boardId,
+        label: data.boardNamesById.get(boardId) ?? "لوحة",
+        tasks: sortDirectoryTasks(tasks, sort, data),
+      }),
+    );
 
-    return sortDirectoryGroups(boardGroups, sort.groupSort, undefined, data.boardOrderById);
+    return sortDirectoryGroups(
+      boardGroups,
+      sort.groupSort,
+      undefined,
+      data.boardOrderById,
+    );
   }, [data, visibleTasks, searching, sort, narrowingCount, hideEmptyBoards]);
 
   // Each board's tasks as a tree in the board's own order, for the rows' link
@@ -154,7 +195,10 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   const childrenByBoard = useMemo(() => {
     const out = new Map<string, Map<string | null, TaskRow[]>>();
     if (!data) return out;
-    const sorted = [...data.tasks].sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
+    const sorted = [...data.tasks].sort(
+      (a, b) =>
+        a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at),
+    );
     for (const t of sorted) {
       let tree = out.get(t.board_id);
       if (!tree) {
@@ -173,14 +217,27 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   // board's own order. A subtask whose parent is filtered out moves up to its
   // board's top level (the board page does the same for assignee-only views).
   const ganttGroups = useMemo<GanttGroup[]>(
-    () => groups.map((g) => ({ id: g.key, label: g.label, href: `/tasks/board/${g.key}/gantt` })),
+    () =>
+      groups.map((g) => ({
+        id: g.key,
+        label: g.label,
+        href: `/tasks/board/${g.key}/gantt`,
+      })),
     [groups],
   );
   const ganttTasks = useMemo(() => {
     const visibleIds = new Set(visibleTasks.map((t) => t.id));
     return [...visibleTasks]
-      .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at))
-      .map((t) => (t.parent_task_id && !visibleIds.has(t.parent_task_id) ? { ...t, parent_task_id: null } : t));
+      .sort(
+        (a, b) =>
+          a.sort_order - b.sort_order ||
+          a.created_at.localeCompare(b.created_at),
+      )
+      .map((t) =>
+        t.parent_task_id && !visibleIds.has(t.parent_task_id)
+          ? { ...t, parent_task_id: null }
+          : t,
+      );
   }, [visibleTasks]);
 
   const expandAll = () => setCollapsedKeys(new Set());
@@ -212,7 +269,10 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
   return (
     <div className="flex h-full flex-col" dir="rtl">
       <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
-        <h1 className="shrink-0 text-base font-semibold text-gray-900" style={spaceColor ? { color: spaceColor } : undefined}>
+        <h1
+          className="shrink-0 text-base font-semibold text-gray-900"
+          style={spaceColor ? { color: spaceColor } : undefined}
+        >
           {spaceNode?.space.name ?? "المساحة"}
         </h1>
         <div className="flex items-center gap-2">
@@ -220,7 +280,9 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
             <Link
               to={`/tasks/space/${spaceId}`}
               className={`flex items-center gap-1.5 px-3 py-1.5 ${
-                view === "list" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+                view === "list"
+                  ? "bg-primary-superLight font-medium text-primary"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <List className="h-3.5 w-3.5" />
@@ -229,7 +291,9 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
             <Link
               to={`/tasks/space/${spaceId}/gantt`}
               className={`flex items-center gap-1.5 border-r border-gray-200 px-3 py-1.5 ${
-                view === "gantt" ? "bg-primary-superLight font-medium text-primary" : "text-gray-600 hover:bg-gray-50"
+                view === "gantt"
+                  ? "bg-primary-superLight font-medium text-primary"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <ChartGantt className="h-3.5 w-3.5" />
@@ -249,9 +313,18 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
           </div>
           {/* the Gantt has its own expand / collapse buttons */}
           {view === "list" && (
-            <CollapseAllButtons onExpandAll={expandAll} onCollapseAll={collapseAll} searching={searching} />
+            <CollapseAllButtons
+              onExpandAll={expandAll}
+              onCollapseAll={collapseAll}
+              searching={searching}
+            />
           )}
-          <OverdueNotifyButton visibleTasks={visibleTasks} data={data} filters={filters} searchTerm={search} />
+          <OverdueNotifyButton
+            visibleTasks={visibleTasks}
+            data={data}
+            filters={filters}
+            searchTerm={search}
+          />
           <button
             onClick={() => setShowTour(true)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
@@ -275,7 +348,9 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
         </div>
       </div>
 
-      {view === "list" && <SpaceKpiStrip data={data} filters={filters} onSelect={setFilters} />}
+      {view === "list" && (
+        <SpaceKpiStrip data={data} filters={filters} onSelect={setFilters} />
+      )}
 
       {showFilterDialog && (
         <DirectoryFilterSortPopover
@@ -305,25 +380,38 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
             onLink={(pair) => link(pair)}
             onUnlink={(pair) => unlink([pair])}
             onReverseLink={(pair) => reverse(pair)}
-            onAddToGroup={spaceCaps.create ? (boardId) => openCreateTask({ boardId }) : undefined}
+            onAddToGroup={
+              spaceCaps.create
+                ? (boardId) => openCreateTask({ boardId })
+                : undefined
+            }
             readOnly={!spaceCaps.edit}
             emptyLabel={
-              searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"
+              searching || narrowingCount > 0 || hideEmptyBoards
+                ? "لا توجد مهام مطابقة"
+                : "لا توجد مهام في هذه المساحة بعد"
             }
           />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-3">
-          {spaceNode?.space.project_id && <ProjectSectionLinks projectId={spaceNode.space.project_id} />}
+          {spaceNode?.space.project_id && (
+            <ProjectSectionLinks projectId={spaceNode.space.project_id} />
+          )}
           {groups.length === 0 ? (
             <div className="p-6 text-center text-sm text-gray-400">
-              {searching || narrowingCount > 0 || hideEmptyBoards ? "لا توجد مهام مطابقة" : "لا توجد مهام في هذه المساحة بعد"}
+              {searching || narrowingCount > 0 || hideEmptyBoards
+                ? "لا توجد مهام مطابقة"
+                : "لا توجد مهام في هذه المساحة بعد"}
             </div>
           ) : (
             groups.map((group) => {
               const collapsed = !searching && collapsedKeys.has(group.key);
               return (
-                <div key={group.key} className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white last:mb-0">
+                <div
+                  key={group.key}
+                  className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white last:mb-0"
+                >
                   {/* A link can't live inside a button, so the header is a row of
                       siblings: chevron (collapse), board name (opens the board),
                       and a flex-1 filler that keeps "click anywhere else on the
@@ -335,7 +423,11 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
                       className="shrink-0 rounded p-0.5 hover:bg-gray-300/60"
                       title={collapsed ? "توسيع" : "طي"}
                     >
-                      {collapsed ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      {collapsed ? (
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
                     </button>
                     <Link
                       to={`/tasks/board/${group.key}`}
@@ -344,7 +436,9 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
                     >
                       {group.label}
                     </Link>
-                    <span className="shrink-0 text-xs font-normal text-gray-400">({group.tasks.length})</span>
+                    <span className="shrink-0 text-xs font-normal text-gray-400">
+                      ({group.tasks.length})
+                    </span>
                     <button
                       onClick={() => toggle(group.key)}
                       className="h-6 flex-1"
@@ -386,7 +480,8 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
                           onOpenTask={openTask}
                           linkEditing={{
                             dependencyLinks: data.dependencyLinks,
-                            childrenByParent: childrenByBoard.get(task.board_id) ?? new Map(),
+                            childrenByParent:
+                              childrenByBoard.get(task.board_id) ?? new Map(),
                             onLink: (pair) => link(pair),
                             onUnlink: (pairs) => unlink(pairs),
                           }}
@@ -394,9 +489,15 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
                         />
                       ))}
                       {group.tasks.length === 0 && (
-                        <div className="px-3 py-3 text-center text-sm text-gray-400">لا توجد مهام في هذه اللوحة بعد</div>
+                        <div className="px-3 py-3 text-center text-sm text-gray-400">
+                          لا توجد مهام في هذه اللوحة بعد
+                        </div>
                       )}
-                      {spaceCaps.create && <AddTaskRow onAdd={() => openCreateTask({ boardId: group.key })} />}
+                      {spaceCaps.create && (
+                        <AddTaskRow
+                          onAdd={() => openCreateTask({ boardId: group.key })}
+                        />
+                      )}
                     </>
                   )}
                 </div>
@@ -433,10 +534,26 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
 // their own permission guards.
 function ProjectSectionLinks({ projectId }: { projectId: string }) {
   const sections = [
-    { label: "الاتفاقات", to: `/operations/contracts/project/${projectId}`, icon: FileText },
-    { label: "حصر الكميات", to: `/operations/boq/project/${projectId}`, icon: Ruler },
-    { label: "الخرائط", to: `/operations/maps/project/${projectId}`, icon: MapIcon },
-    { label: "المشتريات", to: `/shops/orders/project/${projectId}`, icon: ShoppingCart },
+    {
+      label: "الاتفاقات",
+      to: `/operations/contracts/project/${projectId}`,
+      icon: FileText,
+    },
+    {
+      label: "حصر الكميات",
+      to: `/operations/boq/project/${projectId}`,
+      icon: Ruler,
+    },
+    {
+      label: "الخرائط",
+      to: `/operations/maps/project/${projectId}`,
+      icon: MapIcon,
+    },
+    {
+      label: "المشتريات",
+      to: `/shops/orders/project/${projectId}`,
+      icon: ShoppingCart,
+    },
   ];
   return (
     <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

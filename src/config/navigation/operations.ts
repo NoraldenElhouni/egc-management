@@ -1,4 +1,4 @@
-import { PackageOpen, Paperclip, Settings, Sheet } from "lucide-react";
+import { PackageOpen, Paperclip, Settings } from "lucide-react";
 import type { NavItem } from "./types";
 
 // One permission per destination (issue 19 gap 4 pattern), each with
@@ -21,12 +21,6 @@ export const OPERATIONS_ITEMS: NavItem[] = [
     icon: PackageOpen,
     path: "/operations/maps",
     description: "عرض وإدارة الخرائط",
-  },
-  {
-    label: "العقود",
-    icon: Sheet,
-    path: "/operations/contracts",
-    description: "إدارة العقود والملفات",
   },
   {
     label: "حصر الكميات",

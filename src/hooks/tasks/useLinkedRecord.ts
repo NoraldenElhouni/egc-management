@@ -64,7 +64,7 @@ async function fetchRecordInfo(recordType: LinkRecordType, recordId: string): Pr
         .eq("id", recordId)
         .maybeSingle();
       if (!data) return { label: "جولة عقد محذوفة", url: null };
-      return { label: data.title, url: `/operations/contracts/project/${data.project_id}/rounds/${data.id}` };
+      return { label: data.title, url: null };
     }
     case "contract": {
       const { data } = await supabase
@@ -77,7 +77,7 @@ async function fetchRecordInfo(recordType: LinkRecordType, recordId: string): Pr
       const { data: round } = await supabase.schema("contracts").from("rounds").select("title").eq("id", data.round_id).maybeSingle();
       return {
         label: round?.title ? `عقد — ${round.title}` : `عقد — ${data.total_amount}`,
-        url: `/operations/contracts/project/${data.project_id}/${data.id}`,
+        url: null,
       };
     }
     case "payment_request": {
@@ -90,7 +90,7 @@ async function fetchRecordInfo(recordType: LinkRecordType, recordId: string): Pr
       if (!data) return { label: "طلب دفعة محذوف", url: null };
       return {
         label: data.description || `طلب دفعة — ${data.amount}`,
-        url: `/operations/contracts/project/${data.project_id}/${data.contract_id}/payments`,
+        url: null,
       };
     }
     case "expense": {
