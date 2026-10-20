@@ -4,13 +4,12 @@ import {
   Briefcase,
   Calendar,
   CheckCircle2,
-  Clock,
   DollarSign,
-  FileText,
-  Phone,
+  FolderKanban,
   Mail,
+  Phone,
   User,
-  FileSignature,
+  Wallet,
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
@@ -270,30 +269,25 @@ const ContractorDetailPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
-            title="إجمالي العقود"
-            value={stats.totalContracts}
-            icon={<FileSignature className="h-5 w-5" />}
+            title="عدد المشاريع"
+            value={groupedExpenses.length}
+            icon={<FolderKanban className="h-5 w-5" />}
           />
           <StatCard
-            title="العقود النشطة"
-            value={stats.activeContracts}
-            icon={<Clock className="h-5 w-5" />}
+            title="إجمالي المصروفات"
+            value={formatCurrency(grandTotal, expenseCurrency || "LYD")}
+            icon={<DollarSign className="h-5 w-5" />}
           />
           <StatCard
-            title="العقود المكتملة"
-            value={stats.completedContracts}
-            icon={<CheckCircle2 className="h-5 w-5" />}
+            title="إجمالي المدفوع"
+            value={formatCurrency(grandPaid, expenseCurrency || "LYD")}
+            icon={<Wallet className="h-5 w-5" />}
           />
           <StatCard
-            title="العقود الملغاة"
-            value={stats.cancelledContracts}
-            icon={<FileText className="h-5 w-5" />}
-          />
-          <StatCard
-            title="إجمالي القيمة"
-            value={formatCurrency(stats.totalValue)}
+            title="المتبقي"
+            value={formatCurrency(grandTotal - grandPaid, expenseCurrency || "LYD")}
             icon={<DollarSign className="h-5 w-5" />}
           />
         </div>
@@ -381,24 +375,39 @@ const ContractorDetailPage = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <SummaryCard
-                title="إجمالي المصروفات"
-                value={formatCurrency(grandTotal, expenseCurrency || "LYD")}
-                description="إجمالي المصروفات المرتبطة بالمقاول"
+                title="نسبة السداد"
+                value={
+                  grandTotal > 0
+                    ? `${Math.round((grandPaid / grandTotal) * 100)}%`
+                    : "0%"
+                }
+                description="نسبة المصروفات المدفوعة من إجمالي المصروفات"
               />
               <SummaryCard
-                title="المبلغ المدفوع"
-                value={formatCurrency(grandPaid, expenseCurrency || "LYD")}
-                description="إجمالي المبالغ المسددة"
+                title="متوسط قيمة المصروف"
+                value={
+                  groupedExpenses.reduce((s, g) => s + g.expenses.length, 0) > 0
+                    ? formatCurrency(
+                        grandTotal /
+                          groupedExpenses.reduce(
+                            (s, g) => s + g.expenses.length,
+                            0,
+                          ),
+                        expenseCurrency || "LYD",
+                      )
+                    : formatCurrency(0, expenseCurrency || "LYD")
+                }
+                description="متوسط قيمة كل مصروف"
               />
               <SummaryCard
-                title="المبلغ المتبقي"
-                value={formatCurrency(grandTotal - grandPaid, expenseCurrency || "LYD")}
-                description="إجمالي المبالغ المتبقية"
+                title="عدد المصروفات"
+                value={`${groupedExpenses.reduce((s, g) => s + g.expenses.length, 0)} مصروف`}
+                description="إجمالي عدد المصروفات المسجلة"
               />
               <SummaryCard
-                title="عدد المشاريع"
-                value={`${groupedExpenses.length} مشروع`}
-                description="عدد المشاريع المرتبطة بالمقاول"
+                title="حالة المقاول"
+                value="نشط"
+                description="الحالة الحالية لحساب المقاول"
               />
             </div>
           </div>
