@@ -15,9 +15,7 @@ const VendorsList = () => {
     const total = vendors.length;
 
     const withSpecialtyCount = vendors.filter(
-      (v) =>
-        Boolean(v.specialization_id) ||
-        (v.users?.user_specializations?.length ?? 0) > 0,
+      (v) => (v.vendor_specialities?.length ?? 0) > 0,
     ).length;
 
     const bankApprovedCount = vendors.filter(
@@ -26,9 +24,11 @@ const VendorsList = () => {
 
     const specialtyCounts = new Map<string, number>();
     vendors.forEach((v) => {
-      const name = v.specializations?.name;
-      if (!name) return;
-      specialtyCounts.set(name, (specialtyCounts.get(name) ?? 0) + 1);
+      v.vendor_specialities?.forEach((vs) => {
+        const name = vs.speciality?.name;
+        if (!name) return;
+        specialtyCounts.set(name, (specialtyCounts.get(name) ?? 0) + 1);
+      });
     });
 
     const topSpecialty = Array.from(specialtyCounts, ([name, count]) => ({

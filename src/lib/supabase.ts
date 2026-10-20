@@ -1191,7 +1191,6 @@ export type Database = {
           id: string
           notes: string | null
           project_id: string
-          specialization_id: string | null
           status: Database["contracts"]["Enums"]["round_status"]
           title: string
         }
@@ -1201,7 +1200,6 @@ export type Database = {
           id?: string
           notes?: string | null
           project_id: string
-          specialization_id?: string | null
           status?: Database["contracts"]["Enums"]["round_status"]
           title: string
         }
@@ -1211,7 +1209,6 @@ export type Database = {
           id?: string
           notes?: string | null
           project_id?: string
-          specialization_id?: string | null
           status?: Database["contracts"]["Enums"]["round_status"]
           title?: string
         }
@@ -2586,7 +2583,6 @@ export type Database = {
           merged_by: string | null
           merged_into_id: string | null
           phone_number: string | null
-          specialization_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -2609,7 +2605,6 @@ export type Database = {
           merged_by?: string | null
           merged_into_id?: string | null
           phone_number?: string | null
-          specialization_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -2632,7 +2627,6 @@ export type Database = {
           merged_by?: string | null
           merged_into_id?: string | null
           phone_number?: string | null
-          specialization_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -2658,13 +2652,6 @@ export type Database = {
             columns: ["merged_into_id"]
             isOneToOne: false
             referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contractors_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
             referencedColumns: ["id"]
           },
           {
@@ -2930,7 +2917,6 @@ export type Database = {
           place_of_birth: string | null
           resume_url: string | null
           salary_type: string | null
-          specializations_id: string | null
           status: string | null
           university: string | null
           updated_at: string
@@ -2968,7 +2954,6 @@ export type Database = {
           place_of_birth?: string | null
           resume_url?: string | null
           salary_type?: string | null
-          specializations_id?: string | null
           status?: string | null
           university?: string | null
           updated_at?: string
@@ -3006,7 +2991,6 @@ export type Database = {
           place_of_birth?: string | null
           resume_url?: string | null
           salary_type?: string | null
-          specializations_id?: string | null
           status?: string | null
           university?: string | null
           updated_at?: string
@@ -3031,13 +3015,6 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employees_specializations_id_fkey"
-            columns: ["specializations_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
             referencedColumns: ["id"]
           },
         ]
@@ -4378,7 +4355,7 @@ export type Database = {
             foreignKeyName: "shop_divisions_specialization_id_fkey"
             columns: ["specialization_id"]
             isOneToOne: false
-            referencedRelation: "specializations"
+            referencedRelation: "specialities"
             referencedColumns: ["id"]
           },
         ]
@@ -4559,7 +4536,7 @@ export type Database = {
           requires_senior_review: boolean
           senior_reviewed_at: string | null
           senior_reviewed_by: string | null
-          specialization_id: string
+          specialization_id: string | null
           status: string
           total_price: number | null
           vendor_id: string | null
@@ -4588,7 +4565,7 @@ export type Database = {
           requires_senior_review?: boolean
           senior_reviewed_at?: string | null
           senior_reviewed_by?: string | null
-          specialization_id: string
+          specialization_id?: string | null
           status?: string
           total_price?: number | null
           vendor_id?: string | null
@@ -4617,7 +4594,7 @@ export type Database = {
           requires_senior_review?: boolean
           senior_reviewed_at?: string | null
           senior_reviewed_by?: string | null
-          specialization_id?: string
+          specialization_id?: string | null
           status?: string
           total_price?: number | null
           vendor_id?: string | null
@@ -4692,7 +4669,7 @@ export type Database = {
             foreignKeyName: "shop_orders_specialization_id_fkey"
             columns: ["specialization_id"]
             isOneToOne: false
-            referencedRelation: "specializations"
+            referencedRelation: "specialities"
             referencedColumns: ["id"]
           },
           {
@@ -4841,32 +4818,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      specializations: {
-        Row: {
-          id: string
-          name: string
-          role_id: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          role_id: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          role_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "specializations_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       team_assignments: {
         Row: {
@@ -5116,36 +5067,6 @@ export type Database = {
           },
         ]
       }
-      user_specializations: {
-        Row: {
-          specialization_id: string
-          user_id: string
-        }
-        Insert: {
-          specialization_id: string
-          user_id: string
-        }
-        Update: {
-          specialization_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_specializations_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_specializations_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       users: {
         Row: {
           change_password_at: string | null
@@ -5259,7 +5180,6 @@ export type Database = {
           merged_into_id: string | null
           phone_number: string | null
           price_limit: number | null
-          specialization_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -5289,7 +5209,6 @@ export type Database = {
           merged_into_id?: string | null
           phone_number?: string | null
           price_limit?: number | null
-          specialization_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -5319,7 +5238,6 @@ export type Database = {
           merged_into_id?: string | null
           phone_number?: string | null
           price_limit?: number | null
-          specialization_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -5349,109 +5267,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "vendors_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "vendors_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      work_requests: {
-        Row: {
-          bid_deadline: string | null
-          contact_name: string | null
-          contact_phone: string | null
-          contractor_provides_materials: boolean
-          created_at: string
-          created_by: string
-          delay_penalty_terms: string | null
-          description: string | null
-          direct_contractor_id: string | null
-          id: string
-          mode: Database["public"]["Enums"]["work_request_mode"]
-          project_id: string
-          retention_terms: string | null
-          specialization_id: string
-          status: Database["public"]["Enums"]["work_request_status"]
-          title: string
-          updated_at: string
-          work_start_at: string | null
-        }
-        Insert: {
-          bid_deadline?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          contractor_provides_materials?: boolean
-          created_at?: string
-          created_by: string
-          delay_penalty_terms?: string | null
-          description?: string | null
-          direct_contractor_id?: string | null
-          id?: string
-          mode?: Database["public"]["Enums"]["work_request_mode"]
-          project_id: string
-          retention_terms?: string | null
-          specialization_id: string
-          status?: Database["public"]["Enums"]["work_request_status"]
-          title: string
-          updated_at?: string
-          work_start_at?: string | null
-        }
-        Update: {
-          bid_deadline?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          contractor_provides_materials?: boolean
-          created_at?: string
-          created_by?: string
-          delay_penalty_terms?: string | null
-          description?: string | null
-          direct_contractor_id?: string | null
-          id?: string
-          mode?: Database["public"]["Enums"]["work_request_mode"]
-          project_id?: string
-          retention_terms?: string | null
-          specialization_id?: string
-          status?: Database["public"]["Enums"]["work_request_status"]
-          title?: string
-          updated_at?: string
-          work_start_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "work_requests_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_requests_direct_contractor_fkey"
-            columns: ["direct_contractor_id"]
-            isOneToOne: false
-            referencedRelation: "contractors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_requests_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_requests_specialization_id_fkey"
-            columns: ["specialization_id"]
-            isOneToOne: false
-            referencedRelation: "specializations"
             referencedColumns: ["id"]
           },
         ]
@@ -6931,7 +6750,6 @@ export type Database = {
           recurrence_rule_id: string | null
           sort_order: number
           source_template_task_id: string | null
-          specialization_id: string | null
           start_date: string | null
           start_lag_days: number
           status_id: string
@@ -6964,7 +6782,6 @@ export type Database = {
           recurrence_rule_id?: string | null
           sort_order?: number
           source_template_task_id?: string | null
-          specialization_id?: string | null
           start_date?: string | null
           start_lag_days?: number
           status_id: string
@@ -6997,7 +6814,6 @@ export type Database = {
           recurrence_rule_id?: string | null
           sort_order?: number
           source_template_task_id?: string | null
-          specialization_id?: string | null
           start_date?: string | null
           start_lag_days?: number
           status_id?: string
@@ -7252,7 +7068,6 @@ export type Database = {
           relative_due_offset_days: number | null
           relative_start_offset_days: number | null
           sort_order: number
-          specialization_id: string | null
           task_type_id: string
           template_id: string
           time_estimate_minutes: number | null
@@ -7270,7 +7085,6 @@ export type Database = {
           relative_due_offset_days?: number | null
           relative_start_offset_days?: number | null
           sort_order?: number
-          specialization_id?: string | null
           task_type_id?: string
           template_id: string
           time_estimate_minutes?: number | null
@@ -7288,7 +7102,6 @@ export type Database = {
           relative_due_offset_days?: number | null
           relative_start_offset_days?: number | null
           sort_order?: number
-          specialization_id?: string | null
           task_type_id?: string
           template_id?: string
           time_estimate_minutes?: number | null

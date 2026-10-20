@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 
 export type Specialization = { id: string; name: string };
 
-export function useSpecializations(role?: string) {
+export function useSpecializations() {
   const [data, setData] = useState<Specialization[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -12,42 +12,18 @@ export function useSpecializations(role?: string) {
   useEffect(() => {
     async function fetchSpecializations() {
       setLoading(true);
+      const { data, error } = await supabase
+        .from("specialities")
+        .select("id, name")
+        .order("name");
 
-      if (role) {
-        // role id
-        const { data: roleData, error: roleError } = await supabase
-          .from("roles")
-          .select("*")
-          .eq("name", role)
-          .single();
-        if (roleError || !roleData) {
-          console.error("error fetching role", roleError);
-          setError(roleError);
-          setLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from("specializations")
-          .select("*")
-          .eq("role_id", roleData.id);
-        if (error) {
-          console.error("error fetching specializations", error);
-          setError(error);
-        } else {
-          setData(data ?? []);
-        }
-        setLoading(false);
+      if (error) {
+        console.error("error fetching specialities", error);
+        setError(error);
       } else {
-        const { data, error } = await supabase
-          .from("specializations")
-          .select("*");
-        if (error) {
-          console.error("error fetching specializations", error);
-          setError(error);
-        } else {
-          setData(data ?? []);
-        }
+        setData(data ?? []);
       }
+      setLoading(false);
     }
 
     fetchSpecializations();
@@ -55,3 +31,4 @@ export function useSpecializations(role?: string) {
 
   return { data, loading, error };
 }
+

@@ -333,21 +333,6 @@ export default function TaskDetailPanel() {
                   ))}
                 </select>
               </FieldRow>
-              <FieldRow label="التخصص">
-                <select
-                  value={data.task.specialization_id ?? ""}
-                  disabled={!caps.edit}
-                  onChange={(e) => updateField({ specialization_id: e.target.value || null })}
-                  className="rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
-                >
-                  <option value="">—</option>
-                  {data.allSpecializations.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </FieldRow>
               {/* One row per person with its own X, instead of overlapping
                   avatars — removing someone no longer means opening the
                   picker and unticking them. */}

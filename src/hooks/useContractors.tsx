@@ -13,11 +13,11 @@ const fetchContractors = async (): Promise<
     .select(
       `
       *,
-      specializations (*),
-      users!contractors_user_id_fkey (
-        user_specializations (
-          specialization_id,
-          specializations (*)
+      contractor_specialities (
+        speciality_id,
+        speciality:specialities (
+          id,
+          name
         )
       )
     `,
@@ -50,11 +50,11 @@ export function useContractors() {
         .select(
           `
         *,
-        specializations (*),
-        users!contractors_user_id_fkey (
-          user_specializations (
-            specialization_id,
-            specializations (*)
+        contractor_specialities (
+          speciality_id,
+          speciality:specialities (
+            id,
+            name
           )
         )
       `,

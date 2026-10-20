@@ -151,7 +151,6 @@ export const createEmployee = async (data: UserFormValues) => {
     base_salary: data.baseSalary ?? 0,
     // Layer 4 of the ladder. Null is a real answer, not a missing one.
     department_id: normalizeEmptyToNull(data.departmentId),
-    specializations_id: data.specializationsId ?? null,
     dob: normalizeEmptyToNull(data.dob),
     place_of_birth: data.placeOfBirth ?? null,
     blood_type: data.bloodType ?? null,
@@ -277,21 +276,16 @@ export const createEmployee = async (data: UserFormValues) => {
     };
   }
 
-  // if the role engerineer, insert default specializations
+  // if engineer and speciality provided, insert into employee_specialities
   if (roleToAssign === ENGINEER_ROLE_ID && data.specializationsId) {
     const { error: specError } = await supabase
-      .from("user_specializations")
+      .from("employee_specialities")
       .insert({
-        user_id: userId,
-        specialization_id: data.specializationsId ?? null,
+        employee_id: userId,
+        speciality_id: data.specializationsId,
       });
     if (specError) {
-      console.error("Error inserting default specializations:", specError);
-      return {
-        success: false,
-        error: specError,
-        message: "فشل في إضافة التخصصات الافتراضية",
-      };
+      console.warn("Warning inserting employee speciality:", specError);
     }
   }
 

@@ -11,11 +11,11 @@ const fetchVendorsList = async (): Promise<VendorsWithSpecializations[]> => {
     .select(
       `
       *,
-      specializations (*),
-      users!vendors_user_id_fkey (
-        user_specializations (
-          specialization_id,
-          specializations (*)
+      vendor_specialities (
+        speciality_id,
+        speciality:specialities (
+          id,
+          name
         )
       )
     `,
@@ -45,11 +45,11 @@ export function useVendors() {
         .from("vendors")
         .select(
           `*,
-            specializations(*),
-            users!vendors_user_id_fkey (
-              user_specializations (
-                specialization_id,
-                specializations (*)
+            vendor_specialities (
+              speciality_id,
+              speciality:specialities (
+                id,
+                name
               )
             )
           `,

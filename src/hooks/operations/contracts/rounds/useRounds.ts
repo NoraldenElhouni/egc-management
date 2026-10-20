@@ -2,19 +2,16 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
 import { RoundForm } from "../../../../types/schema/contracts.schema";
-import { fetchByIds } from "../crossSchemaLookup";
 
 export interface RoundListRow {
   id: string;
   project_id: string;
   title: string;
   notes: string | null;
-  specialization_id: string | null;
   status: "draft" | "pricing" | "awarded" | "cancelled";
   created_by: string;
   created_at: string;
   quotes: { count: number }[];
-  specialization: { name: string } | null;
 }
 
 export interface RoundItemRow {
@@ -33,12 +30,10 @@ export interface RoundDetail {
   project_id: string;
   title: string;
   notes: string | null;
-  specialization_id: string | null;
   status: "draft" | "pricing" | "awarded" | "cancelled";
   created_by: string;
   created_at: string;
   round_items: RoundItemRow[];
-  specialization: { id: string; name: string } | null;
 }
 
 export function useRounds(projectId: string) {
@@ -63,20 +58,7 @@ export function useRounds(projectId: string) {
           return;
         }
 
-        const specsById = await fetchByIds<{ id: string; name: string }>(
-          "specializations",
-          "id, name",
-          (data ?? []).map((r) => r.specialization_id),
-        );
-
-        setRounds(
-          (data ?? []).map((r) => ({
-            ...r,
-            specialization: r.specialization_id
-              ? (specsById[r.specialization_id] ?? null)
-              : null,
-          })),
-        );
+        setRounds((data ?? []) as unknown as RoundListRow[]);
       } catch (err) {
         setError(err as PostgrestError);
       }
@@ -114,18 +96,7 @@ export function useRound(roundId: string) {
         return;
       }
 
-      const specsById = await fetchByIds<{ id: string; name: string }>(
-        "specializations",
-        "id, name",
-        [data.specialization_id],
-      );
-
-      setRound({
-        ...data,
-        specialization: data.specialization_id
-          ? (specsById[data.specialization_id] ?? null)
-          : null,
-      });
+      setRound(data as unknown as RoundDetail);
     } catch (err) {
       setError(err as PostgrestError);
     }
@@ -164,7 +135,6 @@ export function useCreateRound() {
       .from("rounds")
       .insert({
         project_id: projectId,
-        specialization_id: values.specialization_id ?? null,
         title: values.title,
         notes: values.notes ?? null,
         created_by: user?.id ?? "",
@@ -219,7 +189,6 @@ export function useEditRound() {
       .schema("contracts")
       .from("rounds")
       .update({
-        specialization_id: values.specialization_id ?? null,
         title: values.title,
         notes: values.notes ?? null,
       })

@@ -227,10 +227,6 @@ const ContractDetailsPage = () => {
           <Separator />
           <InfoRow label="المشروع" value={contract.project?.name ?? "—"} />
           <InfoRow
-            label="التخصص"
-            value={contract.round?.specialization?.name ?? "—"}
-          />
-          <InfoRow
             label="نسبة الدفعة المقدمة"
             value={`${contract.advance_percentage}%`}
           />

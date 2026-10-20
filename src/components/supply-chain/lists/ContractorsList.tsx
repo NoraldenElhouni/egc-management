@@ -12,9 +12,7 @@ const ContractorsList = () => {
     const total = contractors.length;
 
     const withSpecialtyCount = contractors.filter(
-      (c) =>
-        Boolean(c.specialization_id) ||
-        (c.users?.user_specializations?.length ?? 0) > 0,
+      (c) => (c.contractor_specialities?.length ?? 0) > 0,
     ).length;
 
     const bankApprovedCount = contractors.filter(
@@ -23,9 +21,11 @@ const ContractorsList = () => {
 
     const specialtyCounts = new Map<string, number>();
     contractors.forEach((c) => {
-      const name = c.specializations?.name;
-      if (!name) return;
-      specialtyCounts.set(name, (specialtyCounts.get(name) ?? 0) + 1);
+      c.contractor_specialities?.forEach((cs) => {
+        const name = cs.speciality?.name;
+        if (!name) return;
+        specialtyCounts.set(name, (specialtyCounts.get(name) ?? 0) + 1);
+      });
     });
 
     const topSpecialty = Array.from(specialtyCounts, ([name, count]) => ({

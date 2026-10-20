@@ -21,8 +21,12 @@ export type ExpenseStatus = Database["public"]["Enums"]["expense_status"];
 // Core entity types
 // ------------------------------------------------------------
 export type Clients = Tables<"clients">;
-export type Specializations = Tables<"specializations">;
+export type Specialities = Tables<"specialities">;
+export type Specializations = Tables<"specialities">;
 export type Contractors = Tables<"contractors">;
+export type ContractorSpecialities = Tables<"contractor_specialities">;
+export type VendorSpecialities = Tables<"vendor_specialities">;
+export type EmployeeSpecialities = Tables<"employee_specialities">;
 
 export type Projects = Tables<"projects">;
 export type Employees = Tables<"employees">;
@@ -52,7 +56,6 @@ export type ProjectBalances = Tables<"project_balances">;
 export type ProjectPercentage = Tables<"project_percentage">;
 export type ProjectPercentageLogs = Tables<"project_percentage_logs">;
 export type UserRoles = Tables<"user_roles">;
-export type UserSpecializations = Tables<"user_specializations">;
 export type MapType = Tables<"map_types">;
 export type Bank = Database["lookups"]["Tables"]["banks"]["Row"];
 export type Attachments = Tables<"attachments">;

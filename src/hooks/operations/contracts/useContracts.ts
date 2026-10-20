@@ -1,6 +1,6 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
-import { PaymentMethod, Specializations } from "../../../types/global.type";
+import { PaymentMethod } from "../../../types/global.type";
 import { supabase } from "../../../lib/supabaseClient";
 import { contractorWithSpecializations } from "../../../types/extended.type";
 import { fetchByIds } from "./crossSchemaLookup";
@@ -107,7 +107,7 @@ export interface ContractDetail {
   created_at: string;
   updated_at: string;
   project: { name: string } | null;
-  round: { title: string; specialization: { name: string } | null } | null;
+  round: { title: string } | null;
   contractor: {
     id: string;
     first_name: string;
@@ -167,40 +167,6 @@ export function useContracts(projectId: string) {
   return { contracts, loading, error };
 }
 
-export function useSpecializations() {
-  const [specializations, setSpecializations] = useState<Specializations[]>(
-    [],
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PostgrestError | null>(null);
-
-  useEffect(() => {
-    async function fetchspecializations() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("specializations")
-          .select("*")
-          .eq("role_id", "20606a44-1f4b-4e0a-af58-abc553b70bc0");
-
-        if (error) {
-          console.error("error fetching specializations", error);
-          setError(error);
-        } else {
-          setSpecializations(data ?? []);
-        }
-      } catch (err) {
-        console.error("unexpected error fetching specializations", err);
-        setError(err as PostgrestError);
-      }
-      setLoading(false);
-    }
-    fetchspecializations();
-  }, []);
-
-  return { specializations, loading, error };
-}
-
 export function useContractors(enabled: boolean) {
   const [contractors, setContractors] = useState<
     contractorWithSpecializations[]
@@ -216,9 +182,7 @@ export function useContractors(enabled: boolean) {
 
       const { data, error } = await supabase
         .from("contractors")
-        .select(
-          `*,specializations(id,name,role_id),users!contractors_user_id_fkey(user_specializations(*, specializations(*)))`,
-        );
+        .select("*");
       if (error) setError(error);
       else setContractors(data ?? []);
 
@@ -246,7 +210,7 @@ export function useContractDetails(contractId: string) {
           .from("contracts")
           .select(
             `*,
-            rounds(title, specialization_id),
+            rounds(title),
             contract_items(*),
             milestones(*),
             request_payments(
@@ -267,10 +231,10 @@ export function useContractDetails(contractId: string) {
         const row = data as unknown as {
           project_id: string;
           contractor_id: string;
-          rounds: { title: string; specialization_id: string | null } | null;
+          rounds: { title: string } | null;
         } & Record<string, unknown>;
 
-        const [projectsById, contractorsById, specsById] = await Promise.all([
+        const [projectsById, contractorsById] = await Promise.all([
           fetchByIds<{ id: string; name: string }>(
             "projects",
             "id, name",
@@ -287,25 +251,13 @@ export function useContractDetails(contractId: string) {
             "id, first_name, last_name, phone_number, email",
             [row.contractor_id],
           ),
-          fetchByIds<{ id: string; name: string }>(
-            "specializations",
-            "id, name",
-            [row.rounds?.specialization_id],
-          ),
         ]);
 
         setContract({
           ...row,
           project: projectsById[row.project_id] ?? null,
           contractor: contractorsById[row.contractor_id] ?? null,
-          round: row.rounds
-            ? {
-                title: row.rounds.title,
-                specialization: row.rounds.specialization_id
-                  ? (specsById[row.rounds.specialization_id] ?? null)
-                  : null,
-              }
-            : null,
+          round: row.rounds ? { title: row.rounds.title } : null,
         } as unknown as ContractDetail);
       } catch (err) {
         setError(err as PostgrestError);

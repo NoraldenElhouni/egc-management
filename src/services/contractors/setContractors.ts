@@ -98,7 +98,6 @@ export async function AddContractors(form: ContractorFormValues) {
     phone_number: (form.phone ?? "").trim(), // NOTE: table says NOT NULL (see note below)
     whatsapp_number: (form.whatsappNumber ?? "").trim() || null,
     user_id: authUserId, // null if no auth user created
-    specialization_id: form.specializationId || null,
     bank_id: bankId || null,
     bank_name: bankName,
     bank_number: (form.bankNumber ?? "").trim() || null,
@@ -120,6 +119,20 @@ export async function AddContractors(form: ContractorFormValues) {
     };
   }
 
+  // Link speciality to contractor if provided
+  if (form.specializationId) {
+    const { error: specError } = await supabase
+      .from("contractor_specialities")
+      .insert({
+        contractor_id: contractor.id,
+        speciality_id: form.specializationId,
+      });
+
+    if (specError) {
+      console.warn("Warning inserting contractor speciality:", specError);
+    }
+  }
+
   if (authUserId) {
     const { error: userRoleError } = await supabase
       .from("user_roles")
@@ -134,22 +147,6 @@ export async function AddContractors(form: ContractorFormValues) {
         success: false,
         error: userRoleError,
         message: "فشل في تعيين دور المستخدم",
-      };
-    }
-
-    const { error: userSpecError } = await supabase
-      .from("user_specializations")
-      .insert({
-        specialization_id: form.specializationId,
-        user_id: authUserId,
-      });
-
-    if (userSpecError) {
-      console.error("Error inserting user specialization:", userSpecError);
-      return {
-        success: false,
-        error: userSpecError,
-        message: "فشل في تعيين تخصص المستخدم",
       };
     }
   }

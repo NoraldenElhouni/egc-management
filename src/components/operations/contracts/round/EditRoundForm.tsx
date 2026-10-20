@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 import {
@@ -11,11 +11,7 @@ import {
   RoundDetail,
   useEditRound,
 } from "../../../../hooks/operations/contracts/rounds/useRounds";
-import {
-  AttachmentDraft,
-  Specializations,
-} from "../../../../types/global.type";
-import { SearchableSelectField } from "../../../ui/inputs/SearchableSelectField";
+import { AttachmentDraft } from "../../../../types/global.type";
 import { TextField } from "../../../ui/inputs/TextField";
 import { TextAreaField } from "../../../ui/inputs/TextAreaField";
 import Separator from "../../../ui/separator";
@@ -27,16 +23,12 @@ interface EditRoundFormProps {
   projectId: string;
   roundId: string;
   existingRound: RoundDetail;
-  specializations: Specializations[];
-  specLoading: boolean;
 }
 
 const EditRoundForm = ({
   projectId,
   roundId,
   existingRound,
-  specializations,
-  specLoading,
 }: EditRoundFormProps) => {
   const navigate = useNavigate();
   const { editRound, loading } = useEditRound();
@@ -62,7 +54,6 @@ const EditRoundForm = ({
   } = useForm<RoundForm>({
     resolver: zodResolver(roundSchemaValues),
     defaultValues: {
-      specialization_id: existingRound.specialization_id,
       title: existingRound.title,
       notes: existingRound.notes ?? "",
       items: defaultItems,
@@ -73,11 +64,6 @@ const EditRoundForm = ({
     control,
     name: "items",
   });
-
-  const specOptions = specializations.map((s) => ({
-    value: s.id,
-    label: s.name,
-  }));
 
   const handlePickerConfirm = (items: RoundForm["items"]) => {
     items.forEach((item) => append(item));
@@ -146,22 +132,6 @@ const EditRoundForm = ({
             المعلومات العامة
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Controller
-              name="specialization_id"
-              control={control}
-              render={({ field }) => (
-                <SearchableSelectField
-                  id="specialization_id"
-                  label="التخصص"
-                  options={specOptions}
-                  loading={specLoading}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  error={errors.specialization_id}
-                  placeholder="-- اختر التخصص --"
-                />
-              )}
-            />
             <TextField
               id="title"
               label="العنوان"

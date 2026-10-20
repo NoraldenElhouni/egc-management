@@ -22,12 +22,9 @@ export function useContractor(contractorId: string) {
           .from("contractors")
           .select(
             `*,
-            specializations (id, name, role_id),
-            users!contractors_user_id_fkey (
-              user_specializations (
-                specialization_id,
-                specializations (id, name, role_id)
-              )
+            contractor_specialities (
+              speciality_id,
+              speciality:specialities (id, name)
             ),
             bank_approved_by_user:users!contractors_bank_approved_by_fkey (
               first_name,

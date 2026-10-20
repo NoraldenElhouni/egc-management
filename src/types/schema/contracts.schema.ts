@@ -9,7 +9,6 @@ export const roundItemSchema = z.object({
 });
 
 export const roundSchemaValues = z.object({
-  specialization_id: z.string().uuid("التخصص مطلوب").nullable().optional(),
   title: z.string().min(3, "العنوان مطلوب"),
   notes: z.string().optional(),
   items: z.array(roundItemSchema).min(1, "يجب إضافة بند واحد على الأقل"),

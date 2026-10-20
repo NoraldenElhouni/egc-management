@@ -94,7 +94,6 @@ export async function addVendor(form: VendorFormValues) {
     .from("vendors")
     .insert({
       vendor_name: form.vendor_name,
-      specialization_id: form.specialization_id, // ❗ only if you actually have this column (see note below)
       contact_name: (form.contact_name ?? "").trim() || null,
       email: email || null,
       phone_number: (form.phone_number ?? "").trim() || null,
@@ -121,7 +120,21 @@ export async function addVendor(form: VendorFormValues) {
     };
   }
 
-  // 4) role + specialization only if auth user exists
+  // Link speciality to vendor if provided
+  if (form.specialization_id) {
+    const { error: specError } = await supabase
+      .from("vendor_specialities")
+      .insert({
+        vendor_id: vendorRow.id,
+        speciality_id: form.specialization_id,
+      });
+
+    if (specError) {
+      console.warn("Warning inserting vendor speciality:", specError);
+    }
+  }
+
+  // 4) role only if auth user exists
   if (authUserId) {
     const { error: userRoleError } = await supabase
       .from("user_roles")
@@ -136,22 +149,6 @@ export async function addVendor(form: VendorFormValues) {
         success: false,
         error: userRoleError,
         message: "فشل في تعيين دور المستخدم",
-      };
-    }
-
-    const { error: userSpecError } = await supabase
-      .from("user_specializations")
-      .insert({
-        specialization_id: form.specialization_id,
-        user_id: authUserId,
-      });
-
-    if (userSpecError) {
-      console.error("Error inserting user specialization data:", userSpecError);
-      return {
-        success: false,
-        error: userSpecError,
-        message: "فشل في تعيين تخصص المستخدم",
       };
     }
   }
@@ -180,7 +177,7 @@ export async function AssignUserToVendor({
   // 1) Fetch the vendor to get their info for auth metadata
   const { data: vendor, error: fetchErr } = await supabase
     .from("vendors")
-    .select("id, vendor_name, contact_name, phone_number, specialization_id")
+    .select("id, vendor_name, contact_name, phone_number")
     .eq("id", vendorId)
     .single();
 
@@ -246,24 +243,6 @@ export async function AssignUserToVendor({
       error: roleErr,
       message: "فشل في تعيين دور المستخدم",
     };
-  }
-
-  // 5) Assign specialization if the vendor has one
-  if (vendor.specialization_id) {
-    const { error: specErr } = await supabase
-      .from("user_specializations")
-      .insert({
-        specialization_id: vendor.specialization_id,
-        user_id: authUserId,
-      });
-
-    if (specErr) {
-      return {
-        success: false,
-        error: specErr,
-        message: "فشل في تعيين تخصص المستخدم",
-      };
-    }
   }
 
   return {

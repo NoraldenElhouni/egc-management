@@ -166,13 +166,14 @@ const VendorDetailPage = () => {
     }
   }
 
-  const additionalSpecializationNames = useMemo(
+  const specialityNames = useMemo(
     () =>
-      (vendor?.users?.user_specializations ?? [])
-        .map((us) => us.specializations?.name)
+      (vendor?.vendor_specialities ?? [])
+        .map((s) => s.speciality?.name)
         .filter((name): name is string => Boolean(name)),
     [vendor],
   );
+  const additionalSpecializationNames = specialityNames.slice(1);
 
   if (!id) {
     return (
@@ -312,7 +313,7 @@ const VendorDetailPage = () => {
               <InfoItem label="العنوان" value={vendor.address} />
               <InfoItem
                 label="التخصص الرئيسي"
-                value={vendor.specializations?.name}
+                value={specialityNames[0]}
               />
               {additionalSpecializationNames.length > 0 && (
                 <div>
