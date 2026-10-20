@@ -45,7 +45,7 @@ const EmployeeDistributionDetailsPage = () => {
     if (!employeeId) return;
     supabase
       .from("employees")
-      .select("first_name, last_name, specializations(name)")
+      .select("first_name, last_name, employee_specialities(speciality:specialities(name))")
       .eq("id", employeeId)
       .single()
       .then(({ data }) => {
@@ -54,7 +54,11 @@ const EmployeeDistributionDetailsPage = () => {
             firstName: data.first_name,
             lastName: data.last_name,
             specialization:
-              (data.specializations as { name: string } | null)?.name ?? null,
+              (
+                data.employee_specialities as
+                  | { speciality: { name: string } | null }[]
+                  | null
+              )?.[0]?.speciality?.name ?? null,
           });
         }
       });

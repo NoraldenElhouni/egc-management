@@ -34,9 +34,7 @@ const EditVendorDialog = ({
   const [country, setCountry] = useState(vendor.country ?? "");
   const [city, setCity] = useState(vendor.city ?? "");
   const [address, setAddress] = useState(vendor.address ?? "");
-  const [mainSpecializationId, setMainSpecializationId] = useState(
-    vendor.specialization_id ?? "",
-  );
+  const [mainSpecializationId, setMainSpecializationId] = useState("");
   const [additionalSpecializationIds, setAdditionalSpecializationIds] =
     useState<string[]>([]);
   const [specializationSearch, setSpecializationSearch] = useState("");
@@ -60,12 +58,9 @@ const EditVendorDialog = ({
     setCountry(vendor.country ?? "");
     setCity(vendor.city ?? "");
     setAddress(vendor.address ?? "");
-    setMainSpecializationId(vendor.specialization_id ?? "");
-    setAdditionalSpecializationIds(
-      (vendor.users?.user_specializations ?? []).map(
-        (us) => us.specialization_id,
-      ),
-    );
+    const specs = (vendor.vendor_specialities ?? []).map((vs) => vs.speciality_id);
+    setMainSpecializationId(specs[0] ?? "");
+    setAdditionalSpecializationIds(specs.slice(1));
     setSpecializationSearch("");
     setStatus((vendor.status as VendorStatus) ?? "active");
     setError(null);
@@ -130,7 +125,6 @@ const EditVendorDialog = ({
           country: country.trim() || null,
           city: city.trim() || null,
           address: address.trim() || null,
-          specialization_id: mainSpecializationId || null,
           status,
           updated_at: new Date().toISOString(),
         })
@@ -138,26 +132,29 @@ const EditVendorDialog = ({
 
       if (updateError) throw updateError;
 
-      if (vendor.user_id) {
-        const { error: deleteError } = await supabase
-          .from("user_specializations")
-          .delete()
-          .eq("user_id", vendor.user_id);
+      // Update vendor_specialities
+      const allSpecIds = Array.from(
+        new Set([mainSpecializationId, ...additionalSpecializationIds].filter(Boolean)),
+      );
 
-        if (deleteError) throw deleteError;
+      const { error: deleteError } = await supabase
+        .from("vendor_specialities")
+        .delete()
+        .eq("vendor_id", vendor.id);
 
-        if (additionalSpecializationIds.length > 0) {
-          const { error: insertError } = await supabase
-            .from("user_specializations")
-            .insert(
-              additionalSpecializationIds.map((specialization_id) => ({
-                user_id: vendor.user_id as string,
-                specialization_id,
-              })),
-            );
+      if (deleteError) throw deleteError;
 
-          if (insertError) throw insertError;
-        }
+      if (allSpecIds.length > 0) {
+        const { error: insertError } = await supabase
+          .from("vendor_specialities")
+          .insert(
+            allSpecIds.map((speciality_id) => ({
+              vendor_id: vendor.id,
+              speciality_id,
+            })),
+          );
+
+        if (insertError) throw insertError;
       }
 
       onSuccess();

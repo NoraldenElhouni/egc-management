@@ -25,12 +25,9 @@ export function useVendor(vendorId: string) {
           .from("vendors")
           .select(
             `*,
-            specializations (id, name, role_id),
-            users!vendors_user_id_fkey (
-              user_specializations (
-                specialization_id,
-                specializations (id, name, role_id)
-              )
+            vendor_specialities (
+              speciality_id,
+              speciality:specialities (id, name)
             ),
             bank_approved_by_user:users!vendors_bank_approved_by_fkey (
               first_name,

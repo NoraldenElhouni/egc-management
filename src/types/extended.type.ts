@@ -117,62 +117,38 @@ export interface CompanyPaymentsWithUser extends CompanyExpensePayments {
 }
 
 export interface contractorWithSpecializations extends Contractors {
-  specializations: {
-    id: string;
-    name: string;
-    role_id: string;
-  } | null;
-  users: {
-    user_specializations: {
-      specialization_id: string;
-      specializations: {
-        id: string;
-        name: string;
-        role_id: string;
-      };
-    }[];
-  } | null;
-  bank_approved_by_user: {
+  contractor_specialities?: {
+    speciality_id: string;
+    speciality?: {
+      id: string;
+      name: string;
+    } | null;
+  }[];
+  bank_approved_by_user?: {
     first_name: string;
     last_name: string | null;
   } | null;
 }
 
 export interface VendorsWithSpecializations extends Vendor {
-  specializations: {
-    id: string;
-    name: string;
-    role_id: string;
-  } | null; // ✅ object or null, not an array
-  users: {
-    user_specializations: {
-      specialization_id: string;
-      specializations: {
-        id: string;
-        name: string;
-        role_id: string;
-      };
-    }[];
-  } | null;
+  vendor_specialities?: {
+    speciality_id: string;
+    speciality?: {
+      id: string;
+      name: string;
+    } | null;
+  }[];
 }
 
 export interface VendorWithBankApprover extends Vendor {
-  specializations: {
-    id: string;
-    name: string;
-    role_id: string;
-  } | null;
-  users: {
-    user_specializations: {
-      specialization_id: string;
-      specializations: {
-        id: string;
-        name: string;
-        role_id: string;
-      };
-    }[];
-  } | null;
-  bank_approved_by_user: {
+  vendor_specialities?: {
+    speciality_id: string;
+    speciality?: {
+      id: string;
+      name: string;
+    } | null;
+  }[];
+  bank_approved_by_user?: {
     first_name: string;
     last_name: string | null;
   } | null;

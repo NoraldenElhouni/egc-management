@@ -45,7 +45,7 @@ type RawItem = {
     id: string;
     first_name: string;
     last_name: string | null;
-    specializations: { name: string } | null;
+    employee_specialities: { speciality: { name: string } | null }[] | null;
   } | null;
 };
 
@@ -75,7 +75,7 @@ export function useBatchDetail(date: string) {
              item_type, user_id, total, period_id,
              employee:employees(
                id, first_name, last_name,
-               specializations:specializations(name)
+               employee_specialities(speciality:specialities(name))
              )
            )`,
         )
@@ -162,7 +162,7 @@ export function useBatchDetail(date: string) {
               employeeId: uid,
               firstName: emp.first_name,
               lastName: emp.last_name,
-              specialization: emp.specializations?.name ?? null,
+              specialization: emp.employee_specialities?.[0]?.speciality?.name ?? null,
               projectIds: new Set(),
               totalsByCurrency: {},
             };

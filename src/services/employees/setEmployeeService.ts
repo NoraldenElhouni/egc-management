@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "../../lib/adminSupabase";
+import { adminCreateUser } from "../../lib/adminApi";
 import { supabase } from "../../lib/supabaseClient";
 import { Employees } from "../../types/global.type";
 import { UserFormValues } from "../../types/schema/users.schema";
@@ -72,12 +72,14 @@ export const createEmployee = async (data: UserFormValues) => {
     .getUser()
     .then(({ data }) => data.user?.id ?? null);
 
-  const { data: userData, error: userError } =
-    await supabaseAdmin.auth.admin.createUser({
+  // Created by the admin-users Edge Function, which checks the
+  // create_employee permission and rejects a contractor/vendor/client role.
+  const { data: userData, error: userError } = await adminCreateUser(
+    "employee",
+    {
       email: data.email,
       password: data.password,
-      email_confirm: true,
-      user_metadata: {
+      userMetadata: {
         employeeId: data.employeeId,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -91,7 +93,8 @@ export const createEmployee = async (data: UserFormValues) => {
         // staff. A contractor or vendor must go through its own service.
         partyType: "company",
       },
-    });
+    },
+  );
 
   if (userError) {
     console.error("Error creating auth user:", userError);
@@ -114,7 +117,7 @@ export const createEmployee = async (data: UserFormValues) => {
 
   // certification will be inserted after the employee profile is created
 
-  const { data: roleData, error: userRoleError } = await supabaseAdmin
+  const { data: roleData, error: userRoleError } = await supabase
     .from("roles")
     .select("*")
     .eq("id", data.roleId ?? ENGINEER_ROLE_ID)
@@ -148,7 +151,6 @@ export const createEmployee = async (data: UserFormValues) => {
     base_salary: data.baseSalary ?? 0,
     // Layer 4 of the ladder. Null is a real answer, not a missing one.
     department_id: normalizeEmptyToNull(data.departmentId),
-    specializations_id: data.specializationsId ?? null,
     dob: normalizeEmptyToNull(data.dob),
     place_of_birth: data.placeOfBirth ?? null,
     blood_type: data.bloodType ?? null,
@@ -178,7 +180,7 @@ export const createEmployee = async (data: UserFormValues) => {
     updated_at: new Date().toISOString(),
   };
 
-  const { error: profileError } = await supabaseAdmin
+  const { error: profileError } = await supabase
     .from("employees")
     .insert(employeePayload);
 
@@ -192,7 +194,7 @@ export const createEmployee = async (data: UserFormValues) => {
   }
 
   // certfication (moved after creating employee to satisfy FK constraint)
-  const { error: certError } = await supabaseAdmin
+  const { error: certError } = await supabase
     .from("employee_certifications")
     .insert({
       employee_id: userId,
@@ -221,7 +223,7 @@ export const createEmployee = async (data: UserFormValues) => {
   // user_roles itself (phase8-create-employee.sql proposes exactly that),
   // this must not start failing on a duplicate. Ignoring the conflict
   // keeps both halves correct whichever one runs first.
-  const { error: roleError } = await supabaseAdmin.from("user_roles").upsert(
+  const { error: roleError } = await supabase.from("user_roles").upsert(
     { role_id: roleToAssign, user_id: userId },
     {
       onConflict: "user_id,role_id",
@@ -245,7 +247,7 @@ export const createEmployee = async (data: UserFormValues) => {
   // different times, and only one of them was ever checked. Phase 8
   // retires this column; until then the two must agree, and user_roles
   // above is the one that wins.
-  const { error: legacyRoleError } = await supabaseAdmin
+  const { error: legacyRoleError } = await supabase
     .from("users")
     .update({ role_id: roleToAssign })
     .eq("id", userId);
@@ -260,7 +262,7 @@ export const createEmployee = async (data: UserFormValues) => {
   }
 
   //update role number
-  const { error: updateRoleError } = await supabaseAdmin
+  const { error: updateRoleError } = await supabase
     .from("roles")
     .update({ number: roleData.number + 1 })
     .eq("id", roleToAssign);
@@ -274,26 +276,21 @@ export const createEmployee = async (data: UserFormValues) => {
     };
   }
 
-  // if the role engerineer, insert default specializations
+  // if engineer and speciality provided, insert into employee_specialities
   if (roleToAssign === ENGINEER_ROLE_ID && data.specializationsId) {
-    const { error: specError } = await supabaseAdmin
-      .from("user_specializations")
+    const { error: specError } = await supabase
+      .from("employee_specialities")
       .insert({
-        user_id: userId,
-        specialization_id: data.specializationsId ?? null,
+        employee_id: userId,
+        speciality_id: data.specializationsId,
       });
     if (specError) {
-      console.error("Error inserting default specializations:", specError);
-      return {
-        success: false,
-        error: specError,
-        message: "فشل في إضافة التخصصات الافتراضية",
-      };
+      console.warn("Warning inserting employee speciality:", specError);
     }
   }
 
   // insert employee files
-  const { error: filesError } = await supabaseAdmin
+  const { error: filesError } = await supabase
     .from("employee_documents")
     .insert([
       {

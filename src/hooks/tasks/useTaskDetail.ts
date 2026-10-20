@@ -71,8 +71,6 @@ export interface TaskDetailData {
   assigneeIds: string[];
   departmentNamesById: Map<string, string>;
   allDepartments: { id: string; label: string }[];
-  allSpecializations: { id: string; name: string }[];
-  specializationName: string | null;
   links: TaskLink[];
   requirements: Requirement[];
   blocking: DependencyTaskRef[]; // tasks that block this one
@@ -135,9 +133,7 @@ export function useTaskDetail(taskId: string | undefined) {
         { data: statuses, error: statusesError },
         { data: assigneeRows, error: assigneeError },
         { data: department, error: departmentError },
-        { data: specialization, error: specializationError },
         { data: allDepartmentRows, error: allDepartmentsError },
-        { data: allSpecializationRows, error: allSpecializationsError },
         { data: links, error: linksError },
         { data: requirements, error: requirementsError },
         { data: blockingDeps, error: blockingError },
@@ -156,11 +152,7 @@ export function useTaskDetail(taskId: string | undefined) {
         task.department_id
           ? supabase.from("departments").select("id, name_ar, name").eq("id", task.department_id)
           : Promise.resolve({ data: [], error: null }),
-        task.specialization_id
-          ? supabase.from("specializations").select("name").eq("id", task.specialization_id).maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
         supabase.from("departments").select("id, name_ar, name").eq("is_active", true),
-        supabase.from("specializations").select("id, name"),
         tasksDb.from("task_links").select("*").eq("task_id", taskId),
         tasksDb.from("task_requirements").select("*").eq("task_id", taskId),
         tasksDb.from("task_dependencies").select("id, blocking_task_id").eq("blocked_task_id", taskId),
@@ -182,9 +174,7 @@ export function useTaskDetail(taskId: string | undefined) {
       if (statusesError) throw statusesError;
       if (assigneeError) throw assigneeError;
       if (departmentError) throw departmentError;
-      if (specializationError) throw specializationError;
       if (allDepartmentsError) throw allDepartmentsError;
-      if (allSpecializationsError) throw allSpecializationsError;
       if (linksError) throw linksError;
       if (requirementsError) throw requirementsError;
       if (blockingError) throw blockingError;
@@ -320,8 +310,6 @@ export function useTaskDetail(taskId: string | undefined) {
           id: d.id,
           label: d.name_ar ?? d.name,
         })),
-        allSpecializations: allSpecializationRows ?? [],
-        specializationName: specialization?.name ?? null,
         links: links ?? [],
         requirements: requirements ?? [],
         blocking,
@@ -350,7 +338,7 @@ export function useTaskDetail(taskId: string | undefined) {
   };
 
   const updateField = useMutation({
-    mutationFn: async (patch: Partial<Pick<TaskRow, "title" | "description" | "status_id" | "priority" | "due_date" | "start_date" | "department_id" | "specialization_id">>) => {
+    mutationFn: async (patch: Partial<Pick<TaskRow, "title" | "description" | "status_id" | "priority" | "due_date" | "start_date" | "department_id">>) => {
       if (!taskId) return;
       const prevTask = query.data?.task;
       const { error } = await tasksDb.from("tasks").update(patch).eq("id", taskId);

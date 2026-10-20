@@ -10,7 +10,6 @@ export interface MergeContractorsInput {
   email: string | null;
   phoneNumber: string | null;
   whatsappNumber: string | null;
-  specializationId: string | null;
   bankId: string | null;
   bankNumber: string | null;
   bankHolderName: string | null;
@@ -36,7 +35,6 @@ export function useMergeContractors() {
       p_email: input.email ?? "",
       p_phone_number: input.phoneNumber ?? "",
       p_whatsapp_number: input.whatsappNumber ?? "",
-      p_specialization_id: input.specializationId ?? "",
       p_bank_id: input.bankId ?? "",
       p_bank_number: input.bankNumber ?? "",
       p_bank_holder_name: input.bankHolderName ?? "",

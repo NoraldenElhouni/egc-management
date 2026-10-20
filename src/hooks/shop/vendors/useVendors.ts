@@ -6,15 +6,9 @@ import { VendorsWithSpecializations } from "../../../types/extended.type";
 
 const VENDORS_SELECT = `
   *,
-  specializations(*),
-  users!vendors_user_id_fkey (
-    id,
-    user_specializations (
-      specializations (
-        id,
-        name
-      )
-    )
+  vendor_specialities (
+    speciality_id,
+    speciality:specialities (id, name)
   )
 `;
 

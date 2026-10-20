@@ -108,21 +108,9 @@ const MergeStepCompare = ({
           />
         ))}
 
-        <ConflictRow
-          label="التخصص"
-          survivorDisplay={survivor.specializations?.name ?? ""}
-          loserDisplay={loser.specializations?.name ?? ""}
-          selected={
-            values.specialization_id === loser.specialization_id &&
-            loser.specialization_id !== survivor.specialization_id
-              ? "loser"
-              : "survivor"
-          }
-          onSelectSurvivor={() =>
-            set({ specialization_id: survivor.specialization_id })
-          }
-          onSelectLoser={() => set({ specialization_id: loser.specialization_id })}
-        />
+        <p className="py-3 text-sm text-gray-500">
+          التخصصات: سيتم دمج تخصصات الطرفين تلقائياً.
+        </p>
 
         <ConflictRow
           label="معلومات البنك"

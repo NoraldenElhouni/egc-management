@@ -153,9 +153,6 @@ const RoundDetailsPage = () => {
           >
             {roundStatusLabel[round.status]}
           </span>
-          {round.specialization && (
-            <Badge label={round.specialization.name} variant="purple" />
-          )}
           <Badge label={`${round.round_items.length} بند`} />
           <Badge label={`${quotes.length} عرض`} />
           <Badge label={formatDate(round.created_at)} />

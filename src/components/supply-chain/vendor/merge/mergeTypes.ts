@@ -10,7 +10,6 @@ export interface MergeVendorValues {
   country: string | null;
   city: string | null;
   address: string | null;
-  specialization_id: string | null;
   bank_id: string | null;
   bank_number: string | null;
   bank_holder_name: string | null;
@@ -44,10 +43,6 @@ export function defaultMergeVendorValues(
     country: pick(survivor.country, loser.country),
     city: pick(survivor.city, loser.city),
     address: pick(survivor.address, loser.address),
-    specialization_id: pick(
-      survivor.specialization_id,
-      loser.specialization_id,
-    ),
     bank_id: bankSource.bank_id,
     bank_number: bankSource.bank_number,
     bank_holder_name: bankSource.bank_holder_name,

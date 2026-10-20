@@ -235,6 +235,6 @@ export const BREADCRUMB_ENTITIES: BreadcrumbEntity[] = [
   {
     patterns: ["/settings/specializations/:id"],
     resolve: async (id) =>
-      (await fetchRow(supabase.from("specializations").select("name").eq("id", id).maybeSingle()))?.name ?? null,
+      (await fetchRow(supabase.from("specialities").select("name").eq("id", id).maybeSingle()))?.name ?? null,
   },
 ];

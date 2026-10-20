@@ -49,7 +49,6 @@ npm run types      # regenerate src/lib/supabase.ts from the live database (afte
 | --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
 | `VITE_SUPABASE_URL`         | The project URL                                                                | Supabase Dashboard → Project Settings → API            |
 | `VITE_SUPABASE_ANON_KEY`    | Public (anon) key                                                              | same place                                             |
-| `VITE_SUPABASE_SERVICE_KEY` | Service-role key, used for admin actions such as creating accounts. **See §6** | same place                                             |
 | `VITE_MANAGEMENT_API_URL`   | PDF and management service                                                     | optional, defaults to `https://pdf-service.engroup.ly` |
 | `VITE_LOGS_API_URL`         | Logs service                                                                   | optional                                               |
 | `VITE_APP_VERSION`          | Version shown when not running inside Electron                                 | optional                                               |
@@ -82,7 +81,7 @@ GitHub builds the app for you. Pushing a version tag runs the workflow in `.gith
    - On start-up, anyone running an older version gets a blocking screen with a button to the latest GitHub release.
    - The check runs before login. If it can't reach the database, it lets the user in rather than locking them out.
 
-**Keys used by the build:** the workflow reads `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `VITE_SUPABASE_SERVICE_KEY` from the repo's **GitHub Secrets** (Settings → Secrets and variables → Actions). If the Supabase keys ever change, update them there before releasing.
+**Keys used by the build:** the workflow reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from the repo's **GitHub Secrets** (Settings → Secrets and variables → Actions). If the Supabase keys ever change, update them there before releasing.
 
 ---
 
@@ -182,5 +181,5 @@ If a storage command says _"Access token not provided"_, run `supabase login` on
 - **Row-level security, step 1 (live since 2026-10-15):** nobody signed out can read or change data.
   - **Step 2 isn't done yet:** every signed-in account can still read everything, including contractors, vendors and clients.
   - **Every new table needs RLS turned on plus a policy**, or the app sees it as empty.
-- **The service-role key is built into this app** (`VITE_SUPABASE_SERVICE_KEY`, used in `src/lib/adminSupabase.ts`). It bypasses all security, and anyone with the installer can extract it. The planned fix is to move the admin actions (creating accounts, resetting passwords) into a Supabase Edge Function and remove the key from the app.
+- **The service-role key was built into earlier versions of this app** (up to v1.1.12, as `VITE_SUPABASE_SERVICE_KEY`). Admin actions (creating accounts, deleting a just-created login, resetting passwords) now go through the `admin-users` Edge Function (`supabase/functions/admin-users/`), which checks the signed-in person's permission, and newer builds contain no key. **Installers published before still contain it and it stays valid until it is rotated.** The old `anon` and `service_role` keys can only be rotated together, which would break every shipped app, so first move the apps and Edge Functions to Supabase's new publishable/secret keys, then deactivate the legacy ones. Not done yet.
 - **Known broken:** merging contractors (`merge_contractors` still updates tables that moved to the `contracts` schema).

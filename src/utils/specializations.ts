@@ -1,18 +1,18 @@
 interface SpecializedEntity {
-  specialization_id: string | null;
-  users: {
-    user_specializations: { specialization_id: string }[];
-  } | null;
+  contractor_specialities?: { speciality_id: string }[] | null;
+  vendor_specialities?: { speciality_id: string }[] | null;
+  employee_specialities?: { speciality_id: string }[] | null;
 }
 
 export function matchesSpecialization<T extends SpecializedEntity>(
   item: T,
   specializationId: string,
 ): boolean {
-  if (item.specialization_id === specializationId) return true;
+  if (item.contractor_specialities?.some((cs) => cs.speciality_id === specializationId)) return true;
+  if (item.vendor_specialities?.some((vs) => vs.speciality_id === specializationId)) return true;
   return (
-    item.users?.user_specializations?.some(
-      (us) => us.specialization_id === specializationId,
+    item.employee_specialities?.some(
+      (es) => es.speciality_id === specializationId,
     ) ?? false
   );
 }
@@ -23,10 +23,9 @@ export function countBySpecialization<T extends SpecializedEntity>(
   const counts: Record<string, number> = {};
   items.forEach((item) => {
     const specIds = new Set<string>();
-    if (item.specialization_id) specIds.add(item.specialization_id);
-    item.users?.user_specializations?.forEach((us) =>
-      specIds.add(us.specialization_id),
-    );
+    item.contractor_specialities?.forEach((cs) => specIds.add(cs.speciality_id));
+    item.vendor_specialities?.forEach((vs) => specIds.add(vs.speciality_id));
+    item.employee_specialities?.forEach((es) => specIds.add(es.speciality_id));
     specIds.forEach((specId) => {
       counts[specId] = (counts[specId] ?? 0) + 1;
     });

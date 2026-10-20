@@ -48,14 +48,6 @@ export const RoundsColumns: ColumnDef<RoundListRow>[] = [
     size: 120,
   },
   {
-    id: "specialization",
-    header: "التخصص",
-    accessorFn: (row) => row.specialization?.name ?? "—",
-    cell: ({ getValue }) => (
-      <span className="text-gray-600 text-sm">{getValue<string>()}</span>
-    ),
-  },
-  {
     id: "quotes_count",
     header: "عدد العروض",
     accessorFn: (row) => row.quotes?.[0]?.count ?? 0,

@@ -34,9 +34,7 @@ const EditContractorDialog = ({
   const [whatsappNumber, setWhatsappNumber] = useState(
     contractor.whatsapp_number ?? "",
   );
-  const [mainSpecializationId, setMainSpecializationId] = useState(
-    contractor.specialization_id ?? "",
-  );
+  const [mainSpecializationId, setMainSpecializationId] = useState("");
   const [additionalSpecializationIds, setAdditionalSpecializationIds] =
     useState<string[]>([]);
   const [specializationSearch, setSpecializationSearch] = useState("");
@@ -54,12 +52,9 @@ const EditContractorDialog = ({
     setEmail(contractor.email ?? "");
     setPhoneNumber(contractor.phone_number ?? "");
     setWhatsappNumber(contractor.whatsapp_number ?? "");
-    setMainSpecializationId(contractor.specialization_id ?? "");
-    setAdditionalSpecializationIds(
-      (contractor.users?.user_specializations ?? []).map(
-        (us) => us.specialization_id,
-      ),
-    );
+    const specs = (contractor.contractor_specialities ?? []).map((cs) => cs.speciality_id);
+    setMainSpecializationId(specs[0] ?? "");
+    setAdditionalSpecializationIds(specs.slice(1));
     setSpecializationSearch("");
     setStatus((contractor.status as ContractorStatus) ?? "active");
     setError(null);
@@ -117,33 +112,35 @@ const EditContractorDialog = ({
           email: email.trim() || null,
           phone_number: phoneNumber.trim() || null,
           whatsapp_number: whatsappNumber.trim() || null,
-          specialization_id: mainSpecializationId || null,
           status,
         })
         .eq("id", contractor.id);
 
       if (updateError) throw updateError;
 
-      if (contractor.user_id) {
-        const { error: deleteError } = await supabase
-          .from("user_specializations")
-          .delete()
-          .eq("user_id", contractor.user_id);
+      // Update contractor_specialities
+      const allSpecIds = Array.from(
+        new Set([mainSpecializationId, ...additionalSpecializationIds].filter(Boolean)),
+      );
 
-        if (deleteError) throw deleteError;
+      const { error: deleteError } = await supabase
+        .from("contractor_specialities")
+        .delete()
+        .eq("contractor_id", contractor.id);
 
-        if (additionalSpecializationIds.length > 0) {
-          const { error: insertError } = await supabase
-            .from("user_specializations")
-            .insert(
-              additionalSpecializationIds.map((specialization_id) => ({
-                user_id: contractor.user_id as string,
-                specialization_id,
-              })),
-            );
+      if (deleteError) throw deleteError;
 
-          if (insertError) throw insertError;
-        }
+      if (allSpecIds.length > 0) {
+        const { error: insertError } = await supabase
+          .from("contractor_specialities")
+          .insert(
+            allSpecIds.map((speciality_id) => ({
+              contractor_id: contractor.id,
+              speciality_id,
+            })),
+          );
+
+        if (insertError) throw insertError;
       }
 
       onSuccess();

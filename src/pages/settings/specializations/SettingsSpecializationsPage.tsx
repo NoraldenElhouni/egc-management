@@ -63,14 +63,13 @@ const roleColors = {
 
 function SpecTab({
   title,
-  roleId,
   initialItems,
   roleType,
   counts,
   countLabel,
 }: {
   title: string;
-  roleId: string;
+  roleId?: string;
   initialItems: Specialization[];
   roleType: keyof typeof roleColors;
   counts: Record<string, number>;
@@ -108,14 +107,14 @@ function SpecTab({
       setError(null);
 
       const { data, error } = await supabase
-        .from("specializations")
-        .insert([{ name: trimmed, role_id: roleId }])
-        .select("id, name, role_id")
+        .from("specialities")
+        .insert([{ name: trimmed, is_active: true }])
+        .select("id, name")
         .single();
 
       if (error) throw error;
 
-      setItems((prev) => [data, ...prev]);
+      setItems((prev) => [data as unknown as Specialization, ...prev]);
       setName("");
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2500);

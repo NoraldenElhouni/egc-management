@@ -54,15 +54,18 @@ export function useEmployeesBySpecialization(
     async function fetchEmployees() {
       setLoading(true);
       const { data, error } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, email")
-        .eq("specializations_id", specializationId);
+        .from("employee_specialities")
+        .select("employee:employees(id, first_name, last_name, email)")
+        .eq("speciality_id", specializationId);
 
       if (error) {
         console.error("error fetching employees by specialization", error);
         setError(error);
       } else {
-        setEmployees(data ?? []);
+        const list = (data ?? [])
+          .map((d: { employee: unknown }) => d.employee as EmployeeSummary)
+          .filter(Boolean);
+        setEmployees(list);
       }
       setLoading(false);
     }
@@ -84,18 +87,18 @@ export function useEmployeeCountsBySpecialization() {
     async function fetchCounts() {
       setLoading(true);
       const { data, error } = await supabase
-        .from("employees")
-        .select("specializations_id");
+        .from("employee_specialities")
+        .select("speciality_id");
 
       if (error) {
         console.error("error fetching employee specialization counts", error);
         setError(error);
       } else {
         const counts = (data ?? []).reduce<Record<string, number>>(
-          (acc, row) => {
-            if (row.specializations_id)
-              acc[row.specializations_id] =
-                (acc[row.specializations_id] ?? 0) + 1;
+          (acc, row: { speciality_id: string }) => {
+            if (row.speciality_id)
+              acc[row.speciality_id] =
+                (acc[row.speciality_id] ?? 0) + 1;
             return acc;
           },
           {},

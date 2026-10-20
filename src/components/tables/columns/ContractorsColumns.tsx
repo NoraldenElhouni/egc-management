@@ -53,16 +53,15 @@ export const ContractorsColumns: ColumnDef<contractorWithSpecializations>[] = [
     id: "specializations",
     header: "التخصصات",
     accessorFn: (row) =>
-      row.users?.user_specializations
-        ?.map((us) => us.specializations?.name)
+      row.contractor_specialities
+        ?.map((cs) => cs.speciality?.name)
         .filter(Boolean)
         .join(", ") ||
-      row.specializations?.name ||
       "",
     cell: ({ row }) => {
       const specializations =
-        row.original.users?.user_specializations
-          ?.map((us) => us.specializations?.name)
+        row.original.contractor_specialities
+          ?.map((cs) => cs.speciality?.name)
           .filter(Boolean) ?? [];
 
       return (
@@ -76,10 +75,6 @@ export const ContractorsColumns: ColumnDef<contractorWithSpecializations>[] = [
                 {name}
               </span>
             ))
-          ) : row.original.specializations ? (
-            <span className="px-2 py-1 text-xs bg-gray-100 rounded">
-              {row.original.specializations.name}
-            </span>
           ) : (
             <span className="text-gray-400">لا يوجد</span>
           )}

@@ -6,7 +6,6 @@ export interface MergeValues {
   email: string | null;
   phone_number: string | null;
   whatsapp_number: string | null;
-  specialization_id: string | null;
   bank_id: string | null;
   bank_number: string | null;
   bank_holder_name: string | null;
@@ -36,10 +35,6 @@ export function defaultMergeValues(
     email: pick(survivor.email, loser.email),
     phone_number: pick(survivor.phone_number, loser.phone_number),
     whatsapp_number: pick(survivor.whatsapp_number, loser.whatsapp_number),
-    specialization_id: pick(
-      survivor.specialization_id,
-      loser.specialization_id,
-    ),
     bank_id: bankSource.bank_id,
     bank_number: bankSource.bank_number,
     bank_holder_name: bankSource.bank_holder_name,

@@ -171,13 +171,14 @@ const ContractorDetailPage = () => {
     }
   }
 
-  const additionalSpecializationNames = useMemo(
+  const specialityNames = useMemo(
     () =>
-      (contractor?.users?.user_specializations ?? [])
-        .map((us) => us.specializations?.name)
+      (contractor?.contractor_specialities ?? [])
+        .map((s) => s.speciality?.name)
         .filter((name): name is string => Boolean(name)),
     [contractor],
   );
+  const additionalSpecializationNames = specialityNames.slice(1);
 
   const stats = useMemo(() => {
     const totalContracts = contracts?.length || 0;
@@ -343,7 +344,7 @@ const ContractorDetailPage = () => {
               <InfoItem label="رقم الهاتف" value={contractor.phone_number} />
               <InfoItem
                 label="التخصص الرئيسي"
-                value={contractor.specializations?.name}
+                value={specialityNames[0]}
               />
               {additionalSpecializationNames.length > 0 && (
                 <div>

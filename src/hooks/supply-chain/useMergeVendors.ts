@@ -14,7 +14,6 @@ export interface MergeVendorsInput {
   country: string | null;
   city: string | null;
   address: string | null;
-  specializationId: string | null;
   bankId: string | null;
   bankNumber: string | null;
   bankHolderName: string | null;
@@ -45,7 +44,6 @@ export function useMergeVendors() {
       p_country: input.country,
       p_city: input.city,
       p_address: input.address,
-      p_specialization_id: input.specializationId,
       p_bank_id: input.bankId,
       p_bank_number: input.bankNumber,
       p_bank_holder_name: input.bankHolderName,

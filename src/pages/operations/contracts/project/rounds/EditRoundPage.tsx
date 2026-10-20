@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useSpecializations } from "../../../../../hooks/operations/contracts/useContracts";
 import { useRound } from "../../../../../hooks/operations/contracts/rounds/useRounds";
 import EditRoundForm from "../../../../../components/operations/contracts/round/EditRoundForm";
 import LoadingPage from "../../../../../components/ui/LoadingPage";
@@ -11,7 +10,6 @@ const EditRoundPage = () => {
     projectId: string;
     roundId: string;
   }>();
-  const { specializations, loading: specLoading } = useSpecializations();
   const { round, loading, error } = useRound(roundId ?? "");
   const navigate = useNavigate();
 
@@ -45,8 +43,6 @@ const EditRoundPage = () => {
         projectId={projectId}
         roundId={roundId}
         existingRound={round}
-        specializations={specializations}
-        specLoading={specLoading}
       />
     </div>
   );

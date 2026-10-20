@@ -12,14 +12,14 @@ export function useUtils() {
     async function fetchSpecializations() {
       setLoading(true);
       const { data, error } = await supabase
-        .from("specializations")
+        .from("specialities")
         .select("*")
         .order("name", { ascending: true });
       if (error) {
-        console.error("error fetching specializations", error);
+        console.error("error fetching specialities", error);
         setError(error);
       } else {
-        setSpecializations(data ?? []);
+        setSpecializations((data ?? []) as unknown as Specializations[]);
       }
     }
 

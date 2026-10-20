@@ -95,7 +95,6 @@ const MergeStepConfirm = ({
       country: values.country,
       city: values.city,
       address: values.address,
-      specializationId: values.specialization_id,
       bankId: values.bank_id,
       bankNumber: values.bank_number,
       bankHolderName: values.bank_holder_name,

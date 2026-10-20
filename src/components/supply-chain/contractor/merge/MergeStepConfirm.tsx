@@ -105,7 +105,6 @@ const MergeStepConfirm = ({
       email: values.email,
       phoneNumber: values.phone_number,
       whatsappNumber: values.whatsapp_number,
-      specializationId: values.specialization_id,
       bankId: values.bank_id,
       bankNumber: values.bank_number,
       bankHolderName: values.bank_holder_name,
