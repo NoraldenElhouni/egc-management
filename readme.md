@@ -45,13 +45,13 @@ npm run types      # regenerate src/lib/supabase.ts from the live database (afte
 
 **The `.env` file** (never commit it; it's already in `.gitignore`):
 
-| Name                        | What it is                                                                     | Where to get it                                        |
-| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| `VITE_SUPABASE_URL`         | The project URL                                                                | Supabase Dashboard → Project Settings → API            |
-| `VITE_SUPABASE_ANON_KEY`    | Public (anon) key                                                              | same place                                             |
-| `VITE_MANAGEMENT_API_URL`   | PDF and management service                                                     | optional, defaults to `https://pdf-service.engroup.ly` |
-| `VITE_LOGS_API_URL`         | Logs service                                                                   | optional                                               |
-| `VITE_APP_VERSION`          | Version shown when not running inside Electron                                 | optional                                               |
+| Name                      | What it is                                     | Where to get it                                        |
+| ------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
+| `VITE_SUPABASE_URL`       | The project URL                                | Supabase Dashboard → Project Settings → API            |
+| `VITE_SUPABASE_ANON_KEY`  | Public (anon) key                              | same place                                             |
+| `VITE_MANAGEMENT_API_URL` | PDF and management service                     | optional, defaults to `https://pdf-service.engroup.ly` |
+| `VITE_LOGS_API_URL`       | Logs service                                   | optional                                               |
+| `VITE_APP_VERSION`        | Version shown when not running inside Electron | optional                                               |
 
 **Where things are in the code:** screens are in `src/pages/` and `src/components/`, data hooks in `src/hooks/`, and the Supabase clients in `src/lib/`. Coding conventions are in `AGENTS.md` and `CLAUDE.md`.
 
@@ -68,12 +68,13 @@ GitHub builds the app for you. Pushing a version tag runs the workflow in `.gith
    ```
 2. **Tag and push the tag.** This starts the build:
    ```bash
-   git tag v1.1.11
-   git push origin v1.1.11
+   git tag v1.1.13
+   git push origin v1.1.13
    ```
 3. **Wait for the build** on GitHub → Actions ("Build and Publish (Windows + macOS)").
 4. **Publish the release.** The workflow creates a **draft**. Open GitHub → Releases, check the files, and press **Publish release**. Users can't see a draft.
 5. **(Optional) Force everyone onto the new version.** Run this in the Supabase SQL editor:
+
    ```sql
    insert into public."update" (type, version, is_must) values ('desktop', '1.1.10', true);
    ```
