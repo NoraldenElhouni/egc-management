@@ -28,6 +28,14 @@ export const RECORD_TYPE_LABELS: Record<LinkRecordType, string> = {
   project_map: "خريطة المشروع",
 };
 
+/** Active record types that can be newly linked to a task */
+export const LINKABLE_RECORD_TYPES: LinkRecordType[] = [
+  "shop_order",
+  "work_request",
+  "expense",
+  "project_map",
+];
+
 export interface LinkedRecordInfo {
   label: string;
   url: string | null;
@@ -57,41 +65,53 @@ async function fetchRecordInfo(recordType: LinkRecordType, recordId: string): Pr
       return { label: data.title, url: `/projects/${data.project_id}` };
     }
     case "contract_round": {
-      const { data } = await supabase
-        .schema("contracts")
-        .from("rounds")
-        .select("id, project_id, title")
-        .eq("id", recordId)
-        .maybeSingle();
-      if (!data) return { label: "جولة عقد محذوفة", url: null };
-      return { label: data.title, url: null };
+      try {
+        const { data, error } = await supabase
+          .schema("contracts")
+          .from("rounds")
+          .select("id, project_id, title")
+          .eq("id", recordId)
+          .maybeSingle();
+        if (error || !data) return { label: "جولة عقد محذوفة", url: null };
+        return { label: data.title, url: null };
+      } catch {
+        return { label: "جولة عقد محذوفة", url: null };
+      }
     }
     case "contract": {
-      const { data } = await supabase
-        .schema("contracts")
-        .from("contracts")
-        .select("id, project_id, round_id, total_amount")
-        .eq("id", recordId)
-        .maybeSingle();
-      if (!data) return { label: "عقد محذوف", url: null };
-      const { data: round } = await supabase.schema("contracts").from("rounds").select("title").eq("id", data.round_id).maybeSingle();
-      return {
-        label: round?.title ? `عقد — ${round.title}` : `عقد — ${data.total_amount}`,
-        url: null,
-      };
+      try {
+        const { data, error } = await supabase
+          .schema("contracts")
+          .from("contracts")
+          .select("id, project_id, round_id, total_amount")
+          .eq("id", recordId)
+          .maybeSingle();
+        if (error || !data) return { label: "عقد محذوف", url: null };
+        const { data: round } = await supabase.schema("contracts").from("rounds").select("title").eq("id", data.round_id).maybeSingle();
+        return {
+          label: round?.title ? `عقد — ${round.title}` : `عقد — ${data.total_amount}`,
+          url: null,
+        };
+      } catch {
+        return { label: "عقد محذوف", url: null };
+      }
     }
     case "payment_request": {
-      const { data } = await supabase
-        .schema("contracts")
-        .from("request_payments")
-        .select("id, project_id, contract_id, amount, description")
-        .eq("id", recordId)
-        .maybeSingle();
-      if (!data) return { label: "طلب دفعة محذوف", url: null };
-      return {
-        label: data.description || `طلب دفعة — ${data.amount}`,
-        url: null,
-      };
+      try {
+        const { data, error } = await supabase
+          .schema("contracts")
+          .from("request_payments")
+          .select("id, project_id, contract_id, amount, description")
+          .eq("id", recordId)
+          .maybeSingle();
+        if (error || !data) return { label: "طلب دفعة محذوف", url: null };
+        return {
+          label: data.description || `طلب دفعة — ${data.amount}`,
+          url: null,
+        };
+      } catch {
+        return { label: "طلب دفعة محذوف", url: null };
+      }
     }
     case "expense": {
       const { data } = await supabase
@@ -156,38 +176,13 @@ async function searchLinkableRecords(recordType: LinkRecordType, projectId: stri
       return (data ?? []).map((r) => ({ id: r.id, label: r.title }));
     }
     case "contract_round": {
-      const { data } = await supabase
-        .schema("contracts")
-        .from("rounds")
-        .select("id, title")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      return (data ?? []).map((r) => ({ id: r.id, label: r.title }));
+      return [];
     }
     case "contract": {
-      const { data } = await supabase
-        .schema("contracts")
-        .from("contracts")
-        .select("id, round_id, total_amount")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (!data?.length) return [];
-      const roundIds = Array.from(new Set(data.map((c) => c.round_id)));
-      const { data: rounds } = await supabase.schema("contracts").from("rounds").select("id, title").in("id", roundIds);
-      const titleById = new Map((rounds ?? []).map((r) => [r.id, r.title]));
-      return data.map((c) => ({ id: c.id, label: `${titleById.get(c.round_id) ?? "عقد"} — ${c.total_amount}` }));
+      return [];
     }
     case "payment_request": {
-      const { data } = await supabase
-        .schema("contracts")
-        .from("request_payments")
-        .select("id, description, amount")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      return (data ?? []).map((r) => ({ id: r.id, label: r.description || `طلب دفعة — ${r.amount}` }));
+      return [];
     }
     case "expense": {
       const { data } = await supabase

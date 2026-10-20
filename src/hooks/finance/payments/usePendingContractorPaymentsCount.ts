@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 
-/** Lightweight count (no row data) of contractor payments + penalties awaiting review. */
+/** Lightweight count (no row data) of contractor payments awaiting review. */
 export function usePendingContractorPaymentsCount() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -11,25 +11,17 @@ export function usePendingContractorPaymentsCount() {
 
     async function fetchCount() {
       setLoading(true);
-      const [paymentsResult, penaltiesResult] = await Promise.all([
-        supabase
-          .schema("contracts")
-          .from("payments")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .schema("contracts")
-          .from("payments_penalties")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-      ]);
+      const { count: pendingCount, error } = await supabase
+        .schema("contracts")
+        .from("payments")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
 
       if (cancelled) return;
 
-      if (paymentsResult.error) console.error(paymentsResult.error);
-      if (penaltiesResult.error) console.error(penaltiesResult.error);
+      if (error) console.error(error);
 
-      setCount((paymentsResult.count ?? 0) + (penaltiesResult.count ?? 0));
+      setCount(pendingCount ?? 0);
       setLoading(false);
     }
 

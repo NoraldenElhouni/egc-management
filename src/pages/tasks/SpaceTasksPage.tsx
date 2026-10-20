@@ -5,7 +5,6 @@ import {
   ChartGantt,
   ChevronDown,
   ChevronLeft,
-  FileText,
   List,
   Map as MapIcon,
   Plus,
@@ -535,11 +534,6 @@ export default function SpaceTasksPage({ view }: { view: "list" | "gantt" }) {
 function ProjectSectionLinks({ projectId }: { projectId: string }) {
   const sections = [
     {
-      label: "الاتفاقات",
-      to: `/operations/contracts/project/${projectId}`,
-      icon: FileText,
-    },
-    {
       label: "حصر الكميات",
       to: `/operations/boq/project/${projectId}`,
       icon: Ruler,
@@ -556,7 +550,7 @@ function ProjectSectionLinks({ projectId }: { projectId: string }) {
     },
   ];
   return (
-    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
       {sections.map(({ label, to, icon: Icon }) => (
         <Link
           key={label}

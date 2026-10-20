@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import AnchoredMenu from "../board/AnchoredMenu";
-import { useLinkableRecords, RECORD_TYPE_LABELS, type LinkRecordType } from "../../../hooks/tasks/useLinkedRecord";
+import {
+  useLinkableRecords,
+  RECORD_TYPE_LABELS,
+  LINKABLE_RECORD_TYPES,
+  type LinkRecordType,
+} from "../../../hooks/tasks/useLinkedRecord";
 import type { Database } from "../../../lib/supabase";
 
 type LinkMode = Database["tasks"]["Enums"]["link_mode"];
@@ -55,7 +60,7 @@ export default function LinkRecordPicker({
               }}
               className="w-full rounded border border-gray-200 px-1.5 py-1 text-xs"
             >
-              {(Object.keys(RECORD_TYPE_LABELS) as LinkRecordType[]).map((t) => (
+              {LINKABLE_RECORD_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {RECORD_TYPE_LABELS[t]}
                 </option>
