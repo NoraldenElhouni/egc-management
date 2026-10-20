@@ -8,8 +8,6 @@ import ContractorDetailPage from "../../pages/supply-chain/contractor/Contractor
 import VendorsPage from "../../pages/supply-chain/VendorsPage";
 import NewVendorPage from "../../pages/supply-chain/NewVendorPage";
 import VendorDetailPage from "../../pages/supply-chain/VendorDetailPage";
-import ContractorBidsPage from "../../pages/supply-chain/contractor/ContractorBidsPage";
-import ContractorContractsPage from "../../pages/supply-chain/contractor/ContractorContractsPage";
 import ContractorPaymentsPage from "../../pages/supply-chain/contractor/ContractorPaymentsPage";
 
 const SupplyChainRoutes = () => {
@@ -28,27 +26,9 @@ const SupplyChainRoutes = () => {
             path="contractors/:contractorId"
             element={<ContractorDetailPage />}
           />
-          {/* their contracts — no dedicated "contractor contracts" permission
-              exists in the catalog, so this stays on the section's base
-              permission rather than borrowing a differently-scoped one
-              (view_project_contracts is about a project's own contract
-              register, not a contractor's contracts across projects). */}
-          <Route
-            path="contractors/:contractorId/contracts"
-            element={<ContractorContractsPage />}
-          />
         </Route>
         <Route element={<RequirePermission permission="manage_contractors" />}>
           <Route path="contractors/new" element={<NewContractorPage />} />
-        </Route>
-        <Route
-          element={<RequirePermission permission="view_contractor_bids" />}
-        >
-          {/* their bids */}
-          <Route
-            path="contractors/:contractorId/bids"
-            element={<ContractorBidsPage />}
-          />
         </Route>
         <Route
           element={

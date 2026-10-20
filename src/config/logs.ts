@@ -26,8 +26,6 @@ export const LOG_GROUPS: { id: LogGroup; label: string; permission: string }[] =
  */
 export const LOG_NAMES: { name: string; group: LogGroup; label: string }[] = [
   { name: "contractor_payment", group: "finance", label: "دفعات المقاولين" },
-  { name: "contractor_penalty", group: "finance", label: "خصومات المقاولين" },
-  { name: "payment_request", group: "finance", label: "طلبات الدفع (العقود)" },
   { name: "expense_payment", group: "finance", label: "دفعات المصروفات" },
   { name: "expense", group: "finance", label: "المصروفات" },
   { name: "project_cash", group: "finance", label: "الإيرادات والمرتجعات والخرائط" },
@@ -41,9 +39,6 @@ export const LOG_NAMES: { name: string; group: LogGroup; label: string }[] = [
   { name: "team_assignment", group: "access", label: "فرق المشاريع" },
   { name: "account", group: "access", label: "الحسابات" },
   { name: "shop_order", group: "operations", label: "طلبات الشراء" },
-  { name: "contract", group: "operations", label: "العقود" },
-  { name: "contract_round", group: "operations", label: "جولات التسعير" },
-  { name: "milestone", group: "operations", label: "مراحل العقود" },
   { name: "project_status", group: "operations", label: "حالة المشاريع" },
   { name: "employee_terms", group: "hr", label: "بيانات التوظيف" },
   { name: "hr_hiring", group: "hr", label: "التوظيف" },

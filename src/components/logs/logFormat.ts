@@ -176,10 +176,6 @@ export function subjectOf(event: LogEvent): string {
   switch (event.log_name) {
     case "contractor_payment":
       return `دفعة مقاول ${str(d.payments_number) ?? ""}`.trim();
-    case "contractor_penalty":
-      return "خصم على مقاول";
-    case "payment_request":
-      return `طلب دفع${serial ? ` #${serial}` : ""}`;
     case "expense":
       return `مصروف${serial ? ` #${serial}` : ""}${str(d.description) ? ` — ${d.description}` : ""}`;
     case "expense_payment":
@@ -209,12 +205,6 @@ export function subjectOf(event: LogEvent): string {
       return str(d.user_name) ?? "حساب";
     case "shop_order":
       return `طلب شراء${str(d.vendor_ref) ? ` ${d.vendor_ref}` : ""}`;
-    case "contract":
-      return "عقد";
-    case "contract_round":
-      return str(d.title) ?? "جولة تسعير";
-    case "milestone":
-      return str(d.title) ?? "مرحلة";
     case "project_status":
       return str(d.project_name) ?? event.project_name ?? "مشروع";
     case "employee_terms":

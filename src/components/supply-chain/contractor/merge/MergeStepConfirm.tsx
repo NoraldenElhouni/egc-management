@@ -20,34 +20,16 @@ interface MergeStepConfirmProps {
 function countImpactedRows(loserId: string) {
   return Promise.all([
     supabase
-      .from("contractor_bids")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "عروض أسعار", count, error })),
-    supabase
-      .from("contracts")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "عقود", count, error })),
-    supabase
-      .from("payment_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("contractor_id", loserId)
-      .then(({ count, error }) => ({ label: "طلبات دفع", count, error })),
-    supabase
       .from("project_expenses")
       .select("id", { count: "exact", head: true })
       .eq("contractor_id", loserId)
       .then(({ count, error }) => ({ label: "مصروفات", count, error })),
     supabase
-      .from("work_requests")
+      .schema("contracts")
+      .from("payments")
       .select("id", { count: "exact", head: true })
-      .eq("direct_contractor_id", loserId)
-      .then(({ count, error }) => ({
-        label: "طلبات عمل (مباشر)",
-        count,
-        error,
-      })),
+      .eq("contractor_id", loserId)
+      .then(({ count, error }) => ({ label: "دفعات المقاولين", count, error })),
   ]);
 }
 

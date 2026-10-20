@@ -12,7 +12,6 @@ import ComapnyExpensePayments from "../../pages/finance/company/payments/Comapny
 import NotPiadExpensePage from "../../pages/finance/payments/NotPiadExpensePage";
 import ContractorPaymentsPage from "../../pages/finance/payments/ContractorPaymentsPage";
 import OrdersPage from "../../pages/finance/orders/OrdersPage";
-import ContractsPage from "../../pages/finance/contracts/ContractsPage";
 import FinanceTrackingPage from "../../pages/finance/FinanceTrackingPage";
 import UndistributedExpensePaymentsPage from "../../pages/finance/UndistributedExpensePaymentsPage";
 
@@ -77,7 +76,6 @@ const FinanceRoutes = () => {
           />
           <Route path="tracking" element={<FinanceTrackingPage />} />
           <Route path="orders" element={<OrdersPage />} />
-          <Route path="contracts" element={<ContractsPage />} />
         </Route>
 
         <Route

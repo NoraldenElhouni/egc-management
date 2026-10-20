@@ -63,11 +63,7 @@ export type ActivityRow = LogEvent & { related?: ActivityRow[] };
 export type HistoryRefType =
   | "shop_order"
   | "contractor_payment"
-  | "payment_request"
   | "expense"
-  | "contract"
-  | "round"
-  | "milestone"
   | "payroll"
   | "distribution_period"
   | "project"

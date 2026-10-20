@@ -45,10 +45,10 @@ export const FINANCE_ITEMS: NavItem[] = [
     permission: "view_payments",
   },
   {
-    label: "مدفوعات المقاولين والطلبات والعقود",
+    label: "مدفوعات المقاولين والطلبات",
     icon: ClipboardList,
     path: "/finance/tracking",
-    description: "مدفوعات المقاولين، الطلبات، والعقود",
+    description: "مدفوعات المقاولين والطلبات",
     permission: "view_payments",
   },
   {

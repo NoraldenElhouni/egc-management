@@ -70,27 +70,6 @@ export type Products = Tables<"shop_products">;
 export type ProductSizes = Tables<"shop_product_sizes">;
 export type Orders = Tables<"shop_orders">;
 
-//contracts
-export type Rounds = Tables<{ schema: "contracts" }, "rounds">;
-export type RoundItems = Tables<{ schema: "contracts" }, "round_items">;
-export type Quotes = Tables<{ schema: "contracts" }, "quotes">;
-export type QuoteItems = Tables<{ schema: "contracts" }, "quote_items">;
-export type Contracts = Tables<{ schema: "contracts" }, "contracts">;
-export type ContractItems = Tables<{ schema: "contracts" }, "contract_items">;
-export type Milestones = Tables<{ schema: "contracts" }, "milestones">;
-export type PaymentMilestones = Tables<
-  { schema: "contracts" },
-  "payment_milestones"
->;
-export type PaymentPenalties = Tables<
-  { schema: "contracts" },
-  "payment_penalties"
->;
-export type RequestPayments = Tables<
-  { schema: "contracts" },
-  "request_payments"
->;
-
 // ------------------------------------------------------------
 // ✅ NEW: Types for PercentageDistribution periods
 // ------------------------------------------------------------

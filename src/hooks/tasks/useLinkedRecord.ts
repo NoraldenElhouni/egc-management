@@ -31,7 +31,6 @@ export const RECORD_TYPE_LABELS: Record<LinkRecordType, string> = {
 /** Active record types that can be newly linked to a task */
 export const LINKABLE_RECORD_TYPES: LinkRecordType[] = [
   "shop_order",
-  "work_request",
   "expense",
   "project_map",
 ];
@@ -54,64 +53,6 @@ async function fetchRecordInfo(recordType: LinkRecordType, recordId: string): Pr
         label: data.vendor_ref || data.note || `طلب #${data.id.slice(0, 8)} — ${data.status}`,
         url: `/shops/orders/project/${data.project_id}/${data.id}`,
       };
-    }
-    case "work_request": {
-      const { data } = await supabase
-        .from("work_requests")
-        .select("id, project_id, title")
-        .eq("id", recordId)
-        .maybeSingle();
-      if (!data) return { label: "طلب عمل محذوف", url: null };
-      return { label: data.title, url: `/projects/${data.project_id}` };
-    }
-    case "contract_round": {
-      try {
-        const { data, error } = await supabase
-          .schema("contracts")
-          .from("rounds")
-          .select("id, project_id, title")
-          .eq("id", recordId)
-          .maybeSingle();
-        if (error || !data) return { label: "جولة عقد محذوفة", url: null };
-        return { label: data.title, url: null };
-      } catch {
-        return { label: "جولة عقد محذوفة", url: null };
-      }
-    }
-    case "contract": {
-      try {
-        const { data, error } = await supabase
-          .schema("contracts")
-          .from("contracts")
-          .select("id, project_id, round_id, total_amount")
-          .eq("id", recordId)
-          .maybeSingle();
-        if (error || !data) return { label: "عقد محذوف", url: null };
-        const { data: round } = await supabase.schema("contracts").from("rounds").select("title").eq("id", data.round_id).maybeSingle();
-        return {
-          label: round?.title ? `عقد — ${round.title}` : `عقد — ${data.total_amount}`,
-          url: null,
-        };
-      } catch {
-        return { label: "عقد محذوف", url: null };
-      }
-    }
-    case "payment_request": {
-      try {
-        const { data, error } = await supabase
-          .schema("contracts")
-          .from("request_payments")
-          .select("id, project_id, contract_id, amount, description")
-          .eq("id", recordId)
-          .maybeSingle();
-        if (error || !data) return { label: "طلب دفعة محذوف", url: null };
-        return {
-          label: data.description || `طلب دفعة — ${data.amount}`,
-          url: null,
-        };
-      } catch {
-        return { label: "طلب دفعة محذوف", url: null };
-      }
     }
     case "expense": {
       const { data } = await supabase
@@ -140,6 +81,10 @@ async function fetchRecordInfo(recordType: LinkRecordType, recordId: string): Pr
         url: `/finance/bookkeeping/project/${data.project_id}`,
       };
     }
+    // work_request / contract_round / contract / payment_request: their
+    // tables were removed, so an old link of that type is just a dead record.
+    default:
+      return { label: "سجل محذوف", url: null };
   }
 }
 
@@ -166,24 +111,6 @@ async function searchLinkableRecords(recordType: LinkRecordType, projectId: stri
         .limit(30);
       return (data ?? []).map((r) => ({ id: r.id, label: r.vendor_ref || r.note || `طلب #${r.id.slice(0, 8)} — ${r.status}` }));
     }
-    case "work_request": {
-      const { data } = await supabase
-        .from("work_requests")
-        .select("id, title")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      return (data ?? []).map((r) => ({ id: r.id, label: r.title }));
-    }
-    case "contract_round": {
-      return [];
-    }
-    case "contract": {
-      return [];
-    }
-    case "payment_request": {
-      return [];
-    }
     case "expense": {
       const { data } = await supabase
         .from("project_expenses")
@@ -202,6 +129,8 @@ async function searchLinkableRecords(recordType: LinkRecordType, projectId: stri
         .limit(30);
       return (data ?? []).map((r) => ({ id: r.id, label: r.description || `بند خريطة — ${r.amount}` }));
     }
+    default:
+      return [];
   }
 }
 

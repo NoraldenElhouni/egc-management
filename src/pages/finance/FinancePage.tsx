@@ -2,19 +2,13 @@ import MenuGrid from "../../components/ui/MenuGrid";
 import { FINANCE_ITEMS } from "../../config/navigation/finance";
 import { usePendingContractorPaymentsCount } from "../../hooks/finance/payments/usePendingContractorPaymentsCount";
 import { usePendingOrdersCount } from "../../hooks/finance/orders/usePendingOrdersCount";
-import { usePendingRequestPaymentsCount } from "../../hooks/finance/contracts/usePendingRequestPaymentsCount";
 
 const FinancePage = () => {
   const { count: pendingContractorPaymentsCount } =
     usePendingContractorPaymentsCount();
   const { count: pendingOrdersCount } = usePendingOrdersCount();
-  const { count: pendingRequestPaymentsCount } =
-    usePendingRequestPaymentsCount();
 
-  const trackingBadgeCount =
-    pendingContractorPaymentsCount +
-    pendingOrdersCount +
-    pendingRequestPaymentsCount;
+  const trackingBadgeCount = pendingContractorPaymentsCount + pendingOrdersCount;
 
   const menuItems = FINANCE_ITEMS.filter(
     (item) => item.showInMenuGrid !== false,
