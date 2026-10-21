@@ -4,6 +4,7 @@ import OperationsPage from "../../pages/operations/OperationsPage";
 import OperationsLayout from "../sidebar/OperationsLayout";
 import MapsRoutes from "./operateions/maps/MapsRoutes";
 import BOQRoutes from "./operateions/BOQ/BOQRoutes";
+import AgreementsRoutes from "./operateions/agreements/AgreementsRoutes";
 import OperationsSettingsRoutes from "./operateions/settings/OperationsSettingsRoutes";
 
 // view_operations_maps/_contracts/_boq are project-scoped, so they can
@@ -22,6 +23,7 @@ export default function OperationsRoutes() {
 
         <Route path="maps/*" element={<MapsRoutes />} />
         <Route path="boq/*" element={<BOQRoutes />} />
+        <Route path="agreements/*" element={<AgreementsRoutes />} />
 
         <Route
           element={<RequirePermission permission="view_operations_settings" />}

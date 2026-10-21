@@ -14,6 +14,10 @@ import { getContractorPaymentsColumns } from "../../../components/tables/columns
 import { ContractPayment } from "../../../types/contracts.type";
 import ActivityFeed from "../../../components/logs/ActivityFeed";
 import { useMyPermissions } from "../../../hooks/permissions/useCan";
+import PenaltiesTable from "../../../components/agreements/PenaltiesTable";
+import PaymentDetailsDialog from "../../../components/agreements/PaymentDetailsDialog";
+import AgreementDetailDialog from "../../../components/agreements/AgreementDetailDialog";
+import { usePenalties } from "../../../hooks/agreements/useAgreements";
 
 // The history tab: who approved or declined each payment.
 const PAYMENT_LOGS = { logNames: ["contractor_payment"] };
@@ -33,11 +37,19 @@ const ContractorPaymentsPage = () => {
   } = useContractorPaymentsPdf();
   const { data: myPermissions } = useMyPermissions();
   const canViewFinanceLogs = myPermissions?.has("view_finance_logs") ?? false;
+  const { data: penalties } = usePenalties(null);
+  const pendingPenaltiesCount = (penalties ?? []).filter(
+    (p) => p.status === "pending",
+  ).length;
 
   const [selectedPayments, setSelectedPayments] = useState<ContractPayment[]>(
     [],
   );
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0);
+  const [detailsPayment, setDetailsPayment] = useState<ContractPayment | null>(null);
+  // Opened from the payments list: read-only here — paying and editing
+  // happen from the project's agreements page under Operations.
+  const [openAgreement, setOpenAgreement] = useState<{ id: string; projectId: string } | null>(null);
 
   const paymentsFilterOptions = useMemo(
     () => ({
@@ -81,6 +93,22 @@ const ContractorPaymentsPage = () => {
 
   return (
     <div>
+      <PaymentDetailsDialog
+        payment={detailsPayment}
+        onClose={() => setDetailsPayment(null)}
+        onOpenAgreement={(id, projectId) => setOpenAgreement({ id, projectId })}
+        onDecided={() => {
+          setDetailsPayment(null);
+          refetch();
+        }}
+      />
+      <AgreementDetailDialog
+        projectId={openAgreement?.projectId ?? ""}
+        agreementId={openAgreement?.id ?? null}
+        onClose={() => setOpenAgreement(null)}
+        canEdit={false}
+        canPay={() => false}
+      />
       <Tabs
         tabs={[
           {
@@ -125,7 +153,10 @@ const ContractorPaymentsPage = () => {
 
                 <GenericTable<ContractPayment>
                   data={payments}
-                  columns={getContractorPaymentsColumns(refetch)}
+                  columns={getContractorPaymentsColumns(refetch, {
+                    onOpenDetails: setDetailsPayment,
+                    onOpenAgreement: (id, projectId) => setOpenAgreement({ id, projectId }),
+                  })}
                   enableSorting
                   enableFiltering
                   enablePagination
@@ -145,6 +176,28 @@ const ContractorPaymentsPage = () => {
                     />
                   )}
                 />
+              </>
+            ),
+          },
+          {
+            // Recorded in the field app; approved ones come off the
+            // contractor's next payment in the same project.
+            id: "penalties",
+            label: "الغرامات",
+            badge: pendingPenaltiesCount,
+            content: (
+              <>
+                <div className="px-6 pt-6">
+                  <h1 className="text-2xl font-semibold text-gray-900">
+                    غرامات المقاولين
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1">
+                    الغرامة المقبولة تُخصم تلقائياً من أول دفعة للمقاول في نفس المشروع
+                  </p>
+                </div>
+                <div className="p-6">
+                  <PenaltiesTable projectId={null} canDecide />
+                </div>
               </>
             ),
           },

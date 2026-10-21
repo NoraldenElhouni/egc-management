@@ -28,6 +28,10 @@ type ExpenseSummary = {
 };
 
 export interface ContractPayment extends ContractPaymentRow {
+  /** Not in the generated row type yet (agreements, 2026-10-21). */
+  agreement_id?: string | null;
+  /** The agreement it was paid against; null = an old quick payment. */
+  agreement: { id: string; title: string } | null;
   contractor: ContractorSummary | null;
   project: ProjectSummary | null;
   created_by_employee: EmployeeSummary | null;

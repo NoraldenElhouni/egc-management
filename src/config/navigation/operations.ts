@@ -1,4 +1,4 @@
-import { PackageOpen, Paperclip, Settings } from "lucide-react";
+import { FileSignature, PackageOpen, Paperclip, Settings } from "lucide-react";
 import type { NavItem } from "./types";
 
 // One permission per destination (issue 19 gap 4 pattern), each with
@@ -27,6 +27,14 @@ export const OPERATIONS_ITEMS: NavItem[] = [
     icon: Paperclip,
     path: "/operations/boq",
     description: "إدارة حصر الكميات",
+  },
+  {
+    // Same as maps/boq: leads to a project picker, so no project-scoped
+    // permission here — view_project_agreements guards the project page.
+    label: "الاتفاقيات",
+    icon: FileSignature,
+    path: "/operations/agreements",
+    description: "اتفاقيات المقاولين ودفعاتها والغرامات",
   },
   {
     label: "الإعدادات",

@@ -4,11 +4,17 @@ import { formatCurrency, formatDate } from "../../../utils/helpper";
 import { translatePaymentMethod, translateStatus } from "../../../utils/translations";
 import { statusColor } from "../../../utils/colors/status";
 import ContractPaymentActionsCell from "../actions/payments/ContractPaymentActionsCell";
+import { Eye } from "lucide-react";
 
 const toNum = (v: unknown) => (typeof v === "number" ? v : Number(v || 0));
 
 export function getContractorPaymentsColumns(
   onRefresh?: () => void,
+  handlers?: {
+    /** The details panel: reason, agreement numbers, penalties, bank. */
+    onOpenDetails?: (payment: ContractPayment) => void;
+    onOpenAgreement?: (agreementId: string, projectId: string) => void;
+  },
 ): ColumnDef<ContractPayment>[] {
   return [
     {
@@ -66,6 +72,42 @@ export function getContractorPaymentsColumns(
           {row.original.project?.name ?? "—"}
         </span>
       ),
+    },
+    {
+      id: "agreement",
+      header: "الاتفاقية",
+      accessorFn: (row) => row.agreement?.title ?? "",
+      cell: ({ row }) => {
+        const agreement = row.original.agreement;
+        return agreement ? (
+          <button
+            type="button"
+            onClick={() =>
+              handlers?.onOpenAgreement?.(agreement.id, row.original.project_id)
+            }
+            className="whitespace-nowrap text-blue-700 hover:underline"
+            title="فتح الاتفاقية"
+          >
+            {agreement.title}
+          </button>
+        ) : (
+          <span className="text-xs text-gray-400 whitespace-nowrap">بدون اتفاقية</span>
+        );
+      },
+    },
+    {
+      accessorKey: "payments_reason",
+      header: "سبب الدفعة",
+      cell: ({ getValue }) => {
+        const reason = getValue<string | null>();
+        return reason ? (
+          <span className="block max-w-[220px] truncate text-sm text-gray-700" title={reason}>
+            {reason}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        );
+      },
     },
     {
       accessorKey: "payments_number",
@@ -164,10 +206,22 @@ export function getContractorPaymentsColumns(
       header: "الإجراءات",
       enableSorting: false,
       cell: ({ row }) => (
-        <ContractPaymentActionsCell
-          payment={row.original}
-          onRefresh={onRefresh}
-        />
+        <div className="flex items-center justify-center gap-2">
+          {handlers?.onOpenDetails && (
+            <button
+              type="button"
+              onClick={() => handlers.onOpenDetails?.(row.original)}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+              title="تفاصيل الدفعة"
+            >
+              <Eye className="w-3.5 h-3.5" /> تفاصيل
+            </button>
+          )}
+          <ContractPaymentActionsCell
+            payment={row.original}
+            onRefresh={onRefresh}
+          />
+        </div>
       ),
     },
   ];

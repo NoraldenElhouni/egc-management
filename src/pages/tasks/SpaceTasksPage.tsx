@@ -5,6 +5,7 @@ import {
   ChartGantt,
   ChevronDown,
   ChevronLeft,
+  FileSignature,
   List,
   Map as MapIcon,
   Plus,
@@ -548,9 +549,14 @@ function ProjectSectionLinks({ projectId }: { projectId: string }) {
       to: `/shops/orders/project/${projectId}`,
       icon: ShoppingCart,
     },
+    {
+      label: "الاتفاقيات",
+      to: `/operations/agreements/project/${projectId}`,
+      icon: FileSignature,
+    },
   ];
   return (
-    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
       {sections.map(({ label, to, icon: Icon }) => (
         <Link
           key={label}

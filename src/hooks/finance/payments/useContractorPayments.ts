@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabaseClient";
+import { agreementsDb } from "../../../lib/agreementsDb";
 import { ContractPayment } from "../../../types/contracts.type";
 
 export function useContractorPayments() {
@@ -25,8 +26,14 @@ export function useContractorPayments() {
       const projectIds = new Set<string>();
       const createdByIds = new Set<string>();
       const expenseIds = new Set<string>();
+      const agreementIds = new Set<string>();
+      // agreement_id isn't in the generated types yet.
+      const agreementIdOf = (p: unknown) =>
+        (p as { agreement_id?: string | null }).agreement_id ?? null;
 
       (paymentsData ?? []).forEach((p) => {
+        const agreementId = agreementIdOf(p);
+        if (agreementId) agreementIds.add(agreementId);
         if (p.contractor_id) contractorIds.add(p.contractor_id);
         projectIds.add(p.project_id);
         createdByIds.add(p.created_by);
@@ -38,6 +45,7 @@ export function useContractorPayments() {
         { data: projectsData, error: projectsError },
         { data: employeesData, error: employeesError },
         { data: expensesData, error: expensesError },
+        { data: agreementsData, error: agreementsError },
       ] = await Promise.all([
         contractorIds.size
           ? supabase
@@ -63,12 +71,20 @@ export function useContractorPayments() {
               .select("id, serial_number, description")
               .in("id", Array.from(expenseIds))
           : Promise.resolve({ data: [], error: null }),
+        agreementIds.size
+          ? agreementsDb
+              .schema("contracts")
+              .from("agreements")
+              .select("id, title")
+              .in("id", Array.from(agreementIds))
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (contractorsError) throw contractorsError;
       if (projectsError) throw projectsError;
       if (employeesError) throw employeesError;
       if (expensesError) throw expensesError;
+      if (agreementsError) throw agreementsError;
 
       const contractorsMap = new Map(
         (contractorsData ?? []).map((c) => [c.id, c]),
@@ -80,17 +96,28 @@ export function useContractorPayments() {
       const expensesMap = new Map(
         (expensesData ?? []).map((e) => [e.id, e]),
       );
+      const agreementsMap = new Map(
+        (agreementsData ?? []).map((a) => [a.id, a]),
+      );
 
       setPayments(
-        (paymentsData ?? []).map((p) => ({
-          ...p,
-          contractor: p.contractor_id
-            ? (contractorsMap.get(p.contractor_id) ?? null)
-            : null,
-          project: projectsMap.get(p.project_id) ?? null,
-          created_by_employee: employeesMap.get(p.created_by) ?? null,
-          expense: p.expense_id ? (expensesMap.get(p.expense_id) ?? null) : null,
-        })),
+        (paymentsData ?? []).map((p) => {
+          const agreementId = agreementIdOf(p);
+          return {
+            ...p,
+            contractor: p.contractor_id
+              ? (contractorsMap.get(p.contractor_id) ?? null)
+              : null,
+            project: projectsMap.get(p.project_id) ?? null,
+            created_by_employee: employeesMap.get(p.created_by) ?? null,
+            expense: p.expense_id
+              ? (expensesMap.get(p.expense_id) ?? null)
+              : null,
+            agreement: agreementId
+              ? (agreementsMap.get(agreementId) ?? null)
+              : null,
+          };
+        }),
       );
     } catch (err) {
       console.error("Error fetching contractor payments:", err);
