@@ -7,7 +7,7 @@ import Badge from "../ui/Badge";
 import LoadingPage from "../ui/LoadingPage";
 import ErrorPage from "../ui/errorPage";
 import ColumnFiltersDialog, { optionsOf } from "../tables/filters/ColumnFiltersDialog";
-import { useProjectAgreements } from "../../hooks/agreements/useAgreements";
+import { useProjectAgreements, useProjectOldMoney } from "../../hooks/agreements/useAgreements";
 import { useAuthUserId, useCan } from "../../hooks/permissions/useCan";
 import type { AgreementSummary } from "../../types/agreements.types";
 import { formatCurrency, formatDate } from "../../utils/helpper";
@@ -16,7 +16,9 @@ import AgreementFormDialog from "./AgreementFormDialog";
 
 // The project's agreements with contractors. Click a row to open it (pay,
 // edit, versions). Without view_all_project_agreements you see only the
-// ones you created.
+// ones you created. Contractors who took money here before agreements
+// existed (as project expenses) show as cards above the table: paying
+// them again needs an agreement, created from the card.
 
 type Scope = "all" | "mine";
 
@@ -34,6 +36,9 @@ export default function ProjectAgreementsTab({ projectId }: { projectId: string 
   const { userId } = useAuthUserId();
   const { can: canSeeAll } = useCan("view_all_project_agreements", projectId);
   const { can: canEdit } = useCan("edit_project_agreements", projectId);
+  const { can: canPenalty } = useCan("create_contractor_penalty", projectId);
+  const oldMoney = useProjectOldMoney(projectId);
+  const [presetContractor, setPresetContractor] = useState<{ id: string; name: string | null } | null>(null);
   const { data, isLoading, error } = useProjectAgreements(projectId);
   const [scope, setScope] = useState<Scope>("all");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -142,11 +147,55 @@ export default function ProjectAgreementsTab({ projectId }: { projectId: string 
               ))}
             </div>
           )}
-          <Button type="button" onClick={() => setNewOpen(true)}>
+          <Button
+            type="button"
+            onClick={() => {
+              setPresetContractor(null);
+              setNewOpen(true);
+            }}
+          >
             <Plus className="w-4 h-4 ml-1" /> اتفاقية جديدة
           </Button>
         </div>
       </div>
+
+      {(oldMoney.data?.contractors.length ?? 0) > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+          <div>
+            <h3 className="font-semibold text-gray-900">مقاولون استلموا مبالغ سابقاً</h3>
+            <p className="text-sm text-gray-600">
+              دُفع لهم في هذا المشروع كمصروفات قبل الاتفاقيات. لإضافة دفعة جديدة أنشئ لهم اتفاقية.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {oldMoney.data?.contractors.map((c) => (
+              <div key={c.contractor_id} className="rounded-lg border border-amber-200 bg-white p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{c.contractor_name ?? "—"}</p>
+                    {c.title_hint && <p className="text-xs text-gray-500 truncate">{c.title_hint}</p>}
+                  </div>
+                  <Badge label="مصروفات سابقة" variant="warning" />
+                </div>
+                <p className="text-sm text-gray-700">
+                  استلم <span className="font-semibold">{formatCurrency(c.paid)}</span> في {c.payments_count} دفعات
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    setPresetContractor({ id: c.contractor_id, name: c.contractor_name });
+                    setNewOpen(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 ml-1" /> إنشاء اتفاقية
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <GenericTable<AgreementSummary>
         data={rows}
@@ -179,12 +228,14 @@ export default function ProjectAgreementsTab({ projectId }: { projectId: string 
         agreementId={openId}
         onClose={() => setOpenId(null)}
         canEdit={canEdit}
+        canPenalty={canPenalty}
         canPay={(createdBy) => canSeeAll || createdBy === userId}
       />
       <AgreementFormDialog
         projectId={projectId}
         isOpen={newOpen}
         onClose={() => setNewOpen(false)}
+        presetContractor={presetContractor}
         onSaved={(id) => setOpenId(id)}
       />
     </div>

@@ -1,13 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { agreementsDb } from "../../lib/agreementsDb";
+import { supabase } from "../../lib/supabaseClient";
+import { uploadFile } from "../../lib/storage-client";
+import { normalizePhone } from "../../utils/agreements/rules";
 import { useAuthUserId } from "../permissions/useCan";
 import type {
   AgreementDetail,
   AgreementItemInput,
   AgreementSummary,
+  ContractorProjectMoney,
   PaymentMethod,
   PaymentPreview,
   PenaltyRow,
+  ProjectOldMoney,
 } from "../../types/agreements.types";
 
 // =====================================================================
@@ -41,6 +46,9 @@ const keys = {
   preview: (uid: string, id: string) => ["agreements", uid, "preview", id] as const,
   penalties: (uid: string, projectId: string | null) =>
     ["agreements", uid, "penalties", projectId ?? "all"] as const,
+  contractorMoney: (uid: string, projectId: string, contractorId: string) =>
+    ["agreements", uid, "contractor-money", projectId, contractorId] as const,
+  oldMoney: (uid: string, projectId: string) => ["agreements", uid, "old-money", projectId] as const,
 };
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
@@ -101,6 +109,40 @@ export function usePenalties(projectId: string | null) {
   });
 }
 
+/** What a contractor already took in this project as expenses (the old
+ * way) — the new-agreement form's banner, placeholder and minimum total. */
+export function useContractorProjectMoney(projectId: string, contractorId: string | null) {
+  const { userId } = useAuthUserId();
+  return useQuery({
+    queryKey: keys.contractorMoney(userId ?? "", projectId, contractorId ?? ""),
+    enabled: !!userId && !!projectId && !!contractorId,
+    staleTime: 0,
+    queryFn: async () =>
+      (await rpcOrThrow(
+        "contractor_project_money",
+        agreementsDb.schema("contracts").rpc("contractor_project_money", {
+          p_project_id: projectId,
+          p_contractor_id: contractorId ?? "",
+        }),
+      )) as ContractorProjectMoney,
+  });
+}
+
+/** Contractors who took money here and have no agreement yet, and every
+ * old expense payment to a contractor here. */
+export function useProjectOldMoney(projectId: string) {
+  const { userId } = useAuthUserId();
+  return useQuery({
+    queryKey: keys.oldMoney(userId ?? "", projectId),
+    enabled: !!userId && !!projectId,
+    queryFn: async () =>
+      (await rpcOrThrow(
+        "project_old_money",
+        agreementsDb.schema("contracts").rpc("project_old_money", { p_project_id: projectId }),
+      )) as ProjectOldMoney,
+  });
+}
+
 // ─── Writes ──────────────────────────────────────────────────────────────────
 
 function useInvalidateAgreements() {
@@ -108,6 +150,10 @@ function useInvalidateAgreements() {
   const queryClient = useQueryClient();
   return () => queryClient.invalidateQueries({ queryKey: keys.all(userId ?? "") });
 }
+
+/** Public URL of an attachment's file (bucket "attachments" is public). */
+export const attachmentUrl = (path: string) =>
+  supabase.storage.from("attachments").getPublicUrl(path).data.publicUrl;
 
 export type AgreementFormValues = {
   title: string;
@@ -129,7 +175,7 @@ function cleanItems(items: AgreementItemInput[]): AgreementItemInput[] {
 export function useCreateAgreement(projectId: string) {
   const invalidate = useInvalidateAgreements();
   return useMutation({
-    mutationFn: async (v: AgreementFormValues & { contractorId: string }) =>
+    mutationFn: async (v: AgreementFormValues & { contractorId: string; contractorPhone: string }) =>
       (await rpcOrThrow(
         "create_agreement",
         agreementsDb.schema("contracts").rpc("create_agreement", {
@@ -139,6 +185,8 @@ export function useCreateAgreement(projectId: string) {
           p_description: v.description.trim() || null,
           p_note: v.note.trim() || null,
           p_items: cleanItems(v.items),
+          // only saved by the database when the contractor has no phone
+          p_contractor_phone: normalizePhone(v.contractorPhone) || null,
         }),
       )) as string,
     onSuccess: invalidate,
@@ -193,11 +241,15 @@ export function useCreateAgreementPayment(agreementId: string) {
   });
 }
 
+/**
+ * Records the penalty, then uploads its photos. A photo that fails to
+ * upload doesn't undo the penalty: the result says how many failed.
+ */
 export function useCreatePenalty(projectId: string) {
   const invalidate = useInvalidateAgreements();
   return useMutation({
-    mutationFn: async (v: { contractorId: string; amount: number; reason: string }) =>
-      (await rpcOrThrow(
+    mutationFn: async (v: { contractorId: string; amount: number; reason: string; photos: File[] }) => {
+      const penaltyId = (await rpcOrThrow(
         "create_penalty",
         agreementsDb.schema("contracts").rpc("create_penalty", {
           p_project_id: projectId,
@@ -205,7 +257,18 @@ export function useCreatePenalty(projectId: string) {
           p_amount: v.amount,
           p_reason: v.reason.trim(),
         }),
-      )) as string,
+      )) as string;
+      let failedPhotos = 0;
+      for (const file of v.photos) {
+        try {
+          await uploadFile({ file, entityType: "contractor_penalty", entityId: penaltyId });
+        } catch (err) {
+          console.error("penalty photo upload error:", err);
+          failedPhotos += 1;
+        }
+      }
+      return { penaltyId, failedPhotos };
+    },
     onSuccess: invalidate,
   });
 }

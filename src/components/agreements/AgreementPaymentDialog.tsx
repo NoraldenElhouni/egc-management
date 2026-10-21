@@ -13,6 +13,8 @@ import {
 import type { PaymentMethod } from "../../types/agreements.types";
 import { formatCurrency } from "../../utils/helpper";
 import { parseAmount } from "./AgreementFormDialog";
+import LimitedField from "./LimitedField";
+import { lengthError } from "../../utils/agreements/rules";
 
 // A payment against an agreement. Payment number, previous amount and
 // what's left come from the agreement; approved penalties not yet
@@ -90,9 +92,10 @@ function AgreementPaymentDialogBody({
           ? `المبلغ أكبر من المتبقي (${formatCurrency(p.remaining)})`
           : p.penalty_total > value
             ? `الغرامات (${formatCurrency(p.penalty_total)}) أكبر من مبلغ الدفعة`
-            : method === "bank" && (!bankName.trim() || !bankNumber.trim() || !bankHolderName.trim())
-              ? "أكمل بيانات الحساب البنكي"
-              : null));
+            : (lengthError(reason, "paymentReason") ??
+              (method === "bank" && (!bankName.trim() || !bankNumber.trim() || !bankHolderName.trim())
+                ? "أكمل بيانات الحساب البنكي"
+                : null))));
 
   const handleSubmit = () => {
     if (missing || pay.isPending) return;
@@ -156,15 +159,14 @@ function AgreementPaymentDialogBody({
                       دفع المتبقي كاملاً ({formatCurrency(p.remaining)})
                     </button>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">سبب الدفعة</label>
-                    <textarea
-                      className={inputClass}
-                      rows={2}
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                    />
-                  </div>
+                  <LimitedField
+                    limit="paymentReason"
+                    label="سبب الدفعة"
+                    rows={2}
+                    value={reason}
+                    onChange={setReason}
+                    placeholder="مثال: دفعة عن إنجاز لياسة الدور الأول بالكامل"
+                  />
                 </div>
 
                 {p.penalties.length > 0 && (

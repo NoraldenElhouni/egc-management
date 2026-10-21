@@ -31,6 +31,10 @@ export type AgreementSummary = {
   description: string | null;
   total: number;
   current_version: number;
+  /** What the contractor took here as expenses before their first
+   * agreement (05_round2.sql); included in `paid`. */
+  opening_paid: number;
+  opening_payments: number;
   paid: number;
   pending: number;
   has_pending: boolean;
@@ -94,6 +98,8 @@ export type AgreementDetail = {
 /** contracts.agreement_payment_preview(). */
 export type PaymentPreview = {
   agreement_total: number;
+  opening_paid: number;
+  opening_payments: number;
   next_number: number;
   prev_amount: number;
   pending_amount: number;
@@ -121,6 +127,41 @@ export type PenaltyRow = {
   approved_by_name: string | null;
   created_at: string;
   approved_at: string | null;
+  /** Photos, in the public "attachments" bucket. */
+  attachments: { file_path: string; mime_type: string | null }[];
+};
+
+/** contracts.contractor_project_money(): what they already took here. */
+export type ContractorProjectMoney = {
+  paid: number;
+  payments_count: number;
+  /** Most frequent expense description (latest on a tie) — a placeholder. */
+  title_hint: string | null;
+  /** True when a new agreement would start from `paid`. */
+  counts_as_opening: boolean;
+  has_phone: boolean;
+};
+
+/** contracts.project_old_money(). */
+export type ProjectOldMoney = {
+  /** Took money here as expenses and have no agreement yet. */
+  contractors: {
+    contractor_id: string;
+    contractor_name: string | null;
+    paid: number;
+    payments_count: number;
+    title_hint: string | null;
+    last_paid_at: string;
+  }[];
+  expense_payments: {
+    id: string;
+    contractor_id: string;
+    contractor_name: string | null;
+    description: string | null;
+    amount: number;
+    payment_no: number | null;
+    created_at: string;
+  }[];
 };
 
 /** What the create / edit form sends. `id` = an existing item being kept. */
@@ -207,8 +248,17 @@ export type AgreementsDatabase = {
           p_description: string | null;
           p_note: string | null;
           p_items: AgreementItemInput[];
+          p_contractor_phone?: string | null;
         };
         Returns: string;
+      };
+      contractor_project_money: {
+        Args: { p_project_id: string; p_contractor_id: string };
+        Returns: ContractorProjectMoney;
+      };
+      project_old_money: {
+        Args: { p_project_id: string };
+        Returns: ProjectOldMoney;
       };
       edit_agreement: {
         Args: {

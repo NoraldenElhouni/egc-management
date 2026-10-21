@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Wallet } from "lucide-react";
+import { AlertTriangle, Pencil, Wallet } from "lucide-react";
 import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
@@ -16,6 +16,7 @@ import {
 import { formatCurrency, formatDate } from "../../utils/helpper";
 import AgreementFormDialog from "./AgreementFormDialog";
 import AgreementPaymentDialog from "./AgreementPaymentDialog";
+import PenaltyFormDialog from "./PenaltyFormDialog";
 import HistoryTimeline from "../logs/HistoryTimeline";
 import { useCanViewLogs } from "../../hooks/logs/useActivityLog";
 
@@ -32,16 +33,26 @@ type Props = {
   agreementId: string | null;
   onClose: () => void;
   canEdit: boolean;
+  /** create_contractor_penalty on this project. */
+  canPenalty?: boolean;
   /** May the viewer pay this agreement (view_all, or their own). */
   canPay: (createdBy: string) => boolean;
 };
 
-export default function AgreementDetailDialog({ projectId, agreementId, onClose, canEdit, canPay }: Props) {
+export default function AgreementDetailDialog({
+  projectId,
+  agreementId,
+  onClose,
+  canEdit,
+  canPenalty = false,
+  canPay,
+}: Props) {
   const { data, isLoading } = useAgreementDetail(agreementId);
   const canViewLogs = useCanViewLogs() === true;
   const [view, setView] = useState<View>("items");
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [penaltyOpen, setPenaltyOpen] = useState(false);
 
   const a = data?.agreement;
   const payBlocked = !a
@@ -78,6 +89,11 @@ export default function AgreementDetailDialog({ projectId, agreementId, onClose,
               <Stat label="قيد الانتظار" value={a.pending} />
               <Stat label="المتبقي" value={a.remaining} strong />
             </div>
+            {a.opening_paid > 0 && (
+              <p className="text-sm text-amber-900 bg-amber-50 rounded-lg px-3 py-2">
+                منها {formatCurrency(a.opening_paid)} مدفوعة سابقاً كمصروفات ({a.opening_payments} دفعات)
+              </p>
+            )}
             {a.note && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">ملاحظة: {a.note}</p>}
 
             <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
@@ -112,6 +128,11 @@ export default function AgreementDetailDialog({ projectId, agreementId, onClose,
             <div className="flex items-center justify-between gap-3 border-t pt-4">
               <span className="text-sm text-gray-500">{canPay(a.created_by) ? (payBlocked ?? "") : ""}</span>
               <div className="flex gap-2">
+                {canPenalty && (
+                  <Button type="button" variant="error" onClick={() => setPenaltyOpen(true)}>
+                    <AlertTriangle className="w-4 h-4 ml-1" /> غرامة
+                  </Button>
+                )}
                 {canEdit && (
                   <Button type="button" variant="primary-outline" onClick={() => setEditOpen(true)}>
                     <Pencil className="w-4 h-4 ml-1" /> تعديل
@@ -132,6 +153,12 @@ export default function AgreementDetailDialog({ projectId, agreementId, onClose,
               contractorId={a.contractor_id}
               contractorName={a.contractor_name}
               title={a.title}
+            />
+            <PenaltyFormDialog
+              isOpen={penaltyOpen}
+              onClose={() => setPenaltyOpen(false)}
+              projectId={a.project_id}
+              presetContractor={{ id: a.contractor_id, name: a.contractor_name }}
             />
             <AgreementFormDialog
               isOpen={editOpen}

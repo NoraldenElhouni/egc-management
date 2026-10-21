@@ -6,9 +6,12 @@ import { SearchableSelectField } from "../ui/inputs/SearchableSelectField";
 import { useContractorsQuery } from "../../hooks/useContractors";
 import {
   agreementErrorMessage,
+  useContractorProjectMoney,
   useCreateAgreement,
   useEditAgreement,
 } from "../../hooks/agreements/useAgreements";
+import { isValidPhone, lengthError } from "../../utils/agreements/rules";
+import LimitedField, { inputClass } from "./LimitedField";
 import type { AgreementDetail, AgreementItem } from "../../types/agreements.types";
 import { currentItems } from "../../utils/agreements/versions";
 import { formatCurrency } from "../../utils/helpper";
@@ -18,6 +21,9 @@ import { formatCurrency } from "../../utils/helpper";
 // =====================================================================
 // Same rules as the field app's form: title, description, item rows
 // (description + price, note optional), a general note, a live total.
+// Every text has a length rule (utils/agreements/rules.ts); only notes are
+// optional. A contractor without a phone is asked for one; one who took
+// money here before (as expenses) starts this agreement from it.
 // Editing never deletes: removing an existing row strikes it through
 // (with undo); the server records it as removed in the new version.
 // =====================================================================
@@ -68,15 +74,14 @@ const isEdited = (r: Row) =>
     parseAmount(r.price) !== r.original.price ||
     r.note.trim() !== r.original.note);
 
-const inputClass =
-  "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
-
 type Props = {
   projectId: string;
   isOpen: boolean;
   onClose: () => void;
   /** Present = edit this agreement; absent = create a new one. */
   detail?: AgreementDetail | null;
+  /** New mode: start with this contractor (from a "took money" card). */
+  presetContractor?: { id: string; name: string | null } | null;
   onSaved?: (agreementId: string) => void;
 };
 
@@ -86,14 +91,20 @@ export default function AgreementFormDialog(props: Props) {
   return <AgreementFormDialogBody {...props} />;
 }
 
-function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }: Props) {
+function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, presetContractor, onSaved }: Props) {
   const isEdit = !!detail;
   const a = detail?.agreement;
   const { data: contractors = [], isLoading: contractorsLoading } = useContractorsQuery();
   const create = useCreateAgreement(projectId);
   const edit = useEditAgreement(a?.id ?? "");
 
-  const [contractorId, setContractorId] = useState(a?.contractor_id ?? "");
+  const [contractorId, setContractorId] = useState(a?.contractor_id ?? presetContractor?.id ?? "");
+  const [phone, setPhone] = useState("");
+  // what the picked contractor already took here, and whether they have a phone
+  const money = useContractorProjectMoney(projectId, isEdit ? null : contractorId || null);
+  const m = money.data;
+  const openingPaid = !isEdit && m?.counts_as_opening ? m.paid : 0;
+  const needsPhone = !isEdit && !!m && !m.has_phone;
   const [title, setTitle] = useState(a?.title ?? "");
   const [description, setDescription] = useState(a?.description ?? "");
   const [note, setNote] = useState(a?.note ?? "");
@@ -117,17 +128,23 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
     note.trim() !== (a?.note ?? "") ||
     rows.some((r) => r.removed || !r.id || isEdited(r));
 
-  const missing = !contractorId
-    ? "اختر المقاول"
-    : !title.trim()
-      ? "اكتب عنوان الاتفاقية"
-      : activeRows.length === 0
-        ? "أضف بنداً واحداً على الأقل"
-        : activeRows.some((r) => !r.description.trim() || parseAmount(r.price) <= 0)
-          ? "أكمل وصف وسعر كل بند"
-          : !hasChanges
-            ? "لم تقم بأي تغيير بعد"
-            : null;
+  // The first thing still wrong, in the order the form reads.
+  const missing =
+    (!contractorId ? "اختر المقاول" : null) ??
+    (!isEdit && money.isLoading ? "..." : null) ??
+    lengthError(title, "title") ??
+    lengthError(description, "description") ??
+    (needsPhone && !isValidPhone(phone) ? "اكتب رقم هاتف المقاول (9 إلى 15 رقماً)" : null) ??
+    (activeRows.length === 0 ? "أضف بنداً واحداً على الأقل" : null) ??
+    activeRows.map((r) => lengthError(r.description, "item")).find(Boolean) ??
+    (activeRows.some((r) => parseAmount(r.price) <= 0) ? "اكتب سعر كل بند" : null) ??
+    activeRows.map((r) => lengthError(r.note, "note")).find(Boolean) ??
+    lengthError(note, "note") ??
+    lengthError(changeNote, "note") ??
+    (openingPaid > 0 && total <= openingPaid
+      ? `الإجمالي يجب أن يكون أكثر من ${formatCurrency(openingPaid)} (المستلم سابقاً)`
+      : null) ??
+    (!hasChanges ? "لم تقم بأي تغيير بعد" : null);
 
   const saving = create.isPending || edit.isPending;
 
@@ -151,7 +168,7 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
       edit.mutate(values, { onSuccess: () => { onSaved?.(a.id); onClose(); }, onError });
     } else {
       create.mutate(
-        { ...values, contractorId },
+        { ...values, contractorId, contractorPhone: phone },
         { onSuccess: (id) => { onSaved?.(id); onClose(); }, onError },
       );
     }
@@ -175,6 +192,13 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
                 {a?.contractor_name ?? "—"}
               </div>
             </div>
+          ) : presetContractor ? (
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">المقاول</label>
+              <div className="px-3 py-2 rounded-lg bg-gray-50 text-sm font-medium">
+                {presetContractor.name ?? "—"}
+              </div>
+            </div>
           ) : (
             <SearchableSelectField
               id="agreement-contractor"
@@ -188,26 +212,44 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
               onChange={setContractorId}
             />
           )}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">عنوان الاتفاقية *</label>
-            <input
-              className={inputClass}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="مثال: أعمال لياسة الدور الأول"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">الوصف</label>
-          <textarea
-            className={inputClass}
-            rows={2}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+          <LimitedField
+            limit="title"
+            label="عنوان الاتفاقية"
+            value={title}
+            onChange={setTitle}
+            placeholder={(openingPaid > 0 && m?.title_hint) || "مثال: أعمال لياسة الدور الأول"}
           />
         </div>
+
+        {openingPaid > 0 && m && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            استلم هذا المقاول {formatCurrency(openingPaid)} في {m.payments_count} دفعات في هذا المشروع سابقاً
+            (مصروفات). تُحسب ضمن هذه الاتفاقية، ويجب أن يكون الإجمالي أكثر من ذلك.
+          </div>
+        )}
+
+        {needsPhone && (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">رقم هاتف المقاول *</label>
+            <input
+              className={inputClass}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="مثال: 0912345678"
+              inputMode="tel"
+            />
+            <span className="text-xs text-gray-500">لا يوجد رقم هاتف لهذا المقاول، يُحفظ مع الاتفاقية</span>
+          </div>
+        )}
+
+        <LimitedField
+          limit="description"
+          label="وصف الاتفاقية"
+          rows={3}
+          value={description}
+          onChange={setDescription}
+          placeholder="ما الأعمال المتفق عليها، وأين، وأي تفاصيل مهمة"
+        />
 
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-800">البنود</h3>
@@ -253,10 +295,10 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
                     >
                       <td className="p-2 text-center text-gray-500">{numberOf.get(row.key)}</td>
                       <td className="p-2">
-                        <input
-                          className={inputClass}
+                        <LimitedField
+                          limit="item"
                           value={row.description}
-                          onChange={(e) => update(row.key, { description: e.target.value })}
+                          onChange={(v) => update(row.key, { description: v })}
                           placeholder="وصف البند"
                         />
                       </td>
@@ -266,7 +308,7 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
                           inputMode="decimal"
                           value={row.price}
                           onChange={(e) => update(row.key, { price: e.target.value })}
-                          placeholder="0"
+                          placeholder="سعر البند"
                         />
                         {edited && row.original && parseAmount(row.price) !== row.original.price && (
                           <div className="text-xs text-amber-700 mt-1">
@@ -275,10 +317,10 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
                         )}
                       </td>
                       <td className="p-2">
-                        <input
-                          className={inputClass}
+                        <LimitedField
+                          limit="note"
                           value={row.note}
-                          onChange={(e) => update(row.key, { note: e.target.value })}
+                          onChange={(v) => update(row.key, { note: v })}
                           placeholder="اختياري"
                         />
                       </td>
@@ -308,21 +350,16 @@ function AgreementFormDialogBody({ projectId, isOpen, onClose, detail, onSaved }
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">ملاحظة عامة</label>
-            <textarea className={inputClass} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
+          <LimitedField limit="note" label="ملاحظة عامة" rows={2} value={note} onChange={setNote} />
           {isEdit && (
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">سبب التعديل</label>
-              <textarea
-                className={inputClass}
-                rows={2}
-                value={changeNote}
-                onChange={(e) => setChangeNote(e.target.value)}
-                placeholder="يظهر للإدارة مع الإصدار الجديد"
-              />
-            </div>
+            <LimitedField
+              limit="note"
+              label="سبب التعديل"
+              rows={2}
+              value={changeNote}
+              onChange={setChangeNote}
+              placeholder="يظهر للإدارة مع الإصدار الجديد"
+            />
           )}
         </div>
 

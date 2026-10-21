@@ -7,7 +7,12 @@ import Badge from "../ui/Badge";
 import LoadingPage from "../ui/LoadingPage";
 import ErrorPage from "../ui/errorPage";
 import ColumnFiltersDialog, { optionsOf } from "../tables/filters/ColumnFiltersDialog";
-import { agreementErrorMessage, useDecidePenalty, usePenalties } from "../../hooks/agreements/useAgreements";
+import {
+  agreementErrorMessage,
+  attachmentUrl,
+  useDecidePenalty,
+  usePenalties,
+} from "../../hooks/agreements/useAgreements";
 import type { PenaltyDisplayStatus, PenaltyRow } from "../../types/agreements.types";
 import { PENALTY_STATUS } from "../../utils/agreements/versions";
 import { formatCurrency, formatDate } from "../../utils/helpper";
@@ -58,6 +63,27 @@ export default function PenaltiesTable({ projectId, canCreate, canDecide }: Prop
         ),
       },
       { accessorKey: "reason", header: "السبب" },
+      {
+        // the evidence, before accept / decline
+        id: "photos",
+        header: "الصور",
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.attachments?.length ? (
+            <div className="flex gap-1">
+              {row.original.attachments.map((a) => {
+                const url = attachmentUrl(a.file_path);
+                return (
+                  <a key={a.file_path} href={url} target="_blank" rel="noreferrer" title="فتح الصورة">
+                    <img src={url} alt="" className="h-10 w-10 rounded object-cover border" />
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          ),
+      },
       {
         id: "status",
         header: "الحالة",
