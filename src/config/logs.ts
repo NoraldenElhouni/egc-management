@@ -20,12 +20,15 @@ export const LOG_GROUPS: { id: LogGroup; label: string; permission: string }[] =
 ];
 
 /**
- * The 22 logs, for the activity page's filter. Names and labels mirror
- * logs.catalog (migration 01); rows returned by the API carry the
+ * The logs, for the activity page's filter. Names and labels mirror
+ * logs.catalog (migration 01; agreement + contractor_penalty from
+ * plans/agreements/migrations/04_logs.sql); rows returned by the API carry the
  * database's own label in `log_label`.
  */
 export const LOG_NAMES: { name: string; group: LogGroup; label: string }[] = [
   { name: "contractor_payment", group: "finance", label: "دفعات المقاولين" },
+  { name: "agreement", group: "finance", label: "الاتفاقيات" },
+  { name: "contractor_penalty", group: "finance", label: "غرامات المقاولين" },
   { name: "expense_payment", group: "finance", label: "دفعات المصروفات" },
   { name: "expense", group: "finance", label: "المصروفات" },
   { name: "project_cash", group: "finance", label: "الإيرادات والمرتجعات والخرائط" },

@@ -16,12 +16,16 @@ import {
 import { formatCurrency, formatDate } from "../../utils/helpper";
 import AgreementFormDialog from "./AgreementFormDialog";
 import AgreementPaymentDialog from "./AgreementPaymentDialog";
+import HistoryTimeline from "../logs/HistoryTimeline";
+import { useCanViewLogs } from "../../hooks/logs/useActivityLog";
 
-// One agreement: totals on top, then three views — the agreement as it
+// One agreement: totals on top, then the views — the agreement as it
 // stands now (البنود), every version with what it changed (الإصدارات),
-// and its payments (الدفعات). Pay and edit open from here.
+// its payments (الدفعات), and — for log readers — its full log (السجل:
+// creation, edits, payments, penalties; get_history('agreement')).
+// Pay and edit open from here.
 
-type View = "items" | "versions" | "payments";
+type View = "items" | "versions" | "payments" | "history";
 
 type Props = {
   projectId: string;
@@ -34,6 +38,7 @@ type Props = {
 
 export default function AgreementDetailDialog({ projectId, agreementId, onClose, canEdit, canPay }: Props) {
   const { data, isLoading } = useAgreementDetail(agreementId);
+  const canViewLogs = useCanViewLogs() === true;
   const [view, setView] = useState<View>("items");
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -81,6 +86,7 @@ export default function AgreementDetailDialog({ projectId, agreementId, onClose,
                   { value: "items", label: "البنود" },
                   { value: "versions", label: `الإصدارات (${data.versions.length})` },
                   { value: "payments", label: `الدفعات (${data.payments.length})` },
+                  ...(canViewLogs ? [{ value: "history", label: "السجل" } as const] : []),
                 ] as const
               ).map((t) => (
                 <button
@@ -99,6 +105,9 @@ export default function AgreementDetailDialog({ projectId, agreementId, onClose,
             {view === "items" && <ItemsView detail={data} />}
             {view === "versions" && <VersionsView detail={data} />}
             {view === "payments" && <PaymentsView detail={data} />}
+            {view === "history" && canViewLogs && (
+              <HistoryTimeline refType="agreement" refId={a.id} title="سجل الاتفاقية" />
+            )}
 
             <div className="flex items-center justify-between gap-3 border-t pt-4">
               <span className="text-sm text-gray-500">{canPay(a.created_by) ? (payBlocked ?? "") : ""}</span>

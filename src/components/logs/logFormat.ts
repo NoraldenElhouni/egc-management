@@ -68,6 +68,8 @@ const FIELD_LABELS: Record<string, string> = {
   task_type: "نوع المهمة",
   parent: "المهمة الأم",
   description: "الوصف",
+  // agreement log (title / description / total also used above)
+  note: "الملاحظة",
 };
 
 export const fieldLabel = (field: string) => FIELD_LABELS[field] ?? field;
@@ -174,8 +176,14 @@ export function subjectOf(event: LogEvent): string {
   const d = event.detail ?? {};
   const serial = str(d.serial_number) ?? (typeof d.serial_number === "number" ? String(d.serial_number) : null);
   switch (event.log_name) {
-    case "contractor_payment":
-      return `دفعة مقاول ${str(d.payments_number) ?? ""}`.trim();
+    case "contractor_payment": {
+      const payment = `دفعة مقاول ${str(d.payments_number) ?? ""}`.trim();
+      return str(d.agreement_title) ? `${payment} — «${d.agreement_title}»` : payment;
+    }
+    case "agreement":
+      return `اتفاقية «${str(d.title) ?? ""}»${d.version_no ? ` — إصدار ${d.version_no}` : ""}`;
+    case "contractor_penalty":
+      return `غرامة${str(d.contractor_name) ? ` — ${d.contractor_name}` : ""}`;
     case "expense":
       return `مصروف${serial ? ` #${serial}` : ""}${str(d.description) ? ` — ${d.description}` : ""}`;
     case "expense_payment":

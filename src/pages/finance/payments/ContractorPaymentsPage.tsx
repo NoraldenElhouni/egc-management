@@ -19,8 +19,9 @@ import PaymentDetailsDialog from "../../../components/agreements/PaymentDetailsD
 import AgreementDetailDialog from "../../../components/agreements/AgreementDetailDialog";
 import { usePenalties } from "../../../hooks/agreements/useAgreements";
 
-// The history tab: who approved or declined each payment.
-const PAYMENT_LOGS = { logNames: ["contractor_payment"] };
+// The history tab: who approved or declined each payment, and each
+// penalty (penalties are approved on this page too).
+const PAYMENT_LOGS = { logNames: ["contractor_payment", "contractor_penalty"] };
 
 function uniqueSorted(values: (string | undefined | null)[]): string[] {
   return Array.from(
