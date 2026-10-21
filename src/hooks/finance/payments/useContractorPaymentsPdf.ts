@@ -22,11 +22,30 @@ export interface ContractorPaymentPdfItem {
   bank_number: string | null;
   bank_holder_name: string | null;
   whatsapp_number: string | null;
+  contractor_phone: string | null;
+
+  // The agreement the payment is paid against. Null on old payments, made
+  // before agreements existed.
+  agreement_title: string | null;
+  /** The agreement's total when the payment was made. */
+  agreement_total: number | null;
+  agreement_version: number | null;
+  /** agreement_total − prev_amount − amount */
+  remaining_after: number | null;
+  /** Paid as plain expenses before the agreement was created. */
+  opening_paid: number;
+
+  /** Itemized; empty → the template uses penalty_amount / penalty_reason. */
+  penalties: { reason: string | null; amount: number }[];
+
+  approved_by_name: string | null;
+  approved_at: string | null;
 }
 
 export function contractPaymentToPdfItem(
   payment: ContractPayment,
 ): ContractorPaymentPdfItem {
+  const agreement = payment.agreement;
   return {
     payments_number: payment.payments_number,
     project_name: payment.project?.name ?? "",
@@ -59,6 +78,22 @@ export function contractPaymentToPdfItem(
     bank_number: payment.bank_number,
     bank_holder_name: payment.bank_holder_name,
     whatsapp_number: payment.contractor?.whatsapp_number ?? null,
+    contractor_phone: payment.contractor?.phone_number ?? null,
+
+    agreement_title: agreement?.title ?? null,
+    agreement_total: agreement?.total ?? null,
+    agreement_version: agreement?.version ?? null,
+    remaining_after: agreement
+      ? agreement.total - (Number(payment.prev_amount) || 0) - (Number(payment.amount) || 0)
+      : null,
+    opening_paid: agreement?.opening_paid ?? 0,
+
+    penalties: payment.penalties ?? [],
+
+    approved_by_name: payment.approved_by_employee
+      ? `${payment.approved_by_employee.first_name} ${payment.approved_by_employee.last_name ?? ""}`.trim()
+      : null,
+    approved_at: payment.approved_at ? formatDate(payment.approved_at) : null,
   };
 }
 

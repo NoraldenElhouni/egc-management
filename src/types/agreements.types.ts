@@ -197,16 +197,40 @@ export type AgreementsDatabase = {
   };
   contracts: {
     Tables: {
-      // Read only — for looking up agreement titles next to payments.
+      // Read only — for looking up agreements next to payments.
       agreements: {
-        Row: { id: string; title: string; project_id: string; contractor_id: string };
+        Row: {
+          id: string;
+          title: string;
+          project_id: string;
+          contractor_id: string;
+          total: number;
+          current_version: number;
+          opening_paid: number;
+        };
         Insert: never;
         Update: never;
         Relationships: [];
       };
-      // Read only — for counting what waits for approval.
+      // Read only — for printing which version a payment was made against.
+      agreement_versions: {
+        Row: { agreement_id: string; version_no: number; total: number; created_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      // Read only — counting what waits for approval; itemizing a payment's penalties.
       penalties: {
-        Row: { id: string; project_id: string; contractor_id: string; status: PenaltyStatus };
+        Row: {
+          id: string;
+          project_id: string;
+          contractor_id: string;
+          status: PenaltyStatus;
+          amount: number;
+          reason: string;
+          deducted_in_payment_id: string | null;
+          created_at: string;
+        };
         Insert: never;
         Update: never;
         Relationships: [];
