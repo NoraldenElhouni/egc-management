@@ -36,7 +36,7 @@ export function toReportItem(item: ItemRow): BOQReportItem {
     name: item.name,
     unit: item.unit,
     quantity: item.quantity,
-    unit_price: item.unit_price === 0 ? null : item.unit_price,
+    unit_price: item.unit_price,
   };
 }
 
@@ -115,7 +115,7 @@ export function buildSummaryItems(works: WorkFull[]): BOQReportItem[] {
     name: g.name,
     unit: g.unit,
     quantity: g.quantity,
-    unit_price: g.pricesMatch && g.firstPrice !== 0 ? g.firstPrice : null,
+    unit_price: g.pricesMatch ? g.firstPrice : null,
   }));
 }
 
