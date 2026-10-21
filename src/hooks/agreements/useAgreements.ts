@@ -13,6 +13,7 @@ import type {
   PaymentPreview,
   PenaltyRow,
   ProjectOldMoney,
+  Unit,
 } from "../../types/agreements.types";
 
 // =====================================================================
@@ -143,6 +144,25 @@ export function useProjectOldMoney(projectId: string) {
   });
 }
 
+/** Units of measurement (lookups.units). activeOnly: what item rows may pick. */
+export function useUnits(activeOnly = true) {
+  return useQuery({
+    queryKey: ["lookups", "units", activeOnly ? "active" : "all"],
+    queryFn: async (): Promise<Unit[]> => {
+      let q = agreementsDb
+        .schema("lookups")
+        .from("units")
+        .select("id, name, sort_order, is_active")
+        .order("sort_order")
+        .order("name");
+      if (activeOnly) q = q.eq("is_active", true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 // ─── Writes ──────────────────────────────────────────────────────────────────
 
 function useInvalidateAgreements() {
@@ -167,16 +187,35 @@ function cleanItems(items: AgreementItemInput[]): AgreementItemInput[] {
   return items.map((i) => ({
     ...(i.id ? { id: i.id } : {}),
     description: i.description.trim(),
-    price: i.price,
+    quantity: i.quantity,
+    unit_id: i.unit_id,
+    unit_price: i.unit_price,
     note: i.note?.trim() || null,
   }));
 }
 
+/** Uploads files to a record; returns how many failed (the record stays). */
+async function uploadFiles(entityType: "agreement" | "contractor_penalty", entityId: string, files: File[]) {
+  let failed = 0;
+  for (const file of files) {
+    try {
+      await uploadFile({ file, entityType, entityId });
+    } catch (err) {
+      console.error(`${entityType} attachment upload error:`, err);
+      failed += 1;
+    }
+  }
+  return failed;
+}
+
+/** Creates the agreement, then uploads its attachments (photos, PDF). */
 export function useCreateAgreement(projectId: string) {
   const invalidate = useInvalidateAgreements();
   return useMutation({
-    mutationFn: async (v: AgreementFormValues & { contractorId: string; contractorPhone: string }) =>
-      (await rpcOrThrow(
+    mutationFn: async (
+      v: AgreementFormValues & { contractorId: string; contractorPhone: string; files: File[] },
+    ) => {
+      const agreementId = (await rpcOrThrow(
         "create_agreement",
         agreementsDb.schema("contracts").rpc("create_agreement", {
           p_project_id: projectId,
@@ -188,7 +227,19 @@ export function useCreateAgreement(projectId: string) {
           // only saved by the database when the contractor has no phone
           p_contractor_phone: normalizePhone(v.contractorPhone) || null,
         }),
-      )) as string,
+      )) as string;
+      const failedFiles = await uploadFiles("agreement", agreementId, v.files);
+      return { agreementId, failedFiles };
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Adds attachments to an existing agreement (anytime; never deleted). */
+export function useAddAgreementFiles(agreementId: string) {
+  const invalidate = useInvalidateAgreements();
+  return useMutation({
+    mutationFn: async (files: File[]) => ({ failedFiles: await uploadFiles("agreement", agreementId, files) }),
     onSuccess: invalidate,
   });
 }
@@ -258,30 +309,23 @@ export function useCreatePenalty(projectId: string) {
           p_reason: v.reason.trim(),
         }),
       )) as string;
-      let failedPhotos = 0;
-      for (const file of v.photos) {
-        try {
-          await uploadFile({ file, entityType: "contractor_penalty", entityId: penaltyId });
-        } catch (err) {
-          console.error("penalty photo upload error:", err);
-          failedPhotos += 1;
-        }
-      }
+      const failedPhotos = await uploadFiles("contractor_penalty", penaltyId, v.photos);
       return { penaltyId, failedPhotos };
     },
     onSuccess: invalidate,
   });
 }
 
-export function useDecidePenalty() {
+/** Cancels a penalty before a payment deducts it (reason required). */
+export function useCancelPenalty() {
   const invalidate = useInvalidateAgreements();
   return useMutation({
-    mutationFn: async (v: { penaltyId: string; approve: boolean }) => {
+    mutationFn: async (v: { penaltyId: string; reason: string }) => {
       await rpcOrThrow(
-        "decide_penalty",
+        "cancel_penalty",
         agreementsDb
           .schema("contracts")
-          .rpc("decide_penalty", { p_penalty_id: v.penaltyId, p_approve: v.approve }),
+          .rpc("cancel_penalty", { p_penalty_id: v.penaltyId, p_reason: v.reason.trim() }),
       );
     },
     onSuccess: invalidate,

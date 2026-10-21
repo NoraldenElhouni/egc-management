@@ -9,7 +9,8 @@ type UploadEntity =
   | "employee"
   | "project"
   | "task"
-  | "contractor_penalty";
+  | "contractor_penalty"
+  | "agreement";
 
 interface UploadFileOptions {
   file: File;

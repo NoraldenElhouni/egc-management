@@ -14,6 +14,7 @@ export const LIMITS = {
   item: { min: 5, max: 120, label: "وصف البند" },
   penaltyReason: { min: 15, max: 300, label: "سبب الغرامة" },
   paymentReason: { min: 15, max: 300, label: "سبب الدفعة" },
+  cancelReason: { min: 15, max: 300, label: "سبب الإلغاء" },
   note: { min: 0, max: 300, label: "الملاحظة" },
 } as const;
 

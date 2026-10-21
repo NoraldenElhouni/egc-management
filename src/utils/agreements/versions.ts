@@ -84,8 +84,14 @@ export const PENALTY_STATUS: Record<
   PenaltyDisplayStatus,
   { label: string; variant: "warning" | "success" | "danger" | "info" }
 > = {
-  pending: { label: "قيد الانتظار", variant: "warning" },
-  approved: { label: "معتمدة", variant: "info" },
+  due: { label: "مستحقة", variant: "warning" },
   deducted: { label: "مخصومة", variant: "success" },
-  declined: { label: "مرفوضة", variant: "danger" },
+  cancelled: { label: "ملغاة", variant: "danger" },
 };
+
+/** "3 م² × 50" — an item's quantity, unit and unit price. */
+export function lineText(item: Pick<AgreementItem, "quantity" | "unit_name" | "unit_price">) {
+  const qty = Number(item.quantity).toLocaleString("en-US", { maximumFractionDigits: 3 });
+  const price = Number(item.unit_price).toLocaleString("en-US", { maximumFractionDigits: 3 });
+  return `${qty} ${item.unit_name ?? ""} × ${price}`.replace(/\s+/g, " ");
+}

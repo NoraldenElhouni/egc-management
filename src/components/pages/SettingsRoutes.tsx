@@ -11,6 +11,7 @@ import SpecializationDetailPage from "../../pages/settings/specializations/Speci
 import MapsPage from "../../pages/settings/maps/MapsPage";
 import ExpenseDetailsPage from "../../pages/settings/expenses/ExpenseDetailsPage";
 import BanksPage from "../../pages/settings/banks/BanksPage";
+import UnitsPage from "../../pages/settings/units/UnitsPage";
 import UserSessionsPage from "../../pages/settings/sessions/UserSessionsPage";
 import LogsPage from "../../pages/settings/logs/LogsPage";
 import ActivityLogPage from "../../pages/settings/activityLog/ActivityLogPage";
@@ -78,6 +79,7 @@ export default function SettingsRoutes() {
           <Route path="expenses/:id" element={<ExpenseDetailsPage />} />
           <Route path="maps" element={<MapsPage />} />
           <Route path="banks" element={<BanksPage />} />
+          <Route path="units" element={<UnitsPage />} />
         </Route>
 
         <Route element={<RequirePermission permission="manage_specialities" />}>

@@ -4,15 +4,19 @@ import { Plus } from "lucide-react";
 import GenericTable from "../tables/table";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
+import Dialog from "../ui/Dialog";
 import LoadingPage from "../ui/LoadingPage";
 import ErrorPage from "../ui/errorPage";
 import ColumnFiltersDialog, { optionsOf } from "../tables/filters/ColumnFiltersDialog";
 import {
   agreementErrorMessage,
   attachmentUrl,
-  useDecidePenalty,
+  useCancelPenalty,
   usePenalties,
 } from "../../hooks/agreements/useAgreements";
+import { useAuthUserId } from "../../hooks/permissions/useCan";
+import { lengthError } from "../../utils/agreements/rules";
+import LimitedField from "./LimitedField";
 import type { PenaltyDisplayStatus, PenaltyRow } from "../../types/agreements.types";
 import { PENALTY_STATUS } from "../../utils/agreements/versions";
 import { formatCurrency, formatDate } from "../../utils/helpper";
@@ -20,20 +24,24 @@ import PenaltyFormDialog from "./PenaltyFormDialog";
 
 // Penalties, two ways:
 //  - on a project page (projectId set): that project's penalties + "new"
-//  - in the payments queue (projectId null): every project's, with
-//    accept / decline on the pending ones
+//  - in the payments queue (projectId null): every project's
+// A penalty counts as soon as it's saved; a wrong one can be cancelled
+// (with a reason) until a payment deducts it — by whoever recorded it,
+// or from the payments queue (canCancelAny).
 
 type Props = {
   projectId: string | null;
   /** Project page: show the "new penalty" button. */
   canCreate?: boolean;
-  /** Payments queue: accept / decline column. */
-  canDecide?: boolean;
+  /** Payments queue: may cancel anyone's (not only their own). */
+  canCancelAny?: boolean;
 };
 
-export default function PenaltiesTable({ projectId, canCreate, canDecide }: Props) {
+export default function PenaltiesTable({ projectId, canCreate, canCancelAny = false }: Props) {
   const { data, isLoading, error } = usePenalties(projectId);
+  const { userId } = useAuthUserId();
   const [newOpen, setNewOpen] = useState(false);
+  const [cancelling, setCancelling] = useState<PenaltyRow | null>(null);
   const rows = data ?? [];
 
   const columns = useMemo<ColumnDef<PenaltyRow, unknown>[]>(
@@ -97,6 +105,11 @@ export default function PenaltiesTable({ projectId, canCreate, canDecide }: Prop
               {row.original.display_status === "deducted" && row.original.payment_number && (
                 <span className="text-xs text-gray-500">من الدفعة رقم {row.original.payment_number}</span>
               )}
+              {row.original.display_status === "cancelled" && row.original.cancel_reason && (
+                <span className="text-xs text-gray-500" title={row.original.cancel_reason}>
+                  {row.original.cancelled_by_name ?? "—"}: {row.original.cancel_reason}
+                </span>
+              )}
             </div>
           );
         },
@@ -112,18 +125,19 @@ export default function PenaltiesTable({ projectId, canCreate, canDecide }: Prop
         header: "التاريخ",
         cell: ({ getValue }) => formatDate(getValue<string>()),
       },
-      ...(canDecide
-        ? [
-            {
-              id: "actions",
-              header: "الإجراءات",
-              enableSorting: false,
-              cell: ({ row }) => <PenaltyActionsCell penalty={row.original} />,
-            } as ColumnDef<PenaltyRow, unknown>,
-          ]
-        : []),
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.display_status === "due" && (canCancelAny || row.original.created_by === userId) ? (
+            <Button type="button" variant="error" size="xs" onClick={() => setCancelling(row.original)}>
+              إلغاء
+            </Button>
+          ) : null,
+      },
     ],
-    [projectId, canDecide],
+    [projectId, canCancelAny, userId],
   );
 
   if (isLoading) return <LoadingPage />;
@@ -136,7 +150,7 @@ export default function PenaltiesTable({ projectId, canCreate, canDecide }: Prop
           <div>
             <h2 className="text-xl font-semibold text-gray-900">الغرامات</h2>
             <p className="text-sm text-gray-500">
-              تُعتمد من شاشة مدفوعات المقاولين، ثم تُخصم تلقائياً من أول دفعة للمقاول في المشروع
+              تُخصم تلقائياً من أول دفعة للمقاول في المشروع، ويمكن إلغاؤها قبل ذلك
             </p>
           </div>
           <Button type="button" variant="error" onClick={() => setNewOpen(true)}>
@@ -177,48 +191,59 @@ export default function PenaltiesTable({ projectId, canCreate, canDecide }: Prop
       />
 
       {projectId && <PenaltyFormDialog projectId={projectId} isOpen={newOpen} onClose={() => setNewOpen(false)} />}
+      {cancelling && <CancelPenaltyDialog penalty={cancelling} onClose={() => setCancelling(null)} />}
     </div>
   );
 }
 
-function PenaltyActionsCell({ penalty }: { penalty: PenaltyRow }) {
-  const decide = useDecidePenalty();
-  const [busy, setBusy] = useState<"accept" | "decline" | null>(null);
-  const isPending = penalty.status === "pending";
-
-  const run = (approve: boolean) => {
-    setBusy(approve ? "accept" : "decline");
-    decide.mutate(
-      { penaltyId: penalty.id, approve },
-      {
-        onError: (err) => window.alert(agreementErrorMessage(err)),
-        onSettled: () => setBusy(null),
-      },
-    );
-  };
+function CancelPenaltyDialog({ penalty, onClose }: { penalty: PenaltyRow; onClose: () => void }) {
+  const cancel = useCancelPenalty();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const missing = lengthError(reason, "cancelReason");
 
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Button
-        type="button"
-        variant="success"
-        size="xs"
-        disabled={!isPending || !!busy}
-        loading={busy === "accept"}
-        onClick={() => run(true)}
-      >
-        قبول
-      </Button>
-      <Button
-        type="button"
-        variant="error"
-        size="xs"
-        disabled={!isPending || !!busy}
-        loading={busy === "decline"}
-        onClick={() => run(false)}
-      >
-        رفض
-      </Button>
-    </div>
+    <Dialog isOpen onClose={onClose}>
+      <div dir="rtl" className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">إلغاء الغرامة</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {penalty.contractor_name ?? "—"} · {formatCurrency(penalty.amount)} · {penalty.reason}
+          </p>
+        </div>
+        <LimitedField
+          limit="cancelReason"
+          label="سبب الإلغاء"
+          rows={3}
+          value={reason}
+          onChange={setReason}
+          placeholder="مثال: سُجلت على المقاول الخطأ"
+          autoFocus
+        />
+        {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-gray-500">{missing ?? ""}</span>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              رجوع
+            </Button>
+            <Button
+              type="button"
+              variant="error"
+              disabled={!!missing}
+              loading={cancel.isPending}
+              onClick={() =>
+                cancel.mutate(
+                  { penaltyId: penalty.id, reason },
+                  { onSuccess: onClose, onError: (err) => setError(agreementErrorMessage(err)) },
+                )
+              }
+            >
+              تأكيد الإلغاء
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Dialog>
   );
 }

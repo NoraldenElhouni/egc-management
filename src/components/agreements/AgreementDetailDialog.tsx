@@ -11,12 +11,14 @@ import {
   currentItems,
   headerChanges,
   itemsAtVersion,
+  lineText,
   PAYMENT_STATUS,
 } from "../../utils/agreements/versions";
 import { formatCurrency, formatDate } from "../../utils/helpper";
 import AgreementFormDialog from "./AgreementFormDialog";
 import AgreementPaymentDialog from "./AgreementPaymentDialog";
 import PenaltyFormDialog from "./PenaltyFormDialog";
+import AgreementAttachments from "./AgreementAttachments";
 import HistoryTimeline from "../logs/HistoryTimeline";
 import { useCanViewLogs } from "../../hooks/logs/useActivityLog";
 
@@ -118,6 +120,12 @@ export default function AgreementDetailDialog({
               ))}
             </div>
 
+            <AgreementAttachments
+              agreementId={a.id}
+              attachments={data.attachments ?? []}
+              canAdd={canEdit || canPay(a.created_by)}
+            />
+
             {view === "items" && <ItemsView detail={data} />}
             {view === "versions" && <VersionsView detail={data} />}
             {view === "payments" && <PaymentsView detail={data} />}
@@ -191,6 +199,7 @@ function ItemsTable({ items, total, previousTotal }: { items: AgreementItem[]; t
             <td className="py-2 w-8 text-gray-400">{i + 1}</td>
             <td className="py-2">
               {item.description}
+              <div className="text-xs text-gray-500">{lineText(item)}</div>
               {item.note && <div className="text-xs text-gray-500">{item.note}</div>}
             </td>
             <td className="py-2 text-left font-medium whitespace-nowrap">{formatCurrency(item.price)}</td>
@@ -267,6 +276,13 @@ function VersionsView({ detail }: { detail: AgreementDetail }) {
                         {c.item.description}
                         {c.kind === "edited" && c.before.description !== c.item.description && (
                           <div className="text-xs text-gray-400 line-through">{c.before.description}</div>
+                        )}
+                        {c.kind === "edited" && lineText(c.before) !== lineText(c.item) ? (
+                          <div className="text-xs text-gray-600">
+                            <span className="line-through text-gray-400">{lineText(c.before)}</span> ← {lineText(c.item)}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500">{lineText(c.item)}</div>
                         )}
                       </td>
                       <td className="py-2 px-2 text-left whitespace-nowrap font-medium">

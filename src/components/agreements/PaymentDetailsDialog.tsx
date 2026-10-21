@@ -6,7 +6,7 @@ import LoadingSpinner from "../ui/LoadingSpinner";
 import ContractPaymentActionsCell from "../tables/actions/payments/ContractPaymentActionsCell";
 import { useAgreementDetail } from "../../hooks/agreements/useAgreements";
 import type { ContractPayment } from "../../types/contracts.type";
-import { currentItems, PAYMENT_STATUS } from "../../utils/agreements/versions";
+import { currentItems, lineText, PAYMENT_STATUS } from "../../utils/agreements/versions";
 import { formatCurrency, formatDate } from "../../utils/helpper";
 import { translatePaymentMethod } from "../../utils/translations";
 
@@ -101,7 +101,10 @@ export default function PaymentDetailsDialog({ payment, onClose, onOpenAgreement
                       {currentItems(detail.items).map((item, i) => (
                         <tr key={item.id} className="border-t border-gray-100">
                           <td className="py-1.5 w-6 text-gray-400">{i + 1}</td>
-                          <td className="py-1.5">{item.description}</td>
+                          <td className="py-1.5">
+                            {item.description}
+                            <div className="text-xs text-gray-500">{lineText(item)}</div>
+                          </td>
                           <td className="py-1.5 text-left whitespace-nowrap">{formatCurrency(item.price)}</td>
                         </tr>
                       ))}

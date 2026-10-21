@@ -17,9 +17,14 @@
 
 export type PaymentMethod = "cash" | "bank";
 export type PaymentStatus = "pending" | "approved" | "declined";
-export type PenaltyStatus = "pending" | "approved" | "declined";
-/** approved + already taken off a payment shows as "deducted". */
-export type PenaltyDisplayStatus = PenaltyStatus | "deducted";
+/** Penalties count as soon as they're saved ("approved"); pending /
+ * declined only exist on rows from before 06_round3.sql. */
+export type PenaltyStatus = "pending" | "approved" | "declined" | "cancelled";
+/** due = waiting for the next payment · deducted = taken off one · cancelled */
+export type PenaltyDisplayStatus = "due" | "deducted" | "cancelled";
+
+/** lookups.units — units of measurement, managed in settings. */
+export type Unit = { id: string; name: string; sort_order: number; is_active: boolean };
 
 /** One row of contracts.project_agreements(). */
 export type AgreementSummary = {
@@ -62,6 +67,11 @@ export type AgreementItem = {
   id: string;
   description: string;
   note: string | null;
+  quantity: number;
+  unit_id: string | null;
+  unit_name: string | null;
+  unit_price: number;
+  /** The line total: quantity × unit price. */
   price: number;
   sort_order: number;
   added_in_version: number;
@@ -93,6 +103,15 @@ export type AgreementDetail = {
   versions: AgreementVersion[];
   items: AgreementItem[];
   payments: AgreementPayment[];
+  /** Photos and PDFs (public "attachments" bucket), never deleted. */
+  attachments: {
+    id: string;
+    file_path: string;
+    file_name: string | null;
+    mime_type: string | null;
+    created_at: string;
+    uploaded_by_name: string | null;
+  }[];
 };
 
 /** contracts.agreement_payment_preview(). */
@@ -122,11 +141,12 @@ export type PenaltyRow = {
   display_status: PenaltyDisplayStatus;
   deducted_in_payment_id: string | null;
   payment_number: string | null;
+  cancel_reason: string | null;
+  cancelled_by_name: string | null;
+  cancelled_at: string | null;
   created_by: string;
   created_by_name: string | null;
-  approved_by_name: string | null;
   created_at: string;
-  approved_at: string | null;
   /** Photos, in the public "attachments" bucket. */
   attachments: { file_path: string; mime_type: string | null }[];
 };
@@ -164,11 +184,14 @@ export type ProjectOldMoney = {
   }[];
 };
 
-/** What the create / edit form sends. `id` = an existing item being kept. */
+/** What the create / edit form sends. `id` = an existing item being kept.
+ * The line total (quantity × unit price) is worked out by the database. */
 export type AgreementItemInput = {
   id?: string;
   description: string;
-  price: number;
+  quantity: number;
+  unit_id: string;
+  unit_price: number;
   note?: string | null;
 };
 
@@ -316,11 +339,33 @@ export type AgreementsDatabase = {
         };
         Returns: string;
       };
-      /** Desktop accept / decline of a pending penalty. */
-      decide_penalty: {
-        Args: { p_penalty_id: string; p_approve: boolean };
+      /** Cancel a penalty before a payment deducts it (reason required). */
+      cancel_penalty: {
+        Args: { p_penalty_id: string; p_reason: string };
         Returns: undefined;
       };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
+  lookups: {
+    Tables: {
+      units: {
+        Row: Unit & { created_at: string };
+        Insert: { name: string; sort_order?: number; is_active?: boolean };
+        Update: { name?: string; sort_order?: number; is_active?: boolean };
+        Relationships: [];
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
     };
     Enums: {
       [_ in never]: never;

@@ -15,6 +15,7 @@ import {
   Logs,
   Map,
   Monitor,
+  Ruler,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -62,6 +63,13 @@ export const SETTINGS_ITEMS: NavItem[] = [
     icon: Landmark,
     path: "/settings/banks",
     description: "إدارة قائمة البنوك",
+    permission: "manage_reference_data",
+  },
+  {
+    label: "إدارة وحدات القياس",
+    icon: Ruler,
+    path: "/settings/units",
+    description: "وحدات قياس بنود الاتفاقيات",
     permission: "manage_reference_data",
   },
   // ── Phase 3: permission administration ──────────────────────────

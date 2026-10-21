@@ -17,7 +17,6 @@ import { useMyPermissions } from "../../../hooks/permissions/useCan";
 import PenaltiesTable from "../../../components/agreements/PenaltiesTable";
 import PaymentDetailsDialog from "../../../components/agreements/PaymentDetailsDialog";
 import AgreementDetailDialog from "../../../components/agreements/AgreementDetailDialog";
-import { usePenalties } from "../../../hooks/agreements/useAgreements";
 
 // The history tab: who approved or declined each payment, and each
 // penalty (penalties are approved on this page too).
@@ -38,10 +37,6 @@ const ContractorPaymentsPage = () => {
   } = useContractorPaymentsPdf();
   const { data: myPermissions } = useMyPermissions();
   const canViewFinanceLogs = myPermissions?.has("view_finance_logs") ?? false;
-  const { data: penalties } = usePenalties(null);
-  const pendingPenaltiesCount = (penalties ?? []).filter(
-    (p) => p.status === "pending",
-  ).length;
 
   const [selectedPayments, setSelectedPayments] = useState<ContractPayment[]>(
     [],
@@ -181,11 +176,11 @@ const ContractorPaymentsPage = () => {
             ),
           },
           {
-            // Recorded in the field app; approved ones come off the
-            // contractor's next payment in the same project.
+            // Recorded in the field app; they count right away and come
+            // off the contractor's next payment in the same project. A
+            // wrong one can be cancelled here until then.
             id: "penalties",
             label: "الغرامات",
-            badge: pendingPenaltiesCount,
             content: (
               <>
                 <div className="px-6 pt-6">
@@ -193,11 +188,11 @@ const ContractorPaymentsPage = () => {
                     غرامات المقاولين
                   </h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    الغرامة المقبولة تُخصم تلقائياً من أول دفعة للمقاول في نفس المشروع
+                    تُخصم الغرامة تلقائياً من أول دفعة للمقاول في نفس المشروع، ويمكن إلغاؤها قبل ذلك
                   </p>
                 </div>
                 <div className="p-6">
-                  <PenaltiesTable projectId={null} canDecide />
+                  <PenaltiesTable projectId={null} canCancelAny />
                 </div>
               </>
             ),
