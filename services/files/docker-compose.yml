@@ -1,0 +1,12 @@
+services:
+  files:
+    build: .
+    container_name: egc-files
+    restart: always
+    env_file: .env
+    environment:
+      STORAGE_ROOT: /data
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./.storage:/data

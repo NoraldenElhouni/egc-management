@@ -13,5 +13,5 @@
     "plugin:import/typescript"
   ],
   "parser": "@typescript-eslint/parser",
-  "ignorePatterns": ["supabase/functions/**"]
+  "ignorePatterns": ["supabase/functions/**", "services/**"]
 }

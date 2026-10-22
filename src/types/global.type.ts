@@ -57,6 +57,10 @@ export type ProjectPercentage = Tables<"project_percentage">;
 export type ProjectPercentageLogs = Tables<"project_percentage_logs">;
 export type UserRoles = Tables<"user_roles">;
 export type MapType = Tables<"map_types">;
+export type DrawingFolder = Tables<"project_drawing_folders">;
+export type DrawingVersion = Tables<"project_drawing_versions">;
+export type DrawingNotice = Tables<"project_drawing_notices">;
+export type DrawingAccess = Tables<"project_drawing_access">;
 export type Bank = Database["lookups"]["Tables"]["banks"]["Row"];
 export type Attachments = Tables<"attachments">;
 

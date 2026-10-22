@@ -2645,6 +2645,252 @@ export type Database = {
           },
         ]
       }
+      project_drawing_access: {
+        Row: {
+          can_download: boolean
+          can_edit: boolean
+          can_upload: boolean
+          folder_id: string
+          granted_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_download?: boolean
+          can_edit?: boolean
+          can_upload?: boolean
+          folder_id: string
+          granted_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_download?: boolean
+          can_edit?: boolean
+          can_upload?: boolean
+          folder_id?: string
+          granted_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_drawing_access_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "project_drawing_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_drawing_folders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          map_type_id: string
+          next_version: number
+          project_id: string
+          status: string
+          status_at: string | null
+          status_by: string | null
+          status_note: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          map_type_id: string
+          next_version?: number
+          project_id: string
+          status?: string
+          status_at?: string | null
+          status_by?: string | null
+          status_note?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          map_type_id?: string
+          next_version?: number
+          project_id?: string
+          status?: string
+          status_at?: string | null
+          status_by?: string | null
+          status_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_drawing_folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_folders_map_type_id_fkey"
+            columns: ["map_type_id"]
+            isOneToOne: false
+            referencedRelation: "map_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_folders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_folders_status_by_fkey"
+            columns: ["status_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_drawing_notices: {
+        Row: {
+          created_at: string
+          from_folder_id: string
+          id: string
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          state: string
+          to_folder_id: string
+          version_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          from_folder_id: string
+          id?: string
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          state?: string
+          to_folder_id: string
+          version_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          from_folder_id?: string
+          id?: string
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          state?: string
+          to_folder_id?: string
+          version_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_drawing_notices_from_folder_id_fkey"
+            columns: ["from_folder_id"]
+            isOneToOne: false
+            referencedRelation: "project_drawing_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_notices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_notices_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_notices_to_folder_id_fkey"
+            columns: ["to_folder_id"]
+            isOneToOne: false
+            referencedRelation: "project_drawing_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_notices_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "project_drawing_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_drawing_versions: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          folder_id: string
+          id: string
+          mime_type: string | null
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          folder_id: string
+          id?: string
+          mime_type?: string | null
+          uploaded_by?: string | null
+          version: number
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          folder_id?: string
+          id?: string
+          mime_type?: string | null
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_drawing_versions_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "project_drawing_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drawing_versions_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_expenses: {
         Row: {
           amount_paid: number
@@ -4879,6 +5125,67 @@ export type Database = {
       notify_unread_count: { Args: never; Returns: number }
       notify_unregister_device: {
         Args: { p_app_id: string; p_device_id: string }
+        Returns: undefined
+      }
+      project_drawing_add_version: {
+        Args: {
+          p_file_name: string
+          p_file_path: string
+          p_file_size: number
+          p_folder_id: string
+          p_mime_type: string
+          p_notify_folder_ids?: string[]
+        }
+        Returns: {
+          id: string
+          version: number
+        }[]
+      }
+      project_drawing_assert_files_service: { Args: never; Returns: undefined }
+      project_drawing_can: {
+        Args: { p_cap: string; p_folder_id: string }
+        Returns: boolean
+      }
+      project_drawing_delete_folder: {
+        Args: { p_folder_id: string }
+        Returns: string[]
+      }
+      project_drawing_delete_version: {
+        Args: { p_version_id: string }
+        Returns: string
+      }
+      project_drawing_file_for_download: {
+        Args: { p_version_id: string }
+        Returns: {
+          file_name: string
+          file_path: string
+          file_size: number
+          mime_type: string
+        }[]
+      }
+      project_drawing_is_manager: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      project_drawing_is_participant: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      project_drawing_mark_complied: {
+        Args: { p_notice_id: string }
+        Returns: undefined
+      }
+      project_drawing_my_caps: { Args: { p_project_id: string }; Returns: Json }
+      project_drawing_on_team: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      project_drawing_set_access: {
+        Args: { p_entries: Json; p_folder_id: string }
+        Returns: undefined
+      }
+      project_drawing_set_status: {
+        Args: { p_folder_id: string; p_note?: string; p_status: string }
         Returns: undefined
       }
       resolve_permission_ladder: {

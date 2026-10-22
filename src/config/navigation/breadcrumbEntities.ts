@@ -133,6 +133,20 @@ export const BREADCRUMB_ENTITIES: BreadcrumbEntity[] = [
         ?.description ?? null,
   },
 
+  // ---- project drawings: the folder is named after its map type ----
+  {
+    patterns: ["/operations/maps/project/:projectId/folder/:id"],
+    resolve: async (id) => {
+      const { data, error } = await supabase
+        .from("project_drawing_folders")
+        .select("map_type:map_types(name)")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.map_type?.name ?? null;
+    },
+  },
+
   // ---- projects ----
   {
     patterns: [
