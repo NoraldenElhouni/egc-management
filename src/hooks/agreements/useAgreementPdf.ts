@@ -11,7 +11,10 @@ import {
   PAYMENT_STATUS,
   PENALTY_STATUS,
 } from "../../utils/agreements/versions";
-import { formatDate } from "../../utils/helpper";
+import { formatDate as formatDateAr } from "../../utils/helpper";
+
+// ar-LY dates carry invisible right-to-left marks; the PDF wants plain text.
+const formatDate = (value: string | null | undefined) => formatDateAr(value).replace(/[\u200e\u200f]/g, "");
 
 // =====================================================================
 // Agreement PDFs (pdf-service)
@@ -165,7 +168,8 @@ async function fullBody(detail: AgreementDetail) {
         };
       }),
     expense_payments: (expenses.data ?? []).map((e) => ({
-      serial_number: e.serial_number,
+      // "139.1" = expense 139, payment 1 — text, not a number
+      serial_number: e.serial_number != null ? String(e.serial_number) : null,
       expense_serial_number: e.project_expenses?.serial_number ?? null,
       description: e.project_expenses?.description ?? null,
       payment_no: e.payment_no,
