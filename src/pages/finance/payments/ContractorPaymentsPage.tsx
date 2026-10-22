@@ -6,10 +6,7 @@ import LoadingPage from "../../../components/ui/LoadingPage";
 import Button from "../../../components/ui/Button";
 import ContractorPaymentsFiltersDialog from "../../../components/tables/filters/ContractorPaymentsFiltersDialog";
 import { useContractorPayments } from "../../../hooks/finance/payments/useContractorPayments";
-import {
-  useContractorPaymentsPdf,
-  contractPaymentToPdfItem,
-} from "../../../hooks/finance/payments/useContractorPaymentsPdf";
+import { useContractorPaymentsPdf } from "../../../hooks/finance/payments/useContractorPaymentsPdf";
 import { getContractorPaymentsColumns } from "../../../components/tables/columns/ContractorPaymentsColumns";
 import { ContractPayment } from "../../../types/contracts.type";
 import ActivityFeed from "../../../components/logs/ActivityFeed";
@@ -78,9 +75,7 @@ const ContractorPaymentsPage = () => {
 
   async function handlePrintSelected() {
     if (selectedPayments.length === 0) return;
-    const success = await generatePdf(
-      selectedPayments.map(contractPaymentToPdfItem),
-    );
+    const success = await generatePdf(selectedPayments);
     if (success) {
       setSelectedPayments([]);
       setClearSelectionSignal((n) => n + 1);

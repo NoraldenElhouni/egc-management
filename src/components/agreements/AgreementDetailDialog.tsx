@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { AlertTriangle, Pencil, Wallet } from "lucide-react";
+import { AlertTriangle, FileText, Pencil, Printer, Wallet } from "lucide-react";
 import Dialog from "../ui/Dialog";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { useAgreementDetail } from "../../hooks/agreements/useAgreements";
+import { useAgreementPdf } from "../../hooks/agreements/useAgreementPdf";
 import type { AgreementDetail, AgreementItem } from "../../types/agreements.types";
 import {
   changesInVersion,
@@ -55,6 +56,7 @@ export default function AgreementDetailDialog({
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [penaltyOpen, setPenaltyOpen] = useState(false);
+  const pdf = useAgreementPdf();
 
   const a = data?.agreement;
   const payBlocked = !a
@@ -82,8 +84,33 @@ export default function AgreementDetailDialog({
                 </p>
                 {a.description && <p className="text-sm text-gray-700 mt-2">{a.description}</p>}
               </div>
-              {a.current_version > 1 && <Badge label={`إصدار ${a.current_version}`} variant="info" />}
+              <div className="flex items-center gap-2 shrink-0">
+                {a.current_version > 1 && <Badge label={`إصدار ${a.current_version}`} variant="info" />}
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="primary-outline"
+                  disabled={!!pdf.loading}
+                  onClick={() => pdf.print("agreement", data)}
+                >
+                  <Printer className="w-3.5 h-3.5 ml-1" />
+                  {pdf.loading === "agreement" ? "جاري التجهيز..." : "طباعة الاتفاقية"}
+                </Button>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="primary-outline"
+                  disabled={!!pdf.loading}
+                  onClick={() => pdf.print("full", data)}
+                >
+                  <FileText className="w-3.5 h-3.5 ml-1" />
+                  {pdf.loading === "full" ? "جاري التجهيز..." : "الملف الكامل"}
+                </Button>
+              </div>
             </div>
+            {pdf.error && (
+              <p className="text-sm text-red-700 bg-red-50 rounded-lg px-3 py-2">{pdf.error}</p>
+            )}
 
             <div className="grid grid-cols-4 gap-3">
               <Stat label="الإجمالي" value={a.total} />
