@@ -7,8 +7,8 @@
 -- Drawings" prototype.
 --
 -- The files themselves do NOT live in Supabase Storage. They are kept on
--- the EGC server by the files service (services/files in the desktop
--- repo). That service calls the RPCs below with the user's own JWT, so
+-- the EGC server by the files service (its own repo,
+-- github.com/Nick-800/files-service-egc). That service calls the RPCs below with the user's own JWT, so
 -- every permission decision is made here. The RPCs that register,
 -- reveal or delete a file also require the x-files-secret request
 -- header, matched against the Vault secret `files_service_secret`, so

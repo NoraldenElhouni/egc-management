@@ -5,7 +5,7 @@ const FILES_API_URL =
   "https://files.engroup.ly";
 
 /**
- * Client for the EGC files service (services/files), which keeps drawing
+ * Client for the EGC files service (its own repo, files-service-egc), which keeps drawing
  * files on the EGC server. Every request carries the user's Supabase access
  * token; the service passes it on to Supabase, so the database decides what
  * the user may upload, download or delete.

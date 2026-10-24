@@ -68,7 +68,7 @@ Then run this in the SQL editor with that value:
 select vault.create_secret('<the value>', 'files_service_secret');
 ```
 
-- Keep the value. It goes into the files service's `.env` as `FILES_SERVICE_SECRET` (see `services/files/README.md`).
+- Keep the value. It goes into the files service's `.env` as `FILES_SERVICE_SECRET` (see the [files-service-egc](https://github.com/Nick-800/files-service-egc) README).
 - Use a **different** value from the dev one.
 - Don't paste it in chats or commit it.
 
@@ -78,7 +78,7 @@ Run `02_verify.sql`. Every row must show `ok = true`. The last row lists who hol
 
 ### 5. Files service
 
-Deploy `services/files` to the EGC server, behind `files.engroup.ly`. See `services/files/README.md`. Its `.env` needs:
+The service is its own repo, [files-service-egc](https://github.com/Nick-800/files-service-egc). It deploys itself through GitHub Actions; its README has the one-time server setup. Deploy it to the EGC server, behind `files.engroup.ly`. Its `.env` needs:
 - the prod Supabase URL
 - the prod anon key
 - the secret from step 3
