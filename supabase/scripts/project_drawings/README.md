@@ -85,7 +85,7 @@ Run `02_verify.sql`. Every row must show `ok = true`. The last row lists who hol
 
 ### 5. Files service
 
-The service is its own repo, [files-service-egc](https://github.com/Nick-800/files-service-egc). It deploys itself to `https://files.engroup.ly` through GitHub Actions; its README has the server setup. Its production `.env` (`/opt/files-service/shared/.env` on the EGC server) needs:
+The service is its own repo, [files-service-egc](https://github.com/engroup-dev/files-service-egc). It deploys itself to `https://files.engroup.ly` through GitHub Actions; its README has the server setup. Its production `.env` (`/opt/files-service/shared/.env` on the EGC server) needs:
 - the prod Supabase URL
 - the prod anon key
 - the secret from step 3b
