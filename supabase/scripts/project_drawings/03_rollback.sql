@@ -2,33 +2,40 @@
 -- !! This deletes every drawing folder, version record, notice and access
 -- !! row. It touches nothing that existed before the migration. Files on
 -- !! the EGC server are NOT deleted; remove them separately if wanted.
--- Take a backup first.
+-- Take a backup first. Also remove `drawings` from Project Settings >
+-- Data API > Exposed schemas afterwards.
 begin;
 
-drop function if exists public.project_drawing_delete_folder(uuid);
-drop function if exists public.project_drawing_delete_version(uuid);
-drop function if exists public.project_drawing_file_for_download(uuid);
-drop function if exists public.project_drawing_add_version(uuid, text, text, text, bigint, uuid[]);
-drop function if exists public.project_drawing_set_access(uuid, jsonb);
-drop function if exists public.project_drawing_mark_complied(uuid);
-drop function if exists public.project_drawing_set_status(uuid, text, text);
-drop function if exists public.project_drawing_my_caps(uuid);
+drop function if exists drawings.delete_folder(uuid);
+drop function if exists drawings.delete_version(uuid);
+drop function if exists drawings.file_for_download(uuid);
+drop function if exists drawings.add_version(uuid, text, text, text, bigint, uuid[]);
+drop function if exists drawings.set_access(uuid, jsonb);
+drop function if exists drawings.mark_complied(uuid);
+drop function if exists drawings.set_status(uuid, text, text);
+drop function if exists drawings.my_caps(uuid);
 
-drop table if exists public.project_drawing_access;
-drop table if exists public.project_drawing_notices;
-drop table if exists public.project_drawing_versions;
-drop table if exists public.project_drawing_folders;
+drop table if exists drawings.access;
+drop table if exists drawings.notices;
+drop table if exists drawings.versions;
+drop table if exists drawings.folders;
 
-drop function if exists public.project_drawing_assert_files_service();
-drop function if exists public.project_drawing_is_participant(uuid);
-drop function if exists public.project_drawing_can(uuid, text);
-drop function if exists public.project_drawing_on_team(uuid);
-drop function if exists public.project_drawing_is_manager(uuid);
+drop function if exists drawings.assert_files_service();
+drop function if exists drawings.is_participant(uuid);
+drop function if exists drawings.can(uuid, text);
+drop function if exists drawings.on_team(uuid);
+drop function if exists drawings.is_manager(uuid);
+
+-- No cascade: if anything else was put in the schema, this fails and the
+-- whole rollback is undone, rather than silently deleting it.
+drop schema if exists drawings;
 
 -- Put the catalog entry back the way it was before (inactive).
 update public.permission_catalog set is_active = false where name = 'manage_project_maps';
 
 -- Vault secret (optional):
 -- delete from vault.secrets where name = 'files_service_secret';
+
+notify pgrst, 'reload schema';
 
 commit;

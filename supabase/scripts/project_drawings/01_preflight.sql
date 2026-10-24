@@ -37,18 +37,24 @@ with checks(check_name, ok, detail) as (
   ('roles anon / authenticated exist',
    (select count(*) = 2 from pg_roles where rolname in ('anon', 'authenticated')),
    'grants and revokes target these roles'),
-  ('no clashing objects from elsewhere',
-   not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-               where n.nspname = 'public' and p.proname like 'project\_drawing\_%'
-                 and to_regclass('public.project_drawing_folders') is null),
-   'project_drawing_* functions should only exist if this migration ran before')
+  ('schema drawings is free or ours',
+   to_regnamespace('drawings') is null
+   or not exists (select 1 from pg_class c
+                  where c.relnamespace = to_regnamespace('drawings') and c.relkind = 'r'
+                    and c.relname not in ('folders', 'versions', 'notices', 'access')),
+   'the migration creates schema drawings; it must not already hold unrelated tables')
 )
 select check_name, ok, detail from checks
 union all
 select 'info: migration already applied?',
        true,
-       case when to_regclass('public.project_drawing_folders') is null
+       case when to_regclass('drawings.folders') is null
             then 'no - first run' else 'yes - re-running is safe (idempotent)' end
+union all
+select 'info: old public.project_drawing_* tables',
+       true,
+       case when to_regclass('public.project_drawing_folders') is null
+            then 'none (expected)' else 'present - an early dev-only version; see the dev transition notes' end
 union all
 select 'info: manage_project_maps',
        true,

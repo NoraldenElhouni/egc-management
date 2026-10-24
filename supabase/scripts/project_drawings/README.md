@@ -9,8 +9,9 @@ The feature needs three things in this order:
 After those, release the app version that contains the feature.
 
 **The migration only adds:**
-- 4 new tables
-- 13 functions
+- a new schema, `drawings`, the same way `boq`, `contracts` and `tasks` each have their own
+- 4 tables in it: `drawings.folders`, `drawings.versions`, `drawings.notices`, `drawings.access`
+- 13 functions in it (`drawings.my_caps`, `drawings.add_version`, …)
 - their RLS policies
 
 **It deletes, drops or rewrites nothing that already exists.** The single change to existing data is switching on the `manage_project_maps` row in `permission_catalog` (`is_active = true`). It runs as one transaction, so it either applies fully or not at all. It is idempotent, so running it twice is harmless.
@@ -54,12 +55,18 @@ Run `01_preflight.sql`.
 
 Run `supabase/migrations/20261020120000_project_drawings.sql`. It should finish with "Success. No rows returned".
 
-### 3. Vault secret (once per environment)
+### 3. Expose the schema (once per environment)
 
-Generate a long random value on your machine:
+Supabase dashboard → **Project Settings → Data API → Exposed schemas**. **Add** `drawings` to the existing list, keep every schema already there, then save.
+
+Without this step the app and the files service get "schema must be one of the following" errors.
+
+### 3b. Vault secret (once per environment)
+
+The production files service already has its secret. It was generated on the EGC server, in `/opt/files-service/shared/.env` as `FILES_SERVICE_SECRET`. Print it from your own terminal, not through a chat:
 
 ```bash
-openssl rand -hex 32
+ssher exec EGC -- grep FILES_SERVICE_SECRET /opt/files-service/shared/.env
 ```
 
 Then run this in the SQL editor with that value:
@@ -68,8 +75,8 @@ Then run this in the SQL editor with that value:
 select vault.create_secret('<the value>', 'files_service_secret');
 ```
 
-- Keep the value. It goes into the files service's `.env` as `FILES_SERVICE_SECRET` (see the [files-service-egc](https://github.com/Nick-800/files-service-egc) README).
-- Use a **different** value from the dev one.
+- The value must be **identical** on both sides.
+- It is not the dev value.
 - Don't paste it in chats or commit it.
 
 ### 4. Verify (read-only)
@@ -78,10 +85,12 @@ Run `02_verify.sql`. Every row must show `ok = true`. The last row lists who hol
 
 ### 5. Files service
 
-The service is its own repo, [files-service-egc](https://github.com/Nick-800/files-service-egc). It deploys itself through GitHub Actions; its README has the one-time server setup. Deploy it to the EGC server, behind `files.engroup.ly`. Its `.env` needs:
+The service is its own repo, [files-service-egc](https://github.com/Nick-800/files-service-egc). It deploys itself to `https://files.engroup.ly` through GitHub Actions; its README has the server setup. Its production `.env` (`/opt/files-service/shared/.env` on the EGC server) needs:
 - the prod Supabase URL
 - the prod anon key
-- the secret from step 3
+- the secret from step 3b
+
+After changing that file, recreate the container. The command is in the service README.
 
 The app uses `https://files.engroup.ly` by default. Set `VITE_FILES_API_URL` at build time only if you use a different address.
 
@@ -92,7 +101,8 @@ In the app (Settings › Permissions), grant `manage_project_maps` to whoever sh
 ## Rolling back
 
 Take a backup first, then run `03_rollback.sql`.
-- It drops only the drawings tables and functions, and switches `manage_project_maps` back off.
+- It drops only the `drawings` schema with its tables and functions, and switches `manage_project_maps` back off. It refuses to drop the schema if anything else was put in it.
+- Afterwards, remove `drawings` from the exposed schemas (step 3).
 - It deletes the drawings records. The files on the EGC server stay until you remove them yourself.
 - Everything else in the database is untouched.
 
@@ -102,3 +112,5 @@ Take a backup first, then run `03_rollback.sql`.
 - The migration applies and re-applies cleanly.
 - The post-check passes.
 - The rollback was dry-run inside a rolled-back transaction: it removed exactly the new objects and left the rest in place.
+- The `drawings` schema layout (2026-10-24): applied on dev, and the rows from the early `public.project_drawing_*` layout were copied over and the old objects dropped (a dev-only step; prod never had the old layout). Every test user sees the same folders and rights as before.
+- **Still open on dev:** adding `drawings` to the exposed schemas needs the `data_api_config_write` permission, which the current account doesn't have.

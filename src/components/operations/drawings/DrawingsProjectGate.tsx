@@ -9,7 +9,7 @@ import { useMyDrawingCaps } from "../../../hooks/operations/drawings/useProjectD
 // manager granting a team member folder access is the whole point of the
 // feature, and that member should not also need a separate permission
 // grant to open the page. What they then see is still decided folder by
-// folder (project_drawing_my_caps / RLS).
+// folder (drawings.my_caps / RLS).
 //
 // Must sit on a route whose own path declares :projectId (same reason as
 // RequirePermission).

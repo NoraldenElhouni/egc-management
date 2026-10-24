@@ -24,7 +24,7 @@ import {
 
 // One folder (map type) of a project: its versions newest first, its
 // status, and the updates from other folders it still has to comply with.
-// What the buttons offer comes from project_drawing_my_caps; the database
+// What the buttons offer comes from drawings.my_caps; the database
 // enforces the same rules again on every write.
 const ProjectDrawingFolderPage = () => {
   const { projectId, folderId } = useParams<{ projectId: string; folderId: string }>();

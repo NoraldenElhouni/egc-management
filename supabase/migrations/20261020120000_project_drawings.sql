@@ -6,10 +6,16 @@
 -- per-folder per-member access. Port of the "Site Docs – Project
 -- Drawings" prototype.
 --
+-- Everything lives in its own schema, `drawings` (drawings.folders,
+-- drawings.versions, drawings.notices, drawings.access and the
+-- drawings.* functions), like boq / contracts / tasks. The schema must
+-- be listed under Project Settings > Data API > Exposed schemas.
+--
 -- The files themselves do NOT live in Supabase Storage. They are kept on
 -- the EGC server by the files service (its own repo,
--- github.com/Nick-800/files-service-egc). That service calls the RPCs below with the user's own JWT, so
--- every permission decision is made here. The RPCs that register,
+-- github.com/Nick-800/files-service-egc). That service calls the RPCs
+-- below with the user's own JWT, so every permission decision is made
+-- here. The RPCs that register,
 -- reveal or delete a file also require the x-files-secret request
 -- header, matched against the Vault secret `files_service_secret`, so
 -- only the files service can call them (otherwise any uploader could
@@ -19,12 +25,24 @@
 --   select vault.create_secret('<long random string>', 'files_service_secret');
 -- and give the same value to the files service as FILES_SERVICE_SECRET.
 --
--- Idempotent: safe to run more than once. Additive only: it creates new
--- objects and changes no existing row except switching on the
--- manage_project_maps catalog entry. Runs as one transaction.
+-- Idempotent: safe to run more than once. Additive only: it creates the
+-- new schema and its objects and changes no existing row except
+-- switching on the manage_project_maps catalog entry. Runs as one
+-- transaction.
 -- =====================================================================
 
 begin;
+
+-- Never queue behind a busy table (the foreign keys briefly lock
+-- projects / map_types / users): fail cleanly instead, and retry later.
+set local lock_timeout = '10s';
+
+-- ---------------------------------------------------------------------
+-- 0. Schema
+-- ---------------------------------------------------------------------
+create schema if not exists drawings;
+revoke all on schema drawings from public, anon;
+grant usage on schema drawings to authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 1. Permission: manage_project_maps (project-scoped)
@@ -60,7 +78,7 @@ where name = 'manage_project_maps' and not is_active;
 -- ---------------------------------------------------------------------
 -- 2. Tables
 -- ---------------------------------------------------------------------
-create table if not exists public.project_drawing_folders (
+create table if not exists drawings.folders (
   id            uuid primary key default gen_random_uuid(),
   project_id    uuid not null references public.projects(id) on delete cascade,
   map_type_id   uuid not null references public.map_types(id) on delete restrict,
@@ -77,9 +95,9 @@ create table if not exists public.project_drawing_folders (
   unique (project_id, map_type_id)
 );
 
-create table if not exists public.project_drawing_versions (
+create table if not exists drawings.versions (
   id           uuid primary key default gen_random_uuid(),
-  folder_id    uuid not null references public.project_drawing_folders(id) on delete cascade,
+  folder_id    uuid not null references drawings.folders(id) on delete cascade,
   version      integer not null,
   file_path    text not null unique,
   file_name    text not null,
@@ -90,15 +108,15 @@ create table if not exists public.project_drawing_versions (
   unique (folder_id, version)
 );
 
-create table if not exists public.project_drawing_notices (
+create table if not exists drawings.notices (
   id              uuid primary key default gen_random_uuid(),
   project_id      uuid not null references public.projects(id) on delete cascade,
-  from_folder_id  uuid not null references public.project_drawing_folders(id) on delete cascade,
-  version_id      uuid not null references public.project_drawing_versions(id) on delete cascade,
+  from_folder_id  uuid not null references drawings.folders(id) on delete cascade,
+  version_id      uuid not null references drawings.versions(id) on delete cascade,
   -- Copied so the receiving folder can show "Architecture v3" without
   -- being allowed to read the sending folder's versions.
   version_number  integer not null,
-  to_folder_id    uuid not null references public.project_drawing_folders(id) on delete cascade,
+  to_folder_id    uuid not null references drawings.folders(id) on delete cascade,
   state           text not null default 'pending'
                   check (state in ('pending', 'complied', 'superseded')),
   resolved_by     uuid references public.users(id) on delete set null,
@@ -108,16 +126,16 @@ create table if not exists public.project_drawing_notices (
   check (to_folder_id <> from_folder_id)
 );
 
-create index if not exists project_drawing_notices_to_pending_idx
-  on public.project_drawing_notices (to_folder_id) where state = 'pending';
-create index if not exists project_drawing_notices_from_pending_idx
-  on public.project_drawing_notices (from_folder_id) where state = 'pending';
-create index if not exists project_drawing_notices_version_idx
-  on public.project_drawing_notices (version_id);
+create index if not exists notices_to_pending_idx
+  on drawings.notices (to_folder_id) where state = 'pending';
+create index if not exists notices_from_pending_idx
+  on drawings.notices (from_folder_id) where state = 'pending';
+create index if not exists notices_version_idx
+  on drawings.notices (version_id);
 
 -- A row means "may view this folder"; the flags add the rest.
-create table if not exists public.project_drawing_access (
-  folder_id     uuid not null references public.project_drawing_folders(id) on delete cascade,
+create table if not exists drawings.access (
+  folder_id     uuid not null references drawings.folders(id) on delete cascade,
   user_id       uuid not null references public.users(id) on delete cascade,
   can_download  boolean not null default false,
   can_upload    boolean not null default false,
@@ -127,14 +145,14 @@ create table if not exists public.project_drawing_access (
   primary key (folder_id, user_id)
 );
 
-create index if not exists project_drawing_access_user_idx
-  on public.project_drawing_access (user_id);
+create index if not exists access_user_idx
+  on drawings.access (user_id);
 
 -- ---------------------------------------------------------------------
 -- 3. Helpers (security definer so RLS policies can call them without
 --    recursing into the tables' own policies)
 -- ---------------------------------------------------------------------
-create or replace function public.project_drawing_is_manager(p_project_id uuid)
+create or replace function drawings.is_manager(p_project_id uuid)
 returns boolean
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -147,7 +165,7 @@ end;
 $$;
 
 -- Access rows only count while the person is still on the project team.
-create or replace function public.project_drawing_on_team(p_project_id uuid)
+create or replace function drawings.on_team(p_project_id uuid)
 returns boolean
 language sql stable security definer set search_path = ''
 as $$
@@ -158,31 +176,31 @@ as $$
 $$;
 
 -- p_cap: 'view' | 'download' | 'upload' | 'edit'
-create or replace function public.project_drawing_can(p_folder_id uuid, p_cap text)
+create or replace function drawings.can(p_folder_id uuid, p_cap text)
 returns boolean
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
   v_project uuid;
-  a public.project_drawing_access%rowtype;
+  a drawings.access%rowtype;
 begin
   if auth.uid() is null then
     return false;
   end if;
 
   select project_id into v_project
-  from public.project_drawing_folders where id = p_folder_id;
+  from drawings.folders where id = p_folder_id;
   if v_project is null then
     return false;
   end if;
 
-  if public.project_drawing_is_manager(v_project) then
+  if drawings.is_manager(v_project) then
     return true;
   end if;
 
-  select * into a from public.project_drawing_access
+  select * into a from drawings.access
   where folder_id = p_folder_id and user_id = auth.uid();
-  if not found or not public.project_drawing_on_team(v_project) then
+  if not found or not drawings.on_team(v_project) then
     return false;
   end if;
 
@@ -200,18 +218,18 @@ $$;
 -- project while on its team. Participants may read every folder's name
 -- and status (needed for the notify checklist and "must comply" text);
 -- files and versions stay per-folder.
-create or replace function public.project_drawing_is_participant(p_project_id uuid)
+create or replace function drawings.is_participant(p_project_id uuid)
 returns boolean
 language plpgsql stable security definer set search_path = ''
 as $$
 begin
-  if public.project_drawing_is_manager(p_project_id) then
+  if drawings.is_manager(p_project_id) then
     return true;
   end if;
-  return public.project_drawing_on_team(p_project_id) and exists (
+  return drawings.on_team(p_project_id) and exists (
     select 1
-    from public.project_drawing_access a
-    join public.project_drawing_folders f on f.id = a.folder_id
+    from drawings.access a
+    join drawings.folders f on f.id = a.folder_id
     where f.project_id = p_project_id and a.user_id = auth.uid()
   );
 end;
@@ -220,13 +238,13 @@ $$;
 -- Everything the UI needs to decide what to show, in one call:
 -- { "is_manager": bool,
 --   "folders": { "<folder id>": { "view", "download", "upload", "edit" } } }
-create or replace function public.project_drawing_my_caps(p_project_id uuid)
+create or replace function drawings.my_caps(p_project_id uuid)
 returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
-  v_manager boolean := public.project_drawing_is_manager(p_project_id);
-  v_on_team boolean := public.project_drawing_on_team(p_project_id);
+  v_manager boolean := drawings.is_manager(p_project_id);
+  v_on_team boolean := drawings.on_team(p_project_id);
   v_folders jsonb;
 begin
   select coalesce(jsonb_object_agg(f.id, jsonb_build_object(
@@ -236,8 +254,8 @@ begin
            'edit',     v_manager or (v_on_team and coalesce(a.can_edit, false))
          )), '{}'::jsonb)
   into v_folders
-  from public.project_drawing_folders f
-  left join public.project_drawing_access a
+  from drawings.folders f
+  left join drawings.access a
     on a.folder_id = f.id and a.user_id = auth.uid()
   where f.project_id = p_project_id;
 
@@ -246,7 +264,7 @@ end;
 $$;
 
 -- Raises unless the request came from the files service.
-create or replace function public.project_drawing_assert_files_service()
+create or replace function drawings.assert_files_service()
 returns void
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -268,69 +286,69 @@ $$;
 -- ---------------------------------------------------------------------
 -- 4. Row level security
 -- ---------------------------------------------------------------------
-alter table public.project_drawing_folders  enable row level security;
-alter table public.project_drawing_versions enable row level security;
-alter table public.project_drawing_notices  enable row level security;
-alter table public.project_drawing_access   enable row level security;
+alter table drawings.folders  enable row level security;
+alter table drawings.versions enable row level security;
+alter table drawings.notices  enable row level security;
+alter table drawings.access   enable row level security;
 
-revoke all on public.project_drawing_folders, public.project_drawing_versions,
-              public.project_drawing_notices, public.project_drawing_access
+revoke all on drawings.folders, drawings.versions,
+              drawings.notices, drawings.access
   from anon;
-grant select on public.project_drawing_folders, public.project_drawing_versions,
-                public.project_drawing_notices, public.project_drawing_access
+grant select on drawings.folders, drawings.versions,
+                drawings.notices, drawings.access
   to authenticated;
-grant insert on public.project_drawing_folders to authenticated;
+grant insert on drawings.folders to authenticated;
 
-drop policy if exists project_drawing_folders_select on public.project_drawing_folders;
-create policy project_drawing_folders_select on public.project_drawing_folders
+drop policy if exists folders_select on drawings.folders;
+create policy folders_select on drawings.folders
   for select to authenticated
-  using (public.project_drawing_is_participant(project_id));
+  using (drawings.is_participant(project_id));
 
-drop policy if exists project_drawing_folders_insert on public.project_drawing_folders;
-create policy project_drawing_folders_insert on public.project_drawing_folders
+drop policy if exists folders_insert on drawings.folders;
+create policy folders_insert on drawings.folders
   for insert to authenticated
   with check (
-    public.project_drawing_is_manager(project_id)
+    drawings.is_manager(project_id)
     and status = 'ok' and next_version = 1
   );
 
-drop policy if exists project_drawing_versions_select on public.project_drawing_versions;
-create policy project_drawing_versions_select on public.project_drawing_versions
+drop policy if exists versions_select on drawings.versions;
+create policy versions_select on drawings.versions
   for select to authenticated
-  using (public.project_drawing_can(folder_id, 'view'));
+  using (drawings.can(folder_id, 'view'));
 
-drop policy if exists project_drawing_notices_select on public.project_drawing_notices;
-create policy project_drawing_notices_select on public.project_drawing_notices
+drop policy if exists notices_select on drawings.notices;
+create policy notices_select on drawings.notices
   for select to authenticated
-  using (public.project_drawing_can(to_folder_id, 'view')
-         or public.project_drawing_can(from_folder_id, 'view'));
+  using (drawings.can(to_folder_id, 'view')
+         or drawings.can(from_folder_id, 'view'));
 
-drop policy if exists project_drawing_access_select on public.project_drawing_access;
-create policy project_drawing_access_select on public.project_drawing_access
+drop policy if exists access_select on drawings.access;
+create policy access_select on drawings.access
   for select to authenticated
   using (
     user_id = auth.uid()
-    or public.project_drawing_is_manager(
-         (select f.project_id from public.project_drawing_folders f where f.id = folder_id))
+    or drawings.is_manager(
+         (select f.project_id from drawings.folders f where f.id = folder_id))
   );
 
 -- ---------------------------------------------------------------------
 -- 5. RPCs called by the desktop app
 -- ---------------------------------------------------------------------
-create or replace function public.project_drawing_set_status(
+create or replace function drawings.set_status(
   p_folder_id uuid, p_status text, p_note text default null)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
 begin
-  if not public.project_drawing_can(p_folder_id, 'upload') then
+  if not drawings.can(p_folder_id, 'upload') then
     raise exception 'ليست لديك صلاحية تغيير حالة هذه الخرائط' using errcode = '42501';
   end if;
   if p_status not in ('ok', 'design', 'modification') then
     raise exception 'حالة غير صالحة' using errcode = '22023';
   end if;
 
-  update public.project_drawing_folders set
+  update drawings.folders set
     status      = p_status,
     status_note = case when p_status = 'ok' then null else nullif(btrim(p_note), '') end,
     status_by   = case when p_status = 'ok' then null else auth.uid() end,
@@ -339,25 +357,25 @@ begin
 end;
 $$;
 
-create or replace function public.project_drawing_mark_complied(p_notice_id uuid)
+create or replace function drawings.mark_complied(p_notice_id uuid)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
 declare
-  n public.project_drawing_notices%rowtype;
+  n drawings.notices%rowtype;
 begin
-  select * into n from public.project_drawing_notices where id = p_notice_id for update;
+  select * into n from drawings.notices where id = p_notice_id for update;
   if not found then
     raise exception 'الإشعار غير موجود' using errcode = 'P0002';
   end if;
-  if not public.project_drawing_can(n.to_folder_id, 'edit') then
+  if not drawings.can(n.to_folder_id, 'edit') then
     raise exception 'ليست لديك صلاحية تأكيد الالتزام' using errcode = '42501';
   end if;
   if n.state <> 'pending' then
     return;
   end if;
 
-  update public.project_drawing_notices
+  update drawings.notices
   set state = 'complied', resolved_by = auth.uid(), resolved_at = now()
   where id = p_notice_id;
 end;
@@ -366,7 +384,7 @@ $$;
 -- p_entries: [{ "user_id": uuid, "download": bool, "upload": bool, "edit": bool }, ...]
 -- Replaces the folder's access list in one transaction. Every user must
 -- be on the project team.
-create or replace function public.project_drawing_set_access(p_folder_id uuid, p_entries jsonb)
+create or replace function drawings.set_access(p_folder_id uuid, p_entries jsonb)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -375,11 +393,11 @@ declare
   v_bad integer;
 begin
   select project_id into v_project
-  from public.project_drawing_folders where id = p_folder_id for update;
+  from drawings.folders where id = p_folder_id for update;
   if v_project is null then
     raise exception 'نوع الخريطة غير موجود' using errcode = 'P0002';
   end if;
-  if not public.project_drawing_is_manager(v_project) then
+  if not drawings.is_manager(v_project) then
     raise exception 'ليست لديك صلاحية إدارة الوصول' using errcode = '42501';
   end if;
   if jsonb_typeof(coalesce(p_entries, '[]'::jsonb)) <> 'array' then
@@ -396,9 +414,9 @@ begin
     raise exception 'يمكن منح الوصول لأعضاء فريق المشروع فقط' using errcode = '22023';
   end if;
 
-  delete from public.project_drawing_access where folder_id = p_folder_id;
+  delete from drawings.access where folder_id = p_folder_id;
 
-  insert into public.project_drawing_access
+  insert into drawings.access
     (folder_id, user_id, can_download, can_upload, can_edit, granted_by, updated_at)
   select distinct on ((e ->> 'user_id')::uuid)
          p_folder_id,
@@ -418,7 +436,7 @@ $$;
 -- Registers an uploaded file as the next version of the folder, resets
 -- the folder status, and creates "must comply" notices for the chosen
 -- folders (superseding still-pending ones from this folder to them).
-create or replace function public.project_drawing_add_version(
+create or replace function drawings.add_version(
   p_folder_id uuid,
   p_file_path text,
   p_file_name text,
@@ -436,14 +454,14 @@ declare
   v_targets uuid[] := array(select distinct x from unnest(coalesce(p_notify_folder_ids, '{}')) x);
   v_valid integer;
 begin
-  perform public.project_drawing_assert_files_service();
+  perform drawings.assert_files_service();
 
   select f.project_id, f.next_version into v_project, v_version
-  from public.project_drawing_folders f where f.id = p_folder_id for update;
+  from drawings.folders f where f.id = p_folder_id for update;
   if v_project is null then
     raise exception 'نوع الخريطة غير موجود' using errcode = 'P0002';
   end if;
-  if not public.project_drawing_can(p_folder_id, 'upload') then
+  if not drawings.can(p_folder_id, 'upload') then
     raise exception 'ليست لديك صلاحية رفع ملفات لهذه الخرائط' using errcode = '42501';
   end if;
   if p_file_path !~ ('^drawings/' || v_project || '/' || p_folder_id
@@ -452,31 +470,31 @@ begin
   end if;
 
   select count(*) into v_valid
-  from public.project_drawing_folders f
+  from drawings.folders f
   where f.id = any (v_targets) and f.project_id = v_project and f.id <> p_folder_id;
   if v_valid <> coalesce(array_length(v_targets, 1), 0) then
     raise exception 'قائمة أنواع الخرائط المطلوب إشعارها غير صالحة' using errcode = '22023';
   end if;
 
-  insert into public.project_drawing_versions
+  insert into drawings.versions
     (folder_id, version, file_path, file_name, mime_type, file_size, uploaded_by)
   values
     (p_folder_id, v_version, p_file_path, coalesce(nullif(btrim(p_file_name), ''), 'file'),
      p_mime_type, p_file_size, auth.uid())
-  returning project_drawing_versions.id into v_id;
+  returning versions.id into v_id;
 
-  update public.project_drawing_folders set
+  update drawings.folders set
     next_version = v_version + 1,
     status = 'ok', status_note = null, status_by = null, status_at = null
-  where project_drawing_folders.id = p_folder_id;
+  where folders.id = p_folder_id;
 
-  update public.project_drawing_notices n
+  update drawings.notices n
   set state = 'superseded', resolved_by = auth.uid(), resolved_at = now()
   where n.from_folder_id = p_folder_id
     and n.state = 'pending'
     and n.to_folder_id = any (v_targets);
 
-  insert into public.project_drawing_notices
+  insert into drawings.notices
     (project_id, from_folder_id, version_id, version_number, to_folder_id)
   select v_project, p_folder_id, v_id, v_version, t
   from unnest(v_targets) t;
@@ -485,21 +503,21 @@ begin
 end;
 $$;
 
-create or replace function public.project_drawing_file_for_download(p_version_id uuid)
+create or replace function drawings.file_for_download(p_version_id uuid)
 returns table (file_path text, file_name text, mime_type text, file_size bigint)
 language plpgsql stable security definer set search_path = ''
 as $$
 #variable_conflict use_column
 declare
-  v public.project_drawing_versions%rowtype;
+  v drawings.versions%rowtype;
 begin
-  perform public.project_drawing_assert_files_service();
+  perform drawings.assert_files_service();
 
-  select * into v from public.project_drawing_versions where project_drawing_versions.id = p_version_id;
+  select * into v from drawings.versions where versions.id = p_version_id;
   if not found then
     raise exception 'الملف غير موجود' using errcode = 'P0002';
   end if;
-  if not public.project_drawing_can(v.folder_id, 'download') then
+  if not drawings.can(v.folder_id, 'download') then
     raise exception 'ليست لديك صلاحية تنزيل هذا الملف' using errcode = '42501';
   end if;
 
@@ -509,31 +527,31 @@ $$;
 
 -- Deletes one version (its notices go with it) and returns the file path
 -- for the service to remove from disk.
-create or replace function public.project_drawing_delete_version(p_version_id uuid)
+create or replace function drawings.delete_version(p_version_id uuid)
 returns text
 language plpgsql security definer set search_path = ''
 as $$
 declare
-  v public.project_drawing_versions%rowtype;
+  v drawings.versions%rowtype;
 begin
-  perform public.project_drawing_assert_files_service();
+  perform drawings.assert_files_service();
 
-  select * into v from public.project_drawing_versions where id = p_version_id;
+  select * into v from drawings.versions where id = p_version_id;
   if not found then
     raise exception 'الملف غير موجود' using errcode = 'P0002';
   end if;
-  if not public.project_drawing_can(v.folder_id, 'edit') then
+  if not drawings.can(v.folder_id, 'edit') then
     raise exception 'ليست لديك صلاحية حذف هذا الإصدار' using errcode = '42501';
   end if;
 
-  delete from public.project_drawing_versions where id = p_version_id;
+  delete from drawings.versions where id = p_version_id;
   return v.file_path;
 end;
 $$;
 
 -- Deletes a folder with its versions, notices to/from it and its access
 -- list, and returns every file path for the service to remove.
-create or replace function public.project_drawing_delete_folder(p_folder_id uuid)
+create or replace function drawings.delete_folder(p_folder_id uuid)
 returns setof text
 language plpgsql security definer set search_path = ''
 as $$
@@ -541,20 +559,20 @@ declare
   v_project uuid;
   v_paths text[];
 begin
-  perform public.project_drawing_assert_files_service();
+  perform drawings.assert_files_service();
 
-  select project_id into v_project from public.project_drawing_folders where id = p_folder_id;
+  select project_id into v_project from drawings.folders where id = p_folder_id;
   if v_project is null then
     raise exception 'نوع الخريطة غير موجود' using errcode = 'P0002';
   end if;
-  if not public.project_drawing_is_manager(v_project) then
+  if not drawings.is_manager(v_project) then
     raise exception 'ليست لديك صلاحية حذف نوع الخريطة' using errcode = '42501';
   end if;
 
   select coalesce(array_agg(file_path), '{}') into v_paths
-  from public.project_drawing_versions where folder_id = p_folder_id;
+  from drawings.versions where folder_id = p_folder_id;
 
-  delete from public.project_drawing_folders where id = p_folder_id;
+  delete from drawings.folders where id = p_folder_id;
   return query select unnest(v_paths);
 end;
 $$;
@@ -562,32 +580,35 @@ $$;
 -- ---------------------------------------------------------------------
 -- 7. Function privileges
 -- ---------------------------------------------------------------------
-revoke all on function public.project_drawing_is_manager(uuid)              from public, anon;
-revoke all on function public.project_drawing_on_team(uuid)                 from public, anon;
-revoke all on function public.project_drawing_can(uuid, text)               from public, anon;
-revoke all on function public.project_drawing_is_participant(uuid)          from public, anon;
-revoke all on function public.project_drawing_my_caps(uuid)                 from public, anon;
-revoke all on function public.project_drawing_assert_files_service()        from public, anon;
-revoke all on function public.project_drawing_set_status(uuid, text, text)  from public, anon;
-revoke all on function public.project_drawing_mark_complied(uuid)           from public, anon;
-revoke all on function public.project_drawing_set_access(uuid, jsonb)       from public, anon;
-revoke all on function public.project_drawing_add_version(uuid, text, text, text, bigint, uuid[]) from public, anon;
-revoke all on function public.project_drawing_file_for_download(uuid)       from public, anon;
-revoke all on function public.project_drawing_delete_version(uuid)          from public, anon;
-revoke all on function public.project_drawing_delete_folder(uuid)           from public, anon;
+revoke all on function drawings.is_manager(uuid)              from public, anon;
+revoke all on function drawings.on_team(uuid)                 from public, anon;
+revoke all on function drawings.can(uuid, text)               from public, anon;
+revoke all on function drawings.is_participant(uuid)          from public, anon;
+revoke all on function drawings.my_caps(uuid)                 from public, anon;
+revoke all on function drawings.assert_files_service()        from public, anon;
+revoke all on function drawings.set_status(uuid, text, text)  from public, anon;
+revoke all on function drawings.mark_complied(uuid)           from public, anon;
+revoke all on function drawings.set_access(uuid, jsonb)       from public, anon;
+revoke all on function drawings.add_version(uuid, text, text, text, bigint, uuid[]) from public, anon;
+revoke all on function drawings.file_for_download(uuid)       from public, anon;
+revoke all on function drawings.delete_version(uuid)          from public, anon;
+revoke all on function drawings.delete_folder(uuid)           from public, anon;
 
-grant execute on function public.project_drawing_is_manager(uuid)             to authenticated;
-grant execute on function public.project_drawing_on_team(uuid)                to authenticated;
-grant execute on function public.project_drawing_can(uuid, text)              to authenticated;
-grant execute on function public.project_drawing_is_participant(uuid)         to authenticated;
-grant execute on function public.project_drawing_my_caps(uuid)                to authenticated;
-grant execute on function public.project_drawing_assert_files_service()       to authenticated;
-grant execute on function public.project_drawing_set_status(uuid, text, text) to authenticated;
-grant execute on function public.project_drawing_mark_complied(uuid)          to authenticated;
-grant execute on function public.project_drawing_set_access(uuid, jsonb)      to authenticated;
-grant execute on function public.project_drawing_add_version(uuid, text, text, text, bigint, uuid[]) to authenticated;
-grant execute on function public.project_drawing_file_for_download(uuid)      to authenticated;
-grant execute on function public.project_drawing_delete_version(uuid)         to authenticated;
-grant execute on function public.project_drawing_delete_folder(uuid)          to authenticated;
+grant execute on function drawings.is_manager(uuid)             to authenticated;
+grant execute on function drawings.on_team(uuid)                to authenticated;
+grant execute on function drawings.can(uuid, text)              to authenticated;
+grant execute on function drawings.is_participant(uuid)         to authenticated;
+grant execute on function drawings.my_caps(uuid)                to authenticated;
+grant execute on function drawings.assert_files_service()       to authenticated;
+grant execute on function drawings.set_status(uuid, text, text) to authenticated;
+grant execute on function drawings.mark_complied(uuid)          to authenticated;
+grant execute on function drawings.set_access(uuid, jsonb)      to authenticated;
+grant execute on function drawings.add_version(uuid, text, text, text, bigint, uuid[]) to authenticated;
+grant execute on function drawings.file_for_download(uuid)      to authenticated;
+grant execute on function drawings.delete_version(uuid)         to authenticated;
+grant execute on function drawings.delete_folder(uuid)          to authenticated;
+
+-- Let PostgREST see the new schema objects without a restart.
+notify pgrst, 'reload schema';
 
 commit;

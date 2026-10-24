@@ -20,13 +20,15 @@ import type {
 // =====================================================================
 // One folder per map type (map_types) per project. Each folder holds
 // numbered versions of a drawing file, a status, and "must comply"
-// notices to and from other folders. Schema, RLS and RPCs:
-// supabase/migrations/20261020120000_project_drawings.sql.
+// notices to and from other folders. Tables, RLS and RPCs live in the
+// `drawings` schema: supabase/migrations/20261020120000_project_drawings.sql.
+// PostgREST can't embed across schemas, so map type names and people's
+// names are looked up in `public` with a second query by id.
 //
 // Files are NOT in Supabase Storage. Uploads, downloads and deletes go
 // through the EGC files service (lib/filesApiClient.ts); everything else
 // is plain Supabase. Permissions are decided by the database either way:
-// project_drawing_my_caps() tells the UI what to show, and RLS / the RPCs
+// drawings.my_caps() tells the UI what to show, and RLS / the RPCs
 // enforce the same rules.
 // =====================================================================
 
@@ -68,6 +70,8 @@ export const drawingKeys = {
   mapTypes: ["project-drawings", "map-types"],
 };
 
+const drawings = () => supabase.schema("drawings");
+
 type NameRow = { first_name: string | null; last_name: string | null } | null;
 const personName = (u: NameRow) => (u ? [u.first_name, u.last_name].filter(Boolean).join(" ") || null : null);
 
@@ -75,6 +79,24 @@ function toError(error: { message: string; code?: string }, fallback: string): E
   if (error.code === "23505") return new Error("نوع الخريطة هذا موجود بالفعل في المشروع");
   if (error.code === "42501") return new Error(error.message || "ليست لديك صلاحية لهذه العملية");
   return new Error(error.message || fallback);
+}
+
+const uniqueIds = (ids: (string | null)[]) => [...new Set(ids.filter((id): id is string => !!id))];
+
+async function userNames(ids: (string | null)[]): Promise<Map<string, string | null>> {
+  const unique = uniqueIds(ids);
+  if (!unique.length) return new Map();
+  const { data, error } = await supabase.from("users").select("id, first_name, last_name").in("id", unique);
+  if (error) throw toError(error, "تعذر تحميل أسماء المستخدمين");
+  return new Map((data ?? []).map((u) => [u.id, personName(u)]));
+}
+
+async function mapTypeNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = uniqueIds(ids);
+  if (!unique.length) return new Map();
+  const { data, error } = await supabase.from("map_types").select("id, name").in("id", unique);
+  if (error) throw toError(error, "تعذر تحميل أنواع الخرائط");
+  return new Map((data ?? []).map((t) => [t.id, t.name]));
 }
 
 // ---------------------------------------------------------------------
@@ -88,7 +110,7 @@ export function useMyDrawingCaps(projectId: string | undefined) {
     enabled: !!projectId && resolved && !!userId,
     staleTime: 30_000,
     queryFn: async (): Promise<DrawingCaps> => {
-      const { data, error } = await supabase.rpc("project_drawing_my_caps", {
+      const { data, error } = await drawings().rpc("my_caps", {
         p_project_id: projectId as string,
       });
       if (error) throw toError(error, "تعذر تحميل الصلاحيات");
@@ -105,34 +127,38 @@ export function useDrawingFolders(projectId: string | undefined) {
     queryKey: drawingKeys.folders(projectId ?? ""),
     enabled: !!projectId,
     queryFn: async (): Promise<DrawingFolderRow[]> => {
-      const { data: folders, error } = await supabase
-        .from("project_drawing_folders")
-        .select(
-          "*, map_type:map_types(name), status_user:users!project_drawing_folders_status_by_fkey(first_name, last_name)",
-        )
+      const { data: folders, error } = await drawings()
+        .from("folders")
+        .select("*")
         .eq("project_id", projectId as string);
       if (error) throw toError(error, "تعذر تحميل أنواع الخرائط");
+      const rows = folders ?? [];
 
-      const ids = (folders ?? []).map((f) => f.id);
       const latest = new Map<string, DrawingFolderRow["latest"]>();
-      if (ids.length) {
+      const loadLatest = async () => {
+        if (!rows.length) return;
         // RLS only returns versions of folders the user may view.
-        const { data: versions, error: vError } = await supabase
-          .from("project_drawing_versions")
+        const { data: versions, error: vError } = await drawings()
+          .from("versions")
           .select("id, folder_id, version, created_at, file_name")
-          .in("folder_id", ids)
+          .in("folder_id", rows.map((f) => f.id))
           .order("version", { ascending: false });
         if (vError) throw toError(vError, "تعذر تحميل الإصدارات");
         for (const v of versions ?? []) {
           if (!latest.has(v.folder_id)) latest.set(v.folder_id, v);
         }
-      }
+      };
+      const [names, people] = await Promise.all([
+        mapTypeNames(rows.map((f) => f.map_type_id)),
+        userNames(rows.map((f) => f.status_by)),
+        loadLatest(),
+      ]);
 
-      return (folders ?? [])
-        .map(({ map_type, status_user, ...f }) => ({
+      return rows
+        .map((f) => ({
           ...f,
-          name: map_type?.name ?? "—",
-          statusByName: personName(status_user as NameRow),
+          name: names.get(f.map_type_id) ?? "—",
+          statusByName: f.status_by ? people.get(f.status_by) ?? null : null,
           latest: latest.get(f.id) ?? null,
         }))
         .sort((a, b) => a.name.localeCompare(b.name, "ar"));
@@ -146,8 +172,8 @@ export function useDrawingNotices(projectId: string | undefined) {
     queryKey: drawingKeys.notices(projectId ?? ""),
     enabled: !!projectId,
     queryFn: async (): Promise<DrawingNotice[]> => {
-      const { data, error } = await supabase
-        .from("project_drawing_notices")
+      const { data, error } = await drawings()
+        .from("notices")
         .select("*")
         .eq("project_id", projectId as string)
         .order("created_at", { ascending: false });
@@ -162,15 +188,16 @@ export function useDrawingVersions(projectId: string | undefined, folderId: stri
     queryKey: drawingKeys.versions(projectId ?? "", folderId ?? ""),
     enabled: !!projectId && !!folderId,
     queryFn: async (): Promise<DrawingVersionRow[]> => {
-      const { data, error } = await supabase
-        .from("project_drawing_versions")
-        .select("*, uploader:users!project_drawing_versions_uploaded_by_fkey(first_name, last_name)")
+      const { data, error } = await drawings()
+        .from("versions")
+        .select("*")
         .eq("folder_id", folderId as string)
         .order("version", { ascending: false });
       if (error) throw toError(error, "تعذر تحميل الإصدارات");
-      return (data ?? []).map(({ uploader, ...v }) => ({
+      const people = await userNames((data ?? []).map((v) => v.uploaded_by));
+      return (data ?? []).map((v) => ({
         ...v,
-        uploaderName: personName(uploader as NameRow),
+        uploaderName: v.uploaded_by ? people.get(v.uploaded_by) ?? null : null,
       }));
     },
   });
@@ -181,8 +208,8 @@ export function useFolderAccess(projectId: string | undefined, folderId: string 
     queryKey: drawingKeys.access(projectId ?? "", folderId ?? ""),
     enabled: enabled && !!projectId && !!folderId,
     queryFn: async (): Promise<DrawingAccess[]> => {
-      const { data, error } = await supabase
-        .from("project_drawing_access")
+      const { data, error } = await drawings()
+        .from("access")
         .select("*")
         .eq("folder_id", folderId as string);
       if (error) throw toError(error, "تعذر تحميل صلاحيات الوصول");
@@ -217,8 +244,8 @@ export function useAddDrawingFolder(projectId: string | undefined) {
   const invalidate = useInvalidateProject(projectId);
   return useMutation({
     mutationFn: async (mapTypeId: string) => {
-      const { error } = await supabase
-        .from("project_drawing_folders")
+      const { error } = await drawings()
+        .from("folders")
         .insert({ project_id: projectId as string, map_type_id: mapTypeId });
       if (error) throw toError(error, "تعذر إضافة نوع الخريطة");
     },
@@ -278,7 +305,7 @@ export function useSetDrawingStatus(projectId: string | undefined) {
   const invalidate = useInvalidateProject(projectId);
   return useMutation({
     mutationFn: async ({ folderId, status, note }: { folderId: string; status: DrawingStatus; note?: string }) => {
-      const { error } = await supabase.rpc("project_drawing_set_status", {
+      const { error } = await drawings().rpc("set_status", {
         p_folder_id: folderId,
         p_status: status,
         p_note: note ?? undefined,
@@ -293,7 +320,7 @@ export function useMarkNoticeComplied(projectId: string | undefined) {
   const invalidate = useInvalidateProject(projectId);
   return useMutation({
     mutationFn: async (noticeId: string) => {
-      const { error } = await supabase.rpc("project_drawing_mark_complied", { p_notice_id: noticeId });
+      const { error } = await drawings().rpc("mark_complied", { p_notice_id: noticeId });
       if (error) throw toError(error, "تعذر تأكيد الالتزام");
     },
     onSuccess: invalidate,
@@ -311,7 +338,7 @@ export function useSetFolderAccess(projectId: string | undefined) {
   const invalidate = useInvalidateProject(projectId);
   return useMutation({
     mutationFn: async ({ folderId, entries }: { folderId: string; entries: AccessEntry[] }) => {
-      const { error } = await supabase.rpc("project_drawing_set_access", {
+      const { error } = await drawings().rpc("set_access", {
         p_folder_id: folderId,
         p_entries: entries as unknown as Json,
       });

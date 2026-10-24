@@ -137,13 +137,21 @@ export const BREADCRUMB_ENTITIES: BreadcrumbEntity[] = [
   {
     patterns: ["/operations/maps/project/:projectId/folder/:id"],
     resolve: async (id) => {
-      const { data, error } = await supabase
-        .from("project_drawing_folders")
-        .select("map_type:map_types(name)")
+      const { data: folder, error } = await supabase
+        .schema("drawings")
+        .from("folders")
+        .select("map_type_id")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
-      return data?.map_type?.name ?? null;
+      if (!folder) return null;
+      const { data: mapType, error: typeError } = await supabase
+        .from("map_types")
+        .select("name")
+        .eq("id", folder.map_type_id)
+        .maybeSingle();
+      if (typeError) throw typeError;
+      return mapType?.name ?? null;
     },
   },
 
